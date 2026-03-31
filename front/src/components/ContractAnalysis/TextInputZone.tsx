@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Upload, FileText, Type } from "lucide-react";
+import { useDropzone } from "react-dropzone";
 
 interface TextInputZoneProps {
   onTextSubmit: (text: string, fileName: string) => void;
@@ -28,17 +29,39 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
     onTextSubmit(textContent.trim(), autoName);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Vérifier que c'est un PDF
-      if (file.type !== "application/pdf") {
-        alert("Seuls les fichiers PDF sont acceptés.");
-        return;
+  // const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     if (file.type !== "application/pdf") {
+  //       alert("Seuls les fichiers PDF sont acceptés.");
+  //       return;
+  //     }
+  //     onFileUpload(file);
+  //   }
+  // };
+
+  // Fonction onDrop pour react-dropzone
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        const file = acceptedFiles[0];
+        // Vérifier que c'est un PDF
+        if (file.type !== "application/pdf") {
+          alert("Seuls les fichiers PDF sont acceptés.");
+          return;
+        }
+        onFileUpload(file);
       }
-      onFileUpload(file);
-    }
-  };
+    },
+    [onFileUpload],
+  );
+  // Props pour react-dropzone | Remplace les props de la balise <input/>
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: { "application/pdf": [".pdf"] },
+    disabled: isProcessing,
+    multiple: false,
+  });
 
   const isTextValid = textContent.trim().length >= 100;
 
@@ -150,23 +173,14 @@ Le prestataire s'engage à...
           </div>
         ) : (
           <div className="p-6">
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
-                disabled={isProcessing}
-              />
-              <label
-                htmlFor="file-upload"
-                className={
-                  isProcessing
-                    ? "opacity-50 cursor-not-allowed"
-                    : "cursor-pointer"
-                }
-              >
+            {/* React-dropzone pour le drag & drop */}
+            <div
+              {...getRootProps()}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer has-disabled:opacity-50 has-disabled:cursor-not-allowed 
+              "
+            >
+              <input {...getInputProps()} className="hidden" />
+              <section>
                 <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                   <Upload className="w-8 h-8 text-blue-600" />
                 </div>
@@ -181,7 +195,7 @@ Le prestataire s'engage à...
                     📄 Format supporté : PDF uniquement
                   </span>
                 </div>
-              </label>
+              </section>
             </div>
 
             {/* Message supprimé pour éviter duplication avec App.tsx */}
