@@ -20,7 +20,7 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
       alert('Le texte doit contenir au moins 100 caractères pour une analyse pertinente.');
       return;
     }
-    
+
     // Génération automatique du nom sans demander à l'utilisateur
     const autoName = `Contrat_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}`;
     onTextSubmit(textContent.trim(), autoName);
@@ -46,23 +46,22 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
       <div className="flex bg-gray-100 rounded-t-2xl overflow-hidden">
         <button
           onClick={() => setActiveTab('file')}
-          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'file'
+          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'file'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
-          }`}
+            }`}
         >
           <Upload size={20} />
           Importer un PDF
         </button>
         <button
           onClick={() => setActiveTab('text')}
-          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'text'
+          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'text'
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-800'
-          }`}
+            }`}
         >
+
           <Type size={20} />
           Saisir le texte directement
         </button>
@@ -105,7 +104,7 @@ Le prestataire s'engage à...
                 />
                 <div className="flex justify-between items-center mt-2">
                   <p className="text-sm text-gray-500">
-                    {textContent.length} caractères 
+                    {textContent.length} caractères
                     {textContent.length < 100 && (
                       <span className="text-orange-600 ml-2">
                         (minimum 100 requis)
@@ -123,11 +122,10 @@ Le prestataire s'engage à...
               <button
                 onClick={handleTextSubmit}
                 disabled={!isTextValid || isProcessing}
-                className={`w-full py-4 px-6 rounded-lg font-medium transition-all flex items-center justify-center gap-3 ${
-                  isTextValid && !isProcessing
+                className={`w-full py-4 px-6 rounded-lg font-medium transition-all flex items-center justify-center gap-3 ${isTextValid && !isProcessing
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg transform hover:scale-[1.02]'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {isProcessing ? (
                   <>

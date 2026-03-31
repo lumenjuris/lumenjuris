@@ -16,5 +16,8 @@ front/.env.production
 #front proxy
 
 
-#backend node
+#backend nodeJS
 backNode/.env
+backNode/node_modules
+backNode/src/generated/prisma
+backNode/generated/prisma
