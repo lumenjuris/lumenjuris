@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { Upload, FileText, Type } from "lucide-react";
-import { useDropzone } from "react-dropzone";
+
+import InputFile from "../common/InputFile";
 
 interface TextInputZoneProps {
   onTextSubmit: (text: string, fileName: string) => void;
@@ -29,17 +30,6 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
     onTextSubmit(textContent.trim(), autoName);
   };
 
-  // const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (file) {
-  //     if (file.type !== "application/pdf") {
-  //       alert("Seuls les fichiers PDF sont acceptés.");
-  //       return;
-  //     }
-  //     onFileUpload(file);
-  //   }
-  // };
-
   // Fonction onDrop pour react-dropzone
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -55,13 +45,6 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
     },
     [onFileUpload],
   );
-  // Props pour react-dropzone | Remplace les props de la balise <input/>
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
-    accept: { "application/pdf": [".pdf"] },
-    disabled: isProcessing,
-    multiple: false,
-  });
 
   const isTextValid = textContent.trim().length >= 100;
 
@@ -173,30 +156,15 @@ Le prestataire s'engage à...
           </div>
         ) : (
           <div className="p-6">
-            {/* React-dropzone pour le drag & drop */}
-            <div
-              {...getRootProps()}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer has-disabled:opacity-50 has-disabled:cursor-not-allowed 
-              "
-            >
-              <input {...getInputProps()} className="hidden" />
-              <section>
-                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <Upload className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Importez votre contrat PDF
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Cliquez ici ou glissez-déposez votre fichier PDF
-                </p>
-                <div className="text-sm text-gray-400">
-                  <span className="bg-gray-100 px-3 py-1 rounded-full">
-                    📄 Format supporté : PDF uniquement
-                  </span>
-                </div>
-              </section>
-            </div>
+            {/* Composant input file avec React-dropzone pour le drag & drop */}
+            <InputFile
+              onDrop={onDrop}
+              accepted={{ "application/pdf": [".pdf"] }}
+              multiple={false}
+              fieldTitle="Importez votre contrat PDF"
+              fieldDescription="Cliquez ici ou glissez-déposez votre fichier PDF"
+              supportedFileType="PDF uniquement"
+            />
 
             {/* Message supprimé pour éviter duplication avec App.tsx */}
           </div>
