@@ -183,6 +183,8 @@ export const DocumentViewer = forwardRef<
       });
     }, [displayedText, rangeClauseRisk, clauses, activePatchCount, patches]);
 
+    // tester un event.Window pour cliquer sur une clause dans le Quill
+
     /*     
         //Librairie Quill pour l'edit de texte
         const htmlQuill = (str: string) => {
