@@ -14,7 +14,8 @@ import { ContractAnalysisSummary } from "./ContractAnalysisSummary";
 import { AnalysisContext } from "../../types/contextualAnalysis";
 import { findBestClauseSpan } from "../../utils/textPatchLocator";
 //import { useClauseHighlight } from '../hooks/useClauseHighlight'; Momentanément desactivé
-import { formatContent } from "../../utils/documentViewerTools/formatContent";
+// import { formatContent } from "../../utils/documentViewerTools/formatContent";
+import { formatContentToHtml } from "../../utils/documentViewerTools/formatContentToHtml";
 import { modernHighlighter } from "../../utils/modernHighlighter";
 
 import ReactQuill from "react-quill";
@@ -138,28 +139,49 @@ export const DocumentViewer = forwardRef<
     };
 
     //Construction du texte à render
-    const formattedContent = useMemo(() => {
-      console.log("Rerender du texte content");
-      const rangeClauseRisk: any[] = [];
+    // const formattedContent = useMemo(() => {
+    //   console.log("Rerender du texte content");
+    //   const rangeClauseRisk: any[] = [];
 
-      clauses.map((c) => {
-        const range = findBestClauseSpan(displayedText, c);
-        rangeClauseRisk.push({ ...range, clauseId: c.id });
+    //   clauses.map((c) => {
+    //     const range = findBestClauseSpan(displayedText, c);
+    //     rangeClauseRisk.push({ ...range, clauseId: c.id });
+    //   });
+
+    //   rangeClauseRisk.sort((a, b) => a.start - b.start);
+    //   return formatContent({
+    //     text: displayedText,
+    //     clauseRiskRange: rangeClauseRisk,
+    //     patches,
+    //     clauses,
+    //     editingClauseId,
+    //     setEditingClauseId,
+    //     recommendationIndex,
+    //     setRecommendationIndex,
+    //     handleClickSpanClause,
+    //   });
+    // }, [displayedText, clauses, activePatchCount, editingClauseId, patches]);
+
+    //Construction du texte à render pour le Quill
+    const rangeClauseRisk = useMemo(() => {
+      const ranges: any[] = [];
+      clauses.map((clause) => {
+        const range = findBestClauseSpan(displayedText, clause);
+        ranges.push({ ...range, clauseId: clause.id });
       });
+      ranges.sort((a, b) => a.start - b.start);
+      return ranges;
+    }, [displayedText, clauses]);
 
-      rangeClauseRisk.sort((a, b) => a.start - b.start);
-      return formatContent({
+    const htmlContent = useMemo(() => {
+      console.log("Rerender du texte content");
+      return formatContentToHtml({
         text: displayedText,
         clauseRiskRange: rangeClauseRisk,
         patches,
         clauses,
-        editingClauseId,
-        setEditingClauseId,
-        recommendationIndex,
-        setRecommendationIndex,
-        handleClickSpanClause,
       });
-    }, [displayedText, clauses, activePatchCount, editingClauseId, patches]);
+    }, [displayedText, rangeClauseRisk, clauses, activePatchCount, patches]);
 
     /*     
         //Librairie Quill pour l'edit de texte
@@ -216,11 +238,11 @@ export const DocumentViewer = forwardRef<
                 transition={{ duration: 0.4 }}
               >
                 <div className="max-w-4xl mx-auto space-y-2">
-                  {formattedContent.length > 0 ? (
+                  {htmlContent.length > 0 ? (
                     <div>
                       <ReactQuill
-                        theme="bubble" //sinon bubble pour avoir le text directement editable sans les tools
-                        value={displayedText}
+                        theme="bubble"
+                        value={htmlContent}
                         onChange={() => console.log("text changed in quill")}
                       />
                     </div>
