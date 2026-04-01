@@ -1,6 +1,5 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
@@ -12,22 +11,28 @@ datasource db {
   provider = "mysql"
 }
 
-
-
-
 //==== ENUM ====
 
+enum Role{
+  USER
+  ADMIN
+}
 
+enum AuthProvider{
+  GOOGLE
+}
 
-
-
-
+enum SubscriptionStatus{
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
 
 
 //==== CREATION DES MODELS ====
 
-// --- UTILISATEUR ---
-
+// Utilisateurs
 model User{
   idUser                Int     @id @default(autoincrement())
   role                  Role    @default(USER)
@@ -42,40 +47,23 @@ model User{
   tokens                Token[]
   events                Event[]
   authProviders         AuthProviderAccount[]
-  subscription          Subscription?
+  subscription          Subscription[]
 
   enterpriseId          Int?
   enterprise            Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
 
   userCredit            UserCredit?
-
-  preference            UserPreference?  
-
-  documentCustom        DocumentCustom[]
 }
 
 
-
-model UserPreference{
-  idUserPreference      Int @id @default(autoincrement())
-  preferenceUI          Json?
-
-  //relation
-  userId                Int @unique
-  user                  User @relation(fields:[userId], references : [idUser])
-}
-
-
-
-// --- ENTREPRISE ---
-
+//Entreprise
 model Enterprise{
   idEnterprise          Int     @id @default(autoincrement())
   siren                 String?
   codeNaf               String?
   name                  String
   conventionCollective  String
-  statusJuridique       String
+  statusJurisique       String
 
   //relation
   users                 User[]
@@ -89,15 +77,13 @@ model Address{
   codePostal            String
   pays                  String @default("France")
 
-  enterpriseId          Int? @unique
+  enterpriseId          Int?
   enterprise            Enterprise? @relation(fields : [enterpriseId], references : [idEnterprise])
 }
 
 
 
-
-// --- AUTH VIA PROVIDER ---
-
+//Synchronisation provider
 model AuthProviderAccount{
   idAuthProvider        Int @id @default(autoincrement())
   providerId            String
@@ -110,9 +96,7 @@ model AuthProviderAccount{
 
 
 
-
-// --- SECURITE ---
-
+//Sécurité (token)
 model Token{
   idToken               Int @id @default(autoincrement())
   token                 String @unique
@@ -125,9 +109,7 @@ model Token{
 
 
 
-
-// --- EVENTS ---
-
+//Gestion d'événement
 model Event{
   idEvent               Int @id @default(autoincrement())
   type                  String
@@ -135,37 +117,25 @@ model Event{
   expiresAt             DateTime
 
   //relation
-  userId                Int?
-  user                  User? @relation(fields : [userId], references : [idUser])
-  documentCustom        DocumentCustom?
+  userId                Int
+  user                  User @relation(fields : [userId], references : [idUser])
+  Document              Document?
 }
 
 
-model DocumentCustom{
-  idDocumentCustom      Int @id @default(autoincrement())
+model Document{
+  idDocument            Int @id @default(autoincrement())
   type                  String
-  templateContent       String @db.Text
+  templateContent       String @db.text
 
   //relation
-  userId                Int?
-  user                  User? @relation(fields : [userId], references : [idUser])
-
-  eventId               Int? @unique
+  eventId               Int?
   event                 Event? @relation(fields : [eventId], references : [idEvent])
 }
 
-model DocumentTemplate{
-  idDocument            Int @id @default(autoincrement())
-  type                  String
-  templateContent       String @db.Text
-
-}
 
 
-
-
-// --- CREDIT ET PAYMENT ---
-
+//Gestion credit et payment
 model UserCredit{
   idUserCredit          Int @id @default(autoincrement())
   creditSignature       Int
@@ -173,6 +143,8 @@ model UserCredit{
   creditGenerationDoc   Int
 
   //relation
+  subscriptionId        Int @unique
+  subscription          Subscription @relation(fields: [subscriptionId], references: [idSubscription])
 
   userId                Int @unique
   user                  User @relation(fields: [userId], references: [idUser])           
@@ -188,15 +160,15 @@ model Subscription{
   stripePriceId         String?
 
   //relation
-  userId                Int @unique
+  userId                Int
   user                  User @relation(fields: [userId], references: [idUser])  
 
   planId                Int
   plan                  Plan @relation(fields: [planId], references: [idPlan])
 
+  userCredit            UserCredit?
   facture               Facture[]
 }
-
 
 model Plan{
   idPlan                Int @id @default(autoincrement())
@@ -236,7 +208,6 @@ model Llm{
 
   llmUsage              LlmUsage[] 
 }
-
 
 model LlmUsage{
   idLlmUsage            Int     @id @default(autoincrement())
