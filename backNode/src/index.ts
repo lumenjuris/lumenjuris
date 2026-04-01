@@ -61,7 +61,7 @@ app.get("/auth/google/callback", async (req: Request, res: Response) => {
         code,
         state
     })
-
+    
     if (!process.env.JWT_SECRET) {
         throw new Error(".env JWT_SECRET is not defined");
     }
