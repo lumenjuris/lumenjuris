@@ -1,11 +1,11 @@
 import { Navigation } from "../components/Navigation"
-
+import InputFile from "../components/common/InputFile";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   LayoutDashboard, FileText, PenTool, ShieldCheck, MessageSquare,
   Calculator, Newspaper, Settings, Lock, Scale, Bell, Search,
-  PanelLeft, Upload, Briefcase, ClipboardList, BookOpen, Tag,
+  PanelLeft, Briefcase, ClipboardList, BookOpen, Tag,
   ArrowRight, CalendarClock, AlertTriangle, Clock, FileCheck, ChevronDown,
 } from "lucide-react";
 
@@ -44,8 +44,6 @@ const docTypes = [
 
 export function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const handleFile = useCallback((file: File) => {
@@ -53,15 +51,9 @@ export function Dashboard() {
     navigate("/analyzer", { state: { file } });
   }, [navigate]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+  const onDrop = useCallback((files: File[]) => {
+    if (files[0]) handleFile(files[0]);
   }, [handleFile]);
-
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
-  const handleDragLeave = () => setDragOver(false);
 
   return (
     <div className="flex min-h-screen w-full bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
@@ -197,28 +189,21 @@ export function Dashboard() {
                   </div>
                   <ShieldCheck className="h-5 w-5 text-gray-300" />
                 </div>
-                <div
-                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center mb-4 transition-colors cursor-pointer ${
-                    dragOver
-                      ? "border-[#354F99] bg-[#354F99]/5"
-                      : "border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5"
-                  }`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-                  />
-                  <Upload className={`h-8 w-8 mx-auto mb-2 transition-colors ${dragOver ? "text-blue-400" : "text-gray-300"}`} />
-                  <p className="text-sm font-medium text-gray-700">Glissez-déposez votre document ici</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, DOCX – Contrats, avenants, procédures</p>
-                </div>
+                <InputFile
+                  onDrop={onDrop}
+                  accepted={{
+                    "application/pdf": [".pdf"]
+                  }}
+                  multiple={false}
+                  fieldTitle="Cliquez ici ou glissez-déposez votre fichier PDF"
+                  fieldDescription="Contrats, avenants, procédures"
+                  supportedFileType="PDF"
+                  fieldClassName="mb-4 p-6 border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5"
+                  iconClassName="w-10 h-10 bg-slate-100 text-gray-300"
+                  fieldTitleClassName="text-sm font-medium text-gray-700 mb-0"
+                  fieldDescriptionClassName="text-xs text-gray-400 mb-0"
+                  fileTypeClassName="hidden"
+                />
                 <Link to="/analyzer" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
                   Analyser un document <ArrowRight className="h-4 w-4" />
                 </Link>
