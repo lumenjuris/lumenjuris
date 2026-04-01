@@ -31,13 +31,10 @@ const InputFile = ({
   accepted,
   multiple = false,
 }: InputFileProps) => {
-
-
   // Props pour react-dropzone | Remplace les props de la balise <input/>
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
-    //accept: Object.keys(accepted).length > 0 ? accepted : undefined, Ajout de accepted && (si json vide cela reste true)
-    accept: accepted && Object.keys(accepted).length ? accepted : undefined,
+    accept: Object.keys(accepted).length > 0 ? accepted : undefined,
     disabled: disabled,
     multiple: multiple,
   });

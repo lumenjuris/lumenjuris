@@ -29,7 +29,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   originalContent,
   fileName
 }) => {
-  
   const [showComparison, setShowComparison] = useState(false);
 
   // RESTAURATION: Récupérer le nombre de patches appliqués depuis le store

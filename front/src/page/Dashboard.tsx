@@ -9,12 +9,12 @@ import {
 } from "lucide-react";
 
 const kpiCards = [
-  { icon: FileText, iconBg: "bg-slate-100 text-black-500", value: "48", label: "Nombre de contrats", sub: "Total actifs", badge: null },
-  { icon: FileCheck, iconBg: "bg-green-50 text-green-600", value: "32", label: "Contrats signés", sub: null, badge: "+5 ce mois" },
-  { icon: Clock, iconBg: "bg-yellow-50 text-yellow-600", value: "12", label: "Contrats en cours", sub: "En attente de signature", badge: null },
-  { icon: CalendarClock, iconBg: "bg-slate-100 text-black-500", value: "4", label: "Arrivées bientôt", sub: "Dans les 30 prochains jours", badge: null },
-  { icon: ShieldCheck, iconBg: "bg-slate-100 text-black-500", value: "5", label: "Procédures en cours", sub: "2 échéances cette semaine", badge: null },
-  { icon: AlertTriangle, iconBg: "bg-red-50 text-red-500", value: "3", label: "Alertes juridiques", sub: "2 prioritaires", badge: null },
+  { icon: FileText,     iconBg: "bg-slate-100 text-black-500", value: "48", label: "Nombre de contrats",    sub: "Total actifs",                     badge: null },
+  { icon: FileCheck,    iconBg: "bg-green-50 text-green-600", value: "32", label: "Contrats signés",        sub: null,                               badge: "+5 ce mois" },
+  { icon: Clock,        iconBg: "bg-yellow-50 text-yellow-600", value: "12", label: "Contrats en cours",   sub: "En attente de signature",          badge: null },
+  { icon: CalendarClock,iconBg: "bg-slate-100 text-black-500", value: "4",  label: "Arrivées bientôt",      sub: "Dans les 30 prochains jours",      badge: null },
+  { icon: ShieldCheck,  iconBg: "bg-slate-100 text-black-500", value: "5",  label: "Procédures en cours",   sub: "2 échéances cette semaine",        badge: null },
+  { icon: AlertTriangle,iconBg: "bg-red-50 text-red-500",     value: "3",  label: "Alertes juridiques",    sub: "2 prioritaires",                   badge: null },
 ];
 
 const veilleItems = [
@@ -24,10 +24,10 @@ const veilleItems = [
 ];
 
 const docTypes = [
-  { icon: Briefcase, label: "CDI", sub: "Contrat durée indéterminée" },
-  { icon: ClipboardList, label: "CDD", sub: "Contrat durée déterminée" },
-  { icon: FileText, label: "Avenant", sub: "Modification contractuelle" },
-  { icon: BookOpen, label: "Lettre disciplinaire", sub: "Procédure disciplinaire" },
+  { icon: Briefcase,    label: "CDI",                 sub: "Contrat durée indéterminée" },
+  { icon: ClipboardList,label: "CDD",                 sub: "Contrat durée déterminée" },
+  { icon: FileText,     label: "Avenant",             sub: "Modification contractuelle" },
+  { icon: BookOpen,     label: "Lettre disciplinaire",sub: "Procédure disciplinaire" },
 ];
 
 export function Dashboard() {
@@ -43,41 +43,7 @@ export function Dashboard() {
   }, [handleFile]);
 
   return (
-    <div className="flex min-h-screen w-full bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-
-      {/* ── Sidebar ── */}
-      {sidebarOpen && (
-        <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-[#1a1d23] z-20">
-          <div className="p-4 pb-2">
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#354F99]">
-                <Scale className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-white tracking-tight">LumenJuris</span>
-                <span className="text-[10px] text-gray-400 leading-none">Conformité RH</span>
-              </div>
-            </Link>
-          </div>
-
-          <nav className="flex-1 overflow-auto pt-4 px-2">
-            <ul className="flex flex-col gap-1">
-              {navItems.map((item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${item.active
-                      ? "bg-white/10 text-white font-medium"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
-                      }`}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+    <div className="space-y-6 max-w-7xl">
 
             <div className="flex items-end justify-between">
               <div>
@@ -123,27 +89,21 @@ export function Dashboard() {
                   </div>
                   <ShieldCheck className="h-5 w-5 text-gray-300" />
                 </div>
-                <div
-                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center mb-4 transition-colors cursor-pointer ${dragOver
-                    ? "border-[#354F99] bg-[#354F99]/5"
-                    : "border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5"
-                    }`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-                  />
-                  <Upload className={`h-8 w-8 mx-auto mb-2 transition-colors ${dragOver ? "text-blue-400" : "text-gray-300"}`} />
-                  <p className="text-sm font-medium text-gray-700">Glissez-déposez votre document ici</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, DOCX – Contrats, avenants, procédures</p>
-                </div>
+                <InputFile
+                  onDrop={onDrop}
+                  accepted={{
+                    "application/pdf": [".pdf"]
+                  }}
+                  multiple={false}
+                  fieldTitle="Cliquez ici ou glissez-déposez votre fichier PDF"
+                  fieldDescription="Contrats, avenants, procédures"
+                  supportedFileType="PDF"
+                  fieldClassName="mb-4 p-6 border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5"
+                  iconClassName="w-10 h-10 bg-slate-100 text-gray-300"
+                  fieldTitleClassName="text-sm font-medium text-gray-700 mb-0"
+                  fieldDescriptionClassName="text-xs text-gray-400 mb-0"
+                  fileTypeClassName="hidden"
+                />
                 <Link to="/analyzer" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
                   Analyser un document <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -215,9 +175,9 @@ export function Dashboard() {
                   <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Indemnité de licenciement</p>
                   <div className="space-y-2.5">
                     {[
-                      { label: "Ancienneté", value: "8 ans" },
+                      { label: "Ancienneté",          value: "8 ans" },
                       { label: "Salaire brut mensuel", value: "3 200 €" },
-                      { label: "Motif", value: "Personnel" },
+                      { label: "Motif",                value: "Personnel" },
                     ].map((row) => (
                       <div key={row.label} className="flex justify-between items-center">
                         <span className="text-xs text-gray-400">{row.label}</span>

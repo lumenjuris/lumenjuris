@@ -1,5 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
@@ -12,251 +13,52 @@ datasource db {
 }
 
 
+// Tables liées aux utilisateurs
+model User { 
+  id    Int     @id @default(autoincrement()) 
+  email String  @unique
+  first_name  String?
+  last_name String?
+  Siren Int?
+  
+} 
 
 
-//==== ENUM ====
 
-enum Role{
-  USER
-  ADMIN
+
+model Token {
+  id Int @id @default(autoincrement())
+
 }
 
-enum AuthProvider{
-  GOOGLE
-}
-
-enum SubscriptionStatus{
-  ACTIVE
-  CANCELLED
-  EXPIRED
-  PENDING
-}
-
-
-
-
-//==== CREATION DES MODELS ====
-
-// --- UTILISATEUR ---
-
-model User{
-  idUser                Int     @id @default(autoincrement())
-  role                  Role    @default(USER)
-  email                 String  @unique
-  nom                   String 
-  prenom                String
-  isVerified            Boolean @default(false)
-  avatarUrl             String?
-  stripeCustomerId      String?
-
-  //relation 
-  tokens                Token[]
-  events                Event[]
-  authProviders         AuthProviderAccount[]
-  subscription          Subscription?
-
-  enterpriseId          Int?
-  enterprise            Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
-
-  userCredit            UserCredit?
-
-  preference            UserPreference?  
-
-  documentCustom        DocumentCustom[]
-}
-
-
-model UserPreference{
-  idUserPreference      Int @id @default(autoincrement())
-  preferenceUI          Json?
-
-  //relation
-  userId                Int @unique
-  user                  User @relation(fields:[userId], references : [idUser])
-}
-
-
-
-// --- ENTREPRISE ---
-
-model Enterprise{
-  idEnterprise          Int     @id @default(autoincrement())
-  siren                 String?
-  codeNaf               String?
-  name                  String
-  conventionCollective  String
-  statusJuridique       String
-
-  //relation
-  users                 User[]
-  address               Address?
-}
-
-
-model Address{
-  idAddress             Int @id @default(autoincrement())
-  address               String
-  codePostal            String
-  pays                  String @default("France")
-
-  enterpriseId          Int? @unique
-  enterprise            Enterprise? @relation(fields : [enterpriseId], references : [idEnterprise])
-}
-
-
-
-
-// --- AUTH VIA PROVIDER ---
-
-model AuthProviderAccount{
-  idAuthProvider        Int @id @default(autoincrement())
-  providerId            String
-  provider              AuthProvider
-
-  //relation
-  userId                Int
-  user                  User @relation(fields : [userId], references : [idUser])
-}
-
-
-
-
-// --- SECURITE ---
-
-model Token{
-  idToken               Int @id @default(autoincrement())
-  token                 String @unique
-  expiresAt             DateTime
-
-  //relation
-  userId                Int
-  user                  User @relation(fields : [userId], references : [idUser]) 
-}
-
-
-
-
-// --- EVENTS ---
-
-model Event{
-  idEvent               Int @id @default(autoincrement())
-  type                  String
-  state                 String
-  expiresAt             DateTime
-
-  //relation
-  userId                Int?
-  user                  User? @relation(fields : [userId], references : [idUser])
-  documentCustom        DocumentCustom?
-}
-
-
-model DocumentCustom{
-  idDocumentCustom      Int @id @default(autoincrement())
-  type                  String
-  templateContent       String @db.Text
-
-  //relation
-  userId                Int?
-  user                  User? @relation(fields : [userId], references : [idUser])
-
-  eventId               Int? @unique
-  event                 Event? @relation(fields : [eventId], references : [idEvent])
-}
-
-model DocumentTemplate{
-  idDocument            Int @id @default(autoincrement())
-  type                  String
-  templateContent       String @db.Text
+// Evenement des utilisateurs
+model Event {
+  id Int @id @default(autoincrement())
 
 }
 
 
+// definitation des coùt d'un model LLM
+model LlmModel {
+  id Int @default(autoincrement())
+  model String 
 
-
-// --- CREDIT ET PAYMENT ---
-
-model UserCredit{
-  idUserCredit          Int @id @default(autoincrement())
-  creditSignature       Int
-  creditAnalyse         Int
-  creditGenerationDoc   Int
-
-  //relation
-
-  userId                Int @unique
-  user                  User @relation(fields: [userId], references: [idUser])           
 }
 
+//Usage token des models LLM
+model LlmCost {
+  id Int @default(autoincrement())
 
-model Subscription{
-  idSubscription        Int @id @default(autoincrement())
-  status                SubscriptionStatus
-  startAt               DateTime
-  expiresAt             DateTime
-  stripeSubscriptionId  String?
-  stripePriceId         String?
-
-  //relation
-  userId                Int @unique
-  user                  User @relation(fields: [userId], references: [idUser])  
-
-  planId                Int
-  plan                  Plan @relation(fields: [planId], references: [idPlan])
-
-  facture               Facture[]
 }
 
-
-model Plan{
-  idPlan                Int @id @default(autoincrement())
-  name                  String
-  price                 Int
-  interval              String
-  creditSignature       Int
-  creditGenerationDoc   Int
-  creditAnalyse         Int
-
-  //relation
-  subscription          Subscription[]
+// Facturation des utilisateurs
+model Factures {
+  id Int @id @default(autoincrement())
+  
 }
 
+// Current crédit des utilisateurs
+model Credit {
+  id Int @id @default(autoincrement())
 
-model Facture{
-  idFacture             Int @id @default(autoincrement())
-  price                 Int
-  stripeInvoiceId       String
-  createdAt             DateTime @default(now())
-
-  //relation
-
-  subscriptionId        Int
-  subscription          Subscription @relation(fields: [subscriptionId], references : [idSubscription])
-}
-
-
-
-
-// --- RESSOURCE LLM ---
-
-model Llm{
-  idLlm                 Int     @id @default(autoincrement())
-  name                  String
-  tokenPrice            Float
-
-  llmUsage              LlmUsage[] 
-}
-
-
-model LlmUsage{
-  idLlmUsage            Int     @id @default(autoincrement())
-  startAt               DateTime
-  expiresAt             DateTime
-  totalCost             Int
-  tokenInput            Int
-  tokenOutput           Int
-
-  //relation
-  llmId                 Int
-  llm                   Llm @relation(fields : [llmId], references : [idLlm])
 }
