@@ -74,7 +74,7 @@ export default defineConfig({
       '/legifrance-search': { target: 'http://localhost:5678', changeOrigin: true },
       '/jurisprudence': { target: 'http://localhost:5678', changeOrigin: true },
       '/analyze-clause': { target: 'http://localhost:5678', changeOrigin: true },
-      '/chat': { target: 'http://localhost:5678', changeOrigin: true },
+      '^/chat$': { target: 'http://localhost:5678', changeOrigin: true },
     },
   },
 })
