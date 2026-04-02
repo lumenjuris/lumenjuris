@@ -96,6 +96,9 @@ export function ChatJuridique() {
     setInput("");
     setIsSending(true);
 
+    // Snapshot des messages avant la mise à jour (sans le message qu'on vient d'ajouter)
+    const previousMessages = conversations.find((c) => c.id === convId)?.messages ?? [];
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -103,6 +106,9 @@ export function ChatJuridique() {
         body: JSON.stringify({
           message: text,
           context: "Tu es un assistant juridique spécialisé en droit du travail français. Réponds avec précision en citant les articles du Code du travail pertinents.",
+          history: previousMessages
+            .filter((m) => m.role === "user" || m.role === "bot")
+            .map((m) => ({ role: m.role === "bot" ? "assistant" : "user", content: m.text })),
         }),
       });
 
@@ -185,6 +191,7 @@ export function ChatJuridique() {
 
       {/* Zone principale */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[#354F99]" />
