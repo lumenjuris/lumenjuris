@@ -36,7 +36,7 @@ export const formatContentToHtml = ({
 
   const processTextFragment = (fragment: string) => {
     const paragraphs = fragment
-      .split(/(?=(?:Article|Objet))|(?=\*\*)|(?=[A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜ][.)\-:;])/)
+      .split(/(?=(?:Article|Objet))|(?=\*\*)|(?=[A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜ][.)\-;])/)
       .filter((paragraph) => paragraph.trim());
     for (const paragraph of paragraphs) {
       const trimmed = paragraph.trim();
