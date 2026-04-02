@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useMemo,
   useState,
+  useEffect,
 } from "react";
 import { motion } from "framer-motion";
 import { ClauseRisk } from "../../types";
@@ -163,28 +164,40 @@ export const DocumentViewer = forwardRef<
     // }, [displayedText, clauses, activePatchCount, editingClauseId, patches]);
 
     //Construction du texte à render pour le Quill
-    const rangeClauseRisk = useMemo(() => {
-      const ranges: any[] = [];
+    const htmlFormattedContent = useMemo(() => {
+      const rangeClauseRisk: any[] = [];
       clauses.map((clause) => {
         const range = findBestClauseSpan(displayedText, clause);
-        ranges.push({ ...range, clauseId: clause.id });
+        rangeClauseRisk.push({ ...range, clauseId: clause.id });
       });
-      ranges.sort((a, b) => a.start - b.start);
-      return ranges;
-    }, [displayedText, clauses]);
-
-    const htmlContent = useMemo(() => {
-      console.log("Rerender du texte content");
+      rangeClauseRisk.sort((a, b) => a.start - b.start);
       return formatContentToHtml({
         text: displayedText,
         clauseRiskRange: rangeClauseRisk,
         patches,
         clauses,
       });
-    }, [displayedText, rangeClauseRisk, clauses, activePatchCount, patches]);
+    }, [displayedText, clauses, activePatchCount, patches]);
 
-    // tester un event.Window pour cliquer sur une clause dans le Quill
+    // Ref sur le wrapper du Quill pour attacher le listener directement sur .ql-editor
+    const quillWrapperRef = useRef<HTMLDivElement>(null);
 
+    useEffect(() => {
+      const editor = quillWrapperRef.current?.querySelector(".ql-editor");
+      if (!editor) return;
+
+      const handleClick = (event: Event) => {
+        const target = event.target as HTMLElement;
+        const span = target.closest("[data-clause-risk-id]");
+        if (span) {
+          const clauseId = span.getAttribute("data-clause-risk-id");
+          if (clauseId) handleClickSpanClause(clauseId);
+        }
+      };
+
+      editor.addEventListener("click", handleClick);
+      return () => editor.removeEventListener("click", handleClick);
+    }, [htmlFormattedContent]);
     /*     
         //Librairie Quill pour l'edit de texte
         const htmlQuill = (str: string) => {
@@ -241,11 +254,11 @@ export const DocumentViewer = forwardRef<
                 transition={{ duration: 0.4 }}
               >
                 <div className="max-w-4xl mx-auto space-y-2">
-                  {htmlContent.length > 0 ? (
-                    <div>
+                  {htmlFormattedContent.length > 0 ? (
+                    <div ref={quillWrapperRef}>
                       <ReactQuill
                         theme="bubble"
-                        value={htmlContent}
+                        value={htmlFormattedContent}
                         onChange={() => console.log("text changed in quill")}
                       />
                     </div>
