@@ -57,7 +57,7 @@ export function Calculateur() {
       monthlyGrossSalary: parseFloat(salaireMensuelBrut) || 0,
       averageSalary12Months: parseFloat(salaireMoyen12Mois) || 0,
       averageSalary3Months: parseFloat(salaireMoyen3Mois) || 0,
-      partTimeRatio: parseFloat(ratioTempsPartiel) || 1,
+      partTimeRatio: ratioTempsPartiel === "" ? 1 : parseFloat(ratioTempsPartiel),
     });
     setResultat(calcul);
     if (calcul.errors.length > 0) {
@@ -239,4 +239,3 @@ export function Calculateur() {
     </div>
   );
 }
-
