@@ -6,7 +6,7 @@ import axios from "axios"
 import jwt from "jsonwebtoken"
 import cookieParser from "cookie-parser"
 
-
+import { User } from "./services/classUser";
 
 
 /**
@@ -114,11 +114,23 @@ app.get("/auth/google/callback", async (req: Request, res: Response) => {
 })
 
 
+async function sandbox(){
+    const user = new User()
+    const data = {
+        nom : "Beaute",
+        prenom : "Laurent",
+        email : "l.beaute@laposte.net",
+        password : "password123",
+        cgu : true
+    }
+    const created = await user.create(data)
+    console.log("user created :", created)
+    //await user.authenticate("password123", "l.beaute@laposte.net")
+}
 
 
 
-
-app.listen(port, () => {
+app.listen(port, async () => {
     console.log(`Serveur backend nodejs running on port ${port}`);
-    console.log("env", process.env.DATABASE_PASSWORD)
+    await sandbox()
 })
