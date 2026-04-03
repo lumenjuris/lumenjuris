@@ -36,6 +36,7 @@
     "react-dom": "^18.2.0",
     "react-dropzone": "^15.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-markdown": "^10.1.0",
     "react-pdf": "^7.7.2",
     "react-quill": "^2.0.0",
     "react-router-dom": "^7.13.1",

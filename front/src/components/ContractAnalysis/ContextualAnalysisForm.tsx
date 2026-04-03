@@ -29,11 +29,15 @@ export const ContextualAnalysisForm: React.FC<ContextualAnalysisFormProps> = ({
     contractObjective : "",
   });
 
+
+
   const [isDetecting, setIsDetecting] = useState(false);
   const [placeholders] = useState({ mission: '', questions: '' }); // Retiré setPlaceholders
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEquitable = context.interestOrientation === 'balanced';
 
+
+  
   // Détection automatique au chargement du formulaire - 100% IA
   useEffect(() => {
     if (!extractedText || extractedText.length < 100) {

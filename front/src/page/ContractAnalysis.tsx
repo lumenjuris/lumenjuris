@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Header } from '../components/ContractAnalysis/Header';
 import { UploadZone } from '../components/ContractAnalysis/UploadZone';
@@ -23,6 +24,8 @@ import { modernHighlighter } from '../utils/modernHighlighter';
 
 export default function ContractAnalysis() {
 
+
+  const location = useLocation();
 
   // États locaux
   const [selectedClause, setSelectedClause] = useState<string | null>(null);
@@ -178,6 +181,20 @@ export default function ContractAnalysis() {
       console.error('Erreur upload:', error);
     }
   };
+
+  // Déclenche automatiquement l'upload si un fichier est passé via navigation state (autre page)
+  useEffect(() => {
+    const file = (location.state as { file?: File } | null)?.file;
+    if (file) {
+      // Efface le state de navigation immédiatement : empêche un re-déclenchement si le
+      // composant est remonté (Mode dev, refresh, retour navigateur, etc.)
+      window.history.replaceState({}, '', window.location.pathname);
+      onFileUpload(file);
+    }
+  // Tableau vide intentionnel : on veut s'exécuter une seule fois au montage.
+  // Ajouter onFileUpload en dépendance causerait une boucle infinie (sa référence change à chaque render).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const onTextSubmit = async (text: string, fileName: string) => {

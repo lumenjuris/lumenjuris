@@ -1,24 +1,12 @@
-import { Navigation } from "../components/Navigation"
-
+import InputFile from "../components/common/InputFile";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useRef, useCallback } from "react";
+import { useCallback } from "react";
 import {
-  LayoutDashboard, FileText, PenTool, ShieldCheck, MessageSquare,
-  Calculator, Newspaper, Settings, Lock, Scale, Bell, Search,
-  PanelLeft, Upload, Briefcase, ClipboardList, BookOpen, Tag,
-  ArrowRight, CalendarClock, AlertTriangle, Clock, FileCheck, ChevronDown,
+  FileText, ShieldCheck, MessageSquare,
+  Calculator, Newspaper, Lock,
+  Briefcase, ClipboardList, BookOpen, Tag,
+  ArrowRight, CalendarClock, AlertTriangle, Clock, FileCheck,
 } from "lucide-react";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard", active: true },
-  { icon: FileText, label: "Générateur de modèles", path: "/generateur" },
-  { icon: PenTool, label: "Signature", path: "/signature" },
-  { icon: ShieldCheck, label: "Analyse de conformité", path: "/analyzer" },
-  { icon: MessageSquare, label: "Chat juridique RH", path: "/chat" },
-  { icon: Calculator, label: "Calculateur juridique", path: "/calculateur" },
-  { icon: Newspaper, label: "Veille information", path: "/veille" },
-  { icon: Settings, label: "Paramètres", path: "/parametres" },
-];
 
 const kpiCards = [
   { icon: FileText,     iconBg: "bg-slate-100 text-black-500", value: "48", label: "Nombre de contrats",    sub: "Total actifs",                     badge: null },
@@ -30,9 +18,9 @@ const kpiCards = [
 ];
 
 const veilleItems = [
-  { tag: "Temps de travail", tagClass: "bg-green-100 text-green-700",  title: "Nouvelle obligation d'information des salariés en CDD",         date: "28 fév. 2026" },
-  { tag: "Rupture",          tagClass: "bg-yellow-100 text-yellow-700", title: "Réforme des indemnités prud'homales : barème actualisé",        date: "25 fév. 2026" },
-  { tag: "Discipline",       tagClass: "bg-red-100 text-red-600",       title: "Procédure disciplinaire : nouveaux délais de prescription",     date: "22 fév. 2026" },
+  { tag: "Temps de travail", tagClass: "bg-green-100 text-green-700",   title: "Nouvelle obligation d'information des salariés en CDD",         date: "28 fév. 2026" },
+  { tag: "Rupture",          tagClass: "bg-orange-100 text-orange-700", title: "Réforme des indemnités prud'homales : barème actualisé",        date: "25 fév. 2026" },
+  { tag: "Discipline",       tagClass: "bg-purple-100 text-purple-700", title: "Procédure disciplinaire : nouveaux délais de prescription",     date: "22 fév. 2026" },
 ];
 
 const docTypes = [
@@ -43,9 +31,6 @@ const docTypes = [
 ];
 
 export function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const handleFile = useCallback((file: File) => {
@@ -53,106 +38,13 @@ export function Dashboard() {
     navigate("/analyzer", { state: { file } });
   }, [navigate]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+  const onDrop = useCallback((files: File[]) => {
+    if (files[0]) handleFile(files[0]);
   }, [handleFile]);
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
-  const handleDragLeave = () => setDragOver(false);
-
   return (
-    <div className="flex min-h-screen w-full bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div className="space-y-6 max-w-7xl">
 
-      {/* ── Sidebar ── */}
-      {sidebarOpen && (
-        <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-[#1a1d23] z-20">
-          <div className="p-4 pb-2">
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#354F99]">
-                <Scale className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-white tracking-tight">LumenJuris</span>
-                <span className="text-[10px] text-gray-400 leading-none">Conformité RH</span>
-              </div>
-            </Link>
-          </div>
-
-          <nav className="flex-1 overflow-auto pt-4 px-2">
-            <ul className="flex flex-col gap-1">
-              {navItems.map((item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
-                      item.active
-                        ? "bg-white/10 text-white font-medium"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="p-4">
-            <div className="flex items-center justify-center gap-1.5 py-2">
-              <Lock className="h-3 w-3 text-gray-500" />
-              <span className="text-[10px] text-gray-500">Données sécurisées – Hébergement UE</span>
-            </div>
-          </div>
-        </aside>
-      )}
-
-      {/* ── Main ── */}
-      <div className={`flex-1 flex flex-col min-w-0 ${sidebarOpen ? "md:ml-64" : ""}`}>
-
-        {/* Header */}
-        <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="h-7 w-7 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            >
-              <PanelLeft className="h-4 w-4" />
-            </button>
-            <div className="hidden sm:flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-72">
-              <Search className="h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher un document, une clause..."
-                className="bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none w-full"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <Bell className="h-5 w-5 text-gray-400" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-green-500" />
-            </button>
-            <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-              <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium">
-                ML
-              </div>
-              <div className="hidden md:flex items-center gap-1 cursor-pointer">
-                <span className="text-sm font-medium text-gray-800">Marie L.</span>
-                <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <div className="space-y-6 max-w-7xl">
-
-            {/* Title */}
             <div className="flex items-end justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tableau de bord</h1>
@@ -164,7 +56,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* KPI Cards */}
+            {/* Statistiques */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               {kpiCards.map((card, i) => (
                 <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-3 shadow-sm">
@@ -197,29 +89,22 @@ export function Dashboard() {
                   </div>
                   <ShieldCheck className="h-5 w-5 text-gray-300" />
                 </div>
-                <div
-                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center mb-4 transition-colors cursor-pointer ${
-                    dragOver
-                      ? "border-[#354F99] bg-[#354F99]/5"
-                      : "border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5"
-                  }`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.doc"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-                  />
-                  <Upload className={`h-8 w-8 mx-auto mb-2 transition-colors ${dragOver ? "text-blue-400" : "text-gray-300"}`} />
-                  <p className="text-sm font-medium text-gray-700">Glissez-déposez votre document ici</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, DOCX – Contrats, avenants, procédures</p>
-                </div>
-                <Link to="/analyzer" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
+                <InputFile
+                  onDrop={onDrop}
+                  accepted={{
+                    "application/pdf": [".pdf"]
+                  }}
+                  multiple={false}
+                  fieldTitle="Cliquez ici ou glissez-déposez votre fichier PDF"
+                  fieldDescription="Contrats, avenants, procédures"
+                  supportedFileType="PDF"
+                  fieldClassName="mb-4 p-6 border-gray-200 hover:border-lumenjuris hover:bg-lumenjuris/5"
+                  iconClassName="w-10 h-10 bg-slate-100 text-gray-300"
+                  fieldTitleClassName="text-sm font-medium text-gray-700 mb-0"
+                  fieldDescriptionClassName="text-xs text-gray-400 mb-0"
+                  fileTypeClassName="hidden"
+                />
+                <Link to="/conformite" className="inline-flex items-center gap-2 text-sm font-medium text-lumenjuris hover:text-lumenjuris transition-colors">
                   Analyser un document <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -237,17 +122,17 @@ export function Dashboard() {
                   {docTypes.map((item) => (
                     <button
                       key={item.label}
-                      className="flex flex-col items-start gap-1 p-3 rounded-lg border border-gray-200 hover:border-[#354F99] hover:bg-[#354F99]/5 transition-all text-left group"
+                      className="flex flex-col items-start gap-1 p-3 rounded-lg border border-gray-200 hover:border-lumenjuris hover:bg-lumenjuris/5 transition-all text-left group"
                     >
                       <div className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4 text-gray-400 group-hover:text-[#354F99] transition-colors" />
+                        <item.icon className="h-4 w-4 text-gray-400 group-hover:text-lumenjuris transition-colors" />
                         <span className="text-sm font-medium text-gray-800">{item.label}</span>
                       </div>
                       <span className="text-[11px] text-gray-400 leading-tight">{item.sub}</span>
                     </button>
                   ))}
                 </div>
-                <Link to="/generateur" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
+                <Link to="/generateur" className="inline-flex items-center gap-2 text-sm font-medium text-lumenjuris hover:text-lumenjuris transition-colors">
                   Créer un document <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -272,7 +157,7 @@ export function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <Link to="/chat" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
+                <Link to="/chatjuridique" className="inline-flex items-center gap-2 text-sm font-medium text-lumenjuris hover:text-lumenjuris transition-colors">
                   Poser une question <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -302,10 +187,10 @@ export function Dashboard() {
                   </div>
                   <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
                     <span className="text-xs font-medium text-gray-400">Estimation</span>
-                    <span className="text-lg font-bold text-green-600">6 400 €</span>
+                    <span className="text-lg font-bold text-lumenjuris">6 400 €</span>
                   </div>
                 </div>
-                <Link to="/calculateur" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
+                <Link to="/calculateur" className="inline-flex items-center gap-2 text-sm font-medium text-lumenjuris hover:text-lumenjuris transition-colors">
                   Calculer une indemnité <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -324,25 +209,22 @@ export function Dashboard() {
                 {veilleItems.map((item, i) => (
                   <div
                     key={i}
-                    className="p-4 rounded-lg border border-gray-200 hover:border-[#354F99] transition-colors cursor-pointer group"
+                    className="p-4 rounded-lg border border-gray-200 hover:border-lumenjuris transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Tag className="h-3 w-3 text-gray-400" />
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${item.tagClass}`}>{item.tag}</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-800 leading-snug group-hover:text-[#354F99] transition-colors">{item.title}</p>
+                    <p className="text-sm font-medium text-gray-800 leading-snug group-hover:text-lumenjuris transition-colors">{item.title}</p>
                     <p className="text-xs text-gray-400 mt-2">{item.date}</p>
                   </div>
                 ))}
               </div>
-              <Link to="/veille" className="inline-flex items-center gap-2 text-sm font-medium text-[#354F99] hover:text-[#4A65B0] transition-colors">
+              <Link to="/veille" className="inline-flex items-center gap-2 text-sm font-medium text-lumenjuris hover:text-lumenjuris transition-colors">
                 Voir toutes les actualités <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-          </div>
-        </main>
-      </div>
     </div>
   );
 }
