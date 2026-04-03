@@ -8,6 +8,7 @@ import FEATURE_FLAGS from '../config/features';
 
 export interface ExtractedContent {
   text: string;
+  html: string | null;
   isProtected: boolean;
   extractionQuality: 'low' | 'medium' | 'high';
   metadata: Record<string, any>;
@@ -96,6 +97,7 @@ async function extractViaServer(file: File, retries = MAX_RETRIES): Promise<Extr
 
       return {
         text: applyLightSanitizeIfEnabled(data.text, 'server'),
+        html: data.html || null,
         isProtected: false,
         extractionQuality: data.extraction_quality || 'high',
         metadata: {
@@ -184,6 +186,7 @@ async function extractViaPDFJS(file: File): Promise<ExtractedContent> {
 
     return {
       text: formattedText,
+      html: null,
       isProtected: formattedText.length === 0,
       extractionQuality: quality,
       metadata: {

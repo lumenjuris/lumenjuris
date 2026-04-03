@@ -2,6 +2,7 @@
 """
 Utilitaires pour extraction PDF avec Google Cloud Vision
 """
+import html as html_module
 import logging
 import os
 import re
@@ -272,6 +273,100 @@ def _extract_text_pdfminer(content: bytes) -> str:
     """Extrait le texte en utilisant pdfplumber/pdfminer.six."""
     with pdfplumber.open(io.BytesIO(content)) as pdf:
         return "\n\n".join(page.extract_text() or "" for page in pdf.pages)
+
+
+def _extract_html_from_pdf_dict(content: bytes) -> Optional[str]:
+    """
+    Extrait le texte du PDF avec mise en forme HTML (gras, italique, titres h1/h2)
+    en exploitant get_text("dict") de PyMuPDF.
+    Retourne None si PyMuPDF n'est pas disponible ou si l'extraction échoue.
+    """
+    if not PYMUPDF_AVAILABLE or not fitz:
+        return None
+    try:
+        doc = fitz.open(stream=content, filetype="pdf")
+
+        # Collecter toutes les tailles de police pour déterminer la taille "normale"
+        all_sizes: List[float] = []
+        for page in doc:
+            page_dict = page.get_text("dict")
+            for block in page_dict.get("blocks", []):
+                if block.get("type") != 0:
+                    continue
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        size = span.get("size", 0)
+                        if span.get("text", "").strip() and size > 0:
+                            all_sizes.append(size)
+
+        if not all_sizes:
+            doc.close()
+            return None
+
+        all_sizes.sort()
+        median_size = all_sizes[len(all_sizes) // 2]
+
+        html_parts: List[str] = []
+
+        for page in doc:
+            page_dict = page.get_text("dict")
+            for block in page_dict.get("blocks", []):
+                if block.get("type") != 0:
+                    continue  # ignorer les blocs image
+
+                block_lines_html: List[str] = []
+                block_sizes: List[float] = []
+
+                for line in block.get("lines", []):
+                    line_html = ""
+                    for span in line.get("spans", []):
+                        raw_text = span.get("text", "")
+                        if not raw_text.strip():
+                            line_html += html_module.escape(raw_text)
+                            continue
+
+                        flags = span.get("flags", 0)
+                        size = span.get("size", median_size)
+                        if size > 0:
+                            block_sizes.append(size)
+
+                        is_bold = bool(flags & 16)
+                        is_italic = bool(flags & 2)
+
+                        safe_text = html_module.escape(raw_text)
+
+                        if is_bold and is_italic:
+                            safe_text = f"<strong><em>{safe_text}</em></strong>"
+                        elif is_bold:
+                            safe_text = f"<strong>{safe_text}</strong>"
+                        elif is_italic:
+                            safe_text = f"<em>{safe_text}</em>"
+
+                        line_html += safe_text
+
+                    block_lines_html.append(line_html)
+
+                block_text = " ".join(block_lines_html).strip()
+                if not block_text:
+                    continue
+
+                block_max_size = max(block_sizes) if block_sizes else median_size
+
+                if block_max_size >= median_size * 1.5:
+                    html_parts.append(f"<h1>{block_text}</h1>")
+                elif block_max_size >= median_size * 1.2:
+                    html_parts.append(f"<h2>{block_text}</h2>")
+                else:
+                    html_parts.append(f"<p>{block_text}</p>")
+
+        doc.close()
+        result = "\n".join(html_parts)
+        return result if result.strip() else None
+
+    except Exception as e:
+        logger.warning(f"Erreur extraction HTML depuis PDF: {e}")
+        return None
+
 
 # --- CORRECTION DÉFINITIVE DE LA FONCTION D'EXTRACTION ---
 def _extract_text_from_pdf_content(content: bytes, scan_mode: bool) -> str:

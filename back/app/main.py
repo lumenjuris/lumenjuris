@@ -18,6 +18,7 @@ from back.services.pdf_processing import (
     corriger_espaces,
     extract_clauses_ia_robuste,
     _extract_text_from_pdf_content,
+    _extract_html_from_pdf_dict,
     _extract_keywords_basic,
     _sanitize_query_text,
     _legifrance_search,
@@ -105,6 +106,7 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
         raise HTTPException(status_code=400, detail="Type de fichier non autorisé")
 
     content = await file.read()
+    html_formatte = _extract_html_from_pdf_dict(content)
     texte_brut = _extract_text_from_pdf_content(content, scan)
     texte_corrige = corriger_espaces(texte_brut)
     clauses_detectees = extract_clauses_ia_robuste(texte_corrige)
@@ -114,6 +116,7 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
     return {
         "success": True,
         "text": texte_corrige,
+        "html": html_formatte,
         "clauses": clauses_detectees,
         "keywords": keywords or [],
         "filename": file.filename,

@@ -20,9 +20,11 @@ export interface TextPatch {
 interface DocumentTextState {
   originalText: string;
   currentText: string;
+  htmlContent: string | null;
   patches: TextPatch[];
   lastAppliedRecommendationKey?: string;
   setOriginalText: (text: string) => void;
+  setHtmlContent: (html: string | null) => void;
   applyPatch: (p: Omit<TextPatch, 'id' | 'originalSlice' | 'active'> & { originalSlice?: string }) => void;
   removePatch: (recommendationKey: string) => void;
   resetAll: () => void;
@@ -58,8 +60,11 @@ function rebuildFrom(originalText: string, patches: TextPatch[]): string {
 export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
   originalText: '',
   currentText: '',
+  htmlContent: null,
   patches: [],
   lastAppliedRecommendationKey: undefined,
+
+  setHtmlContent: (html) => set({ htmlContent: html }),
 
   setOriginalText: (text) => {
     set({ originalText: text, currentText: text, patches: [], lastAppliedRecommendationKey: undefined });
@@ -139,7 +144,7 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
     const { originalText } = get();
     //Ajout du clearAppliedRecommandations dans le resetAll
     useAppliedRecommendationsStore.getState().clearAllAppliedRecommendations();
-    set({ patches: [], currentText: originalText, lastAppliedRecommendationKey: undefined });
+    set({ patches: [], currentText: originalText, lastAppliedRecommendationKey: undefined, htmlContent: null });
     if (FEATURE_FLAGS.ENABLE_PATCH_PERSISTENCE) savePatches(originalText, []);
   },
 

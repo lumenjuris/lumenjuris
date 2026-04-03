@@ -17,6 +17,7 @@ import { findBestClauseSpan } from "../../utils/textPatchLocator";
 //import { useClauseHighlight } from '../hooks/useClauseHighlight'; Momentanément desactivé
 // import { formatContent } from "../../utils/documentViewerTools/formatContent";
 import { formatContentToHtml } from "../../utils/documentViewerTools/formatContentToHtml";
+import { injectClausesIntoHtml } from "../../utils/documentViewerTools/injectClausesIntoHtml";
 import { modernHighlighter } from "../../utils/modernHighlighter";
 
 import ReactQuill from "react-quill";
@@ -59,6 +60,7 @@ export const DocumentViewer = forwardRef<
     const showSidebar = isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR");
     const originalText = useDocumentTextStore((s) => s.originalText);
     const patches = useDocumentTextStore((s) => s.patches);
+    const htmlContent = useDocumentTextStore((s) => s.htmlContent);
     const resetAll = useDocumentTextStore((s) => s.resetAll);
     const activePatchCount = useMemo(
       () => patches.filter((p) => p.active).length,
@@ -165,6 +167,13 @@ export const DocumentViewer = forwardRef<
 
     //Construction du texte à render pour le Quill
     const htmlFormattedContent = useMemo(() => {
+      // Si le backend a fourni du HTML formaté, on l'utilise comme base
+      // et on y injecte les spans de clauses via l'API Range du DOM
+      if (htmlContent) {
+        return injectClausesIntoHtml(htmlContent, clauses, patches);
+      }
+
+      // Fallback : construction depuis le texte brut (PDF.js ou OCR)
       const rangeClauseRisk: any[] = [];
       clauses.map((clause) => {
         const range = findBestClauseSpan(displayedText, clause);
@@ -177,7 +186,7 @@ export const DocumentViewer = forwardRef<
         patches,
         clauses,
       });
-    }, [displayedText, clauses, activePatchCount, patches]);
+    }, [htmlContent, displayedText, clauses, activePatchCount, patches]);
 
     // Ref sur le wrapper du Quill pour attacher le listener directement sur .ql-editor
     const quillWrapperRef = useRef<HTMLDivElement>(null);
