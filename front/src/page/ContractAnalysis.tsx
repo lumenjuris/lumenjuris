@@ -16,7 +16,6 @@ import { useRiskStats } from '../hooks/useRiskStats';
 import { useShareUrl } from '../hooks/useShareUrl';
 import { useAppliedRecommendationsStore } from '../store/appliedRecommendationsStore';
 import { useDocumentTextStore } from '../store/documentTextStore';
-import { modernHighlighter } from '../utils/modernHighlighter';
 
 // ---------------------------------------------------------------------
 // SUPPRIMER LA FONCTION DÉPLACÉE PAR ERREUR (elle existe déjà en utils)
@@ -141,9 +140,6 @@ export default function ContractAnalysis() {
       }
     }, 300); // Délai pour laisser la modale se fermer complètement
 
-    setTimeout(() => {
-      modernHighlighter.clearAllHighlights()
-    }, 800)
   };
 
 
