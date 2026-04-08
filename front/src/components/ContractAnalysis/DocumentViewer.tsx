@@ -16,8 +16,6 @@ import { AnalysisContext } from "../../types/contextualAnalysis";
 import { findBestClauseSpan } from "../../utils/textPatchLocator";
 import { formatContentToHtml } from "../../utils/documentViewerTools/formatContentToHtml";
 import { injectClausesIntoHtml } from "../../utils/documentViewerTools/injectClausesIntoHtml";
-import { modernHighlighter } from "../../utils/modernHighlighter";
-
 import { useEditor, EditorContent } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Mark, mergeAttributes } from "@tiptap/core";
@@ -124,11 +122,10 @@ export const DocumentViewer = forwardRef<
     };
 
     const scrollAndHighlightClause = (clause: ClauseRisk) => {
-      if (!documentRef.current || !clause.content) return;
-      try {
-        modernHighlighter.highlightClause(clause, documentRef.current);
-      } catch (error) {
-        console.error("❌ Modern highlighting error:", error);
+      if (!documentRef.current || !clause.id) return;
+      const span = documentRef.current.querySelector(`[data-clause-risk-id="${clause.id}"]`);
+      if (span) {
+        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     };
 

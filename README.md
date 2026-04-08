@@ -1,2 +1,19 @@
-- Get the project from GIT: read doc/README_GIT.adoc (use the VSCODE extension: AsciiDoc to read the file)
-- Launch the project: read start.txt
+- Launch the project:
+
+local :
+
+front :
+    cd front
+    npm install
+    nmp run dev
+    
+back :
+    cd back
+    source venv/bin/activate
+    cd .. && ./start_pdf_server.sh
+
+backnode :
+    cd backNode
+    npm install
+    npm run db:sync
+    npm run dev

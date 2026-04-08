@@ -13,7 +13,7 @@ front/node_modules/
 front/.env.development
 front/.env.production
 front/src/components/ContractAnalysis/DocumentViewerOld.tsx
-
+front/dist/
 
 #front proxy
 
@@ -23,3 +23,4 @@ backNode/.env
 backNode/node_modules
 backNode/prisma/migrations
 backNode/prisma/generated
+gpt5_tokens_log.json

@@ -128,7 +128,7 @@ export function Calculateur() {
             <div>
               <label className={labelClass}>
                 Ancienneté — Mois{" "}
-                <span className="text-gray-400 font-normal">(0 à 11)</span>
+                <span className="text-gray-400 font-normal whitespace-nowrap">(0 à 11)</span>
               </label>
               <input type="text" inputMode="numeric" value={ancienneteMois} onChange={onIntegerChange(setAncienneteMois)} className={inputClass} />
             </div>
@@ -139,21 +139,21 @@ export function Calculateur() {
             <div>
               <label className={labelClass}>
                 Salaire mensuel brut{" "}
-                <span className="text-gray-400 font-normal">(€ / mois)</span>
+                <span className="text-gray-400 font-normal whitespace-nowrap">(€ / mois)</span>
               </label>
               <input type="text" inputMode="decimal" value={salaireMensuelBrut} onChange={onDecimalChange(setSalaireMensuelBrut)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>
                 Moyenne 12 derniers mois{" "}
-                <span className="text-gray-400 font-normal">(€ / mois)</span>
+                <span className="text-gray-400 font-normal whitespace-nowrap">(€ / mois)</span>
               </label>
               <input type="text" inputMode="decimal" value={salaireMoyen12Mois} onChange={onDecimalChange(setSalaireMoyen12Mois)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>
                 Moyenne 3 derniers mois{" "}
-                <span className="text-gray-400 font-normal">(€ / mois)</span>
+                <span className="text-gray-400 font-normal whitespace-nowrap">(€ / mois)</span>
               </label>
               <input type="text" inputMode="decimal" value={salaireMoyen3Mois} onChange={onDecimalChange(setSalaireMoyen3Mois)} className={inputClass} />
             </div>
@@ -163,7 +163,7 @@ export function Calculateur() {
           <div className="max-w-xs">
             <label className={labelClass}>
               Coefficient temps partiel{" "}
-              <span className="text-gray-400 font-normal">(1 = temps plein)</span>
+              <span className="text-gray-400 font-normal whitespace-nowrap">(1 = temps plein)</span>
             </label>
             <input type="text" inputMode="decimal" value={ratioTempsPartiel} onChange={onDecimalChange(setRatioTempsPartiel)} className={inputClass} />
           </div>
