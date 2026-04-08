@@ -4,7 +4,7 @@
 
 generator client {
   provider = "prisma-client"
-  output = "./generated"
+  output   = "./generated"
 }
 
 datasource db {
@@ -13,250 +13,228 @@ datasource db {
 
 //==== ENUM ====
 
-
-enum Role{
+enum Role {
   USER
   ADMIN
 }
 
-enum AuthProvider{
+enum AuthProvider {
   GOOGLE
 }
 
-enum SubscriptionStatus{
+enum SubscriptionStatus {
   ACTIVE
   CANCELLED
   EXPIRED
   PENDING
 }
 
-
-
-
 //==== CREATION DES MODELS ====
 
 // --- UTILISATEUR ---
 
-model User{
-  idUser                Int     @id @default(autoincrement())
-  role                  Role    @default(USER)
-  email                 String  @unique
-  nom                   String 
-  prenom                String
-  password              String
-  isVerified            Boolean @default(false)
-  cgu                   Boolean @default(false)
-  avatarUrl             String?
-  stripeCustomerId      String?
+model User {
+  idUser           Int     @id @default(autoincrement())
+  role             Role    @default(USER)
+  email            String  @unique
+  nom              String?
+  prenom           String?
+  password         String?
+  isVerified       Boolean @default(false)
+  cgu              Boolean @default(false)
+  stripeCustomerId String?
 
   //relation 
-  tokens                Token[]
-  events                Event[]
-  authProviders         AuthProviderAccount[]
-  subscription          Subscription?
+  tokens        Token[]
+  events        Event[]
+  authProviders AuthProviderAccount[]
+  subscription  Subscription?
 
-  enterpriseId          Int?
-  enterprise            Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
+  enterpriseId Int?
+  enterprise   Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
 
-  userCredit            UserCredit?
-
-  preference            UserPreference?  
-
-  documentCustom        DocumentCustom[]
+  userCredit UserCredit?
+  preference UserPreference?
+  documentCustom DocumentCustom[]
 }
-
-
-model UserPreference{
-  idUserPreference      Int @id @default(autoincrement())
-  preferenceUI          Json?
-
-  //relation
-  userId                Int @unique
-  user                  User @relation(fields:[userId], references : [idUser])
-}
-
-
-
-// --- ENTREPRISE ---
-
-model Enterprise{
-  idEnterprise          Int     @id @default(autoincrement())
-  siren                 String?
-  codeNaf               String?
-  name                  String?
-  conventionCollective  String?
-  statusJuridique       String?
-
-  //relation
-  users                 User[]
-  address               Address?
-}
-
-
-model Address{
-  idAddress             Int @id @default(autoincrement())
-  address               String
-  codePostal            String
-  pays                  String @default("FRANCE")
-
-  enterpriseId          Int? @unique
-  enterprise            Enterprise? @relation(fields : [enterpriseId], references : [idEnterprise])
-}
-
-
 
 
 // --- AUTH VIA PROVIDER ---
-
-model AuthProviderAccount{
-  idAuthProvider        Int @id @default(autoincrement())
-  providerId            String
-  provider              AuthProvider
+model AuthProviderAccount {
+  idAuthProvider Int          @id @default(autoincrement())
+  providerId     String       @unique
+  provider       AuthProvider
+  avatarUrl      String?
 
   //relation
-  userId                Int
-  user                  User @relation(fields : [userId], references : [idUser])
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser])
+}
+
+model UserPreference {
+  idUserPreference Int   @id @default(autoincrement())
+  preferenceUI     Json?
+
+  //relation
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser])
 }
 
 
+// --- ENTREPRISE ---
+model Enterprise {
+  idEnterprise         Int     @id @default(autoincrement())
+  siren                String?
+  codeNaf              String?
+  name                 String? 
+  conventionCollective String?
+  statusJuridique      String?
+
+  //relation
+  users   User[]
+  address Address?
+}
+
+
+model Address {
+  idAddress  Int    @id @default(autoincrement())
+  address    String
+  codePostal String
+  pays       String @default("FRANCE")
+
+  enterpriseId Int?        @unique
+  enterprise   Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
+}
 
 
 // --- SECURITE ---
-
-model Token{
-  idToken               Int @id @default(autoincrement())
-  token                 String @unique
-  expiresAt             DateTime
+model Token {
+  idToken   Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  type      String
 
   //relation
-  userId                Int
-  user                  User @relation(fields : [userId], references : [idUser]) 
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser])
 }
-
-
-
 
 // --- EVENTS ---
 
-model Event{
-  idEvent               Int @id @default(autoincrement())
-  type                  String
-  state                 String
-  expiresAt             DateTime
+model Event {
+  idEvent   Int      @id @default(autoincrement())
+  type      String
+  state     String
+  expiresAt DateTime
 
   //relation
-  userId                Int
-  user                  User @relation(fields : [userId], references : [idUser])
-  documentCustom        DocumentCustom?
+  userId         Int
+  user           User            @relation(fields: [userId], references: [idUser])
+  documentCustom DocumentCustom?
 }
 
 
-model DocumentCustom{
-  idDocumentCustom      Int @id @default(autoincrement())
-  type                  String
-  templateContent       String @db.Text
+model DocumentCustom {
+  idDocumentCustom Int    @id @default(autoincrement())
+  type             String
+  templateContent  String @db.Text
 
   //relation
-  userId                Int?
-  user                  User? @relation(fields : [userId], references : [idUser])
+  userId Int?
+  user   User? @relation(fields: [userId], references: [idUser])
 
-  eventId               Int? @unique
-  event                 Event? @relation(fields : [eventId], references : [idEvent])
+  eventId Int?   @unique
+  event   Event? @relation(fields: [eventId], references: [idEvent])
 }
 
-model DocumentTemplate{
-  idDocument            Int @id @default(autoincrement())
-  type                  String
-  templateContent       String @db.Text
-
+model DocumentTemplate {
+  idDocument      Int    @id @default(autoincrement())
+  type            String
+  templateContent String @db.Text
 }
-
-
-
 
 // --- CREDIT ET PAYMENT ---
 
-model UserCredit{
-  idUserCredit          Int @id @default(autoincrement())
-  creditSignature       Int
-  creditAnalyse         Int
-  creditGenerationDoc   Int
+model UserCredit {
+  idUserCredit        Int @id @default(autoincrement())
+  creditSignature     Int
+  creditAnalyse       Int
+  creditGenerationDoc Int
 
   //relation
 
-  userId                Int @unique
-  user                  User @relation(fields: [userId], references: [idUser])           
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser])
 }
 
-
-model Subscription{
-  idSubscription        Int @id @default(autoincrement())
-  status                SubscriptionStatus
-  startAt               DateTime
-  expiresAt             DateTime
-  stripeSubscriptionId  String?
-  stripePriceId         String?
+model Subscription {
+  idSubscription       Int                @id @default(autoincrement())
+  status               SubscriptionStatus
+  startAt              DateTime
+  expiresAt            DateTime
+  stripeSubscriptionId String?
+  stripePriceId        String?
 
   //relation
-  userId                Int @unique
-  user                  User @relation(fields: [userId], references: [idUser])  
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser])
 
-  planId                Int
-  plan                  Plan @relation(fields: [planId], references: [idPlan])
+  planId Int
+  plan   Plan @relation(fields: [planId], references: [idPlan])
 
-  facture               Facture[]
+  facture Facture[]
 }
 
 
-model Plan{
-  idPlan                Int @id @default(autoincrement())
-  name                  String
-  price                 Int
-  interval              String
-  creditSignature       Int
-  creditGenerationDoc   Int
-  creditAnalyse         Int
+model Plan {
+  idPlan              Int    @id @default(autoincrement())
+  name                String
+  price               Int
+  interval            String
+  creditSignature     Int
+  creditGenerationDoc Int
+  creditAnalyse       Int
 
   //relation
-  subscription          Subscription[]
+  subscription Subscription[]
+
 }
 
-
-model Facture{
-  idFacture             Int @id @default(autoincrement())
-  price                 Int
-  stripeInvoiceId       String
-  createdAt             DateTime @default(now())
+model Facture {
+  idFacture       Int      @id @default(autoincrement())
+  price           Int
+  stripeInvoiceId String
+  createdAt       DateTime @default(now())
 
   //relation
 
-  subscriptionId        Int
-  subscription          Subscription @relation(fields: [subscriptionId], references : [idSubscription])
+  subscriptionId Int
+  subscription   Subscription @relation(fields: [subscriptionId], references: [idSubscription])
 }
-
-
 
 
 // --- RESSOURCE LLM ---
+model Llm {
+  idLlm            Int    @id @default(autoincrement())
+  name             String @unique
+  tokenPriceInput  Int
+  tokenPriceOutput Int
 
-model Llm{
-  idLlm                 Int     @id @default(autoincrement())
-  name                  String
-  tokenPrice            Float
-
-  llmUsage              LlmUsage[] 
+  llmUsage LlmUsage[]
 }
 
 
-model LlmUsage{
-  idLlmUsage            Int     @id @default(autoincrement())
-  startAt               DateTime
-  expiresAt             DateTime
-  totalCost             Int
-  tokenInput            Int
-  tokenOutput           Int
+model LlmUsage {
+  idLlmUsage    Int      @id @default(autoincrement())
+  startAt       DateTime
+  expiresAt     DateTime
+  totalCostEuro Decimal  @db.Decimal(18, 6)
+  tokenInput    Int
+  tokenOutput   Int
 
   //relation
-  llmId                 Int
-  llm                   Llm @relation(fields : [llmId], references : [idLlm])
+  llmId Int
+  llm   Llm @relation(fields: [llmId], references: [idLlm])
+
+  @@unique([llmId, startAt])
 }

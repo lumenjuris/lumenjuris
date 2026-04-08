@@ -26,6 +26,7 @@ Legifrance Proxy (Node/Express)
 5) Front (exemple rapide)
 - fetch('http://localhost:4000/api/legi-search', { method: 'POST', body: JSON.stringify({...}), headers:{'Content-Type':'application/json'}})
 
+
 6) Sécurité
 - Ne jamais mettre les secrets côté front.
 - Ce proxy rafraîchit le token (client_credentials) et retry sur 401.

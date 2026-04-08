@@ -140,6 +140,8 @@ export const DocumentViewer = forwardRef<
       onClauseClick(clause.id);
     };
 
+
+    
     // Construction du HTML à rendre dans TipTap
     const htmlFormattedContent = useMemo(() => {
       if (htmlContent) {
@@ -159,6 +161,8 @@ export const DocumentViewer = forwardRef<
         clauses,
       });
     }, [htmlContent, displayedText, clauses, activePatchCount, patches]);
+
+
 
     // Initialisation de l'éditeur TipTap
     const editor = useEditor({
@@ -202,6 +206,7 @@ export const DocumentViewer = forwardRef<
       wrapper.addEventListener("click", handleClick);
       return () => wrapper.removeEventListener("click", handleClick);
     }, [htmlFormattedContent]);
+
 
     return (
       <div

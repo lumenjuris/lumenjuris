@@ -45,46 +45,97 @@ export class Mailer {
         return mailOptions
     }
 
-
     private createHtmlHeader() {
         return `
-            <tr>
-                <td style="background-color:#716af9; padding:20px; text-align:center; color:#ffffff; font-size:24px; font-weight:bold;">
-                    Lumen Juris
-                </td>
-            </tr>
-    `
-    }
-
-    private createHtmlFooter() {
-        const date = new Date()
-        const year = date.getFullYear()
-        return `
         <tr>
-            <td style="padding: 20px 30px; font-family: Arial, sans-serif; font-size:14px; color:#1f2937;">
-                Cordialement,<br>
-                <strong>L'équipe Lumen Juris</strong>
+            <td align="center" style="background-color:#716af9; padding:24px;">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
+                    <tr>
+                        <td style="text-align:center;">
+                            <span style="color:#ffffff; font-family:Arial, sans-serif; font-size:22px; font-weight:bold; letter-spacing:0.5px;">
+                                Lumen Juris
+                            </span>
+                        </td>
+                    </tr>
+                </table>
             </td>
         </tr>
+
+        <!-- petite séparation clean -->
         <tr>
-            <td 
-            style="background-color:#f4f4f4; padding:20px; text-align:center;
-             font-family: Arial, sans-serif; font-size:12px; color:#777777;">
-                &copy; ${year} Lumen Juris. Tous droits réservés.<br>
-            </td>
-        </tr>`
+            <td style="background-color:#ffffff; height:1px; line-height:1px; font-size:0;"></td>
+        </tr>
+    `;
     }
+
+
+
+
+
+    private createHtmlFooter() {
+        const date = new Date();
+        const year = date.getFullYear();
+
+        return `
+        <tr>
+            <td style="padding: 30px 30px 10px 30px; font-family: Arial, sans-serif; font-size:14px; color:#1f2937;">
+                Cordialement,<br>
+                <strong style="color:#111827;">L'équipe Lumen Juris</strong>
+            </td>
+        </tr>
+
+        <!-- séparation -->
+        <tr>
+            <td style="padding:0 30px;">
+                <hr style="border:none; border-top:1px solid #e5e7eb;">
+            </td>
+        </tr>
+
+        <!-- footer bas -->
+        <tr>
+            <td style="background-color:#f9fafb; padding:20px; text-align:center;
+                       font-family: Arial, sans-serif; font-size:12px; color:#6b7280;">
+                
+                <div style="margin-bottom:8px;">
+                    &copy; ${year} Lumen Juris. Tous droits réservés.
+                </div>
+
+                <div>
+                    <a href="https://lumenjuris.com" 
+                       style="color:#716af9; text-decoration:none; font-weight:500;">
+                        lumenjuris.com
+                    </a>
+                </div>
+
+            </td>
+        </tr>
+    `;
+    }
+
+
+
 
 
     private createHtmlFullContent(htmlContent: string) {
-        return `<body style="margin:0;padding:0; overflow:hidden;">
-        <table width="50%" cellpadding="0" cellspacing="0" style="border:1px solid #b3b7be;border-radius:8px; overflow:hidden;">
-        ${this.createHtmlHeader()}
-        ${htmlContent}
-        ${this.createHtmlFooter()}
-        </table>
-        </body>`
+        return `
+            <body style="margin:0;padding:0;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:20px 0;">
+                    <tr>
+                        <td align="center">
+                            <table width="600" cellpadding="0" cellspacing="0" 
+                                style="background-color:#ffffff; border:1px solid #b3b7be; border-radius:8px;overflow:hidden;">
+                                
+                                ${this.createHtmlHeader()}
+                                ${htmlContent}
+                                ${this.createHtmlFooter()}
+                                
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>`;
     }
+
 
 
 

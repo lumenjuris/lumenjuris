@@ -3,13 +3,14 @@ export const templateVerifyAccount = (verificationLink: string, username?: strin
         <tr>
             <td style="padding:30px; font-family: Arial, sans-serif; color:#1f2937;">
                 
-                <h2 style="margin-top:0; color:#111827;">Bienvenue sur Lumen Juris${username ? `, ${username}` : ''}</h2>
+                <h2 style="margin-top:0; margin-bottom:10px;">Bonjour <strong> ${username}</strong>.</h2>
                 
+                <p>Bienvenue sur Lumen Juris</p>
                 <p style="font-size:14px; line-height:1.6;">
-                    Merci pour votre inscription. Afin d'activer votre compte, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous.
+                Merci pour votre inscription. Afin d'activer votre compte, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous.
                 </p>
 
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0;width:100%">
                     <tr>
                         <td align="center">
                             <a href="${verificationLink}" 

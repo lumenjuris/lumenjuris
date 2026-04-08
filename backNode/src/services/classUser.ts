@@ -3,23 +3,30 @@ import bcrypt from "bcrypt"
 
 type createDataDTO = {
     email: string
-    nom: string
-    prenom: string
-    password: string,
-    cgu:boolean
+    nom?: string
+    prenom?: string
+    password?: string,
+    cgu: boolean
 }
+
+type UserAuthData = {
+    idUser: number;
+    email: string;
+    role: string;
+    isVerified: boolean;
+};
 
 type dataUpdatedDTO = {
-    email? : string
-    nom? : string
-    prenom? : string
-    password? : string
+    email?: string
+    nom?: string
+    prenom?: string
+    password?: string
 }
 
-type returnData = {
-    success : boolean
-    message? : string
-    data ? : Object
+type returnData<T = any> = {
+    success: boolean
+    message?: string
+    data?: T
 }
 
 
@@ -27,7 +34,7 @@ type returnData = {
 export class User {
 
     //Cacthing d'erreur global 
-    private errorCatching(err: unknown, fn: string) {
+    private errorCatching(err: unknown, fn: string): { success: boolean, message: string } {
         const e = err as any;
 
         console.error(`Erreur dans la fonction ${fn} : \n\n`, err);
@@ -56,10 +63,10 @@ export class User {
             };
         }
 
-        if(e?.code === "P2005"){
-            return{
-                success:false,
-                message : "Votre compte n'a pu être retrouvé"
+        if (e?.code === "P2005") {
+            return {
+                success: false,
+                message: "Aucun compte utilisateur n'a été retrouvé."
             }
         }
 
@@ -83,6 +90,12 @@ export class User {
     async create(data: createDataDTO) {
         try {
             const { email, nom, prenom, password, cgu } = data
+            if (!password) {
+                return {
+                    success: false,
+                    message: "Un mot de passe est requit pour la création d'un compte utilisateur."
+                }
+            }
             const passwordHash = await this.hashPassword(password)
             const newUser = await prisma.user.create({
                 data: {
@@ -97,6 +110,7 @@ export class User {
             console.log("New user create with prisma : ", newUser)
             return {
                 success: true,
+                message: "Le compte utilisateur a été créé avec succès.",
                 data: newUser,
             }
         } catch (err) {
@@ -106,21 +120,26 @@ export class User {
 
 
     //Authentification d'un utilisateur lors d'une connexion
-    async authenticate(password: string, email: string):Promise<returnData> {
+    async authenticate(password: string, email: string): Promise<returnData<UserAuthData>> {
         try {
 
-            const hashedPassword = await prisma.user.findUnique({
+            const findUser = await prisma.user.findUnique({
                 where: { email }
             })
 
-            if (!hashedPassword?.password) return {success : false, message : "Email ou mot de passe invalide"}
+            if (!findUser?.password) return { success: false, message: "Email ou mot de passe invalide" }
 
-            const verifyPassword = await bcrypt.compare(password, hashedPassword?.password)
-            
+            const verifyPassword = await bcrypt.compare(password, findUser?.password)
+
             return {
-                success:verifyPassword,
-                message : verifyPassword ? "Connexion réussite" : "Email ou mot de passe invalide"
-            
+                success: verifyPassword,
+                message: verifyPassword ? "Connexion réussite" : "Email ou mot de passe invalide",
+                data: {
+                    email: findUser.email,
+                    role: findUser.role,
+                    isVerified: findUser.isVerified,
+                    idUser: findUser.idUser
+                }
             }
 
         } catch (err) {
@@ -130,22 +149,44 @@ export class User {
 
 
     //Mise à jour des données d'un utilisateur
-    async update(idUser: number, dataUpdated:dataUpdatedDTO): Promise<returnData> {
+    async update(idUser: number, dataUpdated: dataUpdatedDTO): Promise<returnData> {
         try {
-            if(dataUpdated.password){
+            if (dataUpdated.password) {
                 dataUpdated.password = await this.hashPassword(dataUpdated.password)
             }
             const userUpdated = await prisma.user.update({
-                where : { idUser :  idUser },
-                data : {...dataUpdated}
+                where: { idUser: idUser },
+                data: { ...dataUpdated }
             })
             return {
                 success: true,
                 message: "Les informations ont été mises à jour",
-                data: userUpdated
             }
         } catch (err) {
             return this.errorCatching(err, "User.update")
+        }
+    }
+
+    async get(idUser: number) {
+        try {
+            const dataUser = await prisma.user.findUnique({
+                where: { idUser }
+            })
+            return {
+                success: true,
+                message: "Les données de l'utilisateurs ont été récupérés avec succès.",
+                data: {
+                    email: dataUser?.email,
+                    nom: dataUser?.nom,
+                    prenom: dataUser?.prenom,
+                    role: dataUser?.role,
+                    enterpriseId: dataUser?.enterpriseId,
+                    isVerified: dataUser?.isVerified,
+                    stripeCustomerId: dataUser?.stripeCustomerId
+                }
+            }
+        } catch (err) {
+            return this.errorCatching(err, "User.get")
         }
     }
 }

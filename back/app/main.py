@@ -110,7 +110,7 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
 
     content = await file.read()
     html_formatte = _extract_html_from_pdf_dict(content)
-    print(html_formatte[:1000])
+    print("EXTRACT PDF CONTENT IN HTML : ", html_formatte[:1000])
     texte_brut = _extract_text_from_pdf_content(content, scan) #  remplcé par html_formatte
     texte_corrige = corriger_espaces(texte_brut)
     clauses_detectees = extract_clauses_ia_robuste(texte_corrige)
