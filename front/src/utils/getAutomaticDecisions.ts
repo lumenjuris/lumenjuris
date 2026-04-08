@@ -6,7 +6,7 @@ import { ClauseRisk, JurisprudenceCase } from '../types';
 async function fetchDecisionsFromBackend(query: string): Promise<JurisprudenceCase[] | null> {
 
 
-  const backendUrl = `${import.meta.env.VITE_BACKEND_PYTHON_URL}/jurisprudence`;
+  const backendUrl = `/jurisprudence`;
 
   // Le backend attend un objet avec une clé "queries" qui est une liste de strings.
   const payload = { 
