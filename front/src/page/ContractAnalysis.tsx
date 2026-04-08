@@ -128,20 +128,8 @@ export default function ContractAnalysis() {
 
   // Handler pour fermer la modale et revenir au début de la zone PDF
   const handleCloseModal = () => {
-    console.log('🚪 Fermeture de la modale - Retour au début de la zone PDF');
     setSelectedClause(null);
-
-    // Attendre un peu que la modale se ferme, puis aller au début de la zone PDF
-    setTimeout(() => {
-      console.log('📄 Retour au début de la zone PDF');
-      const clausesSection = document.getElementById('clauses-section');
-      if (clausesSection) {
-        clausesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 300); // Délai pour laisser la modale se fermer complètement
-
   };
-
 
 
 

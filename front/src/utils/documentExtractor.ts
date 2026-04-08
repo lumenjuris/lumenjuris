@@ -14,7 +14,7 @@ export interface ExtractedContent {
   clauses: any[];
 }
 
-const PDF_SERVER_URL = `http://localhost:5678/extract-pdf-text`;
+const PDF_SERVER_URL = `/extract-pdf-text`;
 const MAX_RETRIES = 2;
 const TIMEOUT_MS = 180000; // 3 minutes pour l'OCR
 

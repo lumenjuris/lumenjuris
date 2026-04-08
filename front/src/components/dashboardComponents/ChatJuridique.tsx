@@ -161,9 +161,12 @@ export function ChatJuridique() {
           <ul className="flex-1 overflow-auto px-3 py-3 space-y-1">
             {conversations.map((conv) => (
               <li key={conv.id}>
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setActiveId(conv.id)}
-                  className={`group w-full text-left px-3 py-3 rounded-xl transition-colors flex items-start justify-between gap-2 ${
+                  onKeyDown={(e) => e.key === "Enter" && setActiveId(conv.id)}
+                  className={`group w-full text-left px-3 py-3 rounded-xl transition-colors flex items-start justify-between gap-2 cursor-pointer ${
                     activeId === conv.id ? "bg-lumenjuris/10 border border-lumenjuris/20" : "hover:bg-gray-50"
                   }`}
                 >
@@ -183,7 +186,7 @@ export function ChatJuridique() {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                </button>
+                </div>
               </li>
             ))}
           </ul>
