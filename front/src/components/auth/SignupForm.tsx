@@ -77,7 +77,7 @@ const SignupForm = () => {
               <Input
                 id="lastname"
                 type="text"
-                placeholder="Ex : Doe"
+                placeholder="Dupond"
                 required
                 onChange={handleChangeLastname}
               />
@@ -89,7 +89,7 @@ const SignupForm = () => {
               <Input
                 id="firstname"
                 type="text"
-                placeholder="Ex : Jenny"
+                placeholder="Jenny"
                 required
                 onChange={handleChangeFirstname}
               />
@@ -101,7 +101,7 @@ const SignupForm = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="Ex : mail@example.com"
+                placeholder="mail@example.com"
                 required
                 onChange={handleChangeEmail}
               />
@@ -122,15 +122,6 @@ const SignupForm = () => {
                   <EyeOffIcon />
                 </InputGroupAddon>
               </InputGroup>
-              <FieldDescription>
-                Doit contenir :
-                <ul className="pl-2 text-black/50">
-                  <li>- au moins 8 charactères</li>
-                  <li>- une majuscule</li>
-                  <li>- un charactère spécial</li>
-                  <li>- et un chiffre</li>
-                </ul>
-              </FieldDescription>
             </Field>
           </div>
           <div className="grid gap-2">
@@ -177,17 +168,14 @@ const SignupForm = () => {
                 />
                 <FieldContent>
                   <FieldLabel htmlFor="terms-checkbox-desc">
-                    Valider les CGU
-                  </FieldLabel>
-                  <FieldDescription>
-                    Vous confirmez accepter nos{" "}
+                    Valider les{" "}
                     <a
                       href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
                       className="hover:cursor-pointer"
                     >
                       CGU
                     </a>
-                  </FieldDescription>
+                  </FieldLabel>
                 </FieldContent>
               </Field>
             </FieldGroup>
@@ -196,7 +184,7 @@ const SignupForm = () => {
           <div className="grid gap-2">
             <Button className="text-background">S'inscrire</Button>
             <Button variant="ghost" className="border border-lumenjuris">
-              S'inscrire avec Google
+              Se connecter avec Google
             </Button>
           </div>
         </div>
