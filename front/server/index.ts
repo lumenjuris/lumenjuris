@@ -31,7 +31,8 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 const PORT = Number(process.env.PORT || 5173);
-const BACKEND_URL = process.env.BACKEND_URL;
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5678";
+const BACKNODE_URL = process.env.BACKNODE_URL || "http://localhost:3020";
 
 
 // ---- Relay vers Python backend ------------------------------------------------
@@ -71,6 +72,38 @@ function relayJsonToPython(req: Request, res: Response, targetPath: string): voi
     });
 }
 
+// Relay requêtes vers le serveur Node
+function relayToNode(req: Request, res: Response, targetPath: string): void {
+  fetch(`${BACKNODE_URL}${targetPath}`, {
+    method: req.method,
+    headers: {
+      'Content-Type': 'application/json',
+      cookie: req.headers.cookie || '',
+    },
+    body: req.method === 'GET' ? undefined : JSON.stringify(req.body),
+  })
+    .then(async (r) => {
+      const contentType = r.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        const data = await r.json().catch(() => ({}));
+        res.status(r.status).json(data);
+        return;
+      }
+
+      const text = await r.text().catch(() => '');
+      res.status(r.status).json({
+        success: r.ok,
+        status: r.status,
+        raw: text,
+      });
+    })
+    .catch((e: any) => {
+      console.error('relay Node error:', e.message);
+      if (!res.headersSent) res.status(502).json({ error: 'backnode_unreachable' });
+    });
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post('/extract-pdf-text', (req: Request, res: Response) => relayStreamToPython(req, res, '/extract-pdf-text'));
 
@@ -82,6 +115,12 @@ app.post(['/api/chat', '/chat'], (req: Request, res: Response) => relayJsonToPyt
 app.post(['/api/openai-chat', '/openai-chat'], (req: Request, res: Response) => relayJsonToPython(req, res, '/openai-chat'));
 app.post(['/api/openai-chat-5', '/openai-chat-5'], (req: Request, res: Response) => relayJsonToPython(req, res, '/openai-chat-5'));
 app.post(['/api/huggingface-generate', '/huggingface-generate'], (req: Request, res: Response) => relayJsonToPython(req, res, '/huggingface-generate'));
+
+// Node - Requêtes INSEE
+app.get('/api/insee/:siren', (req: Request, res: Response) => {
+  const siren = encodeURIComponent(req.params.siren);
+  relayToNode(req, res, `/enterprise/insee/${siren}`);
+});
 
 // ---- Front React : Vite middleware (dev) ou static (prod) ---------------------
 if (IS_PROD) {

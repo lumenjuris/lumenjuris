@@ -1,5 +1,4 @@
 
-
 import { useState } from "react";
 import { AlertBanner, type AlertVariant } from "../components/common/AlertBanner";
 
@@ -44,6 +43,9 @@ export function Sandbox() {
   const [accent, setAccent] = useState(false);
   const [customTitle, setCustomTitle] = useState("");
   const [customDetail, setCustomDetail] = useState("");
+  const [inseeSiren, setInseeSiren] = useState("940468606");
+  const [inseeLoading, setInseeLoading] = useState(false);
+  const [inseeResult, setInseeResult] = useState<string>("");
 
   const spawn = (preset: typeof PRESETS[number]) => {
     setBanners((prev) => [...prev, {
@@ -58,6 +60,39 @@ export function Sandbox() {
   };
 
   const dismiss = (id: number) => setBanners((prev) => prev.filter((b) => b.id !== id));
+
+  const testInsee = async () => {
+    try {
+      setInseeLoading(true);
+      setInseeResult("");
+
+      const response = await fetch(`/api/insee/${encodeURIComponent(inseeSiren)}`, {
+        credentials: "include",
+      });
+
+      const rawText = await response.text();
+
+      let parsed: unknown = null;
+      try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        parsed = null;
+      }
+
+      setInseeResult(JSON.stringify({
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        body: parsed ?? rawText ?? "",
+      }, null, 2));
+    } catch (error) {
+      setInseeResult(JSON.stringify({
+        error: error instanceof Error ? error.message : String(error),
+      }, null, 2));
+    } finally {
+      setInseeLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
@@ -130,6 +165,33 @@ export function Sandbox() {
               onClose={() => dismiss(b.id)}
             />
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-base font-semibold text-gray-800">Test INSEE</h2>
+
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={inseeSiren}
+              onChange={(e) => setInseeSiren(e.target.value)}
+              placeholder="SIREN"
+              className={inputClass}
+            />
+            <button
+              onClick={testInsee}
+              disabled={inseeLoading}
+              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+            >
+              {inseeLoading ? "Chargement..." : "Tester"}
+            </button>
+          </div>
+
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+            {inseeResult || "Le résultat du test INSEE s'affichera ici."}
+          </pre>
         </div>
       </section>
     </div>
