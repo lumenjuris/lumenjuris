@@ -17,7 +17,7 @@ import {
 import { Separator } from "../ui/Separator";
 import { Checkbox } from "../ui/Checkbox";
 import { Label } from "../ui/Label";
-import { EyeOffIcon } from "lucide-react";
+import { EyeOffIcon, EyeIcon } from "lucide-react";
 
 import { useState } from "react";
 
@@ -54,9 +54,7 @@ const SignupForm = () => {
     console.log(event);
   };
 
-  const handleCheckNewsletter = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleCheckCgu = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.checked;
     console.log(value);
   };
@@ -118,8 +116,12 @@ const SignupForm = () => {
                   required
                   onChange={handleChangePassword}
                 />
-                <InputGroupAddon align="inline-end">
-                  <EyeOffIcon />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </InputGroupAddon>
               </InputGroup>
             </Field>
@@ -137,8 +139,12 @@ const SignupForm = () => {
                   required
                   onChange={handleChangeConfirmPassword}
                 />
-                <InputGroupAddon align="inline-end">
-                  <EyeOffIcon />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </InputGroupAddon>
               </InputGroup>
             </Field>
@@ -149,7 +155,7 @@ const SignupForm = () => {
               <Input
                 id="siren"
                 type="text"
-                placeholder="Ex : 924242424"
+                placeholder="924242424"
                 required
                 onChange={handleChangeFirstname}
               />
@@ -159,19 +165,24 @@ const SignupForm = () => {
             </Field>
           </div>
           <div className="grid gap-2">
-            <FieldGroup className="mx-auto w-72">
+            <FieldGroup className="w-72">
               <Field orientation="horizontal">
                 <Checkbox
                   id="terms-checkbox-desc"
                   name="terms-checkbox-desc"
                   defaultChecked={false}
+                  onCheckedChange={(checked) => {
+                    handleCheckCgu({
+                      target: { checked },
+                    } as React.ChangeEvent<HTMLInputElement>);
+                  }}
                 />
                 <FieldContent>
                   <FieldLabel htmlFor="terms-checkbox-desc">
                     Valider les{" "}
                     <a
                       href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
-                      className="hover:cursor-pointer"
+                      className="hover:cursor-pointer text-blue-600"
                     >
                       CGU
                     </a>
@@ -183,7 +194,10 @@ const SignupForm = () => {
           <div className="w-full h-px bg-border"></div>
           <div className="grid gap-2">
             <Button className="text-background">S'inscrire</Button>
-            <Button variant="ghost" className="border border-lumenjuris">
+            <Button
+              variant="ghost"
+              className="border border-lumenjuris text-lumenjuris"
+            >
               Se connecter avec Google
             </Button>
           </div>
