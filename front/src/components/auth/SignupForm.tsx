@@ -21,7 +21,43 @@ import { EyeOffIcon, EyeIcon } from "lucide-react";
 
 import { useState } from "react";
 
-const SignupForm = () => {
+//  const [lastName, setLastName] = useState("");
+//   const [firstName, setFirstName] = useState("");
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [siren, setSiren] = useState("");
+//   const [acceptCgu, setAcceptCgu] = useState(false);
+
+interface SignupFormProps {
+  lastName: string;
+  setLastName: React.Dispatch<React.SetStateAction<string>>;
+  firstName: string;
+  setFirstName: React.Dispatch<React.SetStateAction<string>>;
+  email: string;
+  setEmail: React.Dispatch<React.SetStateAction<string>>;
+  password: string;
+  setPassword: React.Dispatch<React.SetStateAction<string>>;
+  siren: string;
+  setSiren: React.Dispatch<React.SetStateAction<string>>;
+  acceptCgu: boolean;
+  setAcceptCgu: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const SignupForm = ({
+  lastName,
+  setLastName,
+  firstName,
+  setFirstName,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  siren,
+  setSiren,
+  acceptCgu,
+  setAcceptCgu,
+}: SignupFormProps) => {
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [lastnameError, setLastnameError] = useState("");
   const [firstnameError, setFirstnameError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -31,21 +67,30 @@ const SignupForm = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChangeLastname = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(event);
+    const value = event.target.value;
+    setLastName(value);
   };
 
   const handleChangeFirstname = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    console.log(event);
+    const value = event.target.value;
+    setFirstName(value);
   };
 
   const handleChangeEmail = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(event);
+    const value = event.target.value;
+    setEmail(value);
   };
 
   const handleChangePassword = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(event);
+    const value = event.target.value;
+    setPassword(value);
+    if (value.length < 8 && value.length > 0) {
+      setPasswordError("Le mot de passe est trop court");
+    } else {
+      setPasswordError("");
+    }
   };
 
   const handleChangeConfirmPassword = (
@@ -63,7 +108,7 @@ const SignupForm = () => {
     <div className="w-[420px] border border-border p-4 rounded-xl flex flex-col gap-4 bg-background">
       <section>
         <h2 className="font-semibold text-[18px]">
-          Créez un compte pour accéder à nos outils
+          Créez un compte et accéder à nos outils
         </h2>
         <p className="text-black/50">Complétez les champs suivants</p>
       </section>
@@ -121,7 +166,7 @@ const SignupForm = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="hover:cursor-pointer"
                 >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showPassword ? <EyeIcon /> : <EyeOffIcon />}
                 </InputGroupAddon>
               </InputGroup>
             </Field>
@@ -144,7 +189,7 @@ const SignupForm = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="hover:cursor-pointer"
                 >
-                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showConfirmPassword ? <EyeIcon /> : <EyeOffIcon />}
                 </InputGroupAddon>
               </InputGroup>
             </Field>
@@ -171,18 +216,20 @@ const SignupForm = () => {
                   id="terms-checkbox-desc"
                   name="terms-checkbox-desc"
                   defaultChecked={false}
+                  required
                   onCheckedChange={(checked) => {
                     handleCheckCgu({
                       target: { checked },
                     } as React.ChangeEvent<HTMLInputElement>);
                   }}
+                  className="border-ring"
                 />
                 <FieldContent>
                   <FieldLabel htmlFor="terms-checkbox-desc">
-                    Valider les{" "}
+                    Valider nos{" "}
                     <a
                       href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
-                      className="hover:cursor-pointer text-blue-600"
+                      className="hover:cursor-pointer underline"
                     >
                       CGU
                     </a>
@@ -193,7 +240,12 @@ const SignupForm = () => {
           </div>
           <div className="w-full h-px bg-border"></div>
           <div className="grid gap-2">
-            <Button className="text-background">S'inscrire</Button>
+            <Button
+              className="text-background"
+              disabled={submitLoading && true}
+            >
+              S'inscrire
+            </Button>
             <Button
               variant="ghost"
               className="border border-lumenjuris text-lumenjuris"

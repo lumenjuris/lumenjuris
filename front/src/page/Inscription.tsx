@@ -1,6 +1,15 @@
 import SignupForm from "../components/auth/SignupForm";
 
+import { useState } from "react";
+
 export function Inscription() {
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [siren, setSiren] = useState("");
+  const [acceptCgu, setAcceptCgu] = useState(false);
+
   return (
     <>
       <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10"></header>
