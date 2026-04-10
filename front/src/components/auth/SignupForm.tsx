@@ -18,6 +18,7 @@ import { Separator } from "../ui/Separator";
 import { Checkbox } from "../ui/Checkbox";
 import { Label } from "../ui/Label";
 import { EyeOffIcon, EyeIcon } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 
 import { AlertBanner } from "../common/AlertBanner";
 
@@ -70,7 +71,7 @@ const SignupForm = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!lastName || !firstName || !email || !password) {
+    if (!lastName || !email || !password || !acceptCgu) {
       <AlertBanner
         title="Des champs sont manquants"
         variant="error"
@@ -176,11 +177,10 @@ const SignupForm = ({
         <div className="flex flex-col gap-6">
           <div className="grid gap-2">
             <Field>
-              <FieldLabel
-                htmlFor="lastname"
-                className="after:ml-0.5 after:text-red-500 after:content-['*']"
-              >
-                Nom
+              <FieldLabel htmlFor="lastname">
+                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
+                  Nom
+                </span>
               </FieldLabel>
               <Input
                 id="lastname"
@@ -207,11 +207,10 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field>
-              <FieldLabel
-                htmlFor="email"
-                className="after:ml-0.5 after:text-red-500 after:content-['*']"
-              >
-                Email
+              <FieldLabel htmlFor="email">
+                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
+                  Email
+                </span>
               </FieldLabel>
               <Input
                 id="email"
@@ -233,11 +232,10 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field className="max-w-sm">
-              <FieldLabel
-                htmlFor="password"
-                className="after:ml-0.5 after:text-red-500 after:content-['*']"
-              >
-                Password
+              <FieldLabel htmlFor="password">
+                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
+                  Password
+                </span>
               </FieldLabel>
               <InputGroup
                 className={
@@ -271,11 +269,10 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field className="max-w-sm">
-              <FieldLabel
-                htmlFor="confirmpassword"
-                className="after:ml-0.5 after:text-red-500 after:content-['*']"
-              >
-                Confirm password
+              <FieldLabel htmlFor="confirmpassword">
+                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
+                  Confirm password
+                </span>
               </FieldLabel>
               <InputGroup
                 className={
@@ -341,16 +338,15 @@ const SignupForm = ({
                   className="border-ring"
                 />
                 <FieldContent>
-                  <FieldLabel
-                    htmlFor="terms-checkbox-desc"
-                    className="after:ml-0.5 after:text-red-500 after:content-['*']"
-                  >
+                  <FieldLabel htmlFor="terms-checkbox-desc">
                     Valider nos{" "}
                     <a
                       href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
                       className="hover:cursor-pointer underline"
                     >
-                      CGU
+                      <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
+                        CGU
+                      </span>
                     </a>
                   </FieldLabel>
                 </FieldContent>
@@ -366,22 +362,27 @@ const SignupForm = ({
 
           <div className="w-full h-px bg-border"></div>
           <div className="grid gap-2">
-            {/* <button className="w-full h-7 border-lumenjuris border-2">
-              submit
-            </button> */}
             <Button
-              className="text-background"
+              className="text-background border border-lumenjuris"
               disabled={submitLoading && true}
               type="submit"
+              size="lg"
             >
               S'inscrire
             </Button>
-            <Button
+            {/* <Button
               variant="ghost"
               className="border border-lumenjuris text-lumenjuris"
             >
-              Se connecter avec Google
-            </Button>
+              <span className="text-[20px]">
+                {" "}
+                <FcGoogle />
+              </span>{" "}
+            </Button> */}
+            <button className="w-full h-10 border border-lumenjuris text-[20px] flex justify-center items-center gap-2 rounded-md text-lumenjuris">
+              <FcGoogle />
+              <span className="text-[14px]">Se connecter avec Google</span>
+            </button>
           </div>
         </div>
       </form>
