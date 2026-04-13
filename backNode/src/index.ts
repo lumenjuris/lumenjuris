@@ -8,6 +8,7 @@ import { User } from "./services/classUser"
 import routerGoogleAuth from "./route/authGoogle"
 import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
+import routerEnterprise from "./route/apiEnterprise";
 
 /**
  * Préparation du serveur nodejs/express pour ce backend
@@ -16,6 +17,7 @@ import routerUser from "./route/apiUser";
 
 const app = express()
 const port = process.env.PORT || 3020
+app.use(express.json())
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true })) 
@@ -24,6 +26,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use("/", routerGoogleAuth)
 app.use("/llm", routerLlm)
 app.use("/user/", routerUser)
+app.use("/enterprise/", routerEnterprise)
 
 
 

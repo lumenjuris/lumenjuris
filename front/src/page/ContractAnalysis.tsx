@@ -96,34 +96,12 @@ export default function ContractAnalysis() {
 
   // Gestionnaires d'événements locaux (non extraits dans les hooks)
   const handleClauseClick = (clauseId: string) => {
-    console.log("🚀 handleClauseClick appelé avec clauseId:", clauseId);
+    // Dimming immédiat + scroll
+    setSelectedClause(clauseId);
 
     if (documentViewerRef.current) {
-      console.log("✅ Appel de scrollToClause...");
       documentViewerRef.current.scrollToClause(clauseId);
     }
-
-    // Ouvrir la modale uniquement quand le scroll s'est stabilisé (plus fluide pour les longs articles)
-    let lastScrollTime = Date.now();
-
-    const onScroll = () => {
-      lastScrollTime = Date.now();
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    const checkScrollStop = () => {
-      if (Date.now() - lastScrollTime > 250) {
-        window.removeEventListener("scroll", onScroll);
-        console.log("📱 Ouverture de la modale (scroll terminé)");
-        setSelectedClause(clauseId);
-      } else {
-        setTimeout(checkScrollStop, 150);
-      }
-    };
-
-    // Lancer la vérification après un petit délai initial
-    setTimeout(checkScrollStop, 300);
   };
 
   // Handler pour fermer la modale et revenir au début de la zone PDF

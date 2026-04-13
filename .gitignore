@@ -10,18 +10,19 @@ back/services/gen-lang-client-0501326750-4f358317bac6.json
 
 #front
 front/node_modules/
-front/sever/.env.development
-front/server/.env.production
-front/src/components/ContractAnalysis/DocumentViewerOld.tsx
+front/.env.development
+front/.env.production
 front/dist/
 
 #front proxy
-
+/front/server/.env
 
 #backend nodeJS
+backnode/.env
 backNode/.env.production
 backNode/.env.development
 backNode/node_modules
 backNode/prisma/migrations
 backNode/prisma/generated
 gpt5_tokens_log.json
+

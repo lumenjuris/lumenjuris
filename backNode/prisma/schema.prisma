@@ -92,8 +92,10 @@ model Enterprise {
   idEnterprise         Int     @id @default(autoincrement())
   siren                String?
   codeNaf              String?
-  raisonSocial         String? 
+  intituleNaf          String?
+  name                 String?
   conventionCollective String?
+  idccSelections       Json?
   statusJuridique      String?
 
   //relation

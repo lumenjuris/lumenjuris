@@ -28,6 +28,7 @@ export async function extractDocumentContent(
   console.log("🔍 Tentative d'extraction via serveur local...");
   try {
     const result = await extractViaServer(file);
+    console.log("HTML AFTER EXTRACT FROM SERVER ▶️▶️▶️ ", result);
     return result;
   } catch (error: any) {
     // Si c'est une annulation volontaire, on propage l'erreur sans fallback
@@ -77,7 +78,6 @@ async function extractViaServer(
     // Créer un AbortController avec un timeout plus long pour les PDF scannés
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
 
     try {
       const response = await fetch(PDF_SERVER_URL, {
