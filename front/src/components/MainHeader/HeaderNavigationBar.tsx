@@ -21,7 +21,7 @@ import {
 } from "../ui/DropDownMenu";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface HeaderNavBarProps {
   onNavClick?: () => void;
@@ -31,7 +31,33 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  let role = null;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/user/get", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const dataResponse = await response.json();
+        if (dataResponse.success && dataResponse.data.profile.isVerified) {
+          setIsConnected(true);
+          setUserData(dataResponse.data);
+          role = dataResponse.data.profile.role;
+        }
+      } catch (error) {}
+    };
+    fetchData();
+  }, []);
+
+  const firstName = "Julien";
+  const lastName = "Bouchez";
+  const initials = `${firstName.slice(0, 1)}${lastName.slice(0, 1)}`;
 
   const handleUserLogout = () => {
     setIsConnected(false);
@@ -131,14 +157,14 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
           </button>
           <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
             <div className="h-8 w-8 rounded-full bg-lumenjuris flex items-center justify-center text-white text-xs font-medium">
-              ML
+              {initials}
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <button className="hidden md:flex items-center gap-1 cursor-pointer text-sm font-medium text-gray-800">
-                    Marie L.
+                    {`${firstName} ${lastName.slice(0, 1)}.`}
                     <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                   </button>
                 }

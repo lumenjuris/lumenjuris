@@ -7,7 +7,7 @@ import { createCookieAuth } from "../securite/cookieAuth";
 import { prisma } from "../../prisma/singletonPrisma";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { Google } from "../services/classGoogle";
-// import { TokenState } from "../../prisma/generated/enums";
+import { TokenState } from "../../prisma/generated/enums";
 
 const routerUser: Router = express.Router();
 
@@ -84,11 +84,11 @@ routerUser.get(
       }
 
       // Le token est déjà utilisé
-      // if (tokenEntry.status === TokenState.USED) {
-      //   return res.redirect(
-      //     `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
-      //   );
-      // }
+      if (tokenEntry.status === TokenState.USED) {
+        return res.redirect(
+          `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
+        );
+      }
 
       if (tokenEntry.status !== "ACTIVE") {
         return res.redirect(

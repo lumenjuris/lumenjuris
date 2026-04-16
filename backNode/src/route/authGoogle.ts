@@ -75,7 +75,9 @@ routerAuthGoogle.get(
       },
     );
 
-    const { sub, googleId, email, name, picture } = userInfo.data;
+    console.log(userInfo);
+
+    const { sub, email, name, picture } = userInfo.data;
     console.log(userInfo.data);
 
     //Enregistrer dans la bdd
@@ -86,6 +88,8 @@ routerAuthGoogle.get(
       cgu: true,
     });
 
+    console.log(newUser);
+
     if (!("data" in newUser)) {
       return res.redirect(
         `${process.env.HOST_FRONT}/verify-account?reason=userNotCreated`,
@@ -94,7 +98,7 @@ routerAuthGoogle.get(
 
     //New AuthProviderAccount
     const newGoogle = await new Google().create({
-      providerId: googleId,
+      providerId: sub,
       avatarUrl: picture,
       userId: newUser.data?.idUser!,
     });

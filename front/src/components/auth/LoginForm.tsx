@@ -81,9 +81,6 @@ const LoginForm = ({
         }
       } catch (error) {
         setServerError(true);
-        setServerErrorMessage(
-          "Une erreur s'est produite, la connexion a échouée...",
-        );
         console.error("🛑🛑🛑 ERREUR SERVEUR CONNEXION", error);
       }
     }
