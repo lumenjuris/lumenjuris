@@ -110,6 +110,11 @@ const SignupForm = ({
     }
   };
 
+  const handleSubmitGoogle = async () => {
+    try {
+    } catch (error) {}
+  };
+
   const handleChangeLastname = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setLastName(value);
@@ -436,7 +441,10 @@ const SignupForm = ({
               <PenBoxIcon />
               S'inscrire
             </Button>
-            <button className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris">
+            <button
+              className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris"
+              onClick={handleSubmitGoogle}
+            >
               <FcGoogle className="text-[20px]" />
               Se connecter avec Google
             </button>

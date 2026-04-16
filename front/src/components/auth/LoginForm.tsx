@@ -11,9 +11,6 @@ import { AlertBanner } from "../common/AlertBanner";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-//  forgotPassword={forgotPassword}
-//                   setForgotPassword={setForgotPassword}
-
 interface LoginFormProps {
   email: string;
   setEmail: React.Dispatch<React.SetStateAction<string>>;

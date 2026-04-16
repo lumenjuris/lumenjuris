@@ -20,7 +20,7 @@ interface HeaderNavBarProps {
 const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
   const { pathname } = useLocation();
 
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   return (
     <div className="flex items-center gap-2 lg:pr-2">
@@ -51,7 +51,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               }
             >
               <LayoutDashboard />
-              Mon Workspace
+              Mon workspace
             </Button>
           </Link>
         )}
