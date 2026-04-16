@@ -64,9 +64,9 @@ const SignupForm = ({
   const [submitError, setSubmitError] = useState(false);
   const [submitCguError, setSubmitCguError] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [serverError, setServerError] = useState(false);
   const [serverErrorMessage, setServerErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const passwordErrorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -212,6 +212,7 @@ const SignupForm = ({
           onClose={() => {
             setServerError(false);
             setSubmitLoading(false);
+            setServerErrorMessage("");
           }}
         />
       )}
@@ -223,6 +224,14 @@ const SignupForm = ({
           onClose={() => {
             setSubmitSuccess(false);
             setSubmitLoading(false);
+            setSuccessMessage("");
+            setLastName("");
+            setFirstName("");
+            setEmail("");
+            setPassword("");
+            setConfirmPassword("");
+            setSiren("");
+            setAcceptCgu(false);
           }}
         />
       )}

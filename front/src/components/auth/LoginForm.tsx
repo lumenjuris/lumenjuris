@@ -41,6 +41,8 @@ const LoginForm = ({
   const [submitForgotError, setSubmitForgotError] = useState(false);
   const [serverError, setServerError] = useState(false);
   const [serverErrorMessage, setServerErrorMessage] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const navigate = useNavigate();
 
@@ -76,7 +78,8 @@ const LoginForm = ({
           setServerErrorMessage(data.message);
           throw new Error(`BackNode Auth Error : ${loginResponse.status}`);
         } else {
-          setSubmitLoading(false);
+          setSubmitSuccess(true);
+          setSuccessMessage(data.message);
           navigate("/dashboard");
         }
       } catch (error) {}
@@ -137,6 +140,21 @@ const LoginForm = ({
           onClose={() => {
             setServerError(false);
             setSubmitLoading(false);
+          }}
+        />
+      )}
+      {submitSuccess && (
+        <AlertBanner
+          title="Connexion réussie !"
+          variant="success"
+          detail={successMessage}
+          onClose={() => {
+            setSubmitSuccess(false);
+            setSubmitLoading(false);
+            setSuccessMessage("");
+            setEmail("");
+            setPassword("");
+            navigate("/dashboard");
           }}
         />
       )}
