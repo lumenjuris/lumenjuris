@@ -1,52 +1,52 @@
 import nodemailer from "nodemailer";
 import { templateVerifyAccount } from "./template/verifyAccount";
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.MAILER_USER,
-        pass: process.env.MAILER_PASS
-    }
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.MAILER_USER,
+    pass: process.env.MAILER_PASS,
+  },
 });
 
-
 export class Mailer {
-    private email: string;
+  private email: string;
 
-
-    constructor(email: string) {
-        if (!process.env.MAILER_USER || !process.env.MAILER_PASS) {
-            throw new Error("Configuration SMTP manquante");
-        }
-
-        this.email = email;
+  constructor(email: string) {
+    if (!process.env.MAILER_USER || !process.env.MAILER_PASS) {
+      throw new Error("Configuration SMTP manquante");
     }
 
-    private errorCatching(err: unknown) {
-        console.error(`Une erreur est survenu lors d'un envoie d'un email' error : ${err}`)
-        return {
-            success: false,
-            message: "Erreur avec le serveur est survenue lors de l'envoie d'un email.",
-            error: err
-        }
-    }
+    this.email = email;
+  }
 
+  private errorCatching(err: unknown) {
+    console.error(
+      `Une erreur est survenu lors d'un envoie d'un email' error : ${err}`,
+    );
+    return {
+      success: false,
+      message:
+        "Erreur avec le serveur est survenue lors de l'envoie d'un email.",
+      error: err,
+    };
+  }
 
-    private createOption(html: string, subject: string) {
-        const textBrutFallback = html.replace(/<[^>]*>/g, "")
-        const mailOptions = {
-            from: '"Lumen Juris" <no-reply@lumenjuris.com>',
-            to: this.email,
-            subject, //Le titre qui sera affiché avant l'ouverture de l'email
-            text: textBrutFallback, // fallback en cas de non gestion du texte html
-            html,
-        };
-        return mailOptions
-    }
+  private createOption(html: string, subject: string) {
+    const textBrutFallback = html.replace(/<[^>]*>/g, "");
+    const mailOptions = {
+      from: '"Lumen Juris" <no-reply@lumenjuris.com>',
+      to: this.email,
+      subject, //Le titre qui sera affiché avant l'ouverture de l'email
+      text: textBrutFallback, // fallback en cas de non gestion du texte html
+      html,
+    };
+    return mailOptions;
+  }
 
-    private createHtmlHeader() {
-        return `
+  private createHtmlHeader() {
+    return `
         <tr>
             <td align="center" style="background-color:#716af9; padding:24px;">
                 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
@@ -66,17 +66,13 @@ export class Mailer {
             <td style="background-color:#ffffff; height:1px; line-height:1px; font-size:0;"></td>
         </tr>
     `;
-    }
+  }
 
+  private createHtmlFooter() {
+    const date = new Date();
+    const year = date.getFullYear();
 
-
-
-
-    private createHtmlFooter() {
-        const date = new Date();
-        const year = date.getFullYear();
-
-        return `
+    return `
         <tr>
             <td style="padding: 30px 30px 10px 30px; font-family: Arial, sans-serif; font-size:14px; color:#1f2937;">
                 Cordialement,<br>
@@ -110,14 +106,10 @@ export class Mailer {
             </td>
         </tr>
     `;
-    }
+  }
 
-
-
-
-
-    private createHtmlFullContent(htmlContent: string) {
-        return `
+  private createHtmlFullContent(htmlContent: string) {
+    return `
             <body style="margin:0;padding:0;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:20px 0;">
                     <tr>
@@ -134,36 +126,32 @@ export class Mailer {
                     </tr>
                 </table>
             </body>`;
+  }
+
+  async sendVerifyAccount(verificationLink: string, username: string) {
+    try {
+      const html = this.createHtmlFullContent(
+        templateVerifyAccount(verificationLink, username),
+      );
+      const mailOptions = this.createOption(
+        html,
+        "Activez votre compte Lumen Juris",
+      );
+      const sending = await transporter.sendMail(mailOptions);
+
+      if (!sending.messageId) {
+        throw new Error(
+          `Echec lors de l'envoie d'un email, id indisponible de retour indisponible.\n ${sending}`,
+        );
+      }
+      return {
+        success: !!sending.messageId,
+        message: sending.messageId
+          ? `Un email a été envoyé à votre adresse ${this.email}, veuillez consulter votre boîte de réception pour valider votre inscription.`
+          : "Une erreur est survenue avec le serveur nous n'avons pas pu envoyer votre email.",
+      };
+    } catch (err) {
+      return this.errorCatching(err);
     }
-
-
-
-
-
-    async sendVerifyAccount(verificationLink: string, username: string) {
-        try {
-
-            const html = this.createHtmlFullContent(templateVerifyAccount(verificationLink, username))
-            const mailOptions = this.createOption(html, "Activez votre compte Lumen Juris")
-            const sending = await transporter.sendMail(mailOptions);
-
-            if (!sending.messageId) {
-                throw new Error(`Echec lors de l'envoie d'un email, id indisponible de retour indisponible.\n ${sending}`)
-            }
-            return {
-                success: true,
-                message: `L'email de rappel de rendez-vous a été envoyé au destinataire ${this.email} avec succès.`
-            }
-        } catch (err) {
-            return this.errorCatching(err)
-        }
-    }
-
-
-
-
-
-
-
-
+  }
 }

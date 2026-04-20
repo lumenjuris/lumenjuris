@@ -8,22 +8,14 @@ import {
   FieldDescription,
   FieldError,
   FieldGroup,
-  FieldLegend,
-  FieldSeparator,
-  FieldSet,
-  FieldContent,
-  FieldTitle,
 } from "../ui/Field";
-import { Separator } from "../ui/Separator";
 import { Checkbox } from "../ui/Checkbox";
-import { Label } from "../ui/Label";
-import { EyeOffIcon, EyeIcon } from "lucide-react";
+import { EyeOffIcon, EyeIcon, PenBoxIcon } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
 import { AlertBanner } from "../common/AlertBanner";
 
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface SignupFormProps {
   lastName: string;
@@ -55,47 +47,71 @@ const SignupForm = ({
   setAcceptCgu,
 }: SignupFormProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [lastnameError, setLastnameError] = useState("");
-  const [firstnameError, setFirstnameError] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+
+  const [submitError, setSubmitError] = useState(false);
+  const [submitCguError, setSubmitCguError] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [serverError, setServerError] = useState(false);
+  const [serverErrorMessage, setServerErrorMessage] = useState("");
+
   const passwordErrorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
-  const navigate = useNavigate();
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!lastName || !email || !password || !acceptCgu) {
-      <AlertBanner
-        title="Des champs sont manquants"
-        variant="error"
-        onClose={() => {}}
-      />;
-    } else if (emailError) {
-      <AlertBanner
-        title={emailError}
-        variant="error"
-        onClose={() => {
-          setEmailError("");
-        }}
-      />;
-    } else if (passwordError) {
-      <AlertBanner
-        title={passwordError}
-        variant="error"
-        onClose={() => {
-          setPasswordError("");
-        }}
-      />;
+
+    if (!lastName || !email || !password) {
+      setSubmitError(true);
+    } else if (acceptCgu === false) {
+      setSubmitCguError(true);
     } else {
       setSubmitLoading(true);
+      try {
+        const signupResponse = await fetch("/api/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+            nom: lastName,
+            prenom: firstName,
+            password: password,
+            cgu: acceptCgu,
+          }),
+        });
+
+        const data = await signupResponse.json();
+        console.log("▶️▶️ RETOUR PROXY INSCRIPTION :", data);
+
+        if (!signupResponse.ok) {
+          setServerError(true);
+          setServerErrorMessage(data.message);
+          throw new Error(`BackNode Auth Error : ${signupResponse.status}`);
+        } else {
+          setSubmitSuccess(true);
+          setSuccessMessage(data.message);
+        }
+      } catch (error) {
+        setServerError(true);
+        setServerErrorMessage(
+          "Une erreur s'est produite, nous n'avons pas pu créer votre compte...",
+        );
+        console.error("🛑🛑🛑 ERREUR SERVEUR INSCRIPTION", error);
+      }
     }
+  };
+
+  const handleSubmitGoogle = () => {
+    window.location.href = "http://localhost:3020/auth/google";
   };
 
   const handleChangeLastname = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,30 +179,76 @@ const SignupForm = ({
   };
 
   return (
-    <div className="w-[420px] border border-border p-4 rounded-xl flex flex-col gap-4 bg-background">
-      <section>
-        <h2 className="font-semibold text-[18px]">
-          Créez un compte et accéder à nos outils
-        </h2>
-        <p className="text-black/50 ">Complétez les champs suivants</p>
-      </section>
+    <div className="flex flex-col gap-5">
+      {submitError && (
+        <AlertBanner
+          title="Champs manquants !"
+          variant="error"
+          detail="Certains champs obligatoires sont manquants."
+          onClose={() => {
+            setSubmitError(false);
+          }}
+        />
+      )}
+      {submitCguError && (
+        <AlertBanner
+          title="CGU !"
+          variant="error"
+          detail="Vous devez acceptez nos CGU."
+          onClose={() => {
+            setSubmitCguError(false);
+          }}
+        />
+      )}
 
-      <div className="w-full h-px bg-border"></div>
+      {serverError && (
+        <AlertBanner
+          title="Une erreur est survenue"
+          variant="error"
+          detail={serverErrorMessage}
+          onClose={() => {
+            setServerError(false);
+            setSubmitLoading(false);
+            setServerErrorMessage("");
+          }}
+        />
+      )}
+      {submitSuccess && (
+        <AlertBanner
+          title="Inscription réussie !"
+          variant="success"
+          detail={successMessage}
+          duration={9000}
+          onClose={() => {
+            setSubmitSuccess(false);
+            setSubmitLoading(false);
+            setSuccessMessage("");
+            setLastName("");
+            setFirstName("");
+            setEmail("");
+            setPassword("");
+            setConfirmPassword("");
+            setSiren("");
+            setAcceptCgu(false);
+          }}
+        />
+      )}
 
       <form onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-6">
+        <section className="flex flex-col gap-6">
           <div className="grid gap-2">
             <Field>
-              <FieldLabel htmlFor="lastname">
-                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
-                  Nom
-                </span>
+              <FieldLabel
+                htmlFor="lastname"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Nom
               </FieldLabel>
               <Input
                 id="lastname"
                 type="text"
                 placeholder="Dupond"
-                required
+                value={lastName}
                 onChange={handleChangeLastname}
               />
             </Field>
@@ -199,7 +261,7 @@ const SignupForm = ({
                 id="firstname"
                 type="text"
                 placeholder="Jenny"
-                required
+                value={firstName}
                 onChange={handleChangeFirstname}
               />
             </Field>
@@ -207,21 +269,22 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field>
-              <FieldLabel htmlFor="email">
-                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
-                  Email
-                </span>
+              <FieldLabel
+                htmlFor="email"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Email
               </FieldLabel>
               <Input
                 id="email"
                 type="email"
                 placeholder="mail@example.com"
-                required
-                pattern="/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/"
+                value={email}
+                // pattern="/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/"
                 onChange={handleChangeEmail}
                 className={
                   emailError &&
-                  "text-destructive border-destructive focus-visible:border-destructive ring-1 ring-destructive"
+                  "text-destructive border-destructive focus-visible:border-destructive focus-visible:ring-destructive ring-1 ring-destructive"
                 }
               />
               <FieldError
@@ -232,22 +295,23 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field className="max-w-sm">
-              <FieldLabel htmlFor="password">
-                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
-                  Password
-                </span>
+              <FieldLabel
+                htmlFor="password"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Password
               </FieldLabel>
               <InputGroup
                 className={
                   passwordError &&
-                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2"
+                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
                 }
               >
                 <InputGroupInput
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Choisissez un mot de passe"
-                  required
+                  value={password}
                   onChange={handleChangePassword}
                   className={passwordError && "text-destructive"}
                 />
@@ -256,7 +320,7 @@ const SignupForm = ({
                   onClick={() => setShowPassword(!showPassword)}
                   className="hover:cursor-pointer"
                 >
-                  {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </InputGroupAddon>
               </InputGroup>
               <FieldError
@@ -269,22 +333,23 @@ const SignupForm = ({
 
           <div className="grid gap-2">
             <Field className="max-w-sm">
-              <FieldLabel htmlFor="confirmpassword">
-                <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
-                  Confirm password
-                </span>
+              <FieldLabel
+                htmlFor="confirmpassword"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Confirm password
               </FieldLabel>
               <InputGroup
                 className={
                   confirmPasswordError &&
-                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2"
+                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
                 }
               >
                 <InputGroupInput
                   id="confirmpassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirmez votre mot de passe"
-                  required
+                  value={confirmPassword}
                   onChange={handleChangeConfirmPassword}
                   className={confirmPasswordError && "text-destructive"}
                 />
@@ -293,7 +358,7 @@ const SignupForm = ({
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="hover:cursor-pointer"
                 >
-                  {showConfirmPassword ? <EyeIcon /> : <EyeOffIcon />}
+                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </InputGroupAddon>
               </InputGroup>
               <FieldError
@@ -309,14 +374,14 @@ const SignupForm = ({
           <div className="grid gap-2">
             <Field>
               <FieldLabel htmlFor="siren">Siren</FieldLabel>
-              <FieldDescription className="text-muted_foreground">
+              <FieldDescription className="text-gray-500">
                 Saisissez le numéro Siren de votre société
               </FieldDescription>
               <Input
                 id="siren"
                 type="text"
                 placeholder="552 178 639"
-                required
+                value={siren}
                 onChange={handleChangeFirstname}
               />
             </Field>
@@ -328,8 +393,8 @@ const SignupForm = ({
                 <Checkbox
                   id="terms-checkbox-desc"
                   name="terms-checkbox-desc"
+                  checked={acceptCgu}
                   defaultChecked={false}
-                  required
                   onCheckedChange={(checked) => {
                     handleCheckCgu({
                       target: { checked },
@@ -337,54 +402,55 @@ const SignupForm = ({
                   }}
                   className="border-ring"
                 />
-                <FieldContent>
-                  <FieldLabel htmlFor="terms-checkbox-desc">
-                    Valider nos{" "}
-                    <a
-                      href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
-                      className="hover:cursor-pointer underline"
-                    >
-                      <span className="after:ml-0.5 after:text-red-500 after:content-['*']">
-                        CGU
-                      </span>
-                    </a>
-                  </FieldLabel>
-                </FieldContent>
+                <FieldDescription className="after:ml-1 after:text-red-500 after:content-['*']">
+                  Accepter nos{" "}
+                  <a
+                    href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
+                    className="hover:cursor-pointer underline"
+                  >
+                    <span>CGU</span>
+                  </a>
+                </FieldDescription>
               </Field>
             </FieldGroup>
           </div>
 
           <div className="grid gap-2">
-            <span className="before:mr-0.5 before:text-red-500 before:content-['*'] text-[14px] text-muted_foreground">
+            <span className="before:mr-1 before:text-red-500 before:content-['*'] text-[14px] text-gray-500">
               Champs obligatoires.
             </span>
           </div>
 
           <div className="w-full h-px bg-border"></div>
+
           <div className="grid gap-2">
             <Button
               className="text-background border border-lumenjuris"
-              disabled={submitLoading && true}
+              disabled={
+                submitLoading
+                  ? true
+                  : submitError
+                    ? true
+                    : submitCguError
+                      ? true
+                      : false
+              }
               type="submit"
               size="lg"
             >
+              <PenBoxIcon />
               S'inscrire
             </Button>
-            {/* <Button
-              variant="ghost"
-              className="border border-lumenjuris text-lumenjuris"
+            <button
+              className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris hover:bg-lumenjuris-background"
+              type="button"
+              onClick={handleSubmitGoogle}
             >
-              <span className="text-[20px]">
-                {" "}
-                <FcGoogle />
-              </span>{" "}
-            </Button> */}
-            <button className="w-full h-10 border border-lumenjuris text-[20px] flex justify-center items-center gap-2 rounded-md text-lumenjuris">
-              <FcGoogle />
-              <span className="text-[14px]">Se connecter avec Google</span>
+              <FcGoogle className="text-[20px]" />
+              Se connecter avec Google
             </button>
           </div>
-        </div>
+        </section>
       </form>
     </div>
   );

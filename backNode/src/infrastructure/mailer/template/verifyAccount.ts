@@ -1,5 +1,8 @@
-export const templateVerifyAccount = (verificationLink: string, username?: string) => {
-    return `
+export const templateVerifyAccount = (
+  verificationLink: string,
+  username?: string,
+) => {
+  return `
         <tr>
             <td style="padding:30px; font-family: Arial, sans-serif; color:#1f2937;">
                 
@@ -35,5 +38,5 @@ export const templateVerifyAccount = (verificationLink: string, username?: strin
 
             </td>
         </tr>
-    `
-}
+    `;
+};

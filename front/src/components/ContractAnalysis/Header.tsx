@@ -1,5 +1,5 @@
-import React from 'react';
-import { Scale, RefreshCw } from 'lucide-react';
+import React from "react";
+import { Scale, RefreshCw } from "lucide-react";
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -7,12 +7,16 @@ interface HeaderProps {
   showReanalyze?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onLogoClick, onReanalyze, showReanalyze = false }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onLogoClick,
+  onReanalyze,
+  showReanalyze = false,
+}) => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <button 
+          <button
             onClick={onLogoClick}
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer"
           >
@@ -21,10 +25,12 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onReanalyze, showRe
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Justiclause</h1>
-              <p className="text-sm text-gray-600">Analyse et Revue de Contrats</p>
+              <p className="text-sm text-gray-600">
+                Analyse et Revue de Contrats
+              </p>
             </div>
           </button>
-          
+
           {showReanalyze && (
             <button
               onClick={onReanalyze}

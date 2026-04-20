@@ -1,27 +1,60 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, PenTool, ShieldCheck, MessageSquare,
-  Calculator, Newspaper, Lock, Scale, Bell, Search,
-  PanelLeft, ChevronDown,
+  LayoutDashboard,
+  FileText,
+  PenTool,
+  ShieldCheck,
+  MessageSquare,
+  Calculator,
+  Newspaper,
+  Lock,
+  Scale,
+  Bell,
+  Search,
+  PanelLeft,
+  ChevronDown,
 } from "lucide-react";
 
+import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
+
 const navItems = [
-  { icon: LayoutDashboard, label: "Tableau de bord",       path: "/dashboard" },
-  { icon: FileText,        label: "Générateur de modèles", path: "/generateur" },
-  { icon: PenTool,         label: "Signature",             path: "/signature" },
-  { icon: ShieldCheck,     label: "Analyse de conformité", path: "/conformite" },
-  { icon: MessageSquare,   label: "Chat juridique RH",     path: "/chatjuridique" },
-  { icon: Calculator,      label: "Calculateur juridique", path: "/calculateur" },
-  { icon: Newspaper,       label: "Veille information",    path: "/veille" },
+  { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
+  { icon: FileText, label: "Générateur de modèles", path: "/generateur" },
+  { icon: PenTool, label: "Signature", path: "/signature" },
+  { icon: ShieldCheck, label: "Analyse de conformité", path: "/conformite" },
+  { icon: MessageSquare, label: "Chat juridique RH", path: "/chatjuridique" },
+  { icon: Calculator, label: "Calculateur juridique", path: "/calculateur" },
+  { icon: Newspaper, label: "Veille information", path: "/veille" },
 ];
 
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  return (
-    <div className="flex min-h-screen w-full bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/user/get", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const dataResponse = await response.json();
+        if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
+          navigate("/inscription");
+        }
+      } catch (error) {}
+    };
+    fetchData();
+  }, []);
+
+  return (
+    <div
+      className="flex min-h-screen w-full bg-[#f8f9fb]"
+      style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}
+    >
       {/* ── Sidebar ── */}
       {sidebarOpen && (
         <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-lumenjuris-sidebar z-20">
@@ -31,8 +64,12 @@ export function MainLayout() {
                 <Scale className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-white tracking-tight">LumenJuris</span>
-                <span className="text-[10px] text-gray-400 leading-none">Conformité RH</span>
+                <span className="text-sm font-bold text-white tracking-tight">
+                  LumenJuris
+                </span>
+                <span className="text-[10px] text-gray-400 leading-none">
+                  Conformité RH
+                </span>
               </div>
             </Link>
           </div>
@@ -63,15 +100,18 @@ export function MainLayout() {
           <div className="p-4">
             <div className="flex items-center justify-center gap-1.5 py-2">
               <Lock className="h-3 w-3 text-gray-500" />
-              <span className="text-[10px] text-gray-500">Données sécurisées – Hébergement UE</span>
+              <span className="text-[10px] text-gray-500">
+                Données sécurisées – Hébergement UE
+              </span>
             </div>
           </div>
         </aside>
       )}
 
       {/* ── Main ── */}
-      <div className={`flex-1 flex flex-col min-w-0 ${sidebarOpen ? "md:ml-64" : ""}`}>
-
+      <div
+        className={`flex-1 flex flex-col min-w-0 ${sidebarOpen ? "md:ml-64" : ""}`}
+      >
         {/* Header */}
         <header className="h-16 border-b border-gray-200 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -91,7 +131,10 @@ export function MainLayout() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <HeaderNavigationBar />
+          {/* <div className="flex items-center gap-3">
+            
             <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
               <Bell className="h-5 w-5 text-gray-400" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-green-500" />
@@ -101,11 +144,13 @@ export function MainLayout() {
                 ML
               </div>
               <div className="hidden md:flex items-center gap-1 cursor-pointer">
-                <span className="text-sm font-medium text-gray-800">Marie L.</span>
+                <span className="text-sm font-medium text-gray-800">
+                  Marie L.
+                </span>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
               </div>
             </div>
-          </div>
+          </div> */}
         </header>
 
         {/* Page content via nested routes */}
