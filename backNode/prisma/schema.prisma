@@ -55,9 +55,7 @@ model User {
   events        Event[]
   authProviders AuthProviderAccount[]
   subscription  Subscription?
-
-  enterpriseId Int?
-  enterprise   Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
+  enterprise    Enterprise?
 
   userCredit UserCredit?
   preference UserPreference?
@@ -86,32 +84,33 @@ model UserPreference {
   user   User @relation(fields: [userId], references: [idUser])
 }
 
-
 // --- ENTREPRISE ---
 model Enterprise {
-  idEnterprise         Int     @id @default(autoincrement())
+  idEnterprise         Int    @id @default(autoincrement())
   siren                String?
   codeNaf              String?
   intituleNaf          String?
   name                 String?
-  conventionCollective String?
-  idccSelections       Json?
+  statusJuridiqueCode  String?
   statusJuridique      String?
+  idccSelections       Json?
+  selectedIdccKey      String?
 
   //relation
-  users   User[]
+  userId Int   @unique
+  user   User  @relation(fields: [userId], references: [idUser])
   address Address?
 }
 
-
 model Address {
-  idAddress  Int    @id @default(autoincrement())
-  address    String
-  codePostal String
-  pays       String @default("FRANCE")
+  idAddress    Int     @id @default(autoincrement())
+  address      String?
+  codePostal   String?
+  pays         String? @default("FRANCE")
 
-  enterpriseId Int?        @unique
-  enterprise   Enterprise? @relation(fields: [enterpriseId], references: [idEnterprise])
+  //relation
+  enterpriseId Int     @unique
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [idEnterprise], onDelete: Cascade, onUpdate: Cascade)
 }
 
 

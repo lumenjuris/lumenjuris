@@ -5,105 +5,123 @@ import { Enterprise } from "../services/classEnterprise";
 
 const routerEnterprise: Router = express.Router();
 
+// INSEE preview
 routerEnterprise.get("/insee/:siren", async (req: Request, res: Response) => {
-  try {
-    const siren = String(req.params.siren ?? "");
-    const enterprise = new Enterprise();
-    const result = await enterprise.previewFromSiren(siren);
+    try {
+        const siren = String(req.params.siren ?? "");
+        const result = await new Enterprise().previewFromSiren(siren);
 
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      success: false,
-      message:
-        "Une erreur est survenue lors de la récupération des données INSEE.",
-    });
-  }
+        return res.status(result.success ? 200 : 400).json(result);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la récupération des données INSEE.",
+        });
+    }
 });
 
-routerEnterprise.post(
-  "/create",
-  authMiddleware,
-  async (req: Request, res: Response) => {
+// Create enterprise from SIREN
+routerEnterprise.post("/create", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { siren } = req.body;
-      const userId = Number(req.idUser);
-      const enterprise = new Enterprise();
-      const result = await enterprise.createForUserFromSiren(userId, siren);
+        const userId = Number(req.idUser);
+        const { siren } = req.body;
 
-      return res.status(result.success ? 200 : 400).json(result);
+        const result = await new Enterprise().createForUserFromSiren(userId, siren);
+
+        return res.status(result.success ? 200 : 400).json(result);
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        success: false,
-        message: "Une erreur est survenue lors de la création de l'entreprise.",
-      });
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la création de l'entreprise.",
+        });
     }
-  },
-);
+});
 
-routerEnterprise.get(
-  "/get",
-  authMiddleware,
-  async (req: Request, res: Response) => {
+// Get enterprise
+routerEnterprise.get("/", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const userId = Number(req.idUser);
-      const enterprise = new Enterprise();
-      const result = await enterprise.getByUser(userId);
+        const userId = Number(req.idUser);
+        const result = await new Enterprise().getByUser(userId);
 
-      return res.status(result.success ? 200 : 404).json(result);
+        return res.status(result.success ? 200 : 404).json(result);
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        success: false,
-        message:
-          "Une erreur est survenue lors de la récupération de l'entreprise.",
-      });
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la récupération du profil entreprise.",
+        });
     }
-  },
-);
+});
 
-routerEnterprise.put(
-  "/update",
-  authMiddleware,
-  async (req: Request, res: Response) => {
+// Update enterprise
+routerEnterprise.put("/", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const userId = Number(req.idUser);
-      const enterprise = new Enterprise();
-      const result = await enterprise.updateByUser(userId, req.body);
+        const userId = Number(req.idUser);
+        const result = await new Enterprise().updateByUser(userId, req.body);
 
-      return res.status(result.success ? 200 : 400).json(result);
+        return res.status(result.success ? 200 : 400).json(result);
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        success: false,
-        message:
-          "Une erreur est survenue lors de la mise à jour de l'entreprise.",
-      });
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la mise à jour du profil entreprise.",
+        });
     }
-  },
-);
+});
 
-routerEnterprise.delete(
-  "/delete",
-  authMiddleware,
-  async (req: Request, res: Response) => {
+// Delete enterprise
+routerEnterprise.delete("/", authMiddleware, async (req: Request, res: Response) => {
     try {
-      const userId = Number(req.idUser);
-      const enterprise = new Enterprise();
-      const result = await enterprise.deleteByUser(userId);
+        const userId = Number(req.idUser);
+        const result = await new Enterprise().deleteByUser(userId);
 
-      return res.status(result.success ? 200 : 400).json(result);
+        return res.status(result.success ? 200 : 400).json(result);
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        success: false,
-        message:
-          "Une erreur est survenue lors de la suppression de l'entreprise.",
-      });
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la suppression du profil entreprise.",
+        });
     }
-  },
-);
+});
+
+// Add custom IDCC
+routerEnterprise.post("/idcc/custom", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = Number(req.idUser);
+        const result = await new Enterprise().addCustomConventionCollective(userId, req.body);
+
+        return res.status(result.success ? 200 : 400).json(result);
+    } catch (err) {
+        console.error("Erreur ajout IDCC custom:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de l'ajout d'une convention collective personnalisée.",
+        });
+    }
+});
+
+// Delete custom IDCC
+routerEnterprise.delete("/idcc/custom/:selectedIdccKey", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = Number(req.idUser);
+        const selectedIdccKey = String(req.params.selectedIdccKey ?? "");
+
+        const result = await new Enterprise().deleteCustomConventionCollective(
+            userId,
+            selectedIdccKey
+        );
+
+        return res.status(result.success ? 200 : 400).json(result);
+    } catch (err) {
+        console.error("Erreur suppression IDCC custom:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Erreur lors de la suppression d'une convention collective personnalisée.",
+        });
+    }
+});
 
 export default routerEnterprise;
