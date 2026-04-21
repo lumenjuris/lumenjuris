@@ -1,59 +1,3 @@
-<<<<<<< HEAD
-import MainHeader from "../components/MainHeader/MainHeader";
-
-import { useState, useEffect, useContext } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-
-import { UserDataProfile } from "../types/userData";
-
-export function ParamCompte() {
-  const [serverError, setServerError] = useState(false);
-  const [serverErrorMessage, setServerErrorMessage] = useState<string | null>(
-    null,
-  );
-  const [userData, setUserData] = useState<UserDataProfile | null>(null);
-  const [userAvatar, setUserAvatar] = useState<string | null>("");
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/user/get", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const dataResponse = await response.json();
-        console.log("USER DATA :", dataResponse);
-        if (!dataResponse.ok) {
-          setServerError(true);
-          setServerErrorMessage(dataResponse.message);
-        } else if (!dataResponse.data.profile.isVerified) {
-          navigate("/inscription");
-        } else if (
-          dataResponse.success &&
-          dataResponse.data.profile.isVerified
-        ) {
-          setUserData(dataResponse.data.profile);
-          setUserAvatar(dataResponse.data.provider.avatarUrl);
-        }
-      } catch (error) {
-        console.error("🛑🛑🛑 ERREUR SERVEUR GET USER", error);
-        setServerError(true);
-        setServerErrorMessage(
-          "Nous sommes désolé, un problème est survenu lors de la récupération des données...",
-        );
-      }
-    };
-    fetchData();
-  }, []);
-
-  return (
-    <>
-      <MainHeader />
-      <div>Parametre de compte</div>
-=======
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SETTINGS_TABS } from "../config/paramSettings";
 import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
@@ -89,8 +33,9 @@ const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
 export function ParamCompte() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
   const [panelMinHeight, setPanelMinHeight] = useState<number | null>(null);
-  const [accountProfile, setAccountProfile] =
-    useState<AccountProfile>(EMPTY_ACCOUNT_PROFILE);
+  const [accountProfile, setAccountProfile] = useState<AccountProfile>(
+    EMPTY_ACCOUNT_PROFILE,
+  );
   const [accountPassword, setAccountPassword] = useState("");
   const [accountProvider, setAccountProvider] = useState<AccountProvider>(null);
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
@@ -120,9 +65,9 @@ export function ParamCompte() {
           }),
         ]);
 
-        const userPayload = (await userResponse.json().catch(() => null)) as
-          | ApiResponse<UserGetData>
-          | null;
+        const userPayload = (await userResponse
+          .json()
+          .catch(() => null)) as ApiResponse<UserGetData> | null;
         const preferencePayload = (await preferenceResponse
           .json()
           .catch(() => null)) as ApiResponse<UserPreferenceSettings> | null;
@@ -163,7 +108,10 @@ export function ParamCompte() {
           );
         }
       } catch (error) {
-        console.error("Impossible de charger les paramètres utilisateur.", error);
+        console.error(
+          "Impossible de charger les paramètres utilisateur.",
+          error,
+        );
       }
     };
 
@@ -247,12 +195,10 @@ export function ParamCompte() {
         ...(includePassword ? { password: nextPassword } : {}),
       }),
     });
-    const payload = (await response.json().catch(() => null)) as
-      | ApiResponse<{
-          profile: AccountProfile;
-          provider: AccountProvider;
-        }>
-      | null;
+    const payload = (await response.json().catch(() => null)) as ApiResponse<{
+      profile: AccountProfile;
+      provider: AccountProvider;
+    }> | null;
 
     if (!response.ok || !payload?.success || !payload.data) {
       throw new Error(
@@ -315,13 +261,13 @@ export function ParamCompte() {
       }),
     })
       .then(async (response) => {
-        const payload = (await response.json().catch(() => null)) as
-          | ApiResponse<{
-              preferenceUI: {
-                dyslexicMode: boolean;
-              };
-            }>
-          | null;
+        const payload = (await response
+          .json()
+          .catch(() => null)) as ApiResponse<{
+          preferenceUI: {
+            dyslexicMode: boolean;
+          };
+        }> | null;
 
         if (!response.ok || !payload?.success || !payload.data) {
           throw new Error(
@@ -366,11 +312,11 @@ export function ParamCompte() {
         credentials: "include",
       })
         .then(async (response) => {
-          const payload = (await response.json().catch(() => null)) as
-            | ApiResponse<{
-                enabled?: boolean;
-              }>
-            | null;
+          const payload = (await response
+            .json()
+            .catch(() => null)) as ApiResponse<{
+            enabled?: boolean;
+          }> | null;
 
           if (!response.ok || !payload?.success) {
             throw new Error(
@@ -491,7 +437,6 @@ export function ParamCompte() {
           onConfirm={confirmationModalContent.onConfirm}
         />
       ) : null}
->>>>>>> main
     </>
   );
 }

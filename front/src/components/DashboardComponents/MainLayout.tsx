@@ -1,9 +1,5 @@
-import { useState, useEffect } from "react";
-<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
-import { Link, NavLink, Outlet, useNavigate, Navigate } from "react-router-dom";
-=======
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
->>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
+import { useState } from "react";
+import { Link, NavLink, Outlet, Navigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -14,17 +10,12 @@ import {
   Newspaper,
   Lock,
   Scale,
-  Bell,
   Search,
   PanelLeft,
-  ChevronDown,
 } from "lucide-react";
 
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
-<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
 import { useAuth } from "../../context/AuthContext";
-=======
->>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
@@ -39,49 +30,9 @@ const navItems = [
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
-  // const { userVerified, userConnected } = useAuth();
+  const { userVerified, userConnected } = useAuth();
 
-  const navigate = useNavigate();
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const response = await fetch("/api/user/get", {
-  //         method: "GET",
-  //         headers: { "Content-Type": "application/json" },
-  //       });
-
-  //       const dataResponse = await response.json();
-  //       if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
-  //         navigate("/inscription");
-  //       }
-  //     } catch (error) {}
-  //   };
-  //   fetchData();
-  // }, []);
-=======
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/user/get", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const dataResponse = await response.json();
-        if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
-          navigate("/inscription");
-        }
-      } catch (error) {}
-    };
-    fetchData();
-  }, []);
->>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
-
-  return (
+  return userVerified && userConnected ? (
     <div
       className="flex min-h-screen w-full bg-[#f8f9fb]"
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}
@@ -190,5 +141,7 @@ export function MainLayout() {
         </main>
       </div>
     </div>
+  ) : (
+    <Navigate to="/inscription" />
   );
 }

@@ -15,7 +15,7 @@ dotenv.config();
 
 const app = express();
 
-//Cors adapté pour prod
+//Cord adapté pour prod
 app.use(
   cors({
     origin: [
@@ -32,10 +32,6 @@ const PORT = Number(process.env.PORT || 5173);
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5678";
 const BACKNODE_URL = process.env.BACKNODE_URL || "http://localhost:3020";
 
-<<<<<<< HEAD
-=======
-
->>>>>>> main
 // ---- Relay vers Python backend ------------------------------------------------
 function relayStreamToPython(
   req: Request,
@@ -61,19 +57,11 @@ function relayStreamToPython(
   req.pipe(proxyReq, { end: true });
 }
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> main
 function relayJsonToPython(
   req: Request,
   res: Response,
   targetPath: string,
-<<<<<<< HEAD
-=======
   handleData?: (data: PythonJsonResponse) => Promise<void>,
->>>>>>> main
 ): void {
   fetch(`${BACKEND_URL}${targetPath}`, {
     method: req.method,
@@ -103,20 +91,20 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
     body: req.method === "GET" ? undefined : JSON.stringify(req.body),
   })
     .then(async (r) => {
-<<<<<<< HEAD
-      const contentType = r.headers.get("content-type") || "";
-=======
       const setCookieHeader =
-        typeof (r.headers as any).getSetCookie === 'function'
+        typeof (r.headers as any).getSetCookie === "function"
           ? (r.headers as any).getSetCookie()
-          : r.headers.get('set-cookie');
+          : r.headers.get("set-cookie");
 
-      if (setCookieHeader && ((Array.isArray(setCookieHeader) && setCookieHeader.length > 0) || !Array.isArray(setCookieHeader))) {
-        res.setHeader('set-cookie', setCookieHeader);
+      if (
+        setCookieHeader &&
+        ((Array.isArray(setCookieHeader) && setCookieHeader.length > 0) ||
+          !Array.isArray(setCookieHeader))
+      ) {
+        res.setHeader("set-cookie", setCookieHeader);
       }
 
-      const contentType = r.headers.get('content-type') || '';
->>>>>>> main
+      const contentType = r.headers.get("content-type") || "";
 
       if (contentType.includes("application/json")) {
         const data = await r.json().catch(() => ({}));
@@ -138,51 +126,6 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
     });
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Multipart (upload PDF) — stream direct, body non consommé par express.json
-app.post("/extract-pdf-text", (req: Request, res: Response) =>
-  relayStreamToPython(req, res, "/extract-pdf-text"),
-);
-
-// JSON routes — body déjà parsé par express.json
-app.post(
-  ["/legifrance-search", "/api/legifrance-search"],
-  (req: Request, res: Response) =>
-    relayJsonToPython(req, res, "/legifrance-search"),
-);
-app.post(
-  ["/jurisprudence", "/api/jurisprudence"],
-  (req: Request, res: Response) =>
-    relayJsonToPython(req, res, "/jurisprudence"),
-);
-app.post(
-  ["/analyze-clause", "/api/analyze-clause"],
-  (req: Request, res: Response) =>
-    relayJsonToPython(req, res, "/analyze-clause"),
-);
-app.post(["/api/chat", "/chat"], (req: Request, res: Response) =>
-  relayJsonToPython(req, res, "/chat"),
-);
-app.post(["/api/openai-chat", "/openai-chat"], (req: Request, res: Response) =>
-  relayJsonToPython(req, res, "/openai-chat"),
-);
-app.post(
-  ["/api/openai-chat-5", "/openai-chat-5"],
-  (req: Request, res: Response) =>
-    relayJsonToPython(req, res, "/openai-chat-5"),
-);
-app.post(
-  ["/api/huggingface-generate", "/huggingface-generate"],
-  (req: Request, res: Response) =>
-    relayJsonToPython(req, res, "/huggingface-generate"),
-);
-
-// Node - Requêtes INSEE
-app.get("/api/insee/:siren", (req: Request, res: Response) => {
-=======
-=======
-
 // Comptage consommation token
 type OpenAiUsagePayload = {
   model?: string;
@@ -203,85 +146,80 @@ async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
   const outputTokens = Number(usage.output_tokens ?? 0);
 
   if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) {
-    console.warn('OpenAI usage ignored: invalid payload', usage);
+    console.warn("OpenAI usage ignored: invalid payload", usage);
     return;
   }
 
   try {
     const logResponse = await fetch(
       `${BACKNODE_URL}/llm/increment/${encodeURIComponent(usage.model)}/${Math.trunc(inputTokens)}/${Math.trunc(outputTokens)}`,
-      { method: 'PUT' },
+      { method: "PUT" },
     );
 
     if (!logResponse.ok) {
-      const errorText = await logResponse.text().catch(() => '');
-      console.warn('OpenAI usage log failed:', logResponse.status, errorText);
+      const errorText = await logResponse.text().catch(() => "");
+      console.warn("OpenAI usage log failed:", logResponse.status, errorText);
     }
   } catch (e: any) {
-    console.error('OpenAI usage log error:', e.message);
+    console.error("OpenAI usage log error:", e.message);
   }
 }
 
->>>>>>> main
 function handleExtractPdfText(req: Request, res: Response): void {
-  relayStreamToPython(req, res, '/extract-pdf-text');
+  relayStreamToPython(req, res, "/extract-pdf-text");
 }
 
 function handleLegifranceSearch(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/legifrance-search');
+  relayJsonToPython(req, res, "/legifrance-search");
 }
 
 function handleJurisprudence(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/jurisprudence');
+  relayJsonToPython(req, res, "/jurisprudence");
 }
 
 function handleAnalyzeClause(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/analyze-clause', logOpenAiTokens);
+  relayJsonToPython(req, res, "/analyze-clause", logOpenAiTokens);
 }
 
 function handleChat(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/chat', logOpenAiTokens);
+  relayJsonToPython(req, res, "/chat", logOpenAiTokens);
 }
 
 function handleOpenAiChat(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/openai-chat', logOpenAiTokens);
+  relayJsonToPython(req, res, "/openai-chat", logOpenAiTokens);
 }
 
 function handleOpenAiChat5(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/openai-chat-5', logOpenAiTokens);
+  relayJsonToPython(req, res, "/openai-chat-5", logOpenAiTokens);
 }
 
 function handleHuggingFaceGenerate(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/huggingface-generate');
+  relayJsonToPython(req, res, "/huggingface-generate");
 }
 
-
-
-
 function handleInseeRequest(req: Request, res: Response): void {
->>>>>>> main
   const siren = encodeURIComponent(req.params.siren);
   relayToNode(req, res, `/enterprise/insee/${siren}`);
 }
 
 function handleLlmCurrentUsage(req: Request, res: Response): void {
-  relayToNode(req, res, '/llm/usage');
+  relayToNode(req, res, "/llm/usage");
 }
 
 function handleNodeUserGet(req: Request, res: Response): void {
-  relayToNode(req, res, '/user/get');
+  relayToNode(req, res, "/user/get");
 }
 
 function handleNodeUserUpdate(req: Request, res: Response): void {
-  relayToNode(req, res, '/user');
+  relayToNode(req, res, "/user");
 }
 
 function handleNodeLogin(req: Request, res: Response): void {
-  relayToNode(req, res, '/user/auth/login');
+  relayToNode(req, res, "/user/auth/login");
 }
 
 function handleNodeLogout(req: Request, res: Response): void {
-  relayToNode(req, res, '/user/auth/logout');
+  relayToNode(req, res, "/user/auth/logout");
 }
 
 function handleNodeUserPreferences(req: Request, res: Response): void {
@@ -301,64 +239,50 @@ function handleNodeUserDeleteAccount(req: Request, res: Response): void {
 }
 
 function handleNodeEnterpriseGet(req: Request, res: Response): void {
-  relayToNode(req, res, '/enterprise');
+  relayToNode(req, res, "/enterprise");
 }
 
 function handleNodeEnterpriseUpdate(req: Request, res: Response): void {
-  relayToNode(req, res, '/enterprise');
+  relayToNode(req, res, "/enterprise");
 }
 
-function handleSignUpUser(req:Request, res:Response):void{
-  relayToNode(req,res, "/user/create");
+function handleSignUpUser(req: Request, res: Response): void {
+  relayToNode(req, res, "/user/create");
 }
 
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
-app.post('/extract-pdf-text', handleExtractPdfText);
+app.post("/extract-pdf-text", handleExtractPdfText);
 
 // JSON routes — body déjà parsé par express.json
-app.post(['/legifrance-search', '/api/legifrance-search'], handleLegifranceSearch);
-app.post(['/jurisprudence', '/api/jurisprudence'], handleJurisprudence);
-app.post(['/analyze-clause', '/api/analyze-clause'], handleAnalyzeClause);
-app.post(['/api/chat', '/chat'], handleChat);
-app.post(['/api/openai-chat', '/openai-chat'], handleOpenAiChat);
-app.post(['/api/openai-chat-5', '/openai-chat-5'], handleOpenAiChat5);
-app.post(['/api/huggingface-generate', '/huggingface-generate'], handleHuggingFaceGenerate);
-
+app.post(
+  ["/legifrance-search", "/api/legifrance-search"],
+  handleLegifranceSearch,
+);
+app.post(["/jurisprudence", "/api/jurisprudence"], handleJurisprudence);
+app.post(["/analyze-clause", "/api/analyze-clause"], handleAnalyzeClause);
+app.post(["/api/chat", "/chat"], handleChat);
+app.post(["/api/openai-chat", "/openai-chat"], handleOpenAiChat);
+app.post(["/api/openai-chat-5", "/openai-chat-5"], handleOpenAiChat5);
+app.post(
+  ["/api/huggingface-generate", "/huggingface-generate"],
+  handleHuggingFaceGenerate,
+);
 
 // Node - Requêtes Backend
-app.post('/api/signup', handleSignUpUser )
-app.get('/api/insee/:siren', handleInseeRequest);
-app.get('/api/llm/usage', handleLlmCurrentUsage);
-app.get('/api/user/get', handleNodeUserGet);
-app.put('/api/user', handleNodeUserUpdate);
-app.post('/api/user/auth/login', handleNodeLogin);
-app.post('/api/user/auth/logout', handleNodeLogout);
-app.get('/api/user/preferences', handleNodeUserPreferences);
-app.put('/api/user/preferences', handleNodeUserPreferences);
-app.post('/api/user/two-factor', handleNodeUserTwoFactor);
-app.post('/api/user/export-data', handleNodeUserExportData);
-app.delete('/api/user/account', handleNodeUserDeleteAccount);
-app.get('/api/enterprise', handleNodeEnterpriseGet);
-app.put('/api/enterprise', handleNodeEnterpriseUpdate);
-
-// BackNode - Requêtes connexions
-app.post("/api/signup", (req: Request, res: Response) => {
-  relayToNode(req, res, "/user/create");
-});
-app.post("/api/login", (req: Request, res: Response) => {
-  relayToNode(req, res, "/user/auth/login");
-});
-app.get("/api/user/get", (req: Request, res: Response) => {
-  relayToNode(req, res, "/user/get");
-});
-app.post("/api/user/logout", (req: Request, res: Response) => {
-  relayToNode(req, res, "/user/auth/logout");
-});
-
-// BackNode - Requête connexion GOOGLE
-// app.get("/api/login/google", (_req: Request, res: Response) => {
-//   res.redirect(`${BACKNODE_URL}/auth/google`);
-// });
+app.post("/api/signup", handleSignUpUser);
+app.get("/api/insee/:siren", handleInseeRequest);
+app.get("/api/llm/usage", handleLlmCurrentUsage);
+app.get("/api/user/get", handleNodeUserGet);
+app.put("/api/user", handleNodeUserUpdate);
+app.post("/api/user/auth/login", handleNodeLogin);
+app.post("/api/user/auth/logout", handleNodeLogout);
+app.get("/api/user/preferences", handleNodeUserPreferences);
+app.put("/api/user/preferences", handleNodeUserPreferences);
+app.post("/api/user/two-factor", handleNodeUserTwoFactor);
+app.post("/api/user/export-data", handleNodeUserExportData);
+app.delete("/api/user/account", handleNodeUserDeleteAccount);
+app.get("/api/enterprise", handleNodeEnterpriseGet);
+app.put("/api/enterprise", handleNodeEnterpriseUpdate);
 
 // ---- Front React : Vite middleware (dev) ou static (prod) ---------------------
 if (IS_PROD) {
