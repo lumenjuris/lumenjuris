@@ -26,10 +26,6 @@ from back.services.pdf_processing import (
     _openai_client,
 )
 
-from back.services.logger_call_gpt import (
-    logger_gpt
-)
-
 from .logging_setup import setup_logging
 import logging
 
@@ -97,6 +93,23 @@ class HFRequest(BaseModel):
     model: str
     inputs: str
     parameters: Optional[Dict[str, Any]] = None
+
+
+def extract_token_usage(response: Any, model: str) -> Dict[str, Any]:
+    usage = getattr(response, "usage", None)
+    return {
+        "model": model,
+        "input_tokens": (
+            getattr(usage, "input_tokens", None)
+            or getattr(usage, "prompt_tokens", None)
+            or 0
+        ),
+        "output_tokens": (
+            getattr(usage, "output_tokens", None)
+            or getattr(usage, "completion_tokens", None)
+            or 0
+        ),
+    }
 
 
 
@@ -188,7 +201,12 @@ Si la question demande des améliorations, propose des reformulations concrètes
         max_tokens=500,
     )
     answer = response.choices[0].message.content.strip()
-    return {"success": True, "answer": answer, "question": req.question}
+    return {
+        "success": True,
+        "answer": answer,
+        "question": req.question,
+        "openai_tokens": extract_token_usage(response, "GPT-4o-mini"),
+    }
 
 
 
@@ -218,7 +236,11 @@ async def chat(req: ChatRequest):
         max_tokens=800,
     )
     assistant_response = response.choices[0].message.content.strip()
-    return {"success": True, "response": assistant_response}
+    return {
+        "success": True,
+        "response": assistant_response,
+        "openai_tokens": extract_token_usage(response, "GPT-4o-mini"),
+    }
 
 
 
@@ -237,7 +259,10 @@ async def openai_chat(req: OpenAIChatRequest):
     try:
         response = _openai_client.chat.completions.create(**params)
         content = response.choices[0].message.content
-        return {"content": content}
+        return {
+            "content": content,
+            "openai_tokens": extract_token_usage(response, req.model),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -271,13 +296,12 @@ async def openai_chat52(req:OpenAIRequestGpt5):
         #call openai
             response = await run_in_threadpool(lambda: _openai_client.responses.create(**params))   
             
-
-        #log des tokens utilisé pour la requette
-        logger_gpt(response)      
-
         #Renvois la réponse  
         content = response.output_text
-        return {"content": content} 
+        return {
+            "content": content,
+            "openai_tokens": extract_token_usage(response, "GPT-5.2"),
+        }
     except Exception as e:
         import traceback
         print("❌ Erreur OpenAI:", type(e), e)

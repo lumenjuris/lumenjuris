@@ -1,5 +1,9 @@
 import { prisma } from "../../prisma/singletonPrisma"
 
+const LLM_MODELS = [
+    { name: "GPT-4o-mini", pricePerMillionTokenInput: (0.15 * 100), pricePerMillionTokenOutput: (0.6 * 100) },
+    { name: "GPT-5.2", pricePerMillionTokenInput: (1.75 * 100), pricePerMillionTokenOutput: (14 * 100) },
+]
 
 
 export class Llm {
@@ -8,13 +12,7 @@ export class Llm {
     //Initialisation des models IA LLM de l'application pour monitoring
     async setLlm() {
         try {
-            const models = [
-                { name: "GPT-4o-mini", pricePerMillionTokenInput: (0.15 * 100), pricePerMillionTokenOutput: (0.6 * 100) },
-                { name: "GPT-5.2", pricePerMillionTokenInput: (1.75 * 100), pricePerMillionTokenOutput: (14 * 100) },
-            ]
-
-
-            for (const model of models) {
+            for (const model of LLM_MODELS) {
                 await prisma.llm.upsert({
                     where: { name: model.name },
                     update: {
@@ -38,6 +36,55 @@ export class Llm {
     }
 
 
+    /**
+     * Récupération de l'utilisation LLM pour le mois en cours.
+     */
+    async getCurrentUsage() {
+        try {
+            await this.setLlm()
+
+            const today = new Date()
+            const startAt = new Date(today.getFullYear(), today.getMonth(), 1)
+
+            const models = await prisma.llm.findMany({
+                orderBy: { name: "asc" },
+                include: {
+                    llmUsage: {
+                        where: { startAt },
+                        take: 1
+                    }
+                }
+            })
+
+            const usage = models.map((model) => {
+                const currentUsage = model.llmUsage[0]
+
+                return {
+                    model: model.name,
+                    tokenInput: currentUsage?.tokenInput ?? 0,
+                    tokenOutput: currentUsage?.tokenOutput ?? 0,
+                    totalTokens: (currentUsage?.tokenInput ?? 0) + (currentUsage?.tokenOutput ?? 0),
+                    totalCostUsd: currentUsage ? Number(currentUsage.totalCostUsd) : 0,
+                    startAt: currentUsage?.startAt ?? startAt,
+                    expiresAt: currentUsage?.expiresAt ?? new Date(today.getFullYear(), today.getMonth() + 1, 1)
+                }
+            })
+
+            return {
+                success: true,
+                usage
+            }
+        } catch (err) {
+            console.error(err)
+            return {
+                success: false,
+                message: "Une erreur est survenue lors de la récupération de l'utilisation llm",
+                usage: []
+            }
+        }
+    }
+
+
     
 
     /**
@@ -49,6 +96,7 @@ export class Llm {
      */
     async incrementUsage(model: string, input: number, output: number) {
         try {
+            await this.setLlm()
 
             const llmModel = await prisma.llm.findUnique({
                 where: { name: model }
@@ -63,7 +111,7 @@ export class Llm {
             const { idLlm, tokenPriceInput, tokenPriceOutput } = llmModel
 
 
-            //prix 
+            // Les prix OpenAI sont en USD par million de tokens, stockés ici en centimes.
             const totalCost =
                 (input * tokenPriceInput / 1_000_000) +
                 (output * tokenPriceOutput / 1_000_000)
@@ -84,7 +132,7 @@ export class Llm {
                 update: {
                     tokenInput: { increment: input },
                     tokenOutput: { increment: output },
-                    totalCostEuro: { increment: totalCost }
+                    totalCostUsd: { increment: totalCost / 100 }
                 },
                 create: {
                     llmId: idLlm,
@@ -92,7 +140,7 @@ export class Llm {
                     expiresAt,
                     tokenInput: input,
                     tokenOutput: output,
-                    totalCostEuro: totalCost / 100 //Mettre la valeur de centime en euro
+                    totalCostUsd: totalCost / 100
                 }
             })
 

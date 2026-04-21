@@ -235,7 +235,7 @@ model LlmUsage {
   idLlmUsage    Int      @id @default(autoincrement())
   startAt       DateTime
   expiresAt     DateTime
-  totalCostEuro Decimal  @db.Decimal(18, 6)
+  totalCostUsd  Decimal  @db.Decimal(18, 6)
   tokenInput    Int
   tokenOutput   Int
 

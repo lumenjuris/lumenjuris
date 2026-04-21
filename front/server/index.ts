@@ -38,7 +38,6 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5678";
 const BACKNODE_URL = process.env.BACKNODE_URL || "http://localhost:3020";
 
 
-
 // ---- Relay vers Python backend ------------------------------------------------
 function relayStreamToPython(req: Request, res: Response, targetPath: string): void {
   const backendUrl = new URL(`${BACKEND_URL}${targetPath}`);
@@ -62,7 +61,12 @@ function relayStreamToPython(req: Request, res: Response, targetPath: string): v
 
 
 
-function relayJsonToPython(req: Request, res: Response, targetPath: string): void {
+function relayJsonToPython(
+  req: Request,
+  res: Response,
+  targetPath: string,
+  handleData?: (data: PythonJsonResponse) => Promise<void>,
+): void {
   fetch(`${BACKEND_URL}${targetPath}`, {
     method: req.method,
     headers: { 'Content-Type': 'application/json' },
@@ -70,6 +74,7 @@ function relayJsonToPython(req: Request, res: Response, targetPath: string): voi
   })
     .then(async (r) => {
       const data = await r.json().catch(() => ({}));
+      if (handleData) await handleData(data);
       res.status(r.status).json(data);
     })
     .catch((e: any) => {
@@ -119,6 +124,47 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
     });
 }
 
+
+// Comptage consommation token
+type OpenAiUsagePayload = {
+  model?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+};
+
+type PythonJsonResponse = Record<string, any> & {
+  openai_tokens?: OpenAiUsagePayload;
+};
+
+async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
+  const usage = data.openai_tokens;
+  delete data.openai_tokens;
+
+  if (!usage?.model) return;
+
+  const inputTokens = Number(usage.input_tokens ?? 0);
+  const outputTokens = Number(usage.output_tokens ?? 0);
+
+  if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) {
+    console.warn('OpenAI usage ignored: invalid payload', usage);
+    return;
+  }
+
+  try {
+    const logResponse = await fetch(
+      `${BACKNODE_URL}/llm/increment/${encodeURIComponent(usage.model)}/${Math.trunc(inputTokens)}/${Math.trunc(outputTokens)}`,
+      { method: 'PUT' },
+    );
+
+    if (!logResponse.ok) {
+      const errorText = await logResponse.text().catch(() => '');
+      console.warn('OpenAI usage log failed:', logResponse.status, errorText);
+    }
+  } catch (e: any) {
+    console.error('OpenAI usage log error:', e.message);
+  }
+}
+
 function handleExtractPdfText(req: Request, res: Response): void {
   relayStreamToPython(req, res, '/extract-pdf-text');
 }
@@ -132,19 +178,19 @@ function handleJurisprudence(req: Request, res: Response): void {
 }
 
 function handleAnalyzeClause(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/analyze-clause');
+  relayJsonToPython(req, res, '/analyze-clause', logOpenAiTokens);
 }
 
 function handleChat(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/chat');
+  relayJsonToPython(req, res, '/chat', logOpenAiTokens);
 }
 
 function handleOpenAiChat(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/openai-chat');
+  relayJsonToPython(req, res, '/openai-chat', logOpenAiTokens);
 }
 
 function handleOpenAiChat5(req: Request, res: Response): void {
-  relayJsonToPython(req, res, '/openai-chat-5');
+  relayJsonToPython(req, res, '/openai-chat-5', logOpenAiTokens);
 }
 
 function handleHuggingFaceGenerate(req: Request, res: Response): void {
@@ -154,6 +200,10 @@ function handleHuggingFaceGenerate(req: Request, res: Response): void {
 function handleInseeRequest(req: Request, res: Response): void {
   const siren = encodeURIComponent(req.params.siren);
   relayToNode(req, res, `/enterprise/insee/${siren}`);
+}
+
+function handleLlmCurrentUsage(req: Request, res: Response): void {
+  relayToNode(req, res, '/llm/usage');
 }
 
 function handleNodeUserGet(req: Request, res: Response): void {
@@ -210,6 +260,7 @@ app.post(['/api/huggingface-generate', '/huggingface-generate'], handleHuggingFa
 
 // Node - Requêtes Backend
 app.get('/api/insee/:siren', handleInseeRequest);
+app.get('/api/llm/usage', handleLlmCurrentUsage);
 app.get('/api/user/get', handleNodeUserGet);
 app.put('/api/user', handleNodeUserUpdate);
 app.post('/api/user/auth/login', handleNodeLogin);
