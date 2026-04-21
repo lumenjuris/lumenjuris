@@ -83,8 +83,7 @@ routerUser.post("/create", async (req: Request, res: Response) => {
             message: "Une erreur est survenue avec le serveur, nous n'avons pas pu créer votre compte utilisateur.",
         })
     }
-
-);
+})
 
 
 
