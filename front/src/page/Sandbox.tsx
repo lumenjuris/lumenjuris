@@ -101,6 +101,8 @@ export function Sandbox() {
   const [inseeSiren, setInseeSiren] = useState("940468606");
   const [inseeLoading, setInseeLoading] = useState(false);
   const [inseeResult, setInseeResult] = useState<string>("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authResult, setAuthResult] = useState<string>("");
 
   const spawn = (preset: (typeof PRESETS)[number]) => {
     setBanners((prev) => [
@@ -168,6 +170,7 @@ export function Sandbox() {
     }
   };
 
+<<<<<<< HEAD
   return userConnected && userVerified && userRole === "ADMIN" ? (
     <>
       <MainHeader />
@@ -176,6 +179,73 @@ export function Sandbox() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Sandbox
           </h1>
+=======
+  const testAuth = async (action: "login" | "logout") => {
+    try {
+      setAuthLoading(true);
+      setAuthResult("");
+
+      const response = await fetch(
+        action === "login" ? "/api/user/auth/login" : "/api/user/auth/logout",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body:
+            action === "login"
+              ? JSON.stringify({
+                  email: "test@lumenjuris.local",
+                  password: "password123",
+                })
+              : undefined,
+        },
+      );
+
+      const rawText = await response.text();
+
+      let parsed: unknown = null;
+      try {
+        parsed = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        parsed = null;
+      }
+
+      setAuthResult(
+        JSON.stringify(
+          {
+            action,
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            body: parsed ?? rawText ?? "",
+          },
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      setAuthResult(
+        JSON.stringify(
+          {
+            action,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          null,
+          2,
+        ),
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8 max-w-2xl mx-auto">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sandbox</h1>
+>>>>>>> main
         </div>
 
         <section className="space-y-4">
@@ -293,10 +363,96 @@ export function Sandbox() {
               {inseeResult || "Le résultat du test INSEE s'affichera ici."}
             </pre>
           </div>
+<<<<<<< HEAD
         </section>
       </div>
     </>
   ) : (
     <Navigate to="/inscription" />
+=======
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              onClick={() => spawn(preset)}
+              className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          {banners.map((b) => (
+            <AlertBanner
+              key={b.id}
+              variant={b.preset.variant}
+              title={b.title}
+              detail={b.detail || undefined}
+              duration={b.duration}
+              accent={b.accent}
+              onClose={() => dismiss(b.id)}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-base font-semibold text-gray-800">Test Auth</h2>
+
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => testAuth("login")}
+              disabled={authLoading}
+              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+            >
+              {authLoading ? "Chargement..." : "Login user test"}
+            </button>
+            <button
+              onClick={() => testAuth("logout")}
+              disabled={authLoading}
+              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+            >
+              {authLoading ? "Chargement..." : "Logout"}
+            </button>
+          </div>
+
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+            {authResult || "Le résultat du test auth s'affichera ici."}
+          </pre>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-base font-semibold text-gray-800">Test INSEE</h2>
+
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={inseeSiren}
+              onChange={(e) => setInseeSiren(e.target.value)}
+              placeholder="SIREN"
+              className={inputClass}
+            />
+            <button
+              onClick={testInsee}
+              disabled={inseeLoading}
+              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+            >
+              {inseeLoading ? "Chargement..." : "Tester"}
+            </button>
+          </div>
+
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+            {inseeResult || "Le résultat du test INSEE s'affichera ici."}
+          </pre>
+        </div>
+      </section>
+    </div>
+>>>>>>> main
   );
 }

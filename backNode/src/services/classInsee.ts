@@ -1,10 +1,11 @@
 import axios from "axios";
+import { getStatusJuridiqueLabelFromCode } from "./nafResolver";
 
 // Forme minimale des données INSEE attendues par le service métier Enterprise.
 export type InseeEnterpriseData = {
     siren: string
     codeNaf: string | null
-    conventionCollective: string | null
+    statusJuridiqueCode: string | null
     statusJuridique: string | null
     name: string | null
     address: {
@@ -12,9 +13,6 @@ export type InseeEnterpriseData = {
         codePostal: string | null
         pays: string
     }
-}
-
-const conventionCollectiveByCodeNaf: Record<string, string> = {
 }
 
 export class Insee {
@@ -41,11 +39,6 @@ export class Insee {
     private getCurrentPeriod(periodes?: any[]) {
         if (!Array.isArray(periodes) || periodes.length === 0) return null
         return periodes[0]
-    }
-
-    private getConventionCollective(codeNaf: string | null) {
-        if (!codeNaf) return null
-        return conventionCollectiveByCodeNaf[codeNaf] || null
     }
 
     // 1. lire l'unité légale à partir du SIREN
@@ -105,8 +98,9 @@ export class Insee {
         return {
             siren: uniteLegale.siren,
             codeNaf,
-            conventionCollective: this.getConventionCollective(codeNaf),
-            statusJuridique: periode?.categorieJuridiqueUniteLegale || null,
+            statusJuridiqueCode: periode?.categorieJuridiqueUniteLegale?.toString().trim() || null,
+            // L'API Sirene renvoie un code; on le traduit ici en libellé lisible via le référentiel local.
+            statusJuridique: getStatusJuridiqueLabelFromCode(periode?.categorieJuridiqueUniteLegale),
             name:
                 periode?.denominationUniteLegale ||
                 periode?.denominationUsuelle1UniteLegale ||

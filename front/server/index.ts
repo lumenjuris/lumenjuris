@@ -89,7 +89,20 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
     body: req.method === "GET" ? undefined : JSON.stringify(req.body),
   })
     .then(async (r) => {
+<<<<<<< HEAD
       const contentType = r.headers.get("content-type") || "";
+=======
+      const setCookieHeader =
+        typeof (r.headers as any).getSetCookie === 'function'
+          ? (r.headers as any).getSetCookie()
+          : r.headers.get('set-cookie');
+
+      if (setCookieHeader && ((Array.isArray(setCookieHeader) && setCookieHeader.length > 0) || !Array.isArray(setCookieHeader))) {
+        res.setHeader('set-cookie', setCookieHeader);
+      }
+
+      const contentType = r.headers.get('content-type') || '';
+>>>>>>> main
 
       if (contentType.includes("application/json")) {
         const data = await r.json().catch(() => ({}));
@@ -111,6 +124,7 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
     });
 }
 
+<<<<<<< HEAD
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post("/extract-pdf-text", (req: Request, res: Response) =>
   relayStreamToPython(req, res, "/extract-pdf-text"),
@@ -151,9 +165,110 @@ app.post(
 
 // Node - Requêtes INSEE
 app.get("/api/insee/:siren", (req: Request, res: Response) => {
+=======
+function handleExtractPdfText(req: Request, res: Response): void {
+  relayStreamToPython(req, res, '/extract-pdf-text');
+}
+
+function handleLegifranceSearch(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/legifrance-search');
+}
+
+function handleJurisprudence(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/jurisprudence');
+}
+
+function handleAnalyzeClause(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/analyze-clause');
+}
+
+function handleChat(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/chat');
+}
+
+function handleOpenAiChat(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/openai-chat');
+}
+
+function handleOpenAiChat5(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/openai-chat-5');
+}
+
+function handleHuggingFaceGenerate(req: Request, res: Response): void {
+  relayJsonToPython(req, res, '/huggingface-generate');
+}
+
+function handleInseeRequest(req: Request, res: Response): void {
+>>>>>>> main
   const siren = encodeURIComponent(req.params.siren);
   relayToNode(req, res, `/enterprise/insee/${siren}`);
-});
+}
+
+function handleNodeUserGet(req: Request, res: Response): void {
+  relayToNode(req, res, '/user/get');
+}
+
+function handleNodeUserUpdate(req: Request, res: Response): void {
+  relayToNode(req, res, '/user');
+}
+
+function handleNodeLogin(req: Request, res: Response): void {
+  relayToNode(req, res, '/user/auth/login');
+}
+
+function handleNodeLogout(req: Request, res: Response): void {
+  relayToNode(req, res, '/user/auth/logout');
+}
+
+function handleNodeUserPreferences(req: Request, res: Response): void {
+  relayToNode(req, res, `/user/preferences`);
+}
+
+function handleNodeUserTwoFactor(req: Request, res: Response): void {
+  relayToNode(req, res, `/user/two-factor`);
+}
+
+function handleNodeUserExportData(req: Request, res: Response): void {
+  relayToNode(req, res, `/user/export-data`);
+}
+
+function handleNodeUserDeleteAccount(req: Request, res: Response): void {
+  relayToNode(req, res, `/user/account`);
+}
+
+function handleNodeEnterpriseGet(req: Request, res: Response): void {
+  relayToNode(req, res, '/enterprise');
+}
+
+function handleNodeEnterpriseUpdate(req: Request, res: Response): void {
+  relayToNode(req, res, '/enterprise');
+}
+
+// Multipart (upload PDF) — stream direct, body non consommé par express.json
+app.post('/extract-pdf-text', handleExtractPdfText);
+
+// JSON routes — body déjà parsé par express.json
+app.post(['/legifrance-search', '/api/legifrance-search'], handleLegifranceSearch);
+app.post(['/jurisprudence', '/api/jurisprudence'], handleJurisprudence);
+app.post(['/analyze-clause', '/api/analyze-clause'], handleAnalyzeClause);
+app.post(['/api/chat', '/chat'], handleChat);
+app.post(['/api/openai-chat', '/openai-chat'], handleOpenAiChat);
+app.post(['/api/openai-chat-5', '/openai-chat-5'], handleOpenAiChat5);
+app.post(['/api/huggingface-generate', '/huggingface-generate'], handleHuggingFaceGenerate);
+
+// Node - Requêtes Backend
+app.get('/api/insee/:siren', handleInseeRequest);
+app.get('/api/user/get', handleNodeUserGet);
+app.put('/api/user', handleNodeUserUpdate);
+app.post('/api/user/auth/login', handleNodeLogin);
+app.post('/api/user/auth/logout', handleNodeLogout);
+app.get('/api/user/preferences', handleNodeUserPreferences);
+app.put('/api/user/preferences', handleNodeUserPreferences);
+app.post('/api/user/two-factor', handleNodeUserTwoFactor);
+app.post('/api/user/export-data', handleNodeUserExportData);
+app.delete('/api/user/account', handleNodeUserDeleteAccount);
+app.get('/api/enterprise', handleNodeEnterpriseGet);
+app.put('/api/enterprise', handleNodeEnterpriseUpdate);
 
 // BackNode - Requêtes connexions
 app.post("/api/signup", (req: Request, res: Response) => {

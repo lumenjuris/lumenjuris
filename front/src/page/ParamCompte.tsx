@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import MainHeader from "../components/MainHeader/MainHeader";
 
 import { useState, useEffect, useContext } from "react";
@@ -52,6 +53,445 @@ export function ParamCompte() {
     <>
       <MainHeader />
       <div>Parametre de compte</div>
+=======
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { SETTINGS_TABS } from "../config/paramSettings";
+import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
+import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
+import { EnterpriseSettingsPanel } from "../components/ParamComponents/EnterpriseSettingsPanel";
+import { ParamLayout } from "../components/ParamComponents/ParamLayout";
+import { PreferenceSettingsPanel } from "../components/ParamComponents/PreferenceSettingsPanel";
+import { ConfirmationModal } from "../components/ui/ConfirmationModal";
+import type {
+  AccountConfirmationModal,
+  AccountProfile,
+  AccountProvider,
+  ApiResponse,
+  EnterpriseSettings,
+  SettingsTab,
+  UserGetData,
+  UserPreferenceSettings,
+} from "../types/paramSettings";
+import {
+  createEmptyEnterpriseSettings,
+  getParamConfirmationModalContent,
+  normalizeEnterpriseSettings,
+} from "../utils/param/paramSettings";
+
+const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
+  prenom: "",
+  nom: "",
+  email: "",
+  isVerified: false,
+  cgu: false,
+};
+
+export function ParamCompte() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+  const [panelMinHeight, setPanelMinHeight] = useState<number | null>(null);
+  const [accountProfile, setAccountProfile] =
+    useState<AccountProfile>(EMPTY_ACCOUNT_PROFILE);
+  const [accountPassword, setAccountPassword] = useState("");
+  const [accountProvider, setAccountProvider] = useState<AccountProvider>(null);
+  const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
+  const [activeConfirmationModal, setActiveConfirmationModal] =
+    useState<AccountConfirmationModal | null>(null);
+  const [isDyslexicModeEnabled, setIsDyslexicModeEnabled] = useState(false);
+  const [enterpriseInitialSettings, setEnterpriseInitialSettings] =
+    useState<EnterpriseSettings>(createEmptyEnterpriseSettings());
+
+  const enterprise = useEnterpriseSettings(enterpriseInitialSettings);
+
+  const accountMeasureRef = useRef<HTMLElement>(null);
+  const enterpriseMeasureRef = useRef<HTMLElement>(null);
+  const preferenceMeasureRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadSettings = async () => {
+      try {
+        const [userResponse, preferenceResponse] = await Promise.all([
+          fetch("/api/user/get", {
+            credentials: "include",
+          }),
+          fetch("/api/user/preferences", {
+            credentials: "include",
+          }),
+        ]);
+
+        const userPayload = (await userResponse.json().catch(() => null)) as
+          | ApiResponse<UserGetData>
+          | null;
+        const preferencePayload = (await preferenceResponse
+          .json()
+          .catch(() => null)) as ApiResponse<UserPreferenceSettings> | null;
+
+        if (
+          userResponse.ok &&
+          userPayload?.success &&
+          userPayload.data &&
+          !isCancelled
+        ) {
+          setAccountProfile({
+            prenom: userPayload.data.profile.prenom ?? "",
+            nom: userPayload.data.profile.nom ?? "",
+            email: userPayload.data.profile.email ?? "",
+            isVerified: Boolean(userPayload.data.profile.isVerified),
+            cgu: false,
+          });
+          setAccountProvider(
+            userPayload.data.provider?.provider === "GOOGLE"
+              ? {
+                  provider: "GOOGLE",
+                }
+              : null,
+          );
+          setEnterpriseInitialSettings(
+            normalizeEnterpriseSettings(userPayload.data.enterprise),
+          );
+        }
+
+        if (
+          preferenceResponse.ok &&
+          preferencePayload?.success &&
+          preferencePayload.data &&
+          !isCancelled
+        ) {
+          setIsDyslexicModeEnabled(
+            Boolean(preferencePayload.data.preferenceUI.dyslexicMode),
+          );
+        }
+      } catch (error) {
+        console.error("Impossible de charger les paramètres utilisateur.", error);
+      }
+    };
+
+    void loadSettings();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const measurePanels = () => {
+      if (window.innerWidth < 768) {
+        setPanelMinHeight((current) => (current === null ? current : null));
+        return;
+      }
+
+      const heights = [
+        accountMeasureRef.current?.offsetHeight ?? 0,
+        enterpriseMeasureRef.current?.offsetHeight ?? 0,
+        preferenceMeasureRef.current?.offsetHeight ?? 0,
+      ];
+      const nextHeight = Math.max(...heights);
+
+      setPanelMinHeight((current) =>
+        current === nextHeight ? current : nextHeight,
+      );
+    };
+
+    measurePanels();
+    window.addEventListener("resize", measurePanels);
+
+    return () => {
+      window.removeEventListener("resize", measurePanels);
+    };
+  }, [
+    accountPassword,
+    accountProfile,
+    accountProvider,
+    enterprise.enterpriseDraft,
+    enterprise.enterpriseSettings,
+    enterprise.inseeLookupSiren,
+    enterprise.inseePrefillError,
+    enterprise.isEditingEnterprise,
+    enterprise.isPrefillingFromSiren,
+    isDyslexicModeEnabled,
+    isTwoFactorEnabled,
+  ]);
+
+  const handleProfileFieldChange = (
+    field: "prenom" | "nom" | "email",
+    value: string,
+  ) => {
+    setAccountProfile((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const persistAccountSettings = async ({
+    includePassword = false,
+  }: {
+    includePassword?: boolean;
+  } = {}) => {
+    const nextPassword = accountPassword.trim();
+
+    if (includePassword && !nextPassword) {
+      return;
+    }
+
+    const response = await fetch("/api/user", {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prenom: accountProfile.prenom,
+        nom: accountProfile.nom,
+        email: accountProfile.email,
+        ...(includePassword ? { password: nextPassword } : {}),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | ApiResponse<{
+          profile: AccountProfile;
+          provider: AccountProvider;
+        }>
+      | null;
+
+    if (!response.ok || !payload?.success || !payload.data) {
+      throw new Error(
+        payload?.message ||
+          "Impossible de mettre a jour les informations du compte.",
+      );
+    }
+
+    setAccountProfile({
+      prenom: payload.data.profile.prenom ?? "",
+      nom: payload.data.profile.nom ?? "",
+      email: payload.data.profile.email ?? "",
+      isVerified: Boolean(payload.data.profile.isVerified),
+      cgu: Boolean(payload.data.profile.cgu),
+    });
+    setAccountProvider(payload.data.provider ?? null);
+
+    if (includePassword) {
+      setAccountPassword("");
+    }
+  };
+
+  const handleProfileFieldBlur = () => {
+    void persistAccountSettings().catch((error) => {
+      console.error(error);
+    });
+  };
+
+  const handlePasswordBlur = () => {
+    if (!accountPassword.trim()) {
+      return;
+    }
+
+    setActiveConfirmationModal("password_change");
+  };
+
+  const handleTwoFactorCheckedChange = (checked: boolean) => {
+    if (checked) {
+      setActiveConfirmationModal("two_factor");
+      return;
+    }
+
+    setIsTwoFactorEnabled(false);
+  };
+
+  const handlePreferenceCheckedChange = (checked: boolean) => {
+    const previousValue = isDyslexicModeEnabled;
+    setIsDyslexicModeEnabled(checked);
+
+    void fetch("/api/user/preferences", {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        preferenceUI: {
+          dyslexicMode: checked,
+        },
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | ApiResponse<{
+              preferenceUI: {
+                dyslexicMode: boolean;
+              };
+            }>
+          | null;
+
+        if (!response.ok || !payload?.success || !payload.data) {
+          throw new Error(
+            payload?.message ||
+              "Impossible de mettre a jour les preferences utilisateur.",
+          );
+        }
+
+        setIsDyslexicModeEnabled(
+          Boolean(payload.data.preferenceUI.dyslexicMode),
+        );
+      })
+      .catch((error) => {
+        console.error(error);
+        setIsDyslexicModeEnabled(previousValue);
+      });
+  };
+
+  const handleTabChange = (nextTab: SettingsTab) => {
+    if (nextTab === activeTab) {
+      return;
+    }
+
+    if (
+      activeTab === "enterprise" &&
+      nextTab !== "enterprise" &&
+      enterprise.isEditingEnterprise
+    ) {
+      enterprise.handleCancelEnterpriseEdit();
+    }
+
+    setActiveConfirmationModal(null);
+    setActiveTab(nextTab);
+  };
+
+  const confirmationModalContent = getParamConfirmationModalContent({
+    activeConfirmationModal,
+    onClose: () => setActiveConfirmationModal(null),
+    onTwoFactorConfirm: () => {
+      void fetch("/api/user/two-factor", {
+        method: "POST",
+        credentials: "include",
+      })
+        .then(async (response) => {
+          const payload = (await response.json().catch(() => null)) as
+            | ApiResponse<{
+                enabled?: boolean;
+              }>
+            | null;
+
+          if (!response.ok || !payload?.success) {
+            throw new Error(
+              payload?.message ||
+                "Impossible de mettre a jour la double authentification.",
+            );
+          }
+
+          setIsTwoFactorEnabled(Boolean(payload.data?.enabled));
+        })
+        .catch((error) => {
+          console.error(error);
+          setIsTwoFactorEnabled(false);
+        });
+    },
+    onPasswordConfirm: () => {
+      void persistAccountSettings({ includePassword: true }).catch((error) => {
+        console.error(error);
+      });
+    },
+    onExportDataConfirm: () => {
+      void fetch("/api/user/export-data", {
+        method: "POST",
+        credentials: "include",
+      }).catch((error) => {
+        console.error(error);
+      });
+    },
+    onDeleteAccountConfirm: () => {
+      void fetch("/api/user/account", {
+        method: "DELETE",
+        credentials: "include",
+      }).catch((error) => {
+        console.error(error);
+      });
+    },
+  });
+
+  const accountPanel = (
+    <AccountSettingsPanel
+      profile={accountProfile}
+      password={accountPassword}
+      provider={accountProvider}
+      isTwoFactorEnabled={isTwoFactorEnabled}
+      onProfileFieldChange={handleProfileFieldChange}
+      onProfileFieldBlur={handleProfileFieldBlur}
+      onPasswordChange={setAccountPassword}
+      onPasswordBlur={handlePasswordBlur}
+      onTwoFactorCheckedChange={handleTwoFactorCheckedChange}
+      onExportDataClick={() => setActiveConfirmationModal("export_data")}
+      onDeleteAccountClick={() => setActiveConfirmationModal("delete_account")}
+    />
+  );
+
+  const enterprisePanel = (
+    <EnterpriseSettingsPanel
+      enterpriseSettings={enterprise.enterpriseSettings}
+      enterpriseDraft={enterprise.enterpriseDraft}
+      isEditingEnterprise={enterprise.isEditingEnterprise}
+      onEditEnterprise={enterprise.handleEditEnterprise}
+      onCancelEnterpriseEdit={enterprise.handleCancelEnterpriseEdit}
+      onSaveEnterpriseEdit={() => {
+        void enterprise.handleSaveEnterpriseEdit().catch((error) => {
+          console.error(error);
+        });
+      }}
+      onEnterpriseFieldChange={enterprise.handleEnterpriseFieldChange}
+      onEnterpriseAddressFieldChange={
+        enterprise.handleEnterpriseAddressFieldChange
+      }
+      shouldShowInseePrefill={enterprise.shouldShowInseePrefill}
+      inseeLookupSiren={enterprise.inseeLookupSiren}
+      onInseeLookupSirenChange={enterprise.handleInseeLookupSirenChange}
+      canTriggerInseePrefill={enterprise.canTriggerInseePrefill}
+      isPrefillingFromSiren={enterprise.isPrefillingFromSiren}
+      inseePrefillError={enterprise.inseePrefillError}
+      onPrefillFromSiren={enterprise.handlePrefillFromSiren}
+    />
+  );
+
+  const preferencePanel = (
+    <PreferenceSettingsPanel
+      isDyslexicModeEnabled={isDyslexicModeEnabled}
+      onDyslexicModeCheckedChange={handlePreferenceCheckedChange}
+    />
+  );
+
+  return (
+    <>
+      <ParamLayout
+        title="Mes Paramètres"
+        tabs={SETTINGS_TABS}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        panelMinHeight={panelMinHeight}
+        accountMeasureRef={accountMeasureRef}
+        enterpriseMeasureRef={enterpriseMeasureRef}
+        preferenceMeasureRef={preferenceMeasureRef}
+        accountMeasurePanel={accountPanel}
+        enterpriseMeasurePanel={enterprisePanel}
+        preferenceMeasurePanel={preferencePanel}
+      >
+        {activeTab === "account"
+          ? accountPanel
+          : activeTab === "enterprise"
+            ? enterprisePanel
+            : preferencePanel}
+      </ParamLayout>
+
+      {confirmationModalContent ? (
+        <ConfirmationModal
+          open
+          title={confirmationModalContent.title}
+          description={confirmationModalContent.description}
+          confirmLabel={confirmationModalContent.confirmLabel}
+          confirmClassName={confirmationModalContent.confirmClassName}
+          onCancel={() => setActiveConfirmationModal(null)}
+          onConfirm={confirmationModalContent.onConfirm}
+        />
+      ) : null}
+>>>>>>> main
     </>
   );
 }

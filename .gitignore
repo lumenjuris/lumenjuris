@@ -18,11 +18,12 @@ front/dist/
 /front/server/.env
 
 #backend nodeJS
-backnode/.env
+backNode/.env
 backNode/.env.production
 backNode/.env.development
 backNode/node_modules
 backNode/prisma/migrations
 backNode/prisma/generated
+backNode/dist/
 gpt5_tokens_log.json
 

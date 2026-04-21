@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
 import { Link, NavLink, Outlet, useNavigate, Navigate } from "react-router-dom";
+=======
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+>>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
 import {
   LayoutDashboard,
   FileText,
@@ -17,7 +21,10 @@ import {
 } from "lucide-react";
 
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
+<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
 import { useAuth } from "../../context/AuthContext";
+=======
+>>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
@@ -32,6 +39,7 @@ const navItems = [
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+<<<<<<< HEAD:front/src/components/dashboardComponents/MainLayout.tsx
   // const { userVerified, userConnected } = useAuth();
 
   const navigate = useNavigate();
@@ -52,6 +60,26 @@ export function MainLayout() {
   //   };
   //   fetchData();
   // }, []);
+=======
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/user/get", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const dataResponse = await response.json();
+        if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
+          navigate("/inscription");
+        }
+      } catch (error) {}
+    };
+    fetchData();
+  }, []);
+>>>>>>> main:front/src/components/DashboardComponents/MainLayout.tsx
 
   return (
     <div
