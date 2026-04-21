@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
+    "dev": "tsx watch --clear-screen=false --exclude \"dist/**\" --exclude \"node_modules/**\" --exclude \"tests/build/**\" --exclude \"vite.config.ts.timestamp-*.mjs\" server/index.ts",
     "build": "vite build && tsc -p server",
     "lint": "eslint .",
     "preview": "NODE_ENV=production node dist/server/index.js",
