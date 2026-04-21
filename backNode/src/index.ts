@@ -2,7 +2,6 @@ import express from "express";
 import type { Request, Response } from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
-import { Mailer } from "./infrastructure/mailer/classMailer";
 //import { Llm } from "./services/classLlm"
 import { User } from "./services/classUser";
 import routerGoogleAuth from "./route/authGoogle";
@@ -10,6 +9,7 @@ import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
 import routerEnterprise from "./route/apiEnterprise";
 import cors from "cors";
+import { seedBootstrapUsers } from "./services/bootstrapUsers";
 
 /**
  * Préparation du serveur nodejs/express pour ce backend
@@ -56,5 +56,10 @@ async function sandbox() {
 
 app.listen(port, async () => {
   console.log(`Serveur backend nodejs running on port ${port}`);
+  try {
+    await seedBootstrapUsers();
+  } catch (err) {
+    console.error("Erreur lors de l'initialisation des utilisateurs de bootstrap:", err);
+  }
   //await sandbox()
 });
