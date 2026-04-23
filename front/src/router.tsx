@@ -15,6 +15,7 @@ import { ResetPassword } from "./page/ResetPassword";
 import { Inscription } from "./page/Inscription";
 import { Sandbox } from "./page/Sandbox";
 import { ParamCompte } from "./page/ParamCompte";
+import { Monitoring } from "./page/Monitoring";
 
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
@@ -39,6 +40,7 @@ export function App() {
         <Route path="/sandbox" element={<Sandbox />} />
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/mon-compte" element={<ParamCompte />} />
+        <Route path="/monitoring" element={<Monitoring />} />
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

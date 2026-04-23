@@ -8,6 +8,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   LogOutIcon,
+  MonitorCheck,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import {
@@ -158,6 +159,22 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </Button>
           </Link>
         )}
+        {isConnected && userData?.role === "ADMIN" && (
+          <Link to="/monitoring">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={
+                pathname === "/monitoring"
+                  ? " text-gray-800 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
+              }
+              onClick={onNavClick}
+            >
+              <MonitorCheck />
+            </Button>
+          </Link>
+        )}
       </nav>
 
       {/* AFFICHAGE MENU ECRANS LARGE */}
@@ -220,6 +237,23 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </Button>
           </Link>
         )}
+        {isConnected && userData?.role === "ADMIN" && (
+          <Link to="/monitoring">
+            <Button
+              variant="ghost"
+              size="lg"
+              className={
+                pathname === "/monitoring"
+                  ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
+              }
+              onClick={onNavClick}
+            >
+              <MonitorCheck />
+              Monitoring
+            </Button>
+          </Link>
+        )}
       </nav>
 
       {isConnected ? (
@@ -232,10 +266,10 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             {userAvatarUrl ? (
               <img
                 src={userAvatarUrl}
-                className="h-8 w-8 rounded-full object-cover border border-lumenjuris/60"
+                className=" h-8 w-8 rounded-full object-cover border border-lumenjuris/60"
               ></img>
             ) : (
-              <div className="h-8 w-8 rounded-full bg-lumenjuris flex items-center justify-center text-white text-xs font-medium">
+              <div className="flex h-8 w-8 rounded-full bg-lumenjuris items-center justify-center text-white text-xs font-medium">
                 {userData?.prenom
                   ? `${userData.prenom.slice(0, 1)}${userData.nom.slice(0, 1)}`
                   : `${userData?.nom.slice(0, 1)}`}
@@ -255,21 +289,21 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               />
               <DropdownMenuContent
                 sideOffset={22}
-                className="min-w-28 bg-lumenjuris-background ring-lumenjuris/60 font-medium text-sm"
+                className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4"
               >
                 <button
                   onClick={handleUserLogout}
-                  className="cursor-pointer inline-flex justify-center items-center gap-1 px-4 text-gray-400 hover:text-gray-600 transition-all delay-100"
+                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
                 >
                   <LogOutIcon size={14} />
                   Logout
                 </button>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="bg-gray-400" />
                 <button
                   onClick={() => {
                     navigate("/mon-compte");
                   }}
-                  className="cursor-pointer inline-flex justify-center items-center gap-1 px-4 text-gray-400 hover:text-gray-600 transition-all delay-100"
+                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
                 >
                   <User size={14} />
                   Mon compte

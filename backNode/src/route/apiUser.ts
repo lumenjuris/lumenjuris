@@ -450,6 +450,7 @@ routerUser.delete(
   },
 );
 
+// Route forgot password pour l'envoi du mail de réinitialisation
 routerUser.post("/forgotpassword", async (req: Request, res: Response) => {
   const { email } = req.body;
 
@@ -464,8 +465,6 @@ routerUser.post("/forgotpassword", async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { email: email },
     });
-
-    console.log("🚀🚀🚀 USER RESET", user);
 
     if (user) {
       const token = await new Token().createToken(
@@ -490,6 +489,7 @@ routerUser.post("/forgotpassword", async (req: Request, res: Response) => {
   }
 });
 
+// Vérification du token pour permettre la redirection vers la page de reset password
 routerUser.get(
   "/resetpassword/:token",
   async (req: Request<{ token: string }>, res: Response) => {
@@ -543,6 +543,7 @@ routerUser.get(
   },
 );
 
+// Route d'update password suite à une demande de réinitialisation
 routerUser.post("/updatepassword", async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body;

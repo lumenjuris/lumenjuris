@@ -3,7 +3,10 @@ import {
   AlertBanner,
   type AlertVariant,
 } from "../components/common/AlertBanner";
+import MainHeader from "../components/MainHeader/MainHeader";
+
 import { useAuth } from "../context/AuthContext";
+
 import { Navigate } from "react-router-dom";
 
 const PRESETS: {
@@ -93,6 +96,8 @@ export function Sandbox() {
   const [llmUsageLoading, setLlmUsageLoading] = useState(false);
   const [llmUsageError, setLlmUsageError] = useState("");
   const [llmUsageUpdatedAt, setLlmUsageUpdatedAt] = useState<Date | null>(null);
+
+  const { userRole, userConnected } = useAuth();
 
   const spawn = (preset: (typeof PRESETS)[number]) => {
     setBanners((prev) => [
@@ -254,215 +259,220 @@ export function Sandbox() {
     }
   };
 
-  const { userRole, userConnected } = useAuth();
-
-  return userRole != "ADMIN" && !userConnected ? (
+  return !userConnected ? (
     <Navigate to="/inscription" />
+  ) : userRole != "ADMIN" ? (
+    <Navigate to="/dashboard" />
   ) : (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          Sandbox
-        </h1>
-      </div>
-
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">
-          Usage LLM actuel
-        </h2>
-
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500">
-            <span>Modèle</span>
-            <span className="text-right">Input</span>
-            <span className="text-right">Output</span>
-            <span className="text-right">Coût USD</span>
-          </div>
-
-          {llmUsage.length > 0 ? (
-            llmUsage.map((usage) => (
-              <div
-                key={usage.model}
-                className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-gray-100 last:border-b-0 text-sm text-gray-700"
-              >
-                <div>
-                  <div className="font-medium text-gray-900">{usage.model}</div>
-                  <div className="text-xs text-gray-500">
-                    {formatNumber(usage.totalTokens)} tokens
-                  </div>
-                </div>
-                <span className="text-right tabular-nums">
-                  {formatNumber(usage.tokenInput)}
-                </span>
-                <span className="text-right tabular-nums">
-                  {formatNumber(usage.tokenOutput)}
-                </span>
-                <span className="text-right tabular-nums">
-                  {formatUsd(usage.totalCostUsd)}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="px-4 py-4 text-sm text-gray-500">
-              {llmUsageLoading
-                ? "Chargement de l'usage..."
-                : "Aucun usage LLM trouvé pour le mois courant."}
-            </div>
-          )}
-
-          <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500">
-            {llmUsageError
-              ? `Erreur: ${llmUsageError}`
-              : llmUsageUpdatedAt
-                ? `Dernière mise à jour: ${llmUsageUpdatedAt.toLocaleTimeString("fr-FR")}`
-                : "Surveillance active toutes les secondes."}
-          </div>
+    <>
+      <MainHeader />
+      <div className="space-y-8 max-w-2xl min-h-[calc(100vh-64px)] mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Sandbox
+          </h1>
         </div>
-      </section>
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">AlertBanner</h2>
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">
+            Usage LLM actuel
+          </h2>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Titre
-              </label>
-              <input
-                type="text"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Texte principal..."
-                className={inputClass}
-              />
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500">
+              <span>Modèle</span>
+              <span className="text-right">Input</span>
+              <span className="text-right">Output</span>
+              <span className="text-right">Coût USD</span>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Détail
-              </label>
-              <input
-                type="text"
-                value={customDetail}
-                onChange={(e) => setCustomDetail(e.target.value)}
-                placeholder="Texte secondaire..."
-                className={inputClass}
-              />
+
+            {llmUsage.length > 0 ? (
+              llmUsage.map((usage) => (
+                <div
+                  key={usage.model}
+                  className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-gray-100 last:border-b-0 text-sm text-gray-700"
+                >
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {usage.model}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatNumber(usage.totalTokens)} tokens
+                    </div>
+                  </div>
+                  <span className="text-right tabular-nums">
+                    {formatNumber(usage.tokenInput)}
+                  </span>
+                  <span className="text-right tabular-nums">
+                    {formatNumber(usage.tokenOutput)}
+                  </span>
+                  <span className="text-right tabular-nums">
+                    {formatUsd(usage.totalCostUsd)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-4 text-sm text-gray-500">
+                {llmUsageLoading
+                  ? "Chargement de l'usage..."
+                  : "Aucun usage LLM trouvé pour le mois courant."}
+              </div>
+            )}
+
+            <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500">
+              {llmUsageError
+                ? `Erreur: ${llmUsageError}`
+                : llmUsageUpdatedAt
+                  ? `Dernière mise à jour: ${llmUsageUpdatedAt.toLocaleTimeString("fr-FR")}`
+                  : "Surveillance active toutes les secondes."}
             </div>
           </div>
+        </section>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500 shrink-0">
-                Durée (ms)
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={duration}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9]/g, "");
-                  setDuration(v === "" ? 3000 : parseInt(v));
-                }}
-                className="w-24 text-sm border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-lumenjuris-dark focus:ring-1 focus:ring-lumenjuris-dark"
-              />
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <div
-                onClick={() => setAccent((v) => !v)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${accent ? "bg-lumenjuris-dark" : "bg-gray-200"}`}
-              >
-                <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${accent ? "translate-x-4" : ""}`}
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">AlertBanner</h2>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Titre
+                </label>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="Texte principal..."
+                  className={inputClass}
                 />
               </div>
-              <span className="text-xs font-medium text-gray-600">
-                Accent gauche
-              </span>
-            </label>
-          </div>
-        </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Détail
+                </label>
+                <input
+                  type="text"
+                  value={customDetail}
+                  onChange={(e) => setCustomDetail(e.target.value)}
+                  placeholder="Texte secondaire..."
+                  className={inputClass}
+                />
+              </div>
+            </div>
 
-        <div className="flex flex-wrap gap-2">
-          {PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              onClick={() => spawn(preset)}
-              className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700"
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2">
-          {banners.map((b) => (
-            <AlertBanner
-              key={b.id}
-              variant={b.preset.variant}
-              title={b.title}
-              detail={b.detail || undefined}
-              duration={b.duration}
-              accent={b.accent}
-              onClose={() => dismiss(b.id)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">Test Auth</h2>
-
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => testAuth("login")}
-              disabled={authLoading}
-              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
-            >
-              {authLoading ? "Chargement..." : "Login user test"}
-            </button>
-            <button
-              onClick={() => testAuth("logout")}
-              disabled={authLoading}
-              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
-            >
-              {authLoading ? "Chargement..." : "Logout"}
-            </button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500 shrink-0">
+                  Durée (ms)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={duration}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^0-9]/g, "");
+                    setDuration(v === "" ? 3000 : parseInt(v));
+                  }}
+                  className="w-24 text-sm border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-lumenjuris-dark focus:ring-1 focus:ring-lumenjuris-dark"
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <div
+                  onClick={() => setAccent((v) => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${accent ? "bg-lumenjuris-dark" : "bg-gray-200"}`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${accent ? "translate-x-4" : ""}`}
+                  />
+                </div>
+                <span className="text-xs font-medium text-gray-600">
+                  Accent gauche
+                </span>
+              </label>
+            </div>
           </div>
 
-          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
-            {authResult || "Le résultat du test auth s'affichera ici."}
-          </pre>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">Test INSEE</h2>
-
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={inseeSiren}
-              onChange={(e) => setInseeSiren(e.target.value)}
-              placeholder="SIREN"
-              className={inputClass}
-            />
-            <button
-              onClick={testInsee}
-              disabled={inseeLoading}
-              className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
-            >
-              {inseeLoading ? "Chargement..." : "Tester"}
-            </button>
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => spawn(preset)}
+                className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700"
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
 
-          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
-            {inseeResult || "Le résultat du test INSEE s'affichera ici."}
-          </pre>
-        </div>
-      </section>
-    </div>
+          <div className="space-y-2">
+            {banners.map((b) => (
+              <AlertBanner
+                key={b.id}
+                variant={b.preset.variant}
+                title={b.title}
+                detail={b.detail || undefined}
+                duration={b.duration}
+                accent={b.accent}
+                onClose={() => dismiss(b.id)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">Test Auth</h2>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => testAuth("login")}
+                disabled={authLoading}
+                className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+              >
+                {authLoading ? "Chargement..." : "Login user test"}
+              </button>
+              <button
+                onClick={() => testAuth("logout")}
+                disabled={authLoading}
+                className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+              >
+                {authLoading ? "Chargement..." : "Logout"}
+              </button>
+            </div>
+
+            <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+              {authResult || "Le résultat du test auth s'affichera ici."}
+            </pre>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">Test INSEE</h2>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={inseeSiren}
+                onChange={(e) => setInseeSiren(e.target.value)}
+                placeholder="SIREN"
+                className={inputClass}
+              />
+              <button
+                onClick={testInsee}
+                disabled={inseeLoading}
+                className="text-sm px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-400 transition-colors bg-white text-gray-700 disabled:opacity-50"
+              >
+                {inseeLoading ? "Chargement..." : "Tester"}
+              </button>
+            </div>
+
+            <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
+              {inseeResult || "Le résultat du test INSEE s'affichera ici."}
+            </pre>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
