@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { SETTINGS_TABS } from "../config/paramSettings";
 import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
 import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
@@ -22,6 +23,8 @@ import {
   normalizeEnterpriseSettings,
 } from "../utils/param/paramSettings";
 
+import { useAuth } from "../context/AuthContext";
+
 const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
   prenom: "",
   nom: "",
@@ -33,8 +36,9 @@ const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
 export function ParamCompte() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
   const [panelMinHeight, setPanelMinHeight] = useState<number | null>(null);
-  const [accountProfile, setAccountProfile] =
-    useState<AccountProfile>(EMPTY_ACCOUNT_PROFILE);
+  const [accountProfile, setAccountProfile] = useState<AccountProfile>(
+    EMPTY_ACCOUNT_PROFILE,
+  );
   const [accountPassword, setAccountPassword] = useState("");
   const [accountProvider, setAccountProvider] = useState<AccountProvider>(null);
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
@@ -50,6 +54,8 @@ export function ParamCompte() {
   const enterpriseMeasureRef = useRef<HTMLElement>(null);
   const preferenceMeasureRef = useRef<HTMLElement>(null);
 
+  const { userConnected } = useAuth();
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -64,9 +70,9 @@ export function ParamCompte() {
           }),
         ]);
 
-        const userPayload = (await userResponse.json().catch(() => null)) as
-          | ApiResponse<UserGetData>
-          | null;
+        const userPayload = (await userResponse
+          .json()
+          .catch(() => null)) as ApiResponse<UserGetData> | null;
         const preferencePayload = (await preferenceResponse
           .json()
           .catch(() => null)) as ApiResponse<UserPreferenceSettings> | null;
@@ -107,7 +113,10 @@ export function ParamCompte() {
           );
         }
       } catch (error) {
-        console.error("Impossible de charger les paramètres utilisateur.", error);
+        console.error(
+          "Impossible de charger les paramètres utilisateur.",
+          error,
+        );
       }
     };
 
@@ -191,12 +200,10 @@ export function ParamCompte() {
         ...(includePassword ? { password: nextPassword } : {}),
       }),
     });
-    const payload = (await response.json().catch(() => null)) as
-      | ApiResponse<{
-          profile: AccountProfile;
-          provider: AccountProvider;
-        }>
-      | null;
+    const payload = (await response.json().catch(() => null)) as ApiResponse<{
+      profile: AccountProfile;
+      provider: AccountProvider;
+    }> | null;
 
     if (!response.ok || !payload?.success || !payload.data) {
       throw new Error(
@@ -259,13 +266,13 @@ export function ParamCompte() {
       }),
     })
       .then(async (response) => {
-        const payload = (await response.json().catch(() => null)) as
-          | ApiResponse<{
-              preferenceUI: {
-                dyslexicMode: boolean;
-              };
-            }>
-          | null;
+        const payload = (await response
+          .json()
+          .catch(() => null)) as ApiResponse<{
+          preferenceUI: {
+            dyslexicMode: boolean;
+          };
+        }> | null;
 
         if (!response.ok || !payload?.success || !payload.data) {
           throw new Error(
@@ -310,11 +317,11 @@ export function ParamCompte() {
         credentials: "include",
       })
         .then(async (response) => {
-          const payload = (await response.json().catch(() => null)) as
-            | ApiResponse<{
-                enabled?: boolean;
-              }>
-            | null;
+          const payload = (await response
+            .json()
+            .catch(() => null)) as ApiResponse<{
+            enabled?: boolean;
+          }> | null;
 
           if (!response.ok || !payload?.success) {
             throw new Error(
@@ -402,7 +409,9 @@ export function ParamCompte() {
     />
   );
 
-  return (
+  return !userConnected ? (
+    <Navigate to="/inscription" />
+  ) : (
     <>
       <ParamLayout
         title="Mes Paramètres"

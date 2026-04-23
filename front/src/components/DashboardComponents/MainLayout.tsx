@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, NavLink, Outlet, Navigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -10,13 +10,12 @@ import {
   Newspaper,
   Lock,
   Scale,
-  Bell,
   Search,
   PanelLeft,
-  ChevronDown,
 } from "lucide-react";
 
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
+import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
@@ -31,26 +30,13 @@ const navItems = [
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navigate = useNavigate();
+  const { userConnected } = useAuth();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/user/get", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
+  console.log("USER STATE :", userConnected);
 
-        const dataResponse = await response.json();
-        if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
-          navigate("/inscription");
-        }
-      } catch (error) {}
-    };
-    fetchData();
-  }, []);
-
-  return (
+  return !userConnected ? (
+    <Navigate to="/inscription" />
+  ) : (
     <div
       className="flex min-h-screen w-full bg-[#f8f9fb]"
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}
@@ -121,7 +107,7 @@ export function MainLayout() {
             >
               <PanelLeft className="h-4 w-4" />
             </button>
-            <div className="hidden sm:flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
+            {/* <div className="hidden sm:flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
               <Search className="h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -129,7 +115,7 @@ export function MainLayout() {
                 placeholder="Rechercher un document, une clause..."
                 className="bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
               />
-            </div>
+            </div> */}
           </div>
 
           <HeaderNavigationBar />

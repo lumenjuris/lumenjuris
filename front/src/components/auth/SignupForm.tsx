@@ -65,8 +65,14 @@ const SignupForm = ({
     null,
   );
 
+  const topRef = useRef<HTMLDivElement>(null);
+  const scrollToTop = () => {
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    scrollToTop();
 
     if (!lastName || !email || !password) {
       setSubmitError(true);
@@ -74,6 +80,8 @@ const SignupForm = ({
       setSubmitCguError(true);
     } else {
       setSubmitLoading(true);
+      const trimedLastName = lastName.trim();
+      const trimedFirstName = firstName.trim();
       try {
         const signupResponse = await fetch("/api/signup", {
           method: "POST",
@@ -82,11 +90,12 @@ const SignupForm = ({
           },
           body: JSON.stringify({
             email: email,
-            nom: lastName,
-            prenom: firstName,
+            nom: trimedLastName,
+            prenom: trimedFirstName,
             password: password,
             cgu: acceptCgu,
           }),
+          credentials: "include",
         });
 
         const data = await signupResponse.json();
@@ -108,6 +117,24 @@ const SignupForm = ({
         console.error("🛑🛑🛑 ERREUR SERVEUR INSCRIPTION", error);
       }
     }
+
+    if (siren) {
+      const trimedSiren = siren.trim();
+      try {
+        const sirenResponse = await fetch(`/api/insee/${trimedSiren}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+        if (!sirenResponse.ok) {
+          console.log("SIREN RESPONSE ERROR :", sirenResponse.status);
+        } else {
+          console.log("SIREN RESPONSE :", sirenResponse.status);
+        }
+      } catch (error) {
+        console.log("SIREN RESPONSE ERROR :", error);
+      }
+    }
   };
 
   const handleSubmitGoogle = () => {
@@ -122,7 +149,7 @@ const SignupForm = ({
   const handleChangeFirstname = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const value = event.target.value;
+    const value = event.target.value.trim();
     setFirstName(value);
   };
 
@@ -173,13 +200,18 @@ const SignupForm = ({
     }
   };
 
+  const handleChangeSiren = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSiren(value);
+  };
+
   const handleCheckCgu = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.checked;
     setAcceptCgu(value);
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div ref={topRef} className="flex flex-col gap-5">
       {submitError && (
         <AlertBanner
           title="Champs manquants !"
@@ -382,7 +414,7 @@ const SignupForm = ({
                 type="text"
                 placeholder="552 178 639"
                 value={siren}
-                onChange={handleChangeFirstname}
+                onChange={handleChangeSiren}
               />
             </Field>
           </div>

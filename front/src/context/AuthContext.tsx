@@ -1,16 +1,7 @@
 import { createContext, useState, useContext } from "react";
 
-// type UserInfoProfile = {
-//   email: string;
-//   nom: string;
-//   prenom?: string;
-//   role: "USER" | "ADMIN";
-//   isVerified: boolean;
-// };
-
 interface AuthContextValue {
-  //   userInfo: UserInfoProfile | null;
-  userRole: string;
+  userRole: string | null;
   userVerified: boolean;
   userConnected: boolean;
   login: (role: string, verified: boolean, status: boolean) => void;
@@ -24,8 +15,7 @@ interface AuthProviderProps {
 }
 
 export const AuthContextProvider = ({ children }: AuthProviderProps) => {
-  //   const [userInfo, setUserInfo] = useState<UserInfoProfile | null>(null);
-  const [userRole, setUserRole] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [userVerified, setUserVerified] = useState(false);
   const [userConnected, setUserConnected] = useState(false);
 
@@ -37,6 +27,8 @@ export const AuthContextProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     setUserConnected(false);
+    setUserRole(null);
+    setUserVerified(false);
   };
 
   return (
