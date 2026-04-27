@@ -201,21 +201,40 @@ routerUser.post("/auth/login", async (req: Request, res: Response) => {
     const { password, email } = req.body;
     const logUser = await new User().authenticate(password, email);
 
-    if (!logUser.success) {
+    if (!logUser.success || !logUser.data) {
       return res.status(401).json({
         success: false,
         message: "Email ou mot de passe invalide",
       });
     }
 
-    if (logUser.data) {
-      createCookieAuth(logUser.data.idUser, "USER", res);
+    createCookieAuth(logUser.data.idUser, "USER", res);
+
+    if (logUser.data.twoFactorEnabled) {
+      const codeResult = await new Token().createTwoFactorCode(
+        logUser.data.idUser,
+      );
+
+      if (codeResult.success && codeResult.code) {
+        await new Mailer(logUser.data.email).sendTwoFactor(
+          codeResult.code,
+          logUser.data.email,
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        twoFactorRequired: true,
+        message: `Un code de vérification a été envoyé à ${logUser.data.email}.`,
+        data: logUser.data,
+      });
     }
 
-    return res.status(logUser.success ? 200 : 400).json({
-      success: logUser.success,
+    return res.status(200).json({
+      success: true,
+      twoFactorRequired: false,
       message: logUser.message,
-      data: logUser.data ?? null,
+      data: logUser.data,
     });
   } catch (err) {
     console.error(
@@ -252,6 +271,7 @@ routerUser.get("/get", authMiddleware, async (req: Request, res: Response) => {
         prenom: user.data.prenom,
         role: user.data.role,
         isVerified: user.data.isVerified,
+        twoFactorEnabled: user.data.twoFactorEnabled,
       },
       billing: {
         stripeCustomerId: user.data.stripeCustomerId,
@@ -283,7 +303,7 @@ routerUser.get("/get", authMiddleware, async (req: Request, res: Response) => {
 routerUser.put("/", authMiddleware, async (req: Request, res: Response) => {
   try {
     const idUser = Number(req.idUser);
-    const { email, nom, prenom, password } = req.body ?? {};
+    const { email, nom, prenom, password, twoFactorEnabled } = req.body ?? {};
 
     const update = await new User().update(idUser, {
       ...(typeof email === "string" ? { email } : {}),
@@ -292,6 +312,7 @@ routerUser.put("/", authMiddleware, async (req: Request, res: Response) => {
       ...(typeof password === "string" && password.trim()
         ? { password: password.trim() }
         : {}),
+      ...(typeof twoFactorEnabled === "boolean" ? { twoFactorEnabled } : {}),
     });
 
     if (!update.success) {
@@ -414,6 +435,7 @@ routerUser.put(
   },
 );
 
+// Route d'activation de l'auth à deux facteurs avec envoi d'un code à l'utilisateur pour valider l'activation
 routerUser.post(
   "/two-factor",
   authMiddleware,
@@ -512,10 +534,16 @@ routerUser.post(
         });
       }
 
-      await prisma.token.update({
-        where: { idToken: tokenEntry.idToken },
-        data: { status: "USED" },
-      });
+      await Promise.all([
+        prisma.token.update({
+          where: { idToken: tokenEntry.idToken },
+          data: { status: "USED" },
+        }),
+        prisma.user.update({
+          where: { idUser },
+          data: { twoFactorEnabled: true },
+        }),
+      ]);
 
       return res.status(200).json({
         success: true,

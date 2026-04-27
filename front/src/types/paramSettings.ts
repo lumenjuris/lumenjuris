@@ -93,6 +93,7 @@ export type UserGetData = {
     prenom: string | null;
     role?: string;
     isVerified: boolean;
+    twoFactorEnabled?: boolean;
   };
   billing: {
     stripeCustomerId: string | null;

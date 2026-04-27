@@ -43,7 +43,8 @@ export function ParamCompte() {
   const [accountPassword, setAccountPassword] = useState("");
   const [accountProvider, setAccountProvider] = useState<AccountProvider>(null);
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
-  const [isTwoFactorCodeModalOpen, setIsTwoFactorCodeModalOpen] = useState(false);
+  const [isTwoFactorCodeModalOpen, setIsTwoFactorCodeModalOpen] =
+    useState(false);
   const [activeConfirmationModal, setActiveConfirmationModal] =
     useState<AccountConfirmationModal | null>(null);
   const [isDyslexicModeEnabled, setIsDyslexicModeEnabled] = useState(false);
@@ -101,6 +102,9 @@ export function ParamCompte() {
           );
           setEnterpriseInitialSettings(
             normalizeEnterpriseSettings(userPayload.data.enterprise),
+          );
+          setIsTwoFactorEnabled(
+            Boolean(userPayload.data.profile.twoFactorEnabled),
           );
         }
 
@@ -249,7 +253,9 @@ export function ParamCompte() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code }),
     });
-    const payload = (await response.json().catch(() => null)) as ApiResponse<unknown> | null;
+    const payload = (await response
+      .json()
+      .catch(() => null)) as ApiResponse<unknown> | null;
 
     if (!response.ok || !payload?.success) {
       throw new Error(payload?.message ?? "Code invalide. Veuillez réessayer.");
@@ -259,13 +265,26 @@ export function ParamCompte() {
     setIsTwoFactorCodeModalOpen(false);
   };
 
-  const handleTwoFactorCheckedChange = (checked: boolean) => {
+  const handleTwoFactorCheckedChange = async (checked: boolean) => {
     if (checked) {
       setActiveConfirmationModal("two_factor");
       return;
+    } else if (!checked) {
+      try {
+        const response = await fetch("/api/user", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ twoFactorEnabled: false }),
+        });
+        const confirmResponse = await response.json();
+        if (response.ok || confirmResponse.success) {
+          setIsTwoFactorEnabled(false);
+        }
+      } catch (error) {
+        console.log("TWO FACTOR DISABLED ERROR :", error);
+      }
     }
-
-    setIsTwoFactorEnabled(false);
   };
 
   const handlePreferenceCheckedChange = (checked: boolean) => {

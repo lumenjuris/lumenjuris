@@ -7,6 +7,7 @@ import { EyeOffIcon, EyeIcon, SendIcon, LogInIcon } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
 import { AlertBanner } from "../common/AlertBanner";
+import { TwoFactorCodeModal } from "../ui/TwoFactorCodeModal";
 import { useAuth } from "../../context/AuthContext";
 
 import { useState, useEffect } from "react";
@@ -41,6 +42,12 @@ const LoginForm = ({
   const [serverErrorMessage, setServerErrorMessage] = useState(
     "Une erreur est survenue, veuillez réessayer...",
   );
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorEmail, setTwoFactorEmail] = useState("");
+  const [pendingLoginData, setPendingLoginData] = useState<{
+    role: string;
+    isVerified: boolean;
+  } | null>(null);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -55,41 +62,76 @@ const LoginForm = ({
 
     if (!email || !password) {
       setSubmitError(true);
-    } else {
-      setSubmitLoading(true);
-      try {
-        const loginResponse = await fetch("/api/user/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-          credentials: "include",
-        });
-
-        const dataResponse = await loginResponse.json();
-        console.log("▶️▶️ RETOUR SERVEUR CONNEXION :", dataResponse);
-
-        if (!loginResponse.ok || !dataResponse.success) {
-          setServerError(true);
-          setServerErrorMessage(
-            dataResponse.message ||
-              "Une erreur est survenue, veuillez réessayer...",
-          );
-          console.error("🛑🛑🛑 ERREUR CONNEXION", dataResponse);
-          throw new Error(`BackNode Auth Error : ${loginResponse.status}`);
-        } else {
-          login(dataResponse.data.role, dataResponse.isVerified, true);
-          navigate("/dashboard");
-        }
-      } catch (error) {
-        setServerError(true);
-        console.error("🛑🛑🛑 ERREUR SERVEUR CONNEXION", error);
-      }
+      return;
     }
+
+    setSubmitLoading(true);
+    try {
+      const loginResponse = await fetch("/api/user/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+
+      const dataResponse = await loginResponse.json();
+      console.log("▶️▶️ RETOUR SERVEUR CONNEXION :", dataResponse);
+
+      if (!loginResponse.ok || !dataResponse.success) {
+        setServerError(true);
+        setServerErrorMessage(
+          dataResponse.message || "Une erreur est survenue, veuillez réessayer...",
+        );
+        console.error("🛑🛑🛑 ERREUR CONNEXION", dataResponse);
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (dataResponse.twoFactorRequired) {
+        setPendingLoginData({
+          role: dataResponse.data.role,
+          isVerified: dataResponse.data.isVerified,
+        });
+        setTwoFactorEmail(dataResponse.data.email);
+        setTwoFactorModalOpen(true);
+        setSubmitLoading(false);
+        return;
+      }
+
+      login(dataResponse.data.role, dataResponse.data.isVerified, true);
+      navigate("/dashboard");
+    } catch (error) {
+      setServerError(true);
+      setSubmitLoading(false);
+      console.error("🛑🛑🛑 ERREUR SERVEUR CONNEXION", error);
+    }
+  };
+
+  const handleTwoFactorVerify = async (code: string) => {
+    const response = await fetch("/api/user/two-factor/verify", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.message ?? "Code invalide. Veuillez réessayer.");
+    }
+
+    login(pendingLoginData!.role, pendingLoginData!.isVerified, true);
+    navigate("/dashboard");
+  };
+
+  const handleTwoFactorCancel = async () => {
+    setTwoFactorModalOpen(false);
+    setPendingLoginData(null);
+    setSubmitLoading(false);
+    await fetch("/api/user/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => null);
   };
 
   const handleSubmitGoogle = () => {
@@ -106,7 +148,7 @@ const LoginForm = ({
       setSubmitLoading(true);
       setEmailSent(true);
       try {
-        const passwordResponse = await fetch("/api/auth/forgotpassword", {
+        await fetch("/api/auth/forgotpassword", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -117,13 +159,11 @@ const LoginForm = ({
   };
 
   const handleChangeEmail = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setEmail(value);
+    setEmail(event.target.value);
   };
 
   const handleChangePassword = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setPassword(value);
+    setPassword(event.target.value);
   };
 
   return (
@@ -133,9 +173,7 @@ const LoginForm = ({
           title="Champs manquants !"
           variant="error"
           detail="Vérifiez votre adresse email et votre mot de passe."
-          onClose={() => {
-            setSubmitError(false);
-          }}
+          onClose={() => setSubmitError(false)}
         />
       )}
       {submitForgotError && (
@@ -187,7 +225,6 @@ const LoginForm = ({
           <form onSubmit={handleSubmitForgotPassword}>
             <section className="flex flex-col gap-6">
               <Field>
-                {/* <FieldLabel htmlFor="email">Email</FieldLabel> */}
                 <FieldDescription className="text-gray-500">
                   Saisissez l'adresse email associée à votre compte. Vous
                   recevrez un lien pour créer un nouveau mot de passe.
@@ -206,9 +243,7 @@ const LoginForm = ({
               <div className="grid gap-2">
                 <Button
                   className="text-background border border-lumenjuris"
-                  disabled={
-                    submitLoading ? true : submitForgotError ? true : false
-                  }
+                  disabled={submitLoading || submitForgotError}
                   type="submit"
                   size="lg"
                 >
@@ -262,7 +297,7 @@ const LoginForm = ({
             <div className="grid gap-2">
               <Button
                 className="text-background border border-lumenjuris"
-                disabled={submitLoading ? true : submitError ? true : false}
+                disabled={submitLoading || submitError}
                 type="submit"
                 size="lg"
               >
@@ -279,9 +314,7 @@ const LoginForm = ({
               </button>
               <Button
                 variant="ghost"
-                onClick={() => {
-                  setForgotPassword(true);
-                }}
+                onClick={() => setForgotPassword(true)}
               >
                 Mot de passe oublié ?
               </Button>
@@ -289,6 +322,13 @@ const LoginForm = ({
           </section>
         </form>
       )}
+
+      <TwoFactorCodeModal
+        open={twoFactorModalOpen}
+        email={twoFactorEmail}
+        onVerify={handleTwoFactorVerify}
+        onCancel={() => { void handleTwoFactorCancel(); }}
+      />
     </div>
   );
 };

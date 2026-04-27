@@ -47,6 +47,7 @@ model User {
   prenom           String?
   password         String?
   isVerified       Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
   cgu              Boolean @default(false)
   stripeCustomerId String?
 

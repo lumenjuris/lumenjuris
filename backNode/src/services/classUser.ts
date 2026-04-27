@@ -16,6 +16,7 @@ type UserAuthData = {
   email: string;
   role: string;
   isVerified: boolean;
+  twoFactorEnabled: boolean;
 };
 
 type DataUpdatedDTO = {
@@ -145,6 +146,7 @@ export class User {
           email: findUser.email,
           role: findUser.role,
           isVerified: findUser.isVerified,
+          twoFactorEnabled: findUser.twoFactorEnabled,
         },
       };
     } catch (err) {
@@ -197,6 +199,7 @@ export class User {
           prenom: user.prenom,
           role: user.role,
           isVerified: user.isVerified,
+          twoFactorEnabled: user.twoFactorEnabled,
           stripeCustomerId: user.stripeCustomerId,
           enterprise: user.enterprise
             ? formatCompanyProfile(user.enterprise)
