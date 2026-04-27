@@ -402,6 +402,7 @@ export function ParamCompte() {
     <AccountSettingsPanel
       profile={accountProfile}
       password={accountPassword}
+      setPassword={setAccountPassword}
       provider={accountProvider}
       isTwoFactorEnabled={isTwoFactorEnabled}
       onProfileFieldChange={handleProfileFieldChange}
