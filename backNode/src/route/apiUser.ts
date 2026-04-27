@@ -281,8 +281,9 @@ routerUser.get("/get", authMiddleware, async (req: Request, res: Response) => {
     };
 
     const userProviderGoogle = await new Google().get(idUser);
+    console.log("USER GOOGLE PROVIDE :", userProviderGoogle);
 
-    if (userProviderGoogle.data) {
+    if (userProviderGoogle?.data) {
       dataReturn.provider = userProviderGoogle.data;
     }
 
@@ -350,7 +351,7 @@ routerUser.put("/", authMiddleware, async (req: Request, res: Response) => {
           isVerified: Boolean(user.data.isVerified),
           cgu: Boolean(userMeta?.cgu),
         },
-        provider: userProviderGoogle.data ?? null,
+        provider: userProviderGoogle?.data ?? null,
       },
     });
   } catch (err) {

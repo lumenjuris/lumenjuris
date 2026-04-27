@@ -8,6 +8,18 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { SettingsField } from "../ui/SettingsField";
 import { SettingsToggleRow } from "../ui/SettingsToggleRow";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/Dialog";
+import { Field, FieldGroup } from "../ui/Field";
+import { Label } from "../ui/Label";
 
 import { useState } from "react";
 
@@ -50,10 +62,6 @@ export function AccountSettingsPanel({
   const hasAddedPassword = googleConnectionPanelMode === "google_with_password";
 
   // const [firstName, setFirstName] = useState(profile.prenom);
-
-  // const handleChangeProfileInfo = (event: React.FormEvent<HTMLFormElement>) => {
-  //   console.log(event);
-  // };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -123,28 +131,77 @@ export function AccountSettingsPanel({
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
                   {hasAddedPassword
-                    ? "Vous êtes connecté via Google. Vous avez ajouté un mot de passe."
-                    : "Vous êtes actuellement connecté uniquement via Google."}
+                    ? "Vous êtes connecté via votre compte Google et vous utilisez un mot de passe dédié."
+                    : "Vous êtes actuellement connecté via votre compte Google."}
                 </div>
                 {!hasAddedPassword ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const passwordInput = document.getElementById(
-                        ACCOUNT_PASSWORD_INPUT_ID,
-                      );
+                  <Dialog>
+                    <form>
+                      <DialogTrigger
+                        render={
+                          <span className="text-[12px] underline text-lumenjuris">
+                            Ajouter un mot de passe
+                          </span>
+                        }
+                      />
+                      <DialogContent className="sm:max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle>Nouveau mot de passe</DialogTitle>
+                          <DialogDescription>
+                            Choisissez un nouveau mot de passe pour vous
+                            connecter à l'application lors de l'utilisation de
+                            votre adresse email Google.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <FieldGroup>
+                          <Field>
+                            <Label htmlFor="name-1">Mot de passe</Label>
+                            <Input
+                              id="name-1"
+                              name="name"
+                              defaultValue="Pedro Duarte"
+                            />
+                          </Field>
+                          <Field>
+                            <Label htmlFor="username-1">
+                              Confirmez votre mot de passe
+                            </Label>
+                            <Input
+                              id="username-1"
+                              name="username"
+                              defaultValue="@peduarte"
+                            />
+                          </Field>
+                        </FieldGroup>
+                        <DialogFooter>
+                          <DialogClose
+                            render={<Button variant="outline">Cancel</Button>}
+                          />
+                          <Button type="submit" className="text-white">
+                            Save changes
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </form>
+                  </Dialog>
+                ) : // <button
+                //   type="button"
+                //   onClick={() => {
+                //     const passwordInput = document.getElementById(
+                //       ACCOUNT_PASSWORD_INPUT_ID,
+                //     );
 
-                      passwordInput?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-                      (passwordInput as HTMLInputElement | null)?.focus();
-                    }}
-                    className="mt-2 text-xs font-medium text-lumenjuris underline underline-offset-2 transition-colors hover:text-lumenjuris/80"
-                  >
-                    Ajouter un mot de passe
-                  </button>
-                ) : null}
+                //     passwordInput?.scrollIntoView({
+                //       behavior: "smooth",
+                //       block: "center",
+                //     });
+                //     (passwordInput as HTMLInputElement | null)?.focus();
+                //   }}
+                //   className="mt-2 text-xs font-medium text-lumenjuris underline underline-offset-2 transition-colors hover:text-lumenjuris/80"
+                // >
+                //   Ajouter un mot de passe
+                // </button>
+                null}
               </div>
             </div>
           </div>

@@ -95,7 +95,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
           credentials: "include",
         });
         const logoutResponse = await response.json();
-        console.log("LOGOUT RES : ", logoutResponse);
+
         if (logoutResponse.success) {
           setIsConnected(false);
           setUserData(null);
