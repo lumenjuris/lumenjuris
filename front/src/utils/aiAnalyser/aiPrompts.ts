@@ -121,6 +121,7 @@ Identifier et extraire uniquement les clauses susceptibles de présenter un risq
 - **Type de contrat** : {{contractType}}
 - **Secteur d'activité** : {{industry}}
 - **Orientation stratégique** : {{strategicOrientation}}
+{{enterpriseContext}}
 
 
 
@@ -128,13 +129,15 @@ Identifier et extraire uniquement les clauses susceptibles de présenter un risq
 ─────────────────────
 1. **FOCUS PRINCIPAL** : Analyse chaque clause selon le rôle spécifique du mandant ({{userRole}})
 2. **CONTEXTE SECTORIEL** : Prends en compte les spécificités du secteur {{industry}}
-3. **ALIGNEMENT STRATÉGIQUE** : Applique l'approche {{strategicOrientation}} (défensif/équilibré/assertif)
+3. **CONTEXTE ENTREPRISE** : Si la convention collective ou la forme juridique sont renseignées, utilise-les pour apprécier les obligations applicables et les risques propres à l'entreprise utilisatrice.
+4. **ALIGNEMENT STRATÉGIQUE** : Applique l'approche {{strategicOrientation}} (défensif/équilibré/assertif)
 
 
 **MÉTHODOLOGIE D'ANALYSE (ADAPTATIVE)**
 ─────────────────────
 - **Analyse orientée** : Identifie les risques et opportunités spécifiquement pour {{userRole}}
 - **Pertinence sectorielle** : Évalue la conformité et les standards du secteur {{industry}}
+- **Pertinence conventionnelle** : Lorsque la convention collective est connue, vérifie que la clause ne contredit pas les garanties conventionnelles pertinentes, notamment en droit du travail.
 - **Recommandations ciblées** : Propose des ajustements pour renforcer la position de {{userRole}} dans le respect du droit français
 - **Cas non standard** : Si le type de contrat ou le secteur {{industry}} sortent des cas classiques, applique une méthodologie de protection contractuelle standard en faveur de {{userRole}}
 
@@ -535,6 +538,7 @@ Orientation stratégique : {{strategicOrientation}}
 Secteur d’activité : {{industry}}
 Régime juridique applicable : {{legalRegime}}
 Objectif principal du contrat : {{contractObjective}}
+{{enterpriseContext}}
 
 
 **🔒 RÈGLE ABSOLUE**
@@ -543,6 +547,7 @@ Ce contexte sert UNIQUEMENT à :
 
 évaluer le niveau de risque POUR {{userRole}},
 apprécier la conformité au régime juridique applicable,
+tenir compte, lorsqu'elles sont renseignées, de la convention collective applicable et de la forme juridique de l'entreprise utilisatrice,
 détecter les incohérences avec l’objectif contractuel,
 adapter la justification du risque selon l’orientation {{strategicOrientation}}.
 
@@ -639,6 +644,7 @@ confère un pouvoir unilatéral à l’autre partie,
 manque de précision sur un élément essentiel,
 
 déroge aux standards usuels du secteur {{industry}},
+contredit ou fragilise une garantie conventionnelle applicable lorsque la convention collective est renseignée,
 
 ou compromet l’objectif contractuel : {{contractObjective}}.
 
@@ -659,6 +665,8 @@ du {{contractType}},
 du régime {{legalRegime}},
 
 de l’objectif contractuel,
+
+de la convention collective et de la forme juridique lorsqu'elles sont renseignées,
 
 de l’orientation {{strategicOrientation}}
 

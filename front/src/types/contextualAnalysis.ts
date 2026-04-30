@@ -36,6 +36,19 @@ export interface AnalysisContext {
 
   // Objectif du contrat -> champs renseigné manuellement
   contractObjective?: string
+
+  // Contexte entreprise enrichi par les futures données utilisateur.
+  // Pour l'instant ces champs peuvent rester vides: le prompt sait les traiter
+  // comme des informations non renseignées.
+  enterpriseContext?: EnterpriseAnalysisContext;
+}
+
+export interface EnterpriseAnalysisContext {
+  // Convention collective applicable à l'entreprise de l'utilisateur.
+  collectiveAgreement?: string | null;
+
+  // Forme juridique de l'entreprise de l'utilisateur.
+  companyLegalForm?: string | null;
 }
 
 export interface ContextualAnalysisResult {
@@ -145,5 +158,3 @@ export const INDUSTRIES = [
   'Industrie', 'Santé', 'Éducation', 'Finance', 'Restauration',
   'Construction', 'Transport', 'Énergie', 'Média', 'Autre'
 ];
-
-

@@ -38,7 +38,7 @@ routerLlm.put(
     async (req: Request<PutParams>, res: Response) => {
         try {
             const { model, tokenInput, tokenOutput } = req.params
-            const allowedModels = ["GPT-4o-mini", "GPT-5.2"]
+            const allowedModels = ["gpt-4o", "gpt-4o-mini", "gpt-5.2", "gpt-5.4-nano"]
 
             if (!allowedModels.includes(model)) {
                 return res.status(400).json({

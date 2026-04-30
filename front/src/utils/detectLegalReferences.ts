@@ -6,7 +6,7 @@
 import { ClauseRisk } from '../types';
 import { callOpenAI } from './aiClient';
 
-const MODEL = 'gpt-4o-mini';
+const MODEL = 'gpt-4o';
 
 export async function detectLegalReferences(
   clause: ClauseRisk

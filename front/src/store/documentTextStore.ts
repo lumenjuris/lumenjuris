@@ -26,6 +26,11 @@ interface DocumentTextState {
   lastAppliedRecommendationKey?: string;
   setOriginalText: (text: string) => void;
   setHtmlContent: (html: string | null) => void;
+  restoreDocumentState: (state: {
+    originalText: string;
+    htmlContent: string | null;
+    patches: TextPatch[];
+  }) => void;
   applyPatch: (
     p: Omit<TextPatch, "id" | "originalSlice" | "active"> & {
       originalSlice?: string;
@@ -68,6 +73,16 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
   lastAppliedRecommendationKey: undefined,
 
   setHtmlContent: (html) => set({ htmlContent: html }),
+
+  restoreDocumentState: ({ originalText, htmlContent, patches }) => {
+    set({
+      originalText,
+      currentText: rebuildFrom(originalText, patches),
+      htmlContent,
+      patches,
+      lastAppliedRecommendationKey: undefined,
+    });
+  },
 
   setOriginalText: (text) => {
     set({

@@ -12,6 +12,7 @@ export interface ClauseAI {
   issues: string[];
   advice: string;
   alternatives: AltProposal[];
+  error?: string;
 }
 
 export interface ClauseRisk {

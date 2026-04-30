@@ -1,6 +1,3 @@
-
-
-
 import { ClauseRisk } from "../../types";
 
 /**
@@ -51,9 +48,6 @@ export function parseAIResponse(response: string): ClauseRisk[] {
         return [];
     }
 }
-
-
-
 /**
  *  Mappage du type vers la catégorie d'une clause
  */
@@ -77,12 +71,6 @@ function mapTypeToCategory(type: string): 'termination' | 'penalty' | 'responsib
 
     return 'other';
 }
-
-
-
-
-
-
 /**
  * 📊 Calcul du profil de risque
  */

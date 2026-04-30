@@ -87,6 +87,7 @@ export const DocumentViewer = forwardRef<
     const originalText = useDocumentTextStore((s) => s.originalText);
     const patches = useDocumentTextStore((s) => s.patches);
     const htmlContent = useDocumentTextStore((s) => s.htmlContent);
+    const setHtmlContent = useDocumentTextStore((s) => s.setHtmlContent);
     const resetAll = useDocumentTextStore((s) => s.resetAll);
     const activePatchCount = useMemo(
       () => patches.filter((p) => p.active).length,
@@ -168,12 +169,15 @@ export const DocumentViewer = forwardRef<
 
 
     // Initialisation de l'éditeur TipTap
+    const skipNextEditorSyncRef = useRef(false);
+
     const editor = useEditor({
       extensions: [StarterKit, ClauseMark],
       content: htmlFormattedContent,
       editable: true,
-      onUpdate: () => {
-        console.log("text changed in tiptap");
+      onUpdate: ({ editor }) => {
+        skipNextEditorSyncRef.current = true;
+        setHtmlContent(stripClauseMarkupFromHtml(editor.getHTML()));
       },
     });
 
@@ -185,9 +189,15 @@ export const DocumentViewer = forwardRef<
     useEffect(() => {
       if (!editor || editor.isDestroyed) return;
       const current = editor.getHTML();
-      if (current !== htmlFormattedContent) {
-        editor.commands.setContent(htmlFormattedContent);
+      if (current === htmlFormattedContent) {
+        skipNextEditorSyncRef.current = false;
+        return;
       }
+      if (skipNextEditorSyncRef.current) {
+        skipNextEditorSyncRef.current = false;
+        return;
+      }
+      editor.commands.setContent(htmlFormattedContent, { emitUpdate: false });
     }, [htmlFormattedContent, editor]);
 
     // Event delegation pour les clics sur les spans de clauses
@@ -283,3 +293,22 @@ export const DocumentViewer = forwardRef<
 );
 
 DocumentViewer.displayName = "DocumentViewer";
+
+function stripClauseMarkupFromHtml(html: string): string {
+  if (typeof DOMParser === "undefined") return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  doc.body.querySelectorAll("[data-clause-risk-id]").forEach((element) => {
+    const parent = element.parentNode;
+    if (!parent) return;
+
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element);
+    }
+    parent.removeChild(element);
+  });
+
+  return doc.body.innerHTML;
+}

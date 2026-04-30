@@ -21,8 +21,17 @@ export interface PromptContext {
     strategicOrientation: string;
     industry: string;
     contractObjective: string;
-    legalRegime: string
+    legalRegime: string;
+    enterpriseContext: EnterprisePromptContext;
+    enterpriseContextBlock: string;
 }
+
+export interface EnterprisePromptContext {
+    collectiveAgreement: string;
+    companyLegalForm: string;
+}
+
+const UNKNOWN_CONTEXT_VALUE = "Non renseigné pour le moment";
 
 
 /**
@@ -60,16 +69,46 @@ export function buildClauseExtractionPromptForAI(
  * @param {AnalysisContext} context - Contexte brut issu de l'analyse du contrat
  * @returns { PromptContext } - Contexte formaté pour la génération de prompt
  */
-function mapAnalysisContextToPromptContext(context: AnalysisContext): PromptContext {
+export function mapAnalysisContextToPromptContext(context: AnalysisContext): PromptContext {
+    const enterpriseContext = mapEnterpriseContextToPromptContext(context);
+
     return {
-        userRole: context.userRole,
-        contractType: context.contractType,
+        userRole: context.userRole || 'la partie contractante',
+        contractType: context.contractType || 'contrat commercial',
         missionContext: context.missionContext || context.mission || 'analyse contractuelle générale',
-        strategicOrientation: context.interestOrientation,
+        strategicOrientation: context.interestOrientation || 'balanced',
         industry: context.industry || 'secteur général',
-        contractObjective: context.contractObjective || "null",
-        legalRegime: context.legalRegime || "null",
+        contractObjective: context.contractObjective || UNKNOWN_CONTEXT_VALUE,
+        legalRegime: context.legalRegime || UNKNOWN_CONTEXT_VALUE,
+        enterpriseContext,
+        enterpriseContextBlock: buildEnterpriseContextBlock(enterpriseContext),
     };
+}
+
+function mapEnterpriseContextToPromptContext(context: AnalysisContext): EnterprisePromptContext {
+    const enterpriseContext = context.enterpriseContext;
+
+    return {
+        collectiveAgreement: cleanPromptValue(enterpriseContext?.collectiveAgreement),
+        companyLegalForm: cleanPromptValue(enterpriseContext?.companyLegalForm),
+    };
+}
+
+function cleanPromptValue(value?: string | null): string {
+    const cleanedValue = value?.trim();
+    return cleanedValue || UNKNOWN_CONTEXT_VALUE;
+}
+
+function buildEnterpriseContextBlock(context: EnterprisePromptContext): string {
+    return [
+        "- Convention collective applicable : " + context.collectiveAgreement,
+        "- Forme juridique de l'entreprise utilisatrice : " + context.companyLegalForm,
+    ].join("\n");
+}
+
+export function buildEnterpriseContextBlockFromAnalysisContext(context?: AnalysisContext): string {
+    if (!context) return "";
+    return mapAnalysisContextToPromptContext(context).enterpriseContextBlock;
 }
 
 
@@ -85,13 +124,24 @@ function mapAnalysisContextToPromptContext(context: AnalysisContext): PromptCont
  * @returns { string } - Le prompt final avec les valeurs injectées
  */
 export function buildContextualPrompt(template: string, context: PromptContext): string {
-    return template
-        .replace(/\{\{userRole\}\}/g, context.userRole || 'la partie contractante')
-        .replace(/\{\{contractType\}\}/g, context.contractType || 'contrat commercial')
-        .replace(/\{\{mission\}\}/g, context.missionContext || 'analyse contractuelle générale')
-        .replace(/\{\{strategicOrientation\}\}/g, context.strategicOrientation || 'équilibré')
-        .replace(/\{\{industry\}\}/g, context.industry || 'secteur général')
-        .replace(/\{\{legalRegime\}\}/g, context.legalRegime)
-        .replace(/\{\{contractObjective\}\}/g, context.contractObjective)
+    return replacePromptPlaceholders(template, {
+        userRole: context.userRole || 'la partie contractante',
+        contractType: context.contractType || 'contrat commercial',
+        mission: context.missionContext || 'analyse contractuelle générale',
+        strategicOrientation: context.strategicOrientation || 'équilibré',
+        industry: context.industry || 'secteur général',
+        legalRegime: context.legalRegime,
+        contractObjective: context.contractObjective,
+        enterpriseContext: context.enterpriseContextBlock,
+        collectiveAgreement: context.enterpriseContext.collectiveAgreement,
+        companyLegalForm: context.enterpriseContext.companyLegalForm,
+    });
 
+}
+
+function replacePromptPlaceholders(template: string, values: Record<string, string>): string {
+    return Object.entries(values).reduce(
+        (prompt, [key, value]) => prompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), () => value),
+        template,
+    );
 }

@@ -4,7 +4,7 @@
 import { LegalText, ClauseRisk } from '../types';
 import { callOpenAI } from './aiClient';
 
-const MODEL = 'gpt-4.1';
+const MODEL = 'gpt-4o';
 
 /* ---------- helpers ---------- */
 const safeJSON = (txt: string) => {

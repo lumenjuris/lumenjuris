@@ -67,6 +67,7 @@ class OpenAIRequestGpt5(BaseModel):
     prompt: str
     reasoning : str
     verbosity : str
+    model: str = "gpt-5.2"
 
 
 
@@ -79,11 +80,12 @@ class ChatRequest(BaseModel):
     message: str
     context: Optional[str] = ""
     history: List[ChatMessage] = []
+    model: str = "gpt-4o"
 
 
 class OpenAIChatRequest(BaseModel):
     messages: List[Dict[str, str]]
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4o"
     temperature: float = 0.3
     max_tokens: int = 800
     response_format: Optional[Dict[str, Any]] = None
@@ -97,18 +99,22 @@ class HFRequest(BaseModel):
 
 def extract_token_usage(response: Any, model: str) -> Dict[str, Any]:
     usage = getattr(response, "usage", None)
+
+    def usage_value(*keys: str) -> int:
+        if not usage:
+            return 0
+
+        for key in keys:
+            value = usage.get(key) if isinstance(usage, dict) else getattr(usage, key, None)
+            if value is not None:
+                return int(value)
+
+        return 0
+
     return {
         "model": model,
-        "input_tokens": (
-            getattr(usage, "input_tokens", None)
-            or getattr(usage, "prompt_tokens", None)
-            or 0
-        ),
-        "output_tokens": (
-            getattr(usage, "output_tokens", None)
-            or getattr(usage, "completion_tokens", None)
-            or 0
-        ),
+        "input_tokens": usage_value("input_tokens", "prompt_tokens"),
+        "output_tokens": usage_value("output_tokens", "completion_tokens"),
     }
 
 
@@ -195,7 +201,7 @@ Réponds de manière claire, structurée et professionnelle en 3-4 paragraphes m
 Si la question concerne les risques, identifie les principaux points d'attention juridiques.
 Si la question demande des améliorations, propose des reformulations concrètes."""
     response = _openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=500,
@@ -205,7 +211,7 @@ Si la question demande des améliorations, propose des reformulations concrètes
         "success": True,
         "answer": answer,
         "question": req.question,
-        "openai_tokens": extract_token_usage(response, "GPT-4o-mini"),
+        "openai_tokens": extract_token_usage(response, "gpt-4o"),
     }
 
 
@@ -229,8 +235,25 @@ async def chat(req: ChatRequest):
         if h.role and h.content:
             messages.append({"role": h.role, "content": h.content})
     messages.append({"role": "user", "content": req.message})
+
+    if req.model in {"gpt-5.2", "gpt-5.4-nano"}:
+        response = await run_in_threadpool(
+            lambda: _openai_client.responses.create(
+                model=req.model,
+                input=messages,
+                reasoning={"effort": "medium"},
+                text={"verbosity": "medium"},
+            )
+        )
+        assistant_response = response.output_text.strip()
+        return {
+            "success": True,
+            "response": assistant_response,
+            "openai_tokens": extract_token_usage(response, req.model),
+        }
+
     response = _openai_client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=req.model,
         messages=messages,
         temperature=0.7,
         max_tokens=800,
@@ -239,7 +262,7 @@ async def chat(req: ChatRequest):
     return {
         "success": True,
         "response": assistant_response,
-        "openai_tokens": extract_token_usage(response, "GPT-4o-mini"),
+        "openai_tokens": extract_token_usage(response, req.model),
     }
 
 
@@ -275,11 +298,15 @@ async def openai_chat52(req:OpenAIRequestGpt5):
 
     if not _openai_client:
         raise HTTPException(status_code=503, detail="Service OpenAI non configuré")
+
+    allowed_models = {"gpt-5.2", "gpt-5.4-nano"}
+    if req.model not in allowed_models:
+        raise HTTPException(status_code=400, detail=f"Modèle OpenAI non autorisé: {req.model}")
     
     try:
         #construction des parametres
         params = {
-            "model": "gpt-5.2",
+            "model": req.model,
             "input" : [
                 {"role": "system", "content": "Tu es un expert en droit français, spécialisé en contrats et analyse de clauses à risque."},
                 {"role": "user", "content": req.prompt}
@@ -300,7 +327,7 @@ async def openai_chat52(req:OpenAIRequestGpt5):
         content = response.output_text
         return {
             "content": content,
-            "openai_tokens": extract_token_usage(response, "GPT-5.2"),
+            "openai_tokens": extract_token_usage(response, req.model),
         }
     except Exception as e:
         import traceback

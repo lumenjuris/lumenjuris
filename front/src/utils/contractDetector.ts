@@ -330,6 +330,8 @@ Retourne un JSON avec:
 - userRole: Le rôle le plus probable de la personne qui analyse ce contrat (ex: "Locataire commerçant indépendant", "Salarié cadre supérieur")
 - specificQuestions: Des questions pertinentes à poser pour cette analyse (ex: "Vérifier la clause de révision du loyer et les conditions de cession du bail")
 - mission: Une mission d'analyse suggérée basée sur le contenu (ex: "Protéger les intérêts du locataire face aux clauses de révision et garantir la possibilité de cession")
+- legalRegime: Le régime juridique le plus probable applicable au contrat (ex: "Droit privé - bail commercial", "Droit du travail - CDI")
+- contractObjective: L'objectif principal et concret du contrat (ex: "Louer un local commercial", "Encadrer une relation de travail durable")
 - analysisDepth: "quick", "detailed" ou "expert" selon la complexité détectée
 - interestOrientation: "defensive", "balanced" ou "assertive" selon le rôle détecté
 
@@ -358,7 +360,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.`;
       specificQuestions: result.specificQuestions || '',
       analysisDepth: result.analysisDepth || 'detailed',
       interestOrientation: result.interestOrientation || 'balanced',
-      mission: result.mission || ''
+      mission: result.mission || '',
+      legalRegime: result.legalRegime || '',
+      contractObjective: result.contractObjective || '',
     };
 
   } catch (error) {
@@ -370,7 +374,9 @@ Réponds UNIQUEMENT avec le JSON, sans explication.`;
       specificQuestions: '',
       analysisDepth: 'detailed',
       interestOrientation: 'balanced',
-      mission: ''
+      mission: '',
+      legalRegime: '',
+      contractObjective: '',
     };
   }
 }

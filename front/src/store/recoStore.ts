@@ -52,7 +52,7 @@ export const useRecoStore = create<RecoState>()(
                 `Réponds JSON: {"clause":"...", "benefits":"...", "risk":"..."}`;
               const txt = await callOpenAI(
                 [{ role: 'user', content: prompt }],
-                { model: 'gpt-3.5-turbo', temperature: 0.2 }
+                { model: 'gpt-4o', temperature: 0.2 }
               );
               clearTimeout(timeout);
               const obj = JSON.parse(txt);

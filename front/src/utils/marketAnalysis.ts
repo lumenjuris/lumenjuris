@@ -230,7 +230,7 @@ Réponds UNIQUEMENT avec le JSON.`;
   try {
     const txt = await callOpenAI(
       [{ role: 'user', content: prompt }],
-      { model: 'gpt-4o-mini', temperature: 0.3, max_tokens: 800, response_format: { type: 'json_object' } }
+      { model: 'gpt-4o', temperature: 0.3, max_tokens: 800, response_format: { type: 'json_object' } }
     );
     const result = JSON.parse(txt);
 

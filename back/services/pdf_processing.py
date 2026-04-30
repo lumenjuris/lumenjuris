@@ -1231,4 +1231,3 @@ def _judilibre_search(query: str, limit: int = 3) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.warning(f"Judilibre search error: {e}")
     return []
-

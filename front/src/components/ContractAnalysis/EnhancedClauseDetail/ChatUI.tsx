@@ -1,12 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChatStore } from '../../../store/chatStore';
 import { Send, MessageSquare, AlertTriangle, HelpCircle } from 'lucide-react';
+import { type OpenAIModelId } from '../../../utils/aiClient';
+
+interface ClauseAIModelOption {
+  value: OpenAIModelId;
+  label: string;
+}
+
+interface ChatUIProps {
+  clauseAiModel: OpenAIModelId;
+  clauseAiModelOptions: ClauseAIModelOption[];
+  onClauseAiModelChange: (model: OpenAIModelId) => void;
+}
 
 /**
  * Composant réutilisable pour l'interface du chat juridique.
  * Il se connecte au `useChatStore` pour gérer son état.
  */
-export const ChatUI: React.FC = () => {
+export const ChatUI: React.FC<ChatUIProps> = ({
+  clauseAiModel,
+  clauseAiModelOptions,
+  onClauseAiModelChange,
+}) => {
   // Connexion au store Zustand
   const { messages, isSending, sendMessage, contextClause } = useChatStore();
   const [input, setInput] = useState('');
@@ -27,13 +43,13 @@ export const ChatUI: React.FC = () => {
 
   const handleSend = () => {
     if (input.trim()) {
-      sendMessage(input);
+      sendMessage(input, clauseAiModel);
       setInput('');
     }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    sendMessage(suggestion);
+    sendMessage(suggestion, clauseAiModel);
   };
 
   if (!contextClause) {
@@ -50,12 +66,28 @@ export const ChatUI: React.FC = () => {
     <div className="flex flex-col h-full bg-white">
       {/* Header + suggestions compact */}
       <div className="px-4 pt-2 pb-1 bg-white flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <HelpCircle size={16} className="text-slate-600" />
-          <div className="leading-tight">
-            <h4 className="text-sm font-semibold text-slate-800">Questions</h4>
-            <p className="text-[11px] text-slate-500">Analyse contextualisée</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <HelpCircle size={16} className="text-slate-600" />
+            <div className="leading-tight">
+              <h4 className="text-sm font-semibold text-slate-800">Questions</h4>
+              <p className="text-[11px] text-slate-500">Analyse contextualisée</p>
+            </div>
           </div>
+          <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Modèle
+            <select
+              value={clauseAiModel}
+              onChange={(event) => onClauseAiModelChange(event.target.value as OpenAIModelId)}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium normal-case tracking-normal text-slate-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              {clauseAiModelOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {messages.length === 0 && (
           <div className="flex flex-wrap gap-1 -mx-1">

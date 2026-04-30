@@ -14,6 +14,7 @@ interface AppliedRecommendationsState {
   appliedRecommendations: AppliedRecommendation[];
 
   getAllRecommendation:()=>AppliedRecommendation[];
+  setAppliedRecommendations: (items: AppliedRecommendation[]) => void;
   
   applyRecommendation: (
     clauseId: string,
@@ -37,6 +38,15 @@ export const useAppliedRecommendationsStore = create<AppliedRecommendationsState
 
       getAllRecommendation: () => {
         return get().appliedRecommendations
+      },
+
+      setAppliedRecommendations: (items) => {
+        set({
+          appliedRecommendations: items.map((item) => ({
+            ...item,
+            appliedAt: new Date(item.appliedAt),
+          })),
+        });
       },
 
       /**

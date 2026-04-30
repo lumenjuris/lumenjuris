@@ -79,7 +79,7 @@ Réponds en 2 phrases max, sans mise en forme, en français.`;
   try {
     const out = await callOpenAI(
       [{ role: 'user', content: prompt }],
-      { model: 'gpt-4o-mini', temperature: 0.2, max_tokens: 120 }
+      { model: 'gpt-4o', temperature: 0.2, max_tokens: 120 }
     );
     summarizeCache.set(cacheKey, out);
     return out;

@@ -6,8 +6,13 @@ import { Recommendation } from "../../../types";
 import { copyToClipboard } from "./EnhancedClauseDetail";
 import { useDocumentTextStore } from "../../../store/documentTextStore";
 import { useAppliedRecommendationsStore } from "../../../store/appliedRecommendationsStore";
+import { type OpenAIModelId } from "../../../utils/aiClient";
 
 
+interface ClauseAIModelOption {
+    value: OpenAIModelId;
+    label: string;
+}
 
 interface PropsRenderTabOverview {
     longText: string,
@@ -20,6 +25,9 @@ interface PropsRenderTabOverview {
     originalTextGlobal: string,
     recommendationIndex: number,
     setRecommendationIndex: (index: number) => void
+    clauseAiModel: OpenAIModelId,
+    clauseAiModelOptions: ClauseAIModelOption[],
+    onClauseAiModelChange: (model: OpenAIModelId) => void
 }
 export const RenderTabOverview: React.FC<PropsRenderTabOverview> = ({
     longText,
@@ -31,7 +39,10 @@ export const RenderTabOverview: React.FC<PropsRenderTabOverview> = ({
     clause,
     originalTextGlobal,
     recommendationIndex,
-    setRecommendationIndex
+    setRecommendationIndex,
+    clauseAiModel,
+    clauseAiModelOptions,
+    onClauseAiModelChange
 }) => {
 
 
@@ -134,6 +145,31 @@ export const RenderTabOverview: React.FC<PropsRenderTabOverview> = ({
                 )}
             </section>
 
+            <section className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <h4 className="font-semibold text-slate-800">Comparaison IA</h4>
+                        <p className="mt-1 text-xs text-slate-500">
+                            Change le modèle pour régénérer les problèmes et les propositions de clause.
+                        </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Modèle
+                        <select
+                            value={clauseAiModel}
+                            onChange={(event) => onClauseAiModelChange(event.target.value as OpenAIModelId)}
+                            className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium normal-case tracking-normal text-slate-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        >
+                            {clauseAiModelOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+            </section>
+
             {/* Problèmes */}
             <section className="rounded-md border border-slate-200 bg-white p-4">
                 <header className="mb-3 flex items-center gap-2">
@@ -151,7 +187,11 @@ export const RenderTabOverview: React.FC<PropsRenderTabOverview> = ({
                     </div>
                 ) : (
                     <ul className="space-y-2">
-                        {ai?.issues?.length ? (
+                        {ai.error ? (
+                            <li className="rounded-sm bg-amber-50 px-2 py-1.5 text-amber-700">
+                                {ai.error}
+                            </li>
+                        ) : ai?.issues?.length ? (
                             ai.issues.map((issue: string, i: number) => (
                                 <li key={i} className="flex gap-2 rounded-sm px-2 py-1.5 leading-snug text-slate-700">
                                     <span className="mt-0.5 text-red-500">•</span>

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { type OpenAIModelId } from '../utils/aiClient';
 
 type Message = {
   role: 'user' | 'assistant' | 'error';
@@ -9,7 +10,7 @@ type ChatState = {
   messages: Message[];
   isSending: boolean;
   contextClause: { id: string; text: string } | null;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (message: string, model?: OpenAIModelId) => Promise<void>;
   setContextClause: (clause: { id: string; text: string } | null) => void;
 };
 
@@ -39,7 +40,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
    * Envoie un message à l'API OpenAI avec le contexte de la clause.
    * @param message - Le message de l'utilisateur.
    */
-  sendMessage: async (message) => {
+  sendMessage: async (message, model = 'gpt-4o') => {
     const { contextClause } = get();
     if (!contextClause) {
       set({
@@ -60,6 +61,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
+          model,
           context: `Texte de la clause:\n"""${contextClause.text.slice(0, 4000)}"""`,
         }),
       });

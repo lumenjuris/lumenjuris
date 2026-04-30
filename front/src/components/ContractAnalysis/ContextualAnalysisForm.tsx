@@ -63,6 +63,8 @@ export const ContextualAnalysisForm: React.FC<ContextualAnalysisFormProps> = ({
             mission: aiResult.mission || '',
             analysisDepth: aiResult.analysisDepth,
             interestOrientation: aiResult.interestOrientation,
+            legalRegime: aiResult.legalRegime || '',
+            contractObjective: aiResult.contractObjective || '',
           });
 
           console.log('✅ Pré-remplissage 100% IA effectué - aucune variable statique utilisée');
@@ -269,6 +271,7 @@ export const ContextualAnalysisForm: React.FC<ContextualAnalysisFormProps> = ({
 
             <input
               type="text"
+              value={context.legalRegime || ''}
               placeholder="ex: Droit privé – Contrat commercial"
               className="w-full mt-2 p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
               id="legalRegim"
@@ -286,6 +289,7 @@ export const ContextualAnalysisForm: React.FC<ContextualAnalysisFormProps> = ({
 
             <input
               type="text"
+              value={context.contractObjective || ''}
               placeholder="ex: Sécuriser un partenariat"
               className="w-full mt-2 p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
               id="contractGoal"

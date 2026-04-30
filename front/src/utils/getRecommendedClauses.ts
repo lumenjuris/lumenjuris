@@ -1,7 +1,8 @@
 /* src/utils/getRecommendedClauses.ts */
 import { ClauseRisk } from '../types';
 import { AnalysisContext } from '../types/contextualAnalysis';
-import { callOpenAI } from './aiClient';
+import { callOpenAI, callOpenAi52, type OpenAIModelId } from './aiClient';
+import { buildEnterpriseContextBlockFromAnalysisContext } from './aiAnalyser/buildingPrompt';
 
 // Interface améliorée pour les recommandations de clauses
 export interface ClauseRecommendation {
@@ -14,7 +15,10 @@ export interface ClauseRecommendation {
   adaptationLevel?: 'simple' | 'moderate' | 'complex';
 }
 
-const MODEL = 'gpt-4o'; // Modèle amélioré
+const DEFAULT_MODEL: OpenAIModelId = 'gpt-4o';
+const usesResponsesApi = (
+  model: OpenAIModelId,
+): model is Extract<OpenAIModelId, 'gpt-5.2' | 'gpt-5.4-nano'> => model === 'gpt-5.2' || model === 'gpt-5.4-nano';
 
 function safeJSON(txt: string) {
   try {
@@ -43,9 +47,13 @@ function generateAdaptivePrompt(clause: ClauseRisk, context?: AnalysisContext): 
   const contextualInfo = context ? `
 🎯 CONTEXTE UTILISATEUR :
 - Rôle : ${context.userRole}
-- Mission : ${context.missionContext}
+- Mission : ${context.missionContext || context.mission || 'Analyse contractuelle'}
+- Type de contrat : ${context.contractType || 'Contrat non précisé'}
+- Régime juridique : ${context.legalRegime || 'Non renseigné pour le moment'}
+- Objectif du contrat : ${context.contractObjective || 'Non renseigné pour le moment'}
 - Orientation : ${context.interestOrientation === 'defensive' ? 'Protection maximale' : 
                 context.interestOrientation === 'assertive' ? 'Optimisation avantages' : 'Équilibre contractuel'}
+${buildEnterpriseContextBlockFromAnalysisContext(context)}
 ` : '';
 
   const basePrompt = `
@@ -137,24 +145,27 @@ FORMAT JSON attendu :
  */
 export async function getRecommendedClauses(
   clause: ClauseRisk,
-  context?: AnalysisContext
+  context?: AnalysisContext,
+  model: OpenAIModelId = DEFAULT_MODEL
 ): Promise<ClauseRecommendation[]> {
   try {
-    console.log(`🤖 Appel API OpenAI pour "${clause.type}" (${clause.content.length} caractères)`);
+    console.log(`🤖 Appel API OpenAI ${model} pour "${clause.type}" (${clause.content.length} caractères)`);
 
     const prompt = generateAdaptivePrompt(clause, context);
+    const systemPrompt = 'Tu es un avocat expert français spécialisé en rédaction contractuelle et optimisation des clauses.';
 
-    const rawContent = await callOpenAI(
-      [
-        {
-          role: 'system',
-          content:
-            'Tu es un avocat expert français spécialisé en rédaction contractuelle et optimisation des clauses.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      { model: MODEL, temperature: 0.3, max_tokens: 2000 }
-    );
+    const rawContent = usesResponsesApi(model)
+      ? await callOpenAi52(`${systemPrompt}\n\n${prompt}`, 'medium', 'medium', model)
+      : await callOpenAI(
+        [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          { role: 'user', content: prompt },
+        ],
+        { model, temperature: 0.3, max_tokens: 2000 }
+      );
 
     const recommendations = safeJSON(rawContent);
 

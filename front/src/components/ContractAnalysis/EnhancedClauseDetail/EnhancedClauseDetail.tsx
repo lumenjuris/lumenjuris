@@ -5,9 +5,10 @@ import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { ClauseRisk, JurisprudenceCase, Recommendation } from '../../../types';
 import { AnalysisContext } from '../../../types/contextualAnalysis';
-import { useAIStore } from '../../../store/aiStore';
+import { getClauseAIKey, useAIStore } from '../../../store/aiStore';
 import { useDocumentTextStore } from '../../../store/documentTextStore';
 import { useChatStore } from '../../../store/chatStore';
+import { type OpenAIModelId } from '../../../utils/aiClient';
 const ChatUI = React.lazy(() => import('../../ContractAnalysis/EnhancedClauseDetail/ChatUI'));
 
 
@@ -19,14 +20,19 @@ import { renderTabs } from './renderTabs';
 import { renderHeader } from './renderHeader';
 import { RenderTabCases } from './RenderTabCases';
 import { RenderTabOverview } from './RenderTabOverview';
+import {
+  altCache,
+  altCacheTime,
+  jurisprudenceCache,
+} from './enhancedClauseCaches';
 //fin de refactor
 
-
-
-// caches (simple in‑memory + TTL)
-const altCache: Record<string, Recommendation[]> = {};
-const altCacheTime: Record<string, number> = {};
-const jurisprudenceCache: Record<string, JurisprudenceCase[]> = {};
+const CLAUSE_AI_MODEL_OPTIONS: { value: OpenAIModelId; label: string }[] = [
+  { value: 'gpt-4o', label: '4o' },
+  { value: 'gpt-4o-mini', label: '4o mini' },
+  { value: 'gpt-5.2', label: '5.2' },
+  { value: 'gpt-5.4-nano', label: '5.4 nano' },
+];
 
 
 // util
@@ -77,6 +83,8 @@ export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose
 
   const [tab, setTab] = useState<Tab>('overview');
   const [expanded, setExpanded] = useState(false);
+  const [clauseAiModel, setClauseAiModel] = useState<OpenAIModelId>('gpt-4o');
+  const [alternatives, setAlternatives] = useState<Recommendation[] | null>(null);
   const setContextClause = useChatStore(s => s.setContextClause);
 
   // Track current clause id for perf measurements
@@ -90,9 +98,9 @@ export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose
 
 
 
-  const ai = useAIStore(s => (clause ? s.map[clause.id] : undefined));
+  const ai = useAIStore(s => (clause ? s.map[getClauseAIKey(clause.id, clauseAiModel)] : undefined));
   const fetchAI = useAIStore(s => s.fetch);
-  useEffect(() => { if (clause && !ai) fetchAI(clause); }, [clause, ai, fetchAI]);
+  useEffect(() => { if (clause && !ai) fetchAI(clause, clauseAiModel); }, [clause, ai, fetchAI, clauseAiModel]);
 
 
   // Perf: mark clause open & analysis readiness
@@ -115,12 +123,11 @@ export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose
 
 
 
-  const [alternatives, setAlternatives] = useState<Recommendation[] | null>(null);
   const originalTextGlobal = useDocumentTextStore(s => s.originalText);
 
 
 
-  useGetRecommendation(clause, setAlternatives, altCache, altCacheTime, context)
+  useGetRecommendation(clause, setAlternatives, altCache, altCacheTime, context, clauseAiModel)
 
 
 
@@ -197,6 +204,12 @@ export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose
           originalTextGlobal={originalTextGlobal}
           recommendationIndex={recommendationIndex}
           setRecommendationIndex={setRecommendationIndex}
+          clauseAiModel={clauseAiModel}
+          clauseAiModelOptions={CLAUSE_AI_MODEL_OPTIONS}
+          onClauseAiModelChange={(model) => {
+            setAlternatives(null);
+            setClauseAiModel(model);
+          }}
         />
       )
     }
@@ -213,29 +226,26 @@ export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose
 
     if (tab === 'chat') return (
       <Suspense fallback={<div className="p-4 text-sm text-slate-500">Chargement du module de questions…</div>}>
-        <ChatUI />
+        <ChatUI
+          clauseAiModel={clauseAiModel}
+          clauseAiModelOptions={CLAUSE_AI_MODEL_OPTIONS}
+          onClauseAiModelChange={setClauseAiModel}
+        />
       </Suspense>
     );
 
     return null;
   }
 
-
   function renderBody(height: string) {
     return (
       <div className="flex-1 bg-white" style={{ height, overflow: 'hidden' }}>
         <div className="h-full overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="p-4 space-y-4 min-h-full font-sans">{renderTabContent()}</div>
+          <div className="p-4 space-y-4 min-h-full font-sans">
+            {renderTabContent()}
+          </div>
         </div>
       </div>
     );
   }
-};
-
-
-
-// export cache clearer
-export const clearEnhancedClauseCaches = () => {
-  Object.keys(altCache).forEach(k => delete altCache[k]);
-  Object.keys(jurisprudenceCache).forEach(k => delete jurisprudenceCache[k]);
 };

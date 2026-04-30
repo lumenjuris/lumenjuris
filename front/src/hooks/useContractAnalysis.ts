@@ -7,7 +7,10 @@ import { useState, useCallback } from "react";
 import { ContractAnalysis } from "../types";
 import { AnalysisContext } from "../types/contextualAnalysis";
 import { extractDocumentContent } from "../utils/documentExtractor";
-import { analyzeContractWithAI } from "../utils/aiAnalyser/aiAnalyzer";
+import {
+  analyzeContractWithAI,
+  type AnalysisProgress,
+} from "../utils/aiAnalyser/aiAnalyzer";
 import {
   performCompleteMarketAnalysis,
   MarketAnalysisResult,
@@ -27,6 +30,7 @@ interface UseContractAnalysisReturn {
   contract: ContractAnalysis | null;
   isProcessing: boolean;
   processingPhase: ProcessingPhase;
+  analysisProgress: AnalysisProgress | null;
   currentAnalysisContext: AnalysisContext | null;
   marketAnalysis: MarketAnalysisResult | null;
   isMarketAnalysisLoading: boolean;
@@ -35,6 +39,11 @@ interface UseContractAnalysisReturn {
   handleStandardAnalysis: () => Promise<void>;
   handleContextualAnalysis: (context: AnalysisContext) => Promise<void>;
   handleMarketAnalysis: () => Promise<void>;
+  restoreAnalysis: (state: {
+    contract: ContractAnalysis;
+    currentAnalysisContext: AnalysisContext | null;
+    marketAnalysis: MarketAnalysisResult | null;
+  }) => void;
   resetAnalysis: () => void;
 }
 
@@ -44,6 +53,8 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
   const setHtmlContent = useDocumentTextStore((s) => s.setHtmlContent);
   const [processingPhase, setProcessingPhase] =
     useState<ProcessingPhase>("extraction");
+  const [analysisProgress, setAnalysisProgress] =
+    useState<AnalysisProgress | null>(null);
   const [currentAnalysisContext, setCurrentAnalysisContext] =
     useState<AnalysisContext | null>(null);
   const [marketAnalysis, setMarketAnalysis] =
@@ -122,11 +133,13 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         ...baseContract,
         clauses: processedClauses,
         overallRiskScore:
-          analysisResults.reduce((sum, c) => sum + c.riskScore, 0) /
-          analysisResults.length,
+          analysisResults.length > 0
+            ? analysisResults.reduce((sum, c) => sum + c.riskScore, 0) /
+              analysisResults.length
+            : 0,
         contractType:
           analysisType === "contextual"
-            ? "Contrat analysé avec contexte"
+            ? context?.contractType?.trim() || "Contrat analysé"
             : "Contrat analysé",
         processed: true,
         aiConfidenceScore: analysisType === "contextual" ? 90 : 85,
@@ -139,7 +152,10 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
           fileSize: baseContract.extractionMetadata?.fileSize || "0KB",
           extractionTime:
             baseContract.extractionMetadata?.extractionTime || "0ms",
-          aiSummary: `${analysisResults.length} clauses à risque identifiées${analysisType === "contextual" ? " avec contexte" : ""}`,
+          aiSummary:
+            analysisResults.length > 0
+              ? `${analysisResults.length} clauses à risque identifiées${analysisType === "contextual" ? " avec contexte" : ""}`
+              : "Aucune clause à risque identifiée",
         },
         ...(analysisType === "contextual" && context
           ? {
@@ -162,6 +178,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
 
       setIsProcessing(true);
       setProcessingPhase("extraction");
+      setAnalysisProgress(null);
       setContract(null);
       setCurrentAnalysisContext(null);
 
@@ -205,6 +222,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
       );
 
       setIsProcessing(false);
+      setAnalysisProgress(null);
       setContract(null);
       setCurrentAnalysisContext(null);
 
@@ -227,12 +245,15 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
 
     setIsProcessing(true);
     setProcessingPhase("analysis");
+    setAnalysisProgress(null);
 
     try {
       console.log("Lancement de l'analyse standard...");
 
       setProcessingPhase("scoring");
-      const basicAnalysis = await analyzeContractWithAI(contract.content);
+      const basicAnalysis = await analyzeContractWithAI(contract.content, undefined, {
+        onProgress: setAnalysisProgress,
+      });
 
       const updatedContract = processAnalysisResults(
         contract,
@@ -257,15 +278,8 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
       console.log("🔄 handleContextualAnalysis démarré");
       setIsProcessing(true);
       setProcessingPhase("enhanced");
+      setAnalysisProgress(null);
       setCurrentAnalysisContext(context);
-
-      // Timeout de sécurité pour éviter de rester bloqué
-      const timeoutId = setTimeout(() => {
-        console.log(
-          "⏰ Timeout de sécurité dans handleContextualAnalysis - forçage de setIsProcessing(false)",
-        );
-        setIsProcessing(false);
-      }, 120000); // 2 minutes maximum
 
       try {
         console.log(
@@ -278,6 +292,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         const enhancedAnalysis = await analyzeContractWithAI(
           contract.content,
           context,
+          { onProgress: setAnalysisProgress },
         );
 
         setProcessingPhase("scoring");
@@ -311,7 +326,6 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
           "Erreur lors de l'analyse personnalisée. Veuillez réessayer.",
         );
       } finally {
-        clearTimeout(timeoutId);
         console.log(
           "🏁 handleContextualAnalysis finally - setIsProcessing(false)",
         );
@@ -356,14 +370,37 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     setCurrentAnalysisContext(null);
     setMarketAnalysis(null);
     setIsProcessing(false);
+    setAnalysisProgress(null);
     setIsMarketAnalysisLoading(false);
     setProcessingPhase("extraction");
   }, []);
+
+  const restoreAnalysis = useCallback(
+    ({
+      contract,
+      currentAnalysisContext,
+      marketAnalysis,
+    }: {
+      contract: ContractAnalysis;
+      currentAnalysisContext: AnalysisContext | null;
+      marketAnalysis: MarketAnalysisResult | null;
+    }) => {
+      setContract(contract);
+      setCurrentAnalysisContext(currentAnalysisContext);
+      setMarketAnalysis(marketAnalysis);
+      setIsProcessing(false);
+      setAnalysisProgress(null);
+      setIsMarketAnalysisLoading(false);
+      setProcessingPhase(contract.processed ? "report" : "extraction");
+    },
+    [],
+  );
 
   return {
     contract,
     isProcessing,
     processingPhase,
+    analysisProgress,
     currentAnalysisContext,
     marketAnalysis,
     isMarketAnalysisLoading,
@@ -372,6 +409,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     handleStandardAnalysis,
     handleContextualAnalysis,
     handleMarketAnalysis,
+    restoreAnalysis,
     resetAnalysis,
   };
 };
