@@ -229,7 +229,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4 text-gray-400"
               >
                 <p>Pensez à compléter les informations manquantes dans : </p>
-                <Link to="/mon-compte">
+                <Link to="/mon-compte" state={{ origin: "header-alert" }}>
                   <button className="font-semibold text-gray-100">{`Mon compte > Mon entreprise`}</button>
                 </Link>
               </DropdownMenuContent>

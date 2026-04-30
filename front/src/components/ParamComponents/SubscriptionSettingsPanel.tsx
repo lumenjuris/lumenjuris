@@ -212,10 +212,10 @@ export function SubscriptionSettingsPanel(
                 <p className="text-sm font-semibold text-gray-900">
                   {subscription.planName}
                 </p>
-                <Badge variant="success">
+                <Badge variant={MOCK_SUBSCRIPTION.status}>
                   {STATUS_LABEL[subscription.status]}
                 </Badge>
-                {isAnnual && <Badge variant="success">Annuel</Badge>}
+                {isAnnual && <Badge variant="ACTIVE">Annuel</Badge>}
               </div>
               <p className="mt-0.5 text-sm text-gray-500">
                 {formatPrice(subscription.price)} /{" "}

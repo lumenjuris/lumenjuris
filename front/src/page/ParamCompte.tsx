@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { SETTINGS_TABS } from "../config/paramSettings";
 import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
 import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
@@ -54,6 +54,7 @@ export function ParamCompte() {
   const [enterpriseUpdateError, setEnterpriseUpdateError] = useState(false);
   const [enterpriseInitialSettings, setEnterpriseInitialSettings] =
     useState<EnterpriseSettings>(createEmptyEnterpriseSettings());
+  const [fromAlert, setFromAlert] = useState(false);
 
   const enterprise = useEnterpriseSettings(enterpriseInitialSettings);
 
@@ -429,6 +430,8 @@ export function ParamCompte() {
       });
   };
 
+  const location = useLocation();
+
   const accountPanel = (
     <AccountSettingsPanel
       profile={accountProfile}
@@ -508,13 +511,15 @@ export function ParamCompte() {
         preferenceMeasurePanel={preferencePanel}
         preferenceSubscriptionPanel={subscriptionPanel}
       >
-        {activeTab === "account"
-          ? accountPanel
-          : activeTab === "enterprise"
-            ? enterprisePanel
-            : activeTab === "preferences"
-              ? preferencePanel
-              : subscriptionPanel}
+        {location.state
+          ? enterprisePanel
+          : activeTab === "account"
+            ? accountPanel
+            : activeTab === "enterprise"
+              ? enterprisePanel
+              : activeTab === "preferences"
+                ? preferencePanel
+                : subscriptionPanel}
       </ParamLayout>
 
       {confirmationModalContent ? (

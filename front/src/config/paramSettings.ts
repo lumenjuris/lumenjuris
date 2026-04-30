@@ -22,7 +22,7 @@ export const SETTINGS_TABS: SettingsTabItem[] = [
     description: "",
   },
   {
-    id: "abonnements",
+    id: "subscription",
     label: "Abonnements",
     icon: CreditCard,
     description: "",
