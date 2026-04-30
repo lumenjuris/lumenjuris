@@ -54,13 +54,15 @@ async function sandbox() {
   console.log(user, " ");
 }
 
-
 app.listen(port, async () => {
   console.log(`Serveur backend nodejs running on port ${port}`);
   try {
     await seedBootstrapUsers();
   } catch (err) {
-    console.error("Erreur lors de l'initialisation des utilisateurs de bootstrap:", err);
+    console.error(
+      "Erreur lors de l'initialisation des utilisateurs de bootstrap:",
+      err,
+    );
   }
   //await sandbox()
 });

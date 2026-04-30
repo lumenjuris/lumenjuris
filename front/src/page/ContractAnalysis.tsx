@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import {
@@ -47,6 +47,8 @@ import {
   saveContractHistorySnapshot,
   touchContractHistoryEntry,
 } from "../utils/contractHistory";
+
+import { useAuth } from "../context/AuthContext";
 
 // ---------------------------------------------------------------------
 // SUPPRIMER LA FONCTION DÉPLACÉE PAR ERREUR (elle existe déjà en utils)
@@ -135,26 +137,9 @@ function mapEnterpriseToAnalysisContext(
 }
 
 export default function ContractAnalysis() {
-  const navigate = useNavigate();
-
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/user/get", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const dataResponse = await response.json();
-        if (!dataResponse.success && !dataResponse.data.profile.isVerified) {
-          navigate("/inscription");
-        }
-      } catch (error) {}
-    };
-    fetchData();
-  }, []);
+  const { userConnected } = useAuth();
 
   // États locaux
   const [selectedClause, setSelectedClause] = useState<string | null>(null);
@@ -564,7 +549,9 @@ export default function ContractAnalysis() {
     analysisProgress,
   );
 
-  return (
+  return !userConnected ? (
+    <Navigate to="/inscription" />
+  ) : (
     <div className="min-h-screen bg-gray-50">
       <MainHeader
         onNavClick={handleNavClick}

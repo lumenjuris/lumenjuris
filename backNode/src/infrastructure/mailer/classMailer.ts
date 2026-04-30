@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { templateVerifyAccount } from "./template/verifyAccount";
+import { templateResetPassword } from "./template/resetPassword";
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -148,6 +149,33 @@ export class Mailer {
         success: !!sending.messageId,
         message: sending.messageId
           ? `Un email a été envoyé à votre adresse ${this.email}, veuillez consulter votre boîte de réception pour valider votre inscription.`
+          : "Une erreur est survenue avec le serveur nous n'avons pas pu envoyer votre email.",
+      };
+    } catch (err) {
+      return this.errorCatching(err);
+    }
+  }
+
+  async sendResetPassword(resetLink: string, username?: string) {
+    try {
+      const html = this.createHtmlFullContent(
+        templateResetPassword(resetLink, username),
+      );
+      const mailOptions = this.createOption(
+        html,
+        "Réinitialisation de votre mot de passe Lumen Juris",
+      );
+      const sending = await transporter.sendMail(mailOptions);
+
+      if (!sending.messageId) {
+        throw new Error(
+          `Echec lors de l'envoie d'un email, id indisponible de retour indisponible.\n ${sending}`,
+        );
+      }
+      return {
+        success: !!sending.messageId,
+        message: sending.messageId
+          ? `Un email a été envoyé à votre adresse ${this.email}, veuillez consulter votre boîte de réception pour réinitialiser votre mot de passe.`
           : "Une erreur est survenue avec le serveur nous n'avons pas pu envoyer votre email.",
       };
     } catch (err) {

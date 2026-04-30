@@ -7,11 +7,10 @@ import { EyeOffIcon, EyeIcon, SendIcon, LogInIcon } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
 import { AlertBanner } from "../common/AlertBanner";
+import { useAuth } from "../../context/AuthContext";
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-import { useAuth } from "../../context/AuthContext";
 
 interface LoginFormProps {
   email: string;
@@ -39,11 +38,12 @@ const LoginForm = ({
   const [submitError, setSubmitError] = useState(false);
   const [submitForgotError, setSubmitForgotError] = useState(false);
   const [serverError, setServerError] = useState(false);
-  const [serverErrorMessage, setServerErrorMessage] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [serverErrorMessage, setServerErrorMessage] = useState(
+    "Une erreur est survenue, veuillez réessayer...",
+  );
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   useEffect(() => {
     setForgotPassword(false);
@@ -70,16 +70,19 @@ const LoginForm = ({
           credentials: "include",
         });
 
-        const data = await loginResponse.json();
-        console.log("▶️▶️ RETOUR SERVEUR CONNEXION :", data);
+        const dataResponse = await loginResponse.json();
+        console.log("▶️▶️ RETOUR SERVEUR CONNEXION :", dataResponse);
 
-        if (!loginResponse.ok) {
+        if (!loginResponse.ok || !dataResponse.success) {
           setServerError(true);
-          setServerErrorMessage(data.message);
+          setServerErrorMessage(
+            dataResponse.message ||
+              "Une erreur est survenue, veuillez réessayer...",
+          );
+          console.error("🛑🛑🛑 ERREUR CONNEXION", dataResponse);
           throw new Error(`BackNode Auth Error : ${loginResponse.status}`);
         } else {
-          setSubmitSuccess(true);
-          setSuccessMessage(data.message);
+          login(dataResponse.data.role, dataResponse.isVerified, true);
           navigate("/dashboard");
         }
       } catch (error) {
@@ -93,15 +96,23 @@ const LoginForm = ({
     window.location.href = "http://localhost:3020/auth/google";
   };
 
-  const handleSubmitForgotPassword = (
+  const handleSubmitForgotPassword = async (
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
     if (!email) {
       setSubmitForgotError(true);
     } else {
+      setSubmitLoading(true);
       setEmailSent(true);
-      setForgotPassword(false);
+      try {
+        const passwordResponse = await fetch("/api/auth/forgotpassword", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+          credentials: "include",
+        });
+      } catch (error) {}
     }
   };
 
@@ -133,15 +144,15 @@ const LoginForm = ({
           variant="error"
           detail="Pour réinitialiser votre mot de passe veuillez renseigner votre adresse email."
           onClose={() => {
-            setSubmitForgotError(false);
             setForgotPassword(true);
+            setSubmitForgotError(false);
           }}
         />
       )}
 
       {serverError && (
         <AlertBanner
-          title="Erreur serveur !"
+          title="Connexion impossible !"
           variant="error"
           detail={serverErrorMessage}
           onClose={() => {
@@ -150,48 +161,36 @@ const LoginForm = ({
           }}
         />
       )}
-      {submitSuccess && (
-        <AlertBanner
-          title="Connexion réussie !"
-          variant="success"
-          detail={successMessage}
-          onClose={() => {
-            setSubmitSuccess(false);
-            setSubmitLoading(false);
-            setSuccessMessage("");
-            setEmail("");
-            setPassword("");
-            navigate("/dashboard");
-          }}
-        />
-      )}
 
-      {emailSent === true ? (
-        <AlertBanner
-          title="Votre demande est prise en compte"
-          variant="success"
-          detail="Si un compte associé à cette adresse email existe vous allez recevoir un lien pour réinitialiser votre mot de passe"
-          duration={9000}
-          onClose={() => {
-            setEmailSent(false);
-          }}
-        />
-      ) : (
-        <></>
+      {emailSent && (
+        <section className="flex flex-col gap-2">
+          <AlertBanner
+            title="Email envoyé !"
+            variant="success"
+            detail="Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation dans quelques instants."
+            duration={12000}
+            onClose={() => {
+              setEmailSent(false);
+              setSubmitLoading(false);
+            }}
+          />
+          <p className="text-gray-500 text-[14px]">
+            Pensez à vérifier vos spams si vous ne recevez rien dans quelques
+            minutes.
+          </p>
+        </section>
       )}
 
       {forgotPassword === true ? (
         <div className="flex flex-col gap-6">
-          <h2>
-            Renseignez votre email de connexion pour réinitialiser votre mot de
-            passe :
-          </h2>
+          <h2>Réinitialisez votre mot de passe :</h2>
           <form onSubmit={handleSubmitForgotPassword}>
             <section className="flex flex-col gap-6">
               <Field>
                 {/* <FieldLabel htmlFor="email">Email</FieldLabel> */}
                 <FieldDescription className="text-gray-500">
-                  Un lien de réinitialisation vous sera envoyer à cette adresse
+                  Saisissez l'adresse email associée à votre compte. Vous
+                  recevrez un lien pour créer un nouveau mot de passe.
                 </FieldDescription>
                 <Input
                   id="email"

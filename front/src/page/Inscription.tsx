@@ -1,11 +1,13 @@
 import SignupForm from "../components/auth/SignupForm";
 import LoginForm from "../components/auth/LoginForm";
 import MainHeader from "../components/MainHeader/MainHeader";
+import { useAuth } from "../context/AuthContext";
 
 // UI //
 import { Button } from "../components/ui/Button";
 
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 
 export function Inscription() {
   const [isLoginOnScreen, setIsLoginOnScreen] = useState(true);
@@ -19,7 +21,11 @@ export function Inscription() {
   const [forgotPassword, setForgotPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  return (
+  const { userConnected } = useAuth();
+
+  return userConnected ? (
+    <Navigate to="/dashboard" />
+  ) : (
     <>
       <MainHeader />
 

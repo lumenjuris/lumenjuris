@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { createCookieAuth } from "../securite/cookieAuth";
 import { User } from "../services/classUser";
 import { Google } from "../services/classGoogle";
+import { prisma } from "../../prisma/singletonPrisma";
 
 const routerAuthGoogle: Router = express.Router();
 
@@ -79,6 +80,18 @@ routerAuthGoogle.get(
 
     const { sub, email, name, picture } = userInfo.data;
     console.log(userInfo.data);
+
+    // Recherche dans la BDD d'un utilisateur inscrit avec un compte Google
+    const findUser = await prisma.user.findUnique({
+      where: { email: email },
+    });
+
+    if (findUser) {
+      return (
+        createCookieAuth(findUser.idUser, "USER", res),
+        res.redirect(`http://localhost:5173/dashboard`)
+      );
+    }
 
     //Enregistrer dans la bdd
     //New user dans la bdd
