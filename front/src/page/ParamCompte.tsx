@@ -184,6 +184,17 @@ export function ParamCompte() {
     }));
   };
 
+  const handleCancelProfileEdit = () => {
+    if (!userData) return;
+    setAccountProfile({
+      prenom: userData.profile.prenom ?? "",
+      nom: userData.profile.nom ?? "",
+      email: userData.profile.email,
+      isVerified: userData.profile.isVerified,
+      cgu: false,
+    });
+  };
+
   const persistAccountSettings = async ({
     includePassword = false,
   }: {
@@ -426,6 +437,7 @@ export function ParamCompte() {
       provider={accountProvider}
       isTwoFactorEnabled={isTwoFactorEnabled}
       onProfileFieldChange={handleProfileFieldChange}
+      onCancelProfileEdit={handleCancelProfileEdit}
       onUpdateProfileClick={() => setActiveConfirmationModal("profile_update")}
       profileUpdateSuccess={profileUpdateSuccess}
       onProfileUpdateSuccessClose={() => setProfileUpdateSuccess(false)}
