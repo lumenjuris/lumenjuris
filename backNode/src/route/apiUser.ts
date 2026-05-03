@@ -281,7 +281,6 @@ routerUser.get("/get", authMiddleware, async (req: Request, res: Response) => {
     };
 
     const userProviderGoogle = await new Google().get(idUser);
-    console.log("USER GOOGLE PROVIDE :", userProviderGoogle);
 
     if (userProviderGoogle?.data) {
       dataReturn.provider = userProviderGoogle.data;

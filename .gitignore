@@ -27,3 +27,6 @@ backNode/prisma/generated
 backNode/dist/
 gpt5_tokens_log.json
 
+#proxy
+proxy/.env
+proxy/node_modules
