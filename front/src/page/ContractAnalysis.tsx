@@ -134,7 +134,27 @@ export default function ContractAnalysis() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { isConnected: userConnected } = useUserStore();
+  const { isConnected: userConnected, fetchUser } = useUserStore();
+  const [hasCheckedUser, setHasCheckedUser] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (userConnected) {
+      setHasCheckedUser(true);
+      return;
+    }
+
+    fetchUser().finally(() => {
+      if (isMounted) {
+        setHasCheckedUser(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchUser, userConnected]);
 
   // États locaux
   const [selectedClause, setSelectedClause] = useState<string | null>(null);
@@ -544,8 +564,21 @@ export default function ContractAnalysis() {
     analysisProgress,
   );
 
+  if (!hasCheckedUser && !userConnected) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <MainHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+            Chargement de l'analyseur...
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return !userConnected ? (
-    <Navigate to="/inscription" />
+    <Navigate to="/inscription" replace />
   ) : (
     <div className="min-h-screen bg-gray-50">
       <MainHeader
