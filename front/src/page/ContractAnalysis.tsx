@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, Navigate } from "react-router-dom";
+import { useLocation, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import {
@@ -62,12 +62,6 @@ function getProcessingStatusLines(
 
   if (phase === "analysis" || phase === "scoring" || phase === "enhanced") {
     lines.push("Analyse des clauses");
-  }
-
-  if (analysisProgress?.totalChunks && analysisProgress.totalChunks > 1) {
-    lines.push(
-      `${analysisProgress.completedChunks}/${analysisProgress.totalChunks} partie(s) traitée(s)`,
-    );
   }
 
   if ((analysisProgress?.currentAttempt ?? 1) > 1) {
@@ -138,6 +132,7 @@ function mapEnterpriseToAnalysisContext(
 
 export default function ContractAnalysis() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const { isConnected: userConnected } = useUserStore();
 

@@ -505,7 +505,7 @@ Chaque objet du tableau représente une clause et doit avoir deux clés :
 
 
 Voici le texte à analyser :
-""" + text[:20000]
+""" + text
     
     try:
         response = _openai_client.chat.completions.create(
