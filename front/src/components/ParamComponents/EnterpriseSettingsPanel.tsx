@@ -242,6 +242,7 @@ export function EnterpriseSettingsPanel({
             <Button
               type="button"
               variant="outline"
+              className="hover:bg-gray-100"
               onClick={onCancelEnterpriseEdit}
             >
               Annuler

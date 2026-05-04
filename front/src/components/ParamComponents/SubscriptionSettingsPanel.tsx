@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Check } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
+import { StripePaymentForm } from "./StripePaymentForm";
 
 type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "PENDING";
-type BillingInterval = "month" | "year";
+export type BillingInterval = "month" | "year";
 
 export type SubscriptionData = {
   status: SubscriptionStatus;
@@ -36,13 +37,6 @@ const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   CANCELLED: "Annulé",
   EXPIRED: "Expiré",
   PENDING: "En attente",
-};
-
-const STATUS_STYLE: Record<SubscriptionStatus, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-  EXPIRED: "bg-gray-100 text-gray-600",
-  PENDING: "bg-amber-100 text-amber-700",
 };
 
 const formatDate = (iso: string) =>
@@ -148,12 +142,23 @@ const MOCK_CREDITS: CreditsData = {
   totalGenerationDoc: 3,
 };
 
+const PRICE_MONTHLY_CENTS = 3590;
+const PRICE_ANNUAL_CENTS = 35900;
+const PLAN_FEATURES = [
+  "Analyse de contrats illimitée",
+  "Recherche Légifrance & Judilibre",
+  "Génération de documents",
+  "Signatures électroniques",
+];
+
 export function SubscriptionSettingsPanel(
   _props: Partial<SubscriptionSettingsPanelProps> = {},
 ) {
-  const { subscription = MOCK_SUBSCRIPTION, credits = MOCK_CREDITS } = _props;
+  const { subscription = null, credits = MOCK_CREDITS } = _props;
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const isActive = subscription?.status === "ACTIVE";
   const isAnnual = subscription?.interval === "year";
@@ -165,44 +170,129 @@ export function SubscriptionSettingsPanel(
 
   const priceLabel = isAnnual ? "paiement unique" : "mois";
 
+  const displayMonthly = formatPrice(PRICE_MONTHLY_CENTS);
+  const displayAnnual = formatPrice(PRICE_ANNUAL_CENTS);
+  const displayAnnualMonthly = formatPrice(Math.round(PRICE_ANNUAL_CENTS / 12));
+
+  if (showPaymentForm && !paymentSuccess) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Gérez votre formule d'abonnement LumenJuris.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white px-6 py-5">
+          <StripePaymentForm
+            interval={billingInterval}
+            onBack={() => setShowPaymentForm(false)}
+            onSuccess={() => setPaymentSuccess(true)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentSuccess) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
+        </div>
+        <div className="flex flex-col items-center rounded-2xl border border-green-200 bg-green-50 px-6 py-10 text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <Check className="h-6 w-6 text-green-600" />
+          </div>
+          <p className="text-sm font-semibold text-gray-900">
+            Abonnement activé !
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Votre paiement a été accepté. Vous avez maintenant accès à toutes
+            les fonctionnalités LumenJuris.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Gérez votre formule d'abonnement LumenJuris.
+          Choisissez votre formule d'abonnement LumenJuris.
         </p>
       </div>
 
       {subscription === null ? (
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
-          <CreditCard className="mb-3 h-8 w-8 text-gray-300" />
-          <p className="text-sm font-medium text-gray-800">
-            Aucun abonnement actif
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            Souscrivez à un abonnement LumenJuris pour accéder à toutes les
-            fonctionnalités.
-          </p>
-          <div className="mt-5">
+        <div className="space-y-4">
+          <div className="flex justify-center">
             <BillingToggle
               value={billingInterval}
               onChange={setBillingInterval}
             />
           </div>
-          {billingInterval === "year" && (
-            <p className="mt-2 text-xs text-gray-500">
-              Un seul paiement pour 12 mois d'accès — l'équivalent de 10 mois au
-              tarif mensuel.
-            </p>
-          )}
-          <Button
-            type="button"
-            onClick={() => {}}
-            className="mt-4 bg-lumenjuris text-white hover:bg-lumenjuris/90"
-          >
-            Voir les offres
-          </Button>
+
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+            <div className="border-b border-gray-100 px-5 py-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Plan Essentiel
+                  </p>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    {billingInterval === "year" ? (
+                      <>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {displayAnnualMonthly}
+                        </span>
+                        <span className="text-sm text-gray-500">/ mois</span>
+                        <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          2 mois offerts
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {displayMonthly}
+                        </span>
+                        <span className="text-sm text-gray-500">/ mois</span>
+                      </>
+                    )}
+                  </div>
+                  {billingInterval === "year" && (
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      Facturé {displayAnnual} en une seule fois
+                    </p>
+                  )}
+                </div>
+                <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+              </div>
+            </div>
+
+            <ul className="divide-y divide-gray-50 px-5">
+              {PLAN_FEATURES.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-center gap-2.5 py-2.5 text-sm text-gray-700"
+                >
+                  <Check className="h-4 w-4 shrink-0 text-green-500" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <div className="border-t border-gray-100 px-5 py-4">
+              <Button
+                type="button"
+                onClick={() => setShowPaymentForm(true)}
+                className="w-full bg-lumenjuris text-white hover:bg-lumenjuris/90"
+              >
+                Souscrire
+              </Button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
@@ -273,7 +363,12 @@ export function SubscriptionSettingsPanel(
 
       {subscription !== null && (
         <div className="flex justify-end">
-          <Button type="button" variant="outline" onClick={() => {}}>
+          <Button
+            type="button"
+            variant="outline"
+            className="hover:bg-gray-100"
+            onClick={() => {}}
+          >
             Gérer mon abonnement
           </Button>
         </div>
