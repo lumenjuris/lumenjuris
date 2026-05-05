@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "../ui/Button";
 import { cn } from "../../utils/shadcnUtils/cn";
 import { StripePaymentForm } from "./StripePaymentForm";
+import { useUserStore } from "../../store/userStore";
 
 type BillingInterval = "month" | "year";
 
@@ -80,10 +82,30 @@ export function PlansPanel() {
   const [yearly, setYearly] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const userData = useUserStore((s) => s.userData);
+
+  useEffect(() => {
+    const state = location.state as { plan?: SelectedPlan } | null;
+    if (state?.plan) {
+      setSelectedPlan(state.plan);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, []);
 
   const interval: BillingInterval = yearly ? "year" : "month";
 
   const handlePlanSelect = (plan: Plan) => {
+    if (!userData) {
+      const priceEuros = yearly ? plan.yearly : plan.monthly;
+      navigate("/inscription", {
+        state: {
+          plan: { name: plan.name, price: priceEuros * 100, interval },
+        },
+      });
+      return;
+    }
     const priceEuros = yearly ? plan.yearly : plan.monthly;
     setSelectedPlan({
       name: plan.name,

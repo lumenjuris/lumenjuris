@@ -16,6 +16,7 @@ front/dist/
 
 #front proxy
 /front/server/.env
+/front/.env.development
 
 #backend nodeJS
 backNode/.env

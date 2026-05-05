@@ -6,6 +6,7 @@ import {
   CardCvcElement,
   useStripe,
   useElements,
+  PaymentElement,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Lock, ArrowLeft } from "lucide-react";
@@ -15,9 +16,7 @@ import { Label } from "../ui/Label";
 
 type BillingInterval = "month" | "year";
 
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? "",
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_CLIENT ?? "");
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -65,8 +64,8 @@ function PaymentFormInner({
       ? `${formatPrice(price)} — paiement unique (12 mois)`
       : `${formatPrice(price)} / mois`;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!stripe || !elements) return;
 
     setIsLoading(true);
@@ -90,15 +89,21 @@ function PaymentFormInner({
       return;
     }
 
-    // TODO: send paymentMethod.id + interval + planName to backend to create subscription
-    console.log("PaymentMethod created:", paymentMethod.id, "plan:", planName, "interval:", interval);
+    console.log(
+      "PaymentMethod created:",
+      paymentMethod.id,
+      "plan:",
+      planName,
+      "interval:",
+      interval,
+    );
 
     setIsLoading(false);
     onSuccess();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <div className="space-y-5">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
@@ -126,7 +131,7 @@ function PaymentFormInner({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <form className="space-y-5" onSubmit={handleSubmit}>
         <div>
           <Label className="mb-1.5 block text-xs font-medium text-gray-700">
             Nom sur la carte
@@ -168,7 +173,40 @@ function PaymentFormInner({
             </div>
           </div>
         </div>
-      </div>
+
+        <Button
+          type="submit"
+          disabled={!stripe || isLoading}
+          className="w-full bg-lumenjuris text-white hover:bg-lumenjuris/90 disabled:opacity-50"
+        >
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg
+                className="h-4 w-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
+              Traitement…
+            </span>
+          ) : (
+            `Payer ${formatPrice(price)}`
+          )}
+        </Button>
+      </form>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
@@ -176,40 +214,11 @@ function PaymentFormInner({
         </p>
       )}
 
-      <Button
-        type="submit"
-        disabled={!stripe || isLoading}
-        className="w-full bg-lumenjuris text-white hover:bg-lumenjuris/90 disabled:opacity-50"
-      >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8z"
-              />
-            </svg>
-            Traitement…
-          </span>
-        ) : (
-          `Payer ${formatPrice(price)}`
-        )}
-      </Button>
-
       <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
         <Lock className="h-3.5 w-3.5" />
         Paiement sécurisé par Stripe
       </p>
-    </form>
+    </div>
   );
 }
 
@@ -228,6 +237,28 @@ export function StripePaymentForm({
   onBack,
   onSuccess,
 }: StripePaymentFormProps) {
+  if (!import.meta.env.VITE_STRIPE_CLIENT) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={onBack}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour
+          </Button>
+        </div>
+        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Paiement non disponible — clé Stripe manquante (
+          <code>VITE_STRIPE_PUBLISHABLE_KEY</code>).
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Elements stripe={stripePromise}>
       <PaymentFormInner
