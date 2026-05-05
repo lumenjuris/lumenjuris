@@ -60,10 +60,20 @@ export function createContractHistoryId(): string {
 
 export function loadContractHistoryIndex(): ContractHistoryItem[] {
   const index = readJson<ContractHistoryItem[]>(HISTORY_INDEX_KEY, []);
-
-  return index
-    .filter((item) => item?.version === 1 && item.id)
+  const analyzedIndex = index
+    .filter(isPersistedAnalyzedHistoryItem)
     .sort(compareByUploadTimeDesc);
+
+  if (analyzedIndex.length !== index.length) {
+    try {
+      localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(analyzedIndex));
+      cleanupSnapshots(analyzedIndex);
+    } catch (error) {
+      console.warn("[contract history] migration error", error);
+    }
+  }
+
+  return analyzedIndex;
 }
 
 export function createContractHistorySnapshot({
@@ -98,10 +108,15 @@ export function saveContractHistorySnapshot(
 
   try {
     const normalizedSnapshot = normalizeSnapshot(snapshot);
+    if (!isPersistableSnapshot(normalizedSnapshot)) {
+      discardUnanalyzedHistoryEntry(normalizedSnapshot.id);
+      return null;
+    }
+
+    const index = loadContractHistoryIndex();
     const snapshotKey = buildSnapshotKey(normalizedSnapshot.id);
     localStorage.setItem(snapshotKey, JSON.stringify(normalizedSnapshot));
 
-    const index = loadContractHistoryIndex();
     const existing = index.find((item) => item.id === normalizedSnapshot.id);
     const item = buildHistoryItem(normalizedSnapshot, existing);
     const nextIndex = sortByUploadTimeDesc([
@@ -131,11 +146,24 @@ export function loadContractHistorySnapshot(
     const parsed = JSON.parse(raw) as ContractHistorySnapshot;
     if (parsed.version !== 1 || parsed.id !== id) return null;
 
-    return normalizeSnapshot(parsed);
+    const normalizedSnapshot = normalizeSnapshot(parsed);
+    if (!isPersistableSnapshot(normalizedSnapshot)) {
+      discardUnanalyzedHistoryEntry(id);
+      return null;
+    }
+
+    return normalizedSnapshot;
   } catch (error) {
     console.warn("[contract history] load error", error);
     return null;
   }
+}
+
+export function createContractHistoryPreviewItem(
+  snapshot: ContractHistorySnapshot,
+  existing?: ContractHistoryItem,
+): ContractHistoryItem {
+  return buildHistoryItem(normalizeSnapshot(snapshot), existing);
 }
 
 export function touchContractHistoryEntry(id: string): ContractHistoryItem[] {
@@ -201,6 +229,28 @@ function buildHistoryItem(
       snapshot.currentAnalysisContext?.contractType ||
       undefined,
   };
+}
+
+function isPersistedAnalyzedHistoryItem(
+  item: ContractHistoryItem | null | undefined,
+): item is ContractHistoryItem {
+  return item?.version === 1 && Boolean(item.id) && item.status === "analyzed";
+}
+
+function isPersistableSnapshot(snapshot: ContractHistorySnapshot): boolean {
+  return snapshot.status === "analyzed" && snapshot.contract?.processed === true;
+}
+
+function discardUnanalyzedHistoryEntry(id: string) {
+  try {
+    localStorage.removeItem(buildSnapshotKey(id));
+    const nextIndex = loadContractHistoryIndex().filter(
+      (item) => item.id !== id,
+    );
+    localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(nextIndex));
+  } catch (error) {
+    console.warn("[contract history] discard error", error);
+  }
 }
 
 function normalizeSnapshot(

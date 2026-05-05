@@ -44,8 +44,9 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
           <div className="max-h-[calc(100vh-12rem)] overflow-y-auto p-2 space-y-2">
             {items.map((item) => {
               const isActive = item.id === activeId;
+              const isAnalyzed = item.status === "analyzed";
               const StatusIcon =
-                item.status === "analyzed" ? CheckCircle2 : MoreHorizontal;
+                isAnalyzed ? CheckCircle2 : MoreHorizontal;
 
               return (
                 <div
@@ -71,14 +72,12 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
                           <span className="inline-flex items-center gap-1 whitespace-nowrap">
                             <StatusIcon
                               className={`w-3.5 h-3.5 ${
-                                item.status === "analyzed"
+                                isAnalyzed
                                   ? "text-green-600"
                                   : "text-gray-400"
                               }`}
                             />
-                            {item.status === "analyzed"
-                              ? "Analysé"
-                              : "Importé"}
+                            {isAnalyzed ? "Analysé" : "En cours"}
                           </span>
                           <HistoryMetaItem>
                             {formatClauseCount(item.clausesCount)}
@@ -104,7 +103,11 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
                         onDelete(item.id);
                       }}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 focus:opacity-100 focus:outline-none group-hover:opacity-100"
-                      title="Supprimer de l'historique"
+                      title={
+                        isAnalyzed
+                          ? "Supprimer de l'historique"
+                          : "Abandonner l'analyse en cours"
+                      }
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

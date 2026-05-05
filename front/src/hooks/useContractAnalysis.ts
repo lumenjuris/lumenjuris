@@ -3,9 +3,9 @@
  * Extrait la logique métier de App.tsx
  */
 
-import { useState, useCallback } from "react";
-import { ContractAnalysis } from "../types";
-import { AnalysisContext } from "../types/contextualAnalysis";
+import { useState, useCallback, useRef } from "react";
+import type { ClauseRisk, ContractAnalysis } from "../types";
+import type { AnalysisContext } from "../types/contextualAnalysis";
 import { extractDocumentContent } from "../utils/documentExtractor";
 import {
   analyzeContractWithAI,
@@ -34,8 +34,11 @@ interface UseContractAnalysisReturn {
   currentAnalysisContext: AnalysisContext | null;
   marketAnalysis: MarketAnalysisResult | null;
   isMarketAnalysisLoading: boolean;
-  handleFileUpload: (file: File) => Promise<void>;
-  handleTextSubmit: (text: string, fileName: string) => Promise<void>;
+  handleFileUpload: (file: File) => Promise<ContractAnalysis | null>;
+  handleTextSubmit: (
+    text: string,
+    fileName: string,
+  ) => Promise<ContractAnalysis | null>;
   handleStandardAnalysis: () => Promise<void>;
   handleContextualAnalysis: (context: AnalysisContext) => Promise<void>;
   handleMarketAnalysis: () => Promise<void>;
@@ -47,9 +50,90 @@ interface UseContractAnalysisReturn {
   resetAnalysis: () => void;
 }
 
+type ExtractionMetadataInput = {
+  pages?: number;
+  extraction_time?: string;
+  isProtected?: boolean;
+  extractionQuality?: NonNullable<
+    ContractAnalysis["extractionMetadata"]
+  >["extractionQuality"];
+};
+
+type RawClauseRisk = Omit<ClauseRisk, "category"> & {
+  category?: unknown;
+};
+
+const CLAUSE_CATEGORIES = [
+  "penalty",
+  "termination",
+  "responsibility",
+  "confidentiality",
+  "nonCompete",
+  "warranty",
+  "other",
+] as const satisfies readonly ClauseRisk["category"][];
+
+function normalizeClauseCategory(category: unknown): ClauseRisk["category"] {
+  return typeof category === "string" &&
+    (CLAUSE_CATEGORIES as readonly string[]).includes(category)
+    ? (category as ClauseRisk["category"])
+    : "other";
+}
+
+export function processContractAnalysisResults(
+  baseContract: ContractAnalysis,
+  analysisResults: RawClauseRisk[],
+  analysisType: "standard" | "contextual",
+  context?: AnalysisContext,
+): ContractAnalysis {
+  const processedClauses: ClauseRisk[] = analysisResults.map((clause) => ({
+    ...clause,
+    category: normalizeClauseCategory(clause.category),
+  }));
+
+  return {
+    ...baseContract,
+    clauses: processedClauses,
+    overallRiskScore:
+      analysisResults.length > 0
+        ? analysisResults.reduce((sum, c) => sum + c.riskScore, 0) /
+          analysisResults.length
+        : 0,
+    contractType:
+      analysisType === "contextual"
+        ? context?.contractType?.trim() || "Contrat analysé"
+        : "Contrat analysé",
+    processed: true,
+    aiConfidenceScore: analysisType === "contextual" ? 90 : 85,
+    extractionMetadata: {
+      ...baseContract.extractionMetadata,
+      wordCount: baseContract.extractionMetadata?.wordCount || 0,
+      language: baseContract.extractionMetadata?.language || "fr",
+      extractionMethod: baseContract.extractionMetadata?.extractionMethod || "text",
+      fileSize: baseContract.extractionMetadata?.fileSize || "0KB",
+      extractionTime: baseContract.extractionMetadata?.extractionTime || "0ms",
+      aiSummary:
+        analysisResults.length > 0
+          ? `${analysisResults.length} clauses à risque identifiées${analysisType === "contextual" ? " avec contexte" : ""}`
+          : "Aucune clause à risque identifiée",
+    },
+    ...(analysisType === "contextual" && context
+      ? {
+          reponses_questions_mandant: {
+            contractType: context.contractType,
+            userRole: context.userRole,
+            missionContext: context.missionContext || "",
+            specificQuestions: context.specificQuestions,
+          },
+        }
+      : {}),
+  };
+}
+
 export const useContractAnalysis = (): UseContractAnalysisReturn => {
   const [contract, setContract] = useState<ContractAnalysis | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const activeOperationRef = useRef(0);
   const setHtmlContent = useDocumentTextStore((s) => s.setHtmlContent);
   const [processingPhase, setProcessingPhase] =
     useState<ProcessingPhase>("extraction");
@@ -61,12 +145,21 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     useState<MarketAnalysisResult | null>(null);
   const [isMarketAnalysisLoading, setIsMarketAnalysisLoading] = useState(false);
 
+  const beginOperation = useCallback(() => {
+    activeOperationRef.current += 1;
+    return activeOperationRef.current;
+  }, []);
+
+  const isCurrentOperation = useCallback((operationId: number) => {
+    return activeOperationRef.current === operationId;
+  }, []);
+
   const createBaseContract = useCallback(
     (
       fileName: string,
       content: string,
       extractionMethod: string = "direct_input",
-      metadata?: any,
+      metadata?: ExtractionMetadataInput,
     ): ContractAnalysis => {
       return {
         id: Date.now().toString(),
@@ -98,83 +191,10 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     [],
   );
 
-  const processAnalysisResults = useCallback(
-    (
-      baseContract: ContractAnalysis,
-      analysisResults: any[],
-      analysisType: "standard" | "contextual",
-      context?: AnalysisContext,
-    ): ContractAnalysis => {
-      const processedClauses = analysisResults.map((c) => ({
-        ...c,
-        category: (
-          [
-            "penalty",
-            "termination",
-            "responsibility",
-            "confidentiality",
-            "nonCompete",
-            "warranty",
-            "other",
-          ] as const
-        ).includes(c.category as any)
-          ? (c.category as
-              | "penalty"
-              | "termination"
-              | "responsibility"
-              | "confidentiality"
-              | "nonCompete"
-              | "warranty"
-              | "other")
-          : "other",
-      }));
-
-      return {
-        ...baseContract,
-        clauses: processedClauses,
-        overallRiskScore:
-          analysisResults.length > 0
-            ? analysisResults.reduce((sum, c) => sum + c.riskScore, 0) /
-              analysisResults.length
-            : 0,
-        contractType:
-          analysisType === "contextual"
-            ? context?.contractType?.trim() || "Contrat analysé"
-            : "Contrat analysé",
-        processed: true,
-        aiConfidenceScore: analysisType === "contextual" ? 90 : 85,
-        extractionMetadata: {
-          ...baseContract.extractionMetadata,
-          wordCount: baseContract.extractionMetadata?.wordCount || 0,
-          language: baseContract.extractionMetadata?.language || "fr",
-          extractionMethod:
-            baseContract.extractionMetadata?.extractionMethod || "text",
-          fileSize: baseContract.extractionMetadata?.fileSize || "0KB",
-          extractionTime:
-            baseContract.extractionMetadata?.extractionTime || "0ms",
-          aiSummary:
-            analysisResults.length > 0
-              ? `${analysisResults.length} clauses à risque identifiées${analysisType === "contextual" ? " avec contexte" : ""}`
-              : "Aucune clause à risque identifiée",
-        },
-        ...(analysisType === "contextual" && context
-          ? {
-              reponses_questions_mandant: {
-                contractType: context.contractType,
-                userRole: context.userRole,
-                missionContext: context.missionContext || "",
-                specificQuestions: context.specificQuestions,
-              },
-            }
-          : {}),
-      };
-    },
-    [],
-  );
-
   const handleFileUpload = useCallback(
     async (file: File) => {
       // Log supprimé pour de meilleures performances
+      const operationId = beginOperation();
 
       setIsProcessing(true);
       setProcessingPhase("extraction");
@@ -184,6 +204,8 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
 
       try {
         const extractedContent = await extractDocumentContent(file);
+        if (!isCurrentOperation(operationId)) return null;
+
         setHtmlContent(extractedContent.html);
 
         const tempContract = createBaseContract(
@@ -200,20 +222,27 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
 
         setContract(tempContract);
         // Log supprimé pour de meilleures performances
+        return tempContract;
       } catch (err) {
+        if (!isCurrentOperation(operationId)) return null;
+
         console.error("Erreur lors de l'extraction:", err);
         throw new Error(
           "Échec de l'extraction du texte. Assurez-vous que le PDF n'est pas protégé et réessayez.",
         );
       } finally {
-        setIsProcessing(false);
+        if (isCurrentOperation(operationId)) {
+          setIsProcessing(false);
+        }
       }
     },
-    [createBaseContract],
+    [beginOperation, createBaseContract, isCurrentOperation, setHtmlContent],
   );
 
   const handleTextSubmit = useCallback(
     async (text: string, fileName: string) => {
+      beginOperation();
+
       console.log(
         "📝 Soumission de texte direct:",
         fileName,
@@ -230,6 +259,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         const tempContract = createBaseContract(fileName, text);
         setContract(tempContract);
         console.log("✅ Texte préparé, formulaire prêt");
+        return tempContract;
       } catch (error) {
         console.error("❌ Erreur lors de la préparation du texte:", error);
         throw new Error(
@@ -237,12 +267,13 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         );
       }
     },
-    [createBaseContract],
+    [beginOperation, createBaseContract],
   );
 
   const handleStandardAnalysis = useCallback(async () => {
     if (!contract) return;
 
+    const operationId = beginOperation();
     setIsProcessing(true);
     setProcessingPhase("analysis");
     setAnalysisProgress(null);
@@ -251,11 +282,20 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
       console.log("Lancement de l'analyse standard...");
 
       setProcessingPhase("scoring");
-      const basicAnalysis = await analyzeContractWithAI(contract.content, undefined, {
-        onProgress: setAnalysisProgress,
-      });
+      const basicAnalysis = await analyzeContractWithAI(
+        contract.content,
+        undefined,
+        {
+          onProgress: (progress) => {
+            if (isCurrentOperation(operationId)) {
+              setAnalysisProgress(progress);
+            }
+          },
+        },
+      );
+      if (!isCurrentOperation(operationId)) return;
 
-      const updatedContract = processAnalysisResults(
+      const updatedContract = processContractAnalysisResults(
         contract,
         basicAnalysis,
         "standard",
@@ -264,17 +304,22 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
 
       console.log("Analyse standard terminée avec succès");
     } catch (error) {
+      if (!isCurrentOperation(operationId)) return;
+
       console.error("Erreur lors de l'analyse standard:", error);
       throw error;
     } finally {
-      setIsProcessing(false);
+      if (isCurrentOperation(operationId)) {
+        setIsProcessing(false);
+      }
     }
-  }, [contract, processAnalysisResults]);
+  }, [beginOperation, contract, isCurrentOperation]);
 
   const handleContextualAnalysis = useCallback(
     async (context: AnalysisContext) => {
       if (!contract) return;
 
+      const operationId = beginOperation();
       console.log("🔄 handleContextualAnalysis démarré");
       setIsProcessing(true);
       setProcessingPhase("enhanced");
@@ -292,12 +337,19 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         const enhancedAnalysis = await analyzeContractWithAI(
           contract.content,
           context,
-          { onProgress: setAnalysisProgress },
+          {
+            onProgress: (progress) => {
+              if (isCurrentOperation(operationId)) {
+                setAnalysisProgress(progress);
+              }
+            },
+          },
         );
+        if (!isCurrentOperation(operationId)) return;
 
         setProcessingPhase("scoring");
         console.log("📊 Phase: scoring");
-        const updatedContract = processAnalysisResults(
+        const updatedContract = processContractAnalysisResults(
           contract,
           enhancedAnalysis,
           "contextual",
@@ -321,18 +373,22 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         //   analysisTime: Date.now() - new Date().getTime(),
         // });
       } catch (error) {
+        if (!isCurrentOperation(operationId)) return;
+
         console.error("❌ Erreur lors de l'analyse personnalisée:", error);
         throw new Error(
           "Erreur lors de l'analyse personnalisée. Veuillez réessayer.",
         );
       } finally {
-        console.log(
-          "🏁 handleContextualAnalysis finally - setIsProcessing(false)",
-        );
-        setIsProcessing(false);
+        if (isCurrentOperation(operationId)) {
+          console.log(
+            "🏁 handleContextualAnalysis finally - setIsProcessing(false)",
+          );
+          setIsProcessing(false);
+        }
       }
     },
-    [contract, processAnalysisResults],
+    [beginOperation, contract, isCurrentOperation],
   );
 
   const handleMarketAnalysis = useCallback(async () => {
@@ -342,6 +398,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
       );
     }
 
+    const operationId = beginOperation();
     setIsMarketAnalysisLoading(true);
 
     try {
@@ -352,20 +409,26 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
         currentAnalysisContext.contractType,
         contract.clauses,
       );
+      if (!isCurrentOperation(operationId)) return;
 
       setMarketAnalysis(marketResult);
       console.log("✅ Analyse de marché terminée:", marketResult);
     } catch (error) {
+      if (!isCurrentOperation(operationId)) return;
+
       console.error("❌ Erreur lors de l'analyse de marché:", error);
       throw new Error(
         "Erreur lors de l'analyse comparative. Veuillez réessayer.",
       );
     } finally {
-      setIsMarketAnalysisLoading(false);
+      if (isCurrentOperation(operationId)) {
+        setIsMarketAnalysisLoading(false);
+      }
     }
-  }, [contract, currentAnalysisContext]);
+  }, [beginOperation, contract, currentAnalysisContext, isCurrentOperation]);
 
   const resetAnalysis = useCallback(() => {
+    activeOperationRef.current += 1;
     setContract(null);
     setCurrentAnalysisContext(null);
     setMarketAnalysis(null);
@@ -385,6 +448,7 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
       currentAnalysisContext: AnalysisContext | null;
       marketAnalysis: MarketAnalysisResult | null;
     }) => {
+      activeOperationRef.current += 1;
       setContract(contract);
       setCurrentAnalysisContext(currentAnalysisContext);
       setMarketAnalysis(marketAnalysis);
