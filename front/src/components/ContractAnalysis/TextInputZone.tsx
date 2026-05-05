@@ -175,7 +175,7 @@ Le prestataire s'engage à...
       {/* Aide */}
       <div className="mt-6 bg-gray-50 rounded-lg p-4">
         <h4 className="font-medium text-gray-900 mb-2">
-          💡 Conseils pour une meilleure analyse
+          Conseils pour une meilleure analyse
         </h4>
         <ul className="text-sm text-gray-600 space-y-1">
           <li>

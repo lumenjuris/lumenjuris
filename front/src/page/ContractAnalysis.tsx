@@ -598,15 +598,18 @@ export default function ContractAnalysis() {
 
           <div className="min-w-0 flex-1 w-full">
             {!contract && (
-              <div className="max-w-4xl mx-auto text-center">
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                  <h1 className="text-4xl font-bold text-gray-800 mb-6">
-                    👩‍💼 Analyseur de Contrat IA
+              <div className="max-w-5xl mx-auto space-y-8">
+                <div className="mx-auto max-w-2xl text-center">
+                  <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                    Analyse de contrat
                   </h1>
-                  <p className="text-lg text-gray-600 mb-8">
-                    Détectez automatiquement les clauses à risque avec notre IA
-                    spécialisée en droit français
+                  <p className="mt-2 text-sm text-gray-500">
+                    Importez un document ou collez son contenu pour identifier
+                    les clauses à risque en droit français.
                   </p>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
                   <UploadZone
                     onFileSelect={onFileUpload}
