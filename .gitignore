@@ -7,6 +7,8 @@ back/app/__pycache__
 back/services/__pycache__
 back/.env
 back/services/gen-lang-client-0501326750-4f358317bac6.json
+back/.htaccess
+
 
 #front
 front/node_modules/

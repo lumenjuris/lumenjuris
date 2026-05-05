@@ -25,11 +25,12 @@ app.use(
   }),
 );
 
+app.options("*", cors())
 
 
 app.use(express.json({ limit: "1mb" }));
 const IS_PROD = process.env.NODE_ENV === "production";
-const PORT = Number(process.env.PORT || 5173);
+const PORT = Number(process.env.PORT || 3000);
 const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://localhost:5678";
 const BACKNODE_URL = IS_PROD ? process.env.BACKNODE_URL : "http://localhost:3020";
 

@@ -85,6 +85,7 @@ async function extractViaServer(
         method: "POST",
         body: formData,
         signal: controller.signal,
+      
       });
 
       clearTimeout(timeoutId);
