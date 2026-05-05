@@ -7,10 +7,7 @@ import { useState, useCallback, useRef } from "react";
 import type { ClauseRisk, ContractAnalysis } from "../types";
 import type { AnalysisContext } from "../types/contextualAnalysis";
 import { extractDocumentContent } from "../utils/documentExtractor";
-import {
-  analyzeContractWithAI,
-  type AnalysisProgress,
-} from "../utils/aiAnalyser/aiAnalyzer";
+import type { AnalysisProgress } from "../utils/aiAnalyser/aiAnalyzer";
 import {
   performCompleteMarketAnalysis,
   MarketAnalysisResult,
@@ -39,8 +36,6 @@ interface UseContractAnalysisReturn {
     text: string,
     fileName: string,
   ) => Promise<ContractAnalysis | null>;
-  handleStandardAnalysis: () => Promise<void>;
-  handleContextualAnalysis: (context: AnalysisContext) => Promise<void>;
   handleMarketAnalysis: () => Promise<void>;
   restoreAnalysis: (state: {
     contract: ContractAnalysis;
@@ -270,127 +265,6 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     [beginOperation, createBaseContract],
   );
 
-  const handleStandardAnalysis = useCallback(async () => {
-    if (!contract) return;
-
-    const operationId = beginOperation();
-    setIsProcessing(true);
-    setProcessingPhase("analysis");
-    setAnalysisProgress(null);
-
-    try {
-      console.log("Lancement de l'analyse standard...");
-
-      setProcessingPhase("scoring");
-      const basicAnalysis = await analyzeContractWithAI(
-        contract.content,
-        undefined,
-        {
-          onProgress: (progress) => {
-            if (isCurrentOperation(operationId)) {
-              setAnalysisProgress(progress);
-            }
-          },
-        },
-      );
-      if (!isCurrentOperation(operationId)) return;
-
-      const updatedContract = processContractAnalysisResults(
-        contract,
-        basicAnalysis,
-        "standard",
-      );
-      setContract(updatedContract);
-
-      console.log("Analyse standard terminée avec succès");
-    } catch (error) {
-      if (!isCurrentOperation(operationId)) return;
-
-      console.error("Erreur lors de l'analyse standard:", error);
-      throw error;
-    } finally {
-      if (isCurrentOperation(operationId)) {
-        setIsProcessing(false);
-      }
-    }
-  }, [beginOperation, contract, isCurrentOperation]);
-
-  const handleContextualAnalysis = useCallback(
-    async (context: AnalysisContext) => {
-      if (!contract) return;
-
-      const operationId = beginOperation();
-      console.log("🔄 handleContextualAnalysis démarré");
-      setIsProcessing(true);
-      setProcessingPhase("enhanced");
-      setAnalysisProgress(null);
-      setCurrentAnalysisContext(context);
-
-      try {
-        console.log(
-          "Démarrage de l'analyse personnalisée avec contexte:",
-          context,
-        );
-
-        setProcessingPhase("analysis");
-        console.log("📊 Phase: analysis");
-        const enhancedAnalysis = await analyzeContractWithAI(
-          contract.content,
-          context,
-          {
-            onProgress: (progress) => {
-              if (isCurrentOperation(operationId)) {
-                setAnalysisProgress(progress);
-              }
-            },
-          },
-        );
-        if (!isCurrentOperation(operationId)) return;
-
-        setProcessingPhase("scoring");
-        console.log("📊 Phase: scoring");
-        const updatedContract = processContractAnalysisResults(
-          contract,
-          enhancedAnalysis,
-          "contextual",
-          context,
-        );
-        setContract(updatedContract);
-
-        setProcessingPhase("enhanced");
-        console.log("📊 Phase: enhanced");
-
-        console.log(
-          "✅ Analyse personnalisée terminée avec",
-          enhancedAnalysis.length,
-          "clauses détectées",
-        );
-
-        // triggerPostAnalysisJournal({
-        //   documentName: contract.fileName || 'Document sans nom',
-        //   clauses: enhancedAnalysis,
-        //   highlightedCount: enhancedAnalysis.length,
-        //   analysisTime: Date.now() - new Date().getTime(),
-        // });
-      } catch (error) {
-        if (!isCurrentOperation(operationId)) return;
-
-        console.error("❌ Erreur lors de l'analyse personnalisée:", error);
-        throw new Error(
-          "Erreur lors de l'analyse personnalisée. Veuillez réessayer.",
-        );
-      } finally {
-        if (isCurrentOperation(operationId)) {
-          console.log(
-            "🏁 handleContextualAnalysis finally - setIsProcessing(false)",
-          );
-          setIsProcessing(false);
-        }
-      }
-    },
-    [beginOperation, contract, isCurrentOperation],
-  );
-
   const handleMarketAnalysis = useCallback(async () => {
     if (!contract || !currentAnalysisContext) {
       throw new Error(
@@ -470,8 +344,6 @@ export const useContractAnalysis = (): UseContractAnalysisReturn => {
     isMarketAnalysisLoading,
     handleFileUpload,
     handleTextSubmit,
-    handleStandardAnalysis,
-    handleContextualAnalysis,
     handleMarketAnalysis,
     restoreAnalysis,
     resetAnalysis,

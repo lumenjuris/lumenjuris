@@ -27,7 +27,7 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "20mb" }));
 const PORT = Number(process.env.PORT || 5173);
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5678";
 const BACKNODE_URL = process.env.BACKNODE_URL || "http://localhost:3020";
@@ -250,6 +250,20 @@ function handleNodeEnterpriseUpdate(req: Request, res: Response): void {
   relayToNode(req, res, "/enterprise");
 }
 
+function handleNodeContractHistory(req: Request, res: Response): void {
+  relayToNode(req, res, "/contract-history");
+}
+
+function handleNodeContractHistoryItem(req: Request, res: Response): void {
+  const externalId = encodeURIComponent(req.params.externalId);
+  relayToNode(req, res, `/contract-history/${externalId}`);
+}
+
+function handleNodeContractHistoryTouch(req: Request, res: Response): void {
+  const externalId = encodeURIComponent(req.params.externalId);
+  relayToNode(req, res, `/contract-history/${externalId}/touch`);
+}
+
 function handleSignUpUser(req: Request, res: Response): void {
   relayToNode(req, res, "/user/create");
 }
@@ -296,6 +310,11 @@ app.post("/api/user/export-data", handleNodeUserExportData);
 app.delete("/api/user/account", handleNodeUserDeleteAccount);
 app.get("/api/enterprise", handleNodeEnterpriseGet);
 app.put("/api/enterprise", handleNodeEnterpriseUpdate);
+app.get("/api/contract-history", handleNodeContractHistory);
+app.post("/api/contract-history", handleNodeContractHistory);
+app.get("/api/contract-history/:externalId", handleNodeContractHistoryItem);
+app.delete("/api/contract-history/:externalId", handleNodeContractHistoryItem);
+app.patch("/api/contract-history/:externalId/touch", handleNodeContractHistoryTouch);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 
