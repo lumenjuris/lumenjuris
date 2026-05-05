@@ -5,7 +5,7 @@ export function Subscription() {
   return (
     <>
       <MainHeader />
-      <div className="bg-lumenjuris-background min-h-[calc(100vh-64px)] w-screen py-6">
+      <div className="bg-lumenjuris-background min-h-[calc(100vh-64px)] w-screen py-8">
         <PlansPanel />
       </div>
     </>

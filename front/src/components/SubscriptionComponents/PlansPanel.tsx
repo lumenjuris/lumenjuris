@@ -1,19 +1,5 @@
 import { useState } from "react";
-import {
-  Scale,
-  LayoutDashboard,
-  FileText,
-  PenLine,
-  ShieldCheck,
-  MessageSquare,
-  Calculator,
-  Newspaper,
-  CreditCard,
-  Bell,
-  AlertCircle,
-  Check,
-  Sparkles,
-} from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { Button } from "../ui/Button";
 import { cn } from "../../utils/shadcnUtils/cn";
 
@@ -86,7 +72,9 @@ export function PlansPanel() {
     <div className="mx-auto max-w-6xl bg-white px-4 py-6 rounded-md">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Facturation</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Accéder à nos outils
+          </h1>
           <p className="mt-1 text-muted-foreground">
             Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout
             moment.
@@ -98,8 +86,8 @@ export function PlansPanel() {
             className={cn(
               "rounded-full px-4 py-1.5 transition-colors",
               !yearly
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-primary text-gray-50"
+                : "text-muted_foreground hover:text-gray-700",
             )}
           >
             Mensuel
@@ -109,8 +97,8 @@ export function PlansPanel() {
             className={cn(
               "flex items-center gap-2 rounded-full px-4 py-1.5 transition-colors",
               yearly
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-primary text-gray-50"
+                : "text-muted_foreground hover:text-gray-700",
             )}
           >
             Annuel
@@ -118,7 +106,7 @@ export function PlansPanel() {
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-semibold",
                 yearly
-                  ? "bg-primary-foreground/15 text-primary-foreground"
+                  ? "bg-gray-500/50 text-gray-100"
                   : "bg-emerald-500/10 text-emerald-600",
               )}
             >
@@ -143,14 +131,14 @@ export function PlansPanel() {
               )}
             >
               {plan.badge && (
-                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-gray-50">
                   <Sparkles className="h-3 w-3" />
                   {plan.badge}
                 </span>
               )}
               <div>
                 <h3 className="text-lg font-semibold">{plan.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-muted_foreground">
                   {plan.tagline}
                 </p>
               </div>
@@ -168,7 +156,7 @@ export function PlansPanel() {
 
               <Button
                 variant={plan.highlight ? "default" : "outline"}
-                className="mt-6 w-full"
+                className={`mt-6 w-full ${plan.highlight ? "" : "border-lumenjuris/50 hover:bg-gray-100"}`}
               >
                 {plan.cta}
               </Button>
@@ -189,30 +177,6 @@ export function PlansPanel() {
             </div>
           );
         })}
-      </div>
-
-      {/* Current subscription */}
-      <div className="mt-10 rounded-2xl border border-border bg-card p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Abonnement actuel
-            </div>
-            <h3 className="mt-1 text-xl font-semibold">Pro — Annuel</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Prochaine facturation le 12 juin 2026 · Visa •••• 4242
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline">Gérer le moyen de paiement</Button>
-            <Button
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-            >
-              Annuler l'abonnement
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* FAQ */}
