@@ -8,6 +8,7 @@ import routerGoogleAuth from "./route/authGoogle";
 import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
 import routerEnterprise from "./route/apiEnterprise";
+import routerBilling from "./route/apiBilling";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
 
@@ -33,6 +34,7 @@ app.use("/", routerGoogleAuth);
 app.use("/llm", routerLlm);
 app.use("/user", routerUser);
 app.use("/enterprise", routerEnterprise);
+app.use("/billing", routerBilling);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

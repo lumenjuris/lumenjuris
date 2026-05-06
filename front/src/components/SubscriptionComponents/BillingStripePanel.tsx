@@ -24,15 +24,8 @@ export function BillingStripePanel({
   onBack,
   onSuccess,
 }: BillingStripePanelProps) {
-  // STRIPE //
   const options = {
-    mode: "payment" as const,
-    amount: price, // montant indiqué en centimes !
-    currency: "eur",
-    // Fully customizable with appearance API.
-    appearance: {
-      /*...*/
-    },
+    appearance: { theme: "stripe" as const },
   };
 
   if (!import.meta.env.VITE_STRIPE_CLIENT) {
@@ -58,7 +51,7 @@ export function BillingStripePanel({
   }
 
   return (
-    <Elements stripe={stripePromise} options={options}>
+    <Elements stripe={stripePromise} options={options} key={price}>
       <BillingForm
         planName={planName}
         price={price}

@@ -22,8 +22,6 @@ export function Inscription() {
   const [emailSent, setEmailSent] = useState(false);
 
   const { isConnected: userConnected } = useUserStore();
-  // const location = useLocation();
-  // const locationState = location.state as { plan?: object } | null;
 
   return userConnected ? (
     <Navigate to="/dashboard" />

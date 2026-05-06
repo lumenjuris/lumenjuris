@@ -266,6 +266,14 @@ function handleNodeGoogle(_req: Request, res: Response): void {
   res.redirect(`${BACKNODE_URL}/auth/google`);
 }
 
+function handleBillingCustomer(req: Request, res: Response): void {
+  relayToNode(req, res, "/billing/customer");
+}
+
+function handleBillingPaymentIntent(req: Request, res: Response): void {
+  relayToNode(req, res, "/billing/payment-intent");
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post("/extract-pdf-text", handleExtractPdfText);
 
@@ -303,6 +311,8 @@ app.put("/api/enterprise", handleNodeEnterpriseUpdate);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 app.get("/api/google", handleNodeGoogle);
+app.post("/api/billing/customer", handleBillingCustomer);
+app.post("/api/billing/payment-intent", handleBillingPaymentIntent);
 
 // ---- Front React : Vite middleware (dev) ou static (prod) ---------------------
 if (IS_PROD) {

@@ -26,7 +26,7 @@ const CARD_ELEMENT_OPTIONS = {
 
 type BillingInterval = "month" | "year";
 
-type PaymentFormInnerProps = {
+type BillingFormProps = {
   planName: string;
   price: number;
   interval: BillingInterval;
@@ -34,13 +34,36 @@ type PaymentFormInnerProps = {
   onSuccess: () => void;
 };
 
+async function ensureStripeCustomer(): Promise<string | null> {
+  const res = await fetch("/api/billing/customer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (!data.success) return null;
+  return data.stripeCustomerId as string;
+}
+
+async function createPaymentIntent(amount: number): Promise<string | null> {
+  const res = await fetch("/api/billing/payment-intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ amount, automaticPayment: true }),
+  });
+  const data = await res.json();
+  if (!data.success || !data.clientSecret) return null;
+  return data.clientSecret as string;
+}
+
 export function BillingForm({
   planName,
   price,
   interval,
   onBack,
   onSuccess,
-}: PaymentFormInnerProps) {
+}: BillingFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -65,39 +88,38 @@ export function BillingForm({
       return;
     }
 
-    const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardNumber,
-      billing_details: { name: cardholderName },
-    });
-
-    if (pmError) {
-      setError(pmError.message ?? "Une erreur est survenue.");
+    // 1. S'assurer que le customer Stripe existe
+    const customerId = await ensureStripeCustomer();
+    if (!customerId) {
+      setError("Impossible de créer le profil de paiement. Réessayez.");
       setIsLoading(false);
       return;
     }
 
-    let response;
-    try {
-      // Create the PaymentIntent and obtain clientSecret
-      response = await fetch("api/stripe/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: planName, amount: price }),
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("STRIPE PayIntent ERROR :", error);
+    // 2. Créer le PaymentIntent côté serveur
+    const clientSecret = await createPaymentIntent(price);
+    if (!clientSecret) {
+      setError("Impossible d'initialiser le paiement. Réessayez.");
+      setIsLoading(false);
+      return;
     }
 
-    console.log(
-      "PaymentMethod created:",
-      paymentMethod.id,
-      "plan:",
-      planName,
-      "interval:",
-      interval,
+    // 3. Confirmer le paiement avec la carte saisie
+    const { error: confirmError } = await stripe.confirmCardPayment(
+      clientSecret,
+      {
+        payment_method: {
+          card: cardNumber,
+          billing_details: { name: cardholderName },
+        },
+      },
     );
+
+    if (confirmError) {
+      setError(confirmError.message ?? "Le paiement a échoué. Réessayez.");
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(false);
     onSuccess();
