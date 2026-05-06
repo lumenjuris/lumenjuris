@@ -9,6 +9,9 @@ import { useUserStore } from "../store/userStore";
 
 import { Navigate } from "react-router-dom";
 
+import { fetchProxy } from "../utils/fetchProxy";
+
+
 const PRESETS: {
   label: string;
   variant: AlertVariant;
@@ -98,7 +101,7 @@ export function Sandbox() {
       setInseeLoading(true);
       setInseeResult("");
 
-      const response = await fetch(
+      const response = await fetchProxy(
         `/api/insee/${encodeURIComponent(inseeSiren)}`,
         {
           credentials: "include",
@@ -146,7 +149,7 @@ export function Sandbox() {
       setAuthLoading(true);
       setAuthResult("");
 
-      const response = await fetch(
+      const response = await fetchProxy(
         action === "login" ? "/api/user/auth/login" : "/api/user/auth/logout",
         {
           method: "POST",

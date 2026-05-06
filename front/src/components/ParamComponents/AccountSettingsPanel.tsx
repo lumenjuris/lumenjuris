@@ -22,6 +22,8 @@ import { EyeOffIcon, EyeIcon } from "lucide-react";
 import { AlertBanner } from "../common/AlertBanner";
 
 import { useState, useRef } from "react";
+import { fetchProxy } from "../../utils/fetchProxy";
+
 
 type PasswordDialogMode = "change" | "add" | null;
 
@@ -115,7 +117,7 @@ export function AccountSettingsPanel({
     }
     setSubmitLoading(true);
     try {
-      const response = await fetch("/api/user", {
+      const response = await fetchProxy("/api/user", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),

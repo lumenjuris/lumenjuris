@@ -1,14 +1,38 @@
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
-
 PassengerAppRoot "/home/dxin1098/lumenjurisBackend.dxin1098.odns.fr"
 PassengerBaseURI "/"
 PassengerPython "/home/dxin1098/virtualenv/lumenjurisBackend.dxin1098.odns.fr/3.11/bin/python"
-
-
 # DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# CLOUDLINUX PASSENGER CONFIG
 PassengerEnabled on
 PassengerAppRoot /home/dxin1098/lumenjurisBackend.dxin1098.odns.fr
 PassengerPython /home/dxin1098/virtualenv/lumenjurisBackend.dxin1098.odns.fr/3.11/bin/python3.11
 PassengerStartupFile passenger_wsgi.py
 
 Options -Indexes
+
+# =====================
+# CORS CONFIG
+# =====================
+
+<IfModule mod_headers.c>
+
+    Header always set Access-Control-Allow-Origin "https://beta.lumenjuris.com"
+
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+
+    Header always set Access-Control-Allow-Credentials "true"
+
+</IfModule>
+
+# =====================
+# PREFLIGHT
+# =====================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} =OPTIONS
+    RewriteRule .* - [R=204,L]
+</IfModule>

@@ -4,10 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import http from "http";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const IS_PROD = process.env.NODE_ENV === "production";
 
 // Charge d'abord server/.env puis la racine
 dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
@@ -15,22 +12,31 @@ dotenv.config();
 
 const app = express();
 
-//Cord adapté pour prod
+//Cors adapté pour prod
 app.use(
   cors({
     origin: [
       /^http:\/\/localhost:\d+$/,
       /^http:\/\/127\.0\.0\.1:\d+$/,
       /^https:\/\/.*\.odns\.fr$/,
+      "http://localhost:5173"
     ],
     credentials: true,
   }),
 );
 
+app.options("*", cors())
+
+
 app.use(express.json({ limit: "1mb" }));
-const PORT = Number(process.env.PORT || 5173);
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5678";
-const BACKNODE_URL = process.env.BACKNODE_URL || "http://localhost:3020";
+const IS_PROD = process.env.NODE_ENV === "production";
+const PORT = Number(process.env.PORT || 3000);
+const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://localhost:5678";
+const BACKNODE_URL = IS_PROD ? process.env.BACKNODE_URL : "http://localhost:3020";
+
+
+
+
 
 // ---- Relay vers Python backend ------------------------------------------------
 function relayStreamToPython(
@@ -82,6 +88,8 @@ function relayJsonToPython(
 
 // Relay requêtes vers le serveur Node
 function relayToNode(req: Request, res: Response, targetPath: string): void {
+
+
   fetch(`${BACKNODE_URL}${targetPath}`, {
     method: req.method,
     headers: {
@@ -137,6 +145,7 @@ type PythonJsonResponse = Record<string, any> & {
   openai_tokens?: OpenAiUsagePayload;
 };
 
+
 async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
   const usage = data.openai_tokens;
   delete data.openai_tokens;
@@ -164,6 +173,7 @@ async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
     console.error("OpenAI usage log error:", e.message);
   }
 }
+
 
 function handleExtractPdfText(req: Request, res: Response): void {
   relayStreamToPython(req, res, "/extract-pdf-text");
@@ -197,7 +207,13 @@ function handleHuggingFaceGenerate(req: Request, res: Response): void {
   relayJsonToPython(req, res, "/huggingface-generate");
 }
 
-function handleInseeRequest(req: Request, res: Response): void {
+function handleInseeRequest(req: Request, res: Response): void | Response {
+  if (typeof req.params.siren !== "string") {
+    return res.json({
+      success: false,
+      message: "Bad request, le parsing de du siren n'est pas conforme."
+    })
+  }
   const siren = encodeURIComponent(req.params.siren);
   relayToNode(req, res, `/enterprise/insee/${siren}`);
 }
@@ -299,27 +315,23 @@ app.put("/api/enterprise", handleNodeEnterpriseUpdate);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 
-// ---- Front React : Vite middleware (dev) ou static (prod) ---------------------
-if (IS_PROD) {
-  // En production : servir le build Vite
-  const distPath = path.resolve(__dirname, "../../dist");
-  app.use(express.static(distPath));
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-  app.listen(PORT, () => {
-    console.log(`Serveur prod: http://localhost:${PORT}`);
-  });
-} else {
-  // Quand npm run dev : Vite tourne en middleware dans Node
-  const { createServer: createViteServer } = await import("vite");
-  const vite = await createViteServer({
-    root: path.resolve(__dirname, ".."),
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
-  app.listen(PORT, () => {
-    console.log(` Dev server (Vite + Proxy): http://localhost:${PORT}`);
-  });
-}
+
+// Health pour tester le serveur
+app.get("/health", (req: Request, res: Response) => {
+  return res.send({
+    status: "OK",
+    port: PORT,
+    urlBackendPython: BACKEND_URL,
+    urlBackendNodejs: BACKNODE_URL
+  })
+})
+
+
+
+// Démarrage du serveur
+app.listen(PORT, () => {
+  console.log(`Serveur proxy running on : http://localhost:${PORT}`);
+  console.log(`Backend Python url : ${BACKEND_URL}`)
+  console.log(`Backend NodeJs url : ${BACKNODE_URL}`)
+});
+

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ClauseRisk } from '../types';
 import { callOpenAI, callOpenAi52, type OpenAIModelId } from '../utils/aiClient';
-
 /* ---------- TYPES ---------- */
 export interface AltProposal {
   clause: string; // nouvelle rédaction complète

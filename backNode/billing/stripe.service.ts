@@ -4,7 +4,6 @@ import Stripe from 'stripe';
 
 export class StripeLumenJuris {
 
-
     async createCustomer(email: string, name: string) {
         try {
             const stripeClient = new Stripe(process.env.STRIPE_SK!, {
@@ -19,7 +18,6 @@ export class StripeLumenJuris {
             }
 
             const customer: Stripe.Customer = await stripeClient.customers.create(params)
-
             console.log(customer)
             const id = customer.id
             return {
@@ -35,6 +33,7 @@ export class StripeLumenJuris {
             }
         }
     }
+
 
     async createPayementIntent(customerId: string, amount: number, autmaticPayment: boolean) {
         try {
@@ -71,6 +70,7 @@ export class StripeLumenJuris {
         }
     }
 
+
     async confirmPaymentIntent() {
         try {
 
@@ -82,6 +82,4 @@ export class StripeLumenJuris {
             }
         }
     }
-
-
 }

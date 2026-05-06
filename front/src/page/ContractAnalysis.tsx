@@ -49,7 +49,7 @@ import {
 } from "../utils/contractHistory";
 
 import { useUserStore } from "../store/userStore";
-
+import { fetchProxy } from "../utils/fetchProxy";
 // ---------------------------------------------------------------------
 // SUPPRIMER LA FONCTION DÉPLACÉE PAR ERREUR (elle existe déjà en utils)
 // ---------------------------------------------------------------------
@@ -169,7 +169,7 @@ export default function ContractAnalysis() {
 
     const loadEnterpriseContext = async () => {
       try {
-        const response = await fetch("/api/enterprise", {
+        const response = await fetchProxy("/api/enterprise", {
           credentials: "include",
           signal: abortController.signal,
         });

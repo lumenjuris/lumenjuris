@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { UserData } from '../types/userData';
+import { fetchProxy } from '../utils/fetchProxy';
+
 
 interface UserState {
   userData: UserData | null;
@@ -19,11 +21,14 @@ export const useUserStore = create<UserState>((set) => ({
 
   fetchUser: async () => {
     try {
-      const response = await fetch('/api/user/get', {
+      const response = await fetchProxy('/api/user/get', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include"
       });
+      
       const dataResponse = await response.json();
+      console.log("Resultat du get data user", dataResponse)
       if (!dataResponse.success) {
         set({ userInfoError: dataResponse.message });
       } else if (dataResponse.data.profile.isVerified) {
@@ -43,7 +48,7 @@ export const useUserStore = create<UserState>((set) => ({
 
   logoutUser: async () => {
     try {
-      const response = await fetch('/api/user/auth/logout', {
+      const response = await fetchProxy('/api/user/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

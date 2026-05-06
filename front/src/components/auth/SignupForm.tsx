@@ -16,6 +16,7 @@ import { FcGoogle } from "react-icons/fc";
 import { AlertBanner } from "../common/AlertBanner";
 
 import { useRef, useState } from "react";
+import { fetchProxy } from "../../utils/fetchProxy";
 
 interface SignupFormProps {
   lastName: string;
@@ -83,7 +84,7 @@ const SignupForm = ({
       const trimedLastName = lastName.trim();
       const trimedFirstName = firstName.trim();
       try {
-        const signupResponse = await fetch("/api/signup", {
+        const signupResponse = await fetchProxy("/api/signup", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -121,7 +122,7 @@ const SignupForm = ({
     if (siren) {
       const trimedSiren = siren.trim();
       try {
-        const sirenResponse = await fetch(`/api/insee/${trimedSiren}`, {
+        const sirenResponse = await fetchProxy(`/api/insee/${trimedSiren}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

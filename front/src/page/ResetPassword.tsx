@@ -8,6 +8,10 @@ import {
   CheckCircle2,
   ShieldAlert,
 } from "lucide-react";
+import { fetchProxy } from "../utils/fetchProxy";
+
+
+
 
 type ViewState = "form" | "success" | "error";
 
@@ -73,7 +77,7 @@ export const ResetPassword = () => {
     } else {
       setSubmitLoading(true);
       try {
-        const response = await fetch("/api/user/resetpassword", {
+        const response = await fetchProxy("/api/user/resetpassword", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, password }),

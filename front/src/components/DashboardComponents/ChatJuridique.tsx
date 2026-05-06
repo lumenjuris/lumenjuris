@@ -1,6 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { MessageSquare, Send, Download, Clock, Plus, Trash2, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { fetchProxy } from "../../utils/fetchProxy";
+
+
+
+
+
 
 type Message = { role: "user" | "bot" | "error"; text: string };
 type Conversation = { id: string; title: string; createdAt: string; messages: Message[] };
@@ -101,7 +107,7 @@ export function ChatJuridique() {
     const previousMessages = conversations.find((c) => c.id === convId)?.messages ?? [];
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetchProxy("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -7,23 +7,28 @@ back/app/__pycache__
 back/services/__pycache__
 back/.env
 back/services/gen-lang-client-0501326750-4f358317bac6.json
+back/.htaccess
+
 
 #front
 front/node_modules/
+front/.env
 front/.env.development
 front/.env.production
 front/dist/
 
-#front proxy
-/front/server/.env
+
 
 #backend nodeJS
 backNode/.env
 backNode/.env.production
-backNode/.env.development
 backNode/node_modules
 backNode/prisma/migrations
 backNode/prisma/generated
 backNode/dist/
 gpt5_tokens_log.json
 
+#proxy
+proxy/.env
+proxy/node_modules
+proxy/dist
