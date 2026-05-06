@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import MainHeader from "../components/MainHeader/MainHeader";
 import { useUserStore } from "../store/userStore";
 import { Navigate } from "react-router-dom";
+import { fetchProxy } from "../utils/fetchProxy";
+
 
 type LlmUsage = {
   model: string;
@@ -35,7 +37,7 @@ export const Monitoring = () => {
       setLlmUsageLoading(true);
       setLlmUsageError("");
 
-      const response = await fetch("/api/llm/usage", {
+      const response = await fetchProxy("/api/llm/usage", {
         credentials: "include",
       });
 

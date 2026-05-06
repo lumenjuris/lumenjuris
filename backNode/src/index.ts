@@ -18,6 +18,15 @@ import { seedBootstrapUsers } from "./services/bootstrapUsers";
  * Ici sera traité toute les opérations avec la base de données
  */
 
+
+
+const HOST_PROXY: string = process.env.HOST_PROXY
+  || process.env.NODE_ENV == "dev"
+  ? "http://localhost:3000" :
+  "https://proxy.lumenjuris.com";
+
+
+
 const app = express();
 const port = process.env.PORT || 3020;
 app.use(express.json({ limit: "20mb" }));
@@ -26,10 +35,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3020"],
+    origin: ["http://localhost:5173", "http://localhost:3020", HOST_PROXY],
     credentials: true,
   }),
 );
+
+app.options("*", cors())
 
 app.use("/", routerGoogleAuth);
 app.use("/llm", routerLlm);

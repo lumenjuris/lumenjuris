@@ -2,7 +2,7 @@ import sys
 import os
 import traceback
 
-# Fichier de log personnalisé
+# Fichier de log personnalisé dans le serveur de production (O2Switch)
 LOG_FILE = '/home/dxin1098/lumenjurisBackend.dxin1098.odns.fr/passenger_debug.log'
 
 def log_error(message):

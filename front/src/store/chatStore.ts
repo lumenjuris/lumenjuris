@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { type OpenAIModelId } from '../utils/aiClient';
+import { fetchProxy } from '../utils/fetchProxy';
+
+
 
 type Message = {
   role: 'user' | 'assistant' | 'error';
@@ -56,7 +59,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ messages: [...get().messages, userMessage], isSending: true });
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetchProxy('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -4,7 +4,7 @@ import "pdfjs-dist/build/pdf.worker.entry";
 import { cleanExtractedText, formatForClauseMatching } from "./textCleaner";
 import { lightSanitize } from "./lightSanitize";
 import FEATURE_FLAGS from "../config/features";
-
+import { fetchProxy } from "./fetchProxy";
 export interface ExtractedContent {
   text: string;
   html: string | null;
@@ -80,11 +80,12 @@ async function extractViaServer(
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     try {
-      const response = await fetch(PDF_SERVER_URL, {
+      const response = await fetchProxy(PDF_SERVER_URL, {
         // ✅ Correction: PDF_SERVER_URL au lieu de SERVER_URL
         method: "POST",
         body: formData,
         signal: controller.signal,
+      
       });
 
       clearTimeout(timeoutId);

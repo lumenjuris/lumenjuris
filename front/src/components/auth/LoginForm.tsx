@@ -13,6 +13,9 @@ import { useUserStore } from "../../store/userStore";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+
+import { fetchProxy } from "../../utils/fetchProxy";
+
 interface LoginFormProps {
   email: string;
   setEmail: React.Dispatch<React.SetStateAction<string>>;
@@ -63,7 +66,7 @@ const LoginForm = ({
 
     setSubmitLoading(true);
     try {
-      const loginResponse = await fetch("/api/user/auth/login", {
+      const loginResponse = await fetchProxy("/api/user/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -101,7 +104,7 @@ const LoginForm = ({
   };
 
   const handleTwoFactorVerify = async (code: string) => {
-    const response = await fetch("/api/user/two-factor/verify", {
+    const response = await fetchProxy("/api/user/two-factor/verify", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -120,7 +123,7 @@ const LoginForm = ({
   const handleTwoFactorCancel = async () => {
     setTwoFactorModalOpen(false);
     setSubmitLoading(false);
-    await fetch("/api/user/auth/logout", {
+    await fetchProxy("/api/user/auth/logout", {
       method: "POST",
       credentials: "include",
     }).catch(() => null);
@@ -140,7 +143,7 @@ const LoginForm = ({
       setSubmitLoading(true);
       setEmailSent(true);
       try {
-        await fetch("/api/auth/forgotpassword", {
+        await fetchProxy("/api/auth/forgotpassword", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),

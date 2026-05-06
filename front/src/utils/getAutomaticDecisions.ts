@@ -1,5 +1,5 @@
 import { ClauseRisk, JurisprudenceCase } from '../types';
-
+import { fetchProxy } from './fetchProxy';
 /**
  * Appelle la route /jurisprudence du backend Python avec une requête simple.
  */
@@ -15,7 +15,7 @@ async function fetchDecisionsFromBackend(query: string): Promise<JurisprudenceCa
 
   try {
     console.log(`🚀 [API Auto] Appel du backend avec la requête: "${query}"`);
-    const response = await fetch(backendUrl, {
+    const response = await fetchProxy(backendUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

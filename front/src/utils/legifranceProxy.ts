@@ -3,6 +3,7 @@
 
 import type { CanLiiCase } from '../types';
 
+
 const PROXY_BASE = 'http://localhost:4000';
 
 function withTimeout<T>(p: Promise<T>, ms = 8000): Promise<T> {

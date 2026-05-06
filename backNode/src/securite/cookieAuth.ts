@@ -14,7 +14,7 @@ export function createCookieAuth(idUser: number, role: string, res: Response) {
   return res.cookie("authLumenJuris", jwtSigned, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    //sameSite: "strict",
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 jours
   });

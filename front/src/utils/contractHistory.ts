@@ -3,6 +3,7 @@ import type { AnalysisContext } from "../types/contextualAnalysis";
 import type { TextPatch } from "../store/documentTextStore";
 import type { AppliedRecommendation } from "../store/appliedRecommendationsStore";
 import type { MarketAnalysisResult } from "./marketAnalysis";
+import { fetchProxy } from "./fetchProxy";
 
 export type ContractHistoryStatus = "uploaded" | "analyzed";
 
@@ -96,7 +97,7 @@ export function compareByUploadTimeDesc(
 
 export async function loadContractHistoryIndex(): Promise<ContractHistoryItem[]> {
   try {
-    const res = await fetch("/api/contract-history", { credentials: "include" });
+    const res = await fetchProxy("/api/contract-history", { credentials: "include" });
     if (!res.ok) return [];
     const payload = (await res.json()) as { success: boolean; data?: ContractHistoryItem[] };
     return payload.success && payload.data ? payload.data : [];
@@ -111,7 +112,7 @@ export async function saveContractHistorySnapshot(
   if (snapshot.status !== "analyzed" || !snapshot.contract?.processed) return null;
 
   try {
-    const res = await fetch("/api/contract-history", {
+    const res = await fetchProxy("/api/contract-history", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -129,7 +130,7 @@ export async function loadContractHistorySnapshot(
   id: string,
 ): Promise<ContractHistorySnapshot | null> {
   try {
-    const res = await fetch(`/api/contract-history/${encodeURIComponent(id)}`, {
+    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
       credentials: "include",
     });
     if (!res.ok) return null;
@@ -143,7 +144,7 @@ export async function loadContractHistorySnapshot(
 
 export async function touchContractHistoryEntry(id: string): Promise<void> {
   try {
-    await fetch(`/api/contract-history/${encodeURIComponent(id)}/touch`, {
+    await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}/touch`, {
       method: "PATCH",
       credentials: "include",
     });
@@ -154,7 +155,7 @@ export async function touchContractHistoryEntry(id: string): Promise<void> {
 
 export async function deleteContractHistoryEntry(id: string): Promise<void> {
   try {
-    const res = await fetch(`/api/contract-history/${encodeURIComponent(id)}`, {
+    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
       method: "DELETE",
       credentials: "include",
     });

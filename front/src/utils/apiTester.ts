@@ -80,7 +80,7 @@ export async function testPDFExtractionAPI(): Promise<APITestResult> {
 /**
  * Test avec un fichier utilisateur
  */
-export async function testWithUserFile(file: File): Promise<APITestResult> {
+/* export async function testWithUserFile(file: File): Promise<APITestResult> {
   const timestamp = new Date();
   
   try {
@@ -120,7 +120,7 @@ export async function testWithUserFile(file: File): Promise<APITestResult> {
       timestamp
     };
   }
-}
+} */
 
 /**
  * Affiche un rapport de test formaté

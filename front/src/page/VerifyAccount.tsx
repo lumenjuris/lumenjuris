@@ -1,6 +1,9 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { MailOpen, HelpCircle, ShieldCheck } from "lucide-react";
+import { fetchProxy } from "../utils/fetchProxy";
+
+
 
 export const VerifyAccount = () => {
   const [searchParams] = useSearchParams();
@@ -21,7 +24,7 @@ export const VerifyAccount = () => {
   const handleResend = async () => {
     console.log(email);
     setResent(true);
-    const resendEmail = await fetch("user/resend-verify", {
+    const resendEmail = await fetchProxy("user/resend-verify", {
       headers: {
         "Content-type": "application/json",
       },
