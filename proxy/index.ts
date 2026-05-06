@@ -25,8 +25,6 @@ app.use(
   }),
 );
 
-app.options("*", cors())
-
 app.use(express.json({ limit: "20mb" }));
 const IS_PROD = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 3000);
@@ -270,12 +268,12 @@ function handleNodeChatHistory(req: Request, res: Response): void {
 }
 
 function handleNodeContractHistoryItem(req: Request, res: Response): void {
-  const externalId = encodeURIComponent(req.params.externalId);
+  const externalId = encodeURIComponent(req.params.externalId as string);
   relayToNode(req, res, `/contract-history/${externalId}`);
 }
 
 function handleNodeContractHistoryTouch(req: Request, res: Response): void {
-  const externalId = encodeURIComponent(req.params.externalId);
+  const externalId = encodeURIComponent(req.params.externalId as string);
   relayToNode(req, res, `/contract-history/${externalId}/touch`);
 }
 

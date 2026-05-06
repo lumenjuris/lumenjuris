@@ -465,8 +465,12 @@ export default function ContractAnalysis() {
         analysisProgress: null,
       };
 
+      // htmlContent intentionnellement null : resetAll() vide le htmlContent avant toute analyse,
+      // donc le flux normal sauvegarde aussi avec null. Forcer null ici aligne le flux background
+      // sur ce comportement -> au rechargement, DocumentViewer utilise le fallback formatContentToHtml
+      // (qui fonctionne) plutôt que injectClausesIntoHtml (qui échoue sur le HTML brut Python).
       const savedItem = await saveContractHistorySnapshot(
-        createTemporaryHistorySnapshot(completedEntry),
+        createTemporaryHistorySnapshot({ ...completedEntry, htmlContent: null }),
       );
       if (savedItem) {
         setHistoryItems(await loadContractHistoryIndex());
@@ -832,6 +836,25 @@ export default function ContractAnalysis() {
 
   const handleOpenHistoryItem = async (historyId: string) => {
     if (historyId === currentHistoryId) return;
+
+    // Gestion de l'entrée courante avant de changer de vue
+    if (documentPreparationRef.current) {
+      // Préparation PDF/texte en cours -> confirmation requise avant d'annuler
+      if (!confirmLeavingUnfinishedAnalysis()) return;
+      documentPreparationRef.current = null;
+    } else if (currentHistoryId) {
+      const currentEntry = temporaryHistoryEntriesRef.current[currentHistoryId];
+      if (currentEntry && !currentEntry.isProcessing && !currentEntry.contract.processed) {
+        // Formulaire en cours -> confirmation requise avant de supprimer
+        if (!confirmLeavingUnfinishedAnalysis()) return;
+        documentPreparationRef.current = null;
+        removeTemporaryHistoryEntry(currentHistoryId);
+      }
+      // Si isProcessing: true -> analyse en fond, pas de dialogue, on laisse tourner
+    }
+
+    // Annule la phase de préparation en cours (les callbacks async abandonnent d'eux-mêmes)
+    documentPreparationRef.current = null;
 
     const temporaryEntry = temporaryHistoryEntriesRef.current[historyId];
     if (temporaryEntry) {
