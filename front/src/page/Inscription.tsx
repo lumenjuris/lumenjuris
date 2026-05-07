@@ -21,10 +21,18 @@ export function Inscription() {
   const [forgotPassword, setForgotPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  const { isConnected: userConnected } = useUserStore();
+  const authStatus = useUserStore((state) => state.authStatus);
 
-  return userConnected ? (
-    <Navigate to="/dashboard" />
+  if (authStatus === "idle" || authStatus === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-sm text-gray-500">Chargement…</div>
+      </div>
+    );
+  }
+
+  return authStatus === "authenticated" ? (
+    <Navigate to="/dashboard" replace />
   ) : (
     <>
       <MainHeader />

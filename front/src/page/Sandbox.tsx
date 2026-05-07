@@ -76,7 +76,7 @@ export function Sandbox() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authResult, setAuthResult] = useState<string>("");
 
-  const { isConnected: userConnected, userData } = useUserStore();
+  const { userData } = useUserStore();
 
   const spawn = (preset: (typeof PRESETS)[number]) => {
     setBanners((prev) => [
@@ -205,10 +205,8 @@ export function Sandbox() {
     }
   };
 
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : userData?.profile.role !== "ADMIN" ? (
-    <Navigate to="/dashboard" />
+  return userData?.profile.role !== "ADMIN" ? (
+    <Navigate to="/dashboard" replace />
   ) : (
     <>
       <MainHeader />

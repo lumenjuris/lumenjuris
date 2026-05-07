@@ -11,6 +11,9 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Label } from "../ui/Label";
 import { formatPrice } from "../../utils/format/formatPrice";
+import { fetchProxy } from "../../utils/fetchProxy";
+
+const urlProxy: string = import.meta.env.VITE_URL_PROXY;
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -35,7 +38,7 @@ type BillingFormProps = {
 };
 
 async function ensureStripeCustomer(): Promise<string | null> {
-  const res = await fetch("/api/billing/customer", {
+  const res = await fetch(`${urlProxy}/api/billing/customer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

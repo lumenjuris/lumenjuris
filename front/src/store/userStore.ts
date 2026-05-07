@@ -2,9 +2,16 @@ import { create } from "zustand";
 import { UserData } from "../types/userData";
 import { fetchProxy } from "../utils/fetchProxy";
 
+export type AuthStatus =
+  | "idle"
+  | "loading"
+  | "authenticated"
+  | "unauthenticated";
+
 interface UserState {
   userData: UserData | null;
   isConnected: boolean;
+  authStatus: AuthStatus;
   userAvatarUrl: string | null;
   userInfoError: string | null;
   fetchUser: () => Promise<void>;
@@ -15,10 +22,12 @@ interface UserState {
 export const useUserStore = create<UserState>((set) => ({
   userData: null,
   isConnected: false,
+  authStatus: "idle",
   userAvatarUrl: null,
   userInfoError: null,
 
   fetchUser: async () => {
+    set({ authStatus: "loading" });
     try {
       const response = await fetchProxy("/api/user/get", {
         method: "GET",
@@ -28,20 +37,32 @@ export const useUserStore = create<UserState>((set) => ({
 
       const dataResponse = await response.json();
       console.log("Resultat du get data user", dataResponse);
-      if (!dataResponse.success) {
-        set({ userInfoError: dataResponse.message });
-      } else if (dataResponse.data.profile.isVerified) {
+      if (
+        dataResponse.success &&
+        dataResponse.data?.profile?.isVerified
+      ) {
         const provider = dataResponse.data.provider as { avatarUrl?: string };
         set({
           isConnected: true,
+          authStatus: "authenticated",
           userData: dataResponse.data,
           userAvatarUrl: provider?.avatarUrl ?? null,
           userInfoError: null,
+        });
+      } else {
+        set({
+          isConnected: false,
+          authStatus: "unauthenticated",
+          userData: null,
+          userAvatarUrl: null,
+          userInfoError: dataResponse.success ? null : dataResponse.message,
         });
       }
     } catch (error) {
       console.error("🛑🛑🛑 ERREUR SERVEUR GET USER", error);
       set({
+        isConnected: false,
+        authStatus: "unauthenticated",
         userInfoError: "Un problème est survenu, veuillez vous reconnecter.",
       });
     }
@@ -58,6 +79,7 @@ export const useUserStore = create<UserState>((set) => ({
       if (logoutResponse.success) {
         set({
           isConnected: false,
+          authStatus: "unauthenticated",
           userData: null,
           userAvatarUrl: null,
           userInfoError: null,
@@ -80,6 +102,7 @@ export const useUserStore = create<UserState>((set) => ({
     set({
       userData: null,
       isConnected: false,
+      authStatus: "unauthenticated",
       userAvatarUrl: null,
       userInfoError: null,
     }),

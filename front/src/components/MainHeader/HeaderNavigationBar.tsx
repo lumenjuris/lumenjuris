@@ -37,8 +37,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const { userData, isConnected, userAvatarUrl, fetchUser, logoutUser } =
-    useUserStore();
+  const { userData, isConnected, userAvatarUrl, logoutUser } = useUserStore();
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -50,10 +49,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
 
   const handleUserLogout = async () => {
     if (onNavClick?.() === false) return;

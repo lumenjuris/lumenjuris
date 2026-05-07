@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, Navigate, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import {
@@ -62,7 +62,6 @@ import {
 } from "../utils/contractHistory";
 import type { MarketAnalysisResult } from "../utils/marketAnalysis";
 
-import { useUserStore } from "../store/userStore";
 import { fetchProxy } from "../utils/fetchProxy";
 // ---------------------------------------------------------------------
 // SUPPRIMER LA FONCTION DÉPLACÉE PAR ERREUR (elle existe déjà en utils)
@@ -177,28 +176,6 @@ function mapEnterpriseToAnalysisContext(
 export default function ContractAnalysis() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const { isConnected: userConnected, fetchUser } = useUserStore();
-  const [hasCheckedUser, setHasCheckedUser] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (userConnected) {
-      setHasCheckedUser(true);
-      return;
-    }
-
-    fetchUser().finally(() => {
-      if (isMounted) {
-        setHasCheckedUser(true);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchUser, userConnected]);
 
   // États locaux
   const [selectedClause, setSelectedClause] = useState<string | null>(null);
@@ -976,22 +953,7 @@ export default function ContractAnalysis() {
     displayedAnalysisProgress,
   );
 
-  if (!hasCheckedUser && !userConnected) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <MainHeader />
-        <main className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
-            Chargement de l'analyseur...
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return !userConnected ? (
-    <Navigate to="/inscription" replace />
-  ) : (
+  return (
     <div className="min-h-screen bg-gray-50">
       <MainHeader
         onNavClick={handleNavClick}

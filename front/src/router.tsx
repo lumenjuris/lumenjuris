@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ContractAnalysis from "./page/ContractAnalysis";
 
@@ -19,13 +20,30 @@ import { Monitoring } from "./page/Monitoring";
 import { Subscription } from "./page/Subscription";
 
 import { ScrollToTop } from "./components/common/ScrollToTop";
+import { RequireAuth } from "./components/auth/RequireAuth";
+import { useUserStore } from "./store/userStore";
 
 export function App() {
+  const authStatus = useUserStore((state) => state.authStatus);
+  const fetchUser = useUserStore((state) => state.fetchUser);
+
+  useEffect(() => {
+    if (authStatus === "idle") {
+      void fetchUser();
+    }
+  }, [authStatus, fetchUser]);
+
   return (
     <>
       <ScrollToTop />
       <Routes>
-        <Route element={<MainLayout />}>
+        <Route
+          element={
+            <RequireAuth>
+              <MainLayout />
+            </RequireAuth>
+          }
+        >
           {" "}
           {/* Sous-ensemble (charge panneau latéral et header) */}
           <Route path="/dashboard" element={<Dashboard />} />
@@ -37,15 +55,50 @@ export function App() {
           <Route path="/conformite" element={<Conformite />} />
         </Route>
 
-        <Route path="/analyzer" element={<ContractAnalysis />} />
-        <Route path="/sandbox" element={<Sandbox />} />
+        <Route
+          path="/analyzer"
+          element={
+            <RequireAuth>
+              <ContractAnalysis />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/sandbox"
+          element={
+            <RequireAuth>
+              <Sandbox />
+            </RequireAuth>
+          }
+        />
         <Route path="/inscription" element={<Inscription />} />
-        <Route path="/mon-compte" element={<ParamCompte />} />
-        <Route path="/monitoring" element={<Monitoring />} />
+        <Route
+          path="/mon-compte"
+          element={
+            <RequireAuth>
+              <ParamCompte />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/monitoring"
+          element={
+            <RequireAuth>
+              <Monitoring />
+            </RequireAuth>
+          }
+        />
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/souscription" element={<Subscription />} />
+        <Route
+          path="/souscription"
+          element={
+            <RequireAuth>
+              <Subscription />
+            </RequireAuth>
+          }
+        />
       </Routes>
     </>
   );

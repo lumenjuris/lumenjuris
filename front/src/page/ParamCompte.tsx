@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { SETTINGS_TABS } from "../config/paramSettings";
 import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
 import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
@@ -81,7 +81,7 @@ export function ParamCompte() {
   const preferenceMeasureRef = useRef<HTMLElement>(null);
   const subscriptionMeasureRef = useRef<HTMLElement>(null);
 
-  const { isConnected: userConnected, userData, fetchUser } = useUserStore();
+  const { userData, fetchUser } = useUserStore();
 
   useEffect(() => {
     if (!userData) return;
@@ -508,9 +508,7 @@ export function ParamCompte() {
 
   const subscriptionPanel = <SubscriptionSettingsPanel />;
 
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : (
+  return (
     <>
       <ParamLayout
         title="Mes Paramètres"
