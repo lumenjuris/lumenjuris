@@ -8,6 +8,8 @@ import routerGoogleAuth from "./route/authGoogle";
 import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
 import routerEnterprise from "./route/apiEnterprise";
+import routerContractHistory from "./route/apiContractHistory"
+import routerChatHistory from "./route/apiChatHistory";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
 
@@ -27,7 +29,7 @@ const HOST_PROXY: string = process.env.HOST_PROXY
 
 const app = express();
 const port = process.env.PORT || 3020;
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,12 +40,12 @@ app.use(
   }),
 );
 
-app.options("*", cors())
-
 app.use("/", routerGoogleAuth);
 app.use("/llm", routerLlm);
 app.use("/user", routerUser);
 app.use("/enterprise", routerEnterprise);
+app.use("/contract-history", routerContractHistory);
+app.use("/chat-history", routerChatHistory);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

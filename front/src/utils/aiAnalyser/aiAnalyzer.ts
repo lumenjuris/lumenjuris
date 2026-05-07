@@ -8,12 +8,11 @@ import { AnalysisContext } from "../../types/contextualAnalysis";
 import { callOpenAi52 } from "../aiClient";
 
 import { saveAnalysisToCache, loadAnalysisFromCache } from "./cachedAnalysis";
-import { parseAIResponse, createSmartChunks } from "./parsingData";
+import { parseAIResponse } from "./parsingData";
 import { buildClauseExtractionPromptForAI } from "./buildingPrompt";
 
 export type AnalysisProgressMode =
   | "direct"
-  | "chunked"
   | "fallback"
   | "cached";
 
@@ -81,7 +80,7 @@ export async function analyzeContractWithAI(
 
   if (content.length > 30000) {
     console.warn(
-      "⚠️ ATTENTION: Contrat très long, analyse en sections multiples",
+      "⚠️ ATTENTION: Contrat très long, envoi du document complet en une seule requête OpenAI.",
     );
   }
 
@@ -116,36 +115,13 @@ export async function analyzeContractWithAI(
         totalAttempts,
       };
 
-      if (content.length >= 25000) {
-        console.log(
-          `🔄 Document long détecté - Analyse par sections intelligentes`,
-        );
-        clauses = await analyzeLongContractIntelligently(
-          content,
-          context,
-          retryState,
-          progressContext,
-        );
-      } else if (content.length > 12000) {
-        console.log(
-          `⚠️ Document moyen - Division en chunks optimisés avec retry automatique`,
-        );
-        clauses = await analyzeWithOptimizedChunking(
-          content,
-          8000,
-          context,
-          retryState,
-          progressContext,
-        );
-      } else {
-        console.log(`📁 Document court - Analyse directe avec GPT-5.2`);
-        clauses = await analyzeDirectlyWithGPT52(
-          content,
-          context,
-          retryState,
-          progressContext,
-        );
-      }
+      console.log(`📁 Analyse directe du document complet avec GPT-5.2`);
+      clauses = await analyzeDirectlyWithGPT52(
+        content,
+        context,
+        retryState,
+        progressContext,
+      );
 
       if (clauses.length > 0) break;
     }
@@ -174,7 +150,7 @@ export async function analyzeContractWithAI(
 }
 
 /**
- * 🚀 ANALYSE DIRECTE - Document court avec GPT-5.2 length < 12000
+ * 🚀 ANALYSE DIRECTE - Document complet avec GPT-5.2
  */
 async function analyzeDirectlyWithGPT52(
   content: string,
@@ -222,132 +198,6 @@ async function analyzeDirectlyWithGPT52(
     message: `Analyse terminée : ${clauses.length} clause(s).`,
   });
   return clauses;
-}
-
-async function analyzeWithOptimizedChunking(
-  content: string,
-  chunkSize: number,
-  context?: AnalysisContext,
-  retryState?: boolean,
-  progressContext?: AnalysisProgressContext,
-): Promise<ClauseRisk[]> {
-  console.log("Lancement de l'analyse avec gpt-5.2");
-  const reasoning = "none";
-  const verbosity = "low";
-  const chunks = createSmartChunks(content, chunkSize);
-  let completedChunks = 0;
-  let successfulChunks = 0;
-  let failedChunks = 0;
-
-  emitAnalysisProgress(progressContext?.onProgress, {
-    mode: "chunked",
-    state: "running",
-    currentAttempt: progressContext?.currentAttempt ?? 1,
-    totalAttempts: progressContext?.totalAttempts ?? 1,
-    totalChunks: chunks.length,
-    completedChunks,
-    successfulChunks,
-    failedChunks,
-    message: `Analyse lancée sur ${chunks.length} partie(s).`,
-  });
-
-  const promises = chunks.map(async (chunk, i) => {
-    const chunkPrompt = buildClauseExtractionPromptForAI(
-      `PARTIE ${i + 1}/${chunks.length}`,
-      chunk,
-      context,
-      retryState,
-    );
-    return callOpenAi52(chunkPrompt, reasoning, verbosity)
-      .then((r) => {
-        const parsedClauses = parseAIResponse(r);
-
-        console.log(
-          `✅ Chunk ${i + 1}/${chunks.length} analysé: ${parsedClauses.length} clause(s)`,
-        );
-        completedChunks += 1;
-        successfulChunks += 1;
-        emitAnalysisProgress(progressContext?.onProgress, {
-          mode: "chunked",
-          state: "running",
-          currentAttempt: progressContext?.currentAttempt ?? 1,
-          totalAttempts: progressContext?.totalAttempts ?? 1,
-          totalChunks: chunks.length,
-          completedChunks,
-          successfulChunks,
-          failedChunks,
-          message: `Partie ${i + 1}/${chunks.length} terminée.`,
-        });
-
-        return parsedClauses;
-      })
-      .catch((err) => {
-        console.warn(
-          `Une erreur est survenue lors de l'analyse des clauses par l'ia sur le chunk ${i + 1}, error : ${err}`,
-        );
-        completedChunks += 1;
-        failedChunks += 1;
-        emitAnalysisProgress(progressContext?.onProgress, {
-          mode: "chunked",
-          state: "error",
-          currentAttempt: progressContext?.currentAttempt ?? 1,
-          totalAttempts: progressContext?.totalAttempts ?? 1,
-          totalChunks: chunks.length,
-          completedChunks,
-          successfulChunks,
-          failedChunks,
-          message: `Partie ${i + 1}/${chunks.length} en erreur.`,
-        });
-        return [];
-      });
-  });
-
-  const result = await Promise.all(promises);
-  if (!result) return [];
-  const allClauses: ClauseRisk[] = result.flat();
-  emitAnalysisProgress(progressContext?.onProgress, {
-    mode: "chunked",
-    state: "completed",
-    currentAttempt: progressContext?.currentAttempt ?? 1,
-    totalAttempts: progressContext?.totalAttempts ?? 1,
-    totalChunks: chunks.length,
-    completedChunks,
-    successfulChunks,
-    failedChunks,
-    message: `Analyse terminée : ${completedChunks}/${chunks.length} partie(s).`,
-  });
-  console.log("Fin de l'analyse, les clauses récupérés : ", allClauses);
-  return allClauses;
-}
-
-/**
- * 🎯 ANALYSE LONGUE - Document très long
- */
-async function analyzeLongContractIntelligently(
-  content: string,
-  context?: AnalysisContext,
-  retryState?: boolean,
-  progressContext?: AnalysisProgressContext,
-): Promise<ClauseRisk[]> {
-  console.log("🎯 Analyse intelligente de document long");
-  const clauses = await analyzeWithOptimizedChunking(
-    content,
-    20000,
-    context,
-    retryState,
-    progressContext,
-  );
-
-  const uniqueClausesMap = new Map<string, ClauseRisk>();
-  for (const clause of clauses) {
-    const key = `${clause.type}:${clause.content.substring(0, 50)}`;
-    if (!uniqueClausesMap.has(key)) {
-      uniqueClausesMap.set(key, clause);
-    }
-  }
-  return Array.from(uniqueClausesMap.values()).sort(
-    (a, b) => b.riskScore - a.riskScore,
-  );
 }
 
 /**

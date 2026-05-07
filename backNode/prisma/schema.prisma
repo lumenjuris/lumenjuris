@@ -61,6 +61,8 @@ model User {
   userCredit UserCredit?
   preference UserPreference?
   documentCustom DocumentCustom[]
+  contractHistory ContractHistory[]
+  chatHistory ChatHistory?
 }
 
 
@@ -159,6 +161,39 @@ model DocumentTemplate {
   idDocument      Int    @id @default(autoincrement())
   type            String
   templateContent String @db.Text
+}
+
+// --- HISTORIQUE CHAT JURIDIQUE ---
+
+model ChatHistory {
+  idChatHistory Int    @id @default(autoincrement())
+  conversations String @db.LongText
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+}
+
+// --- HISTORIQUE ANALYSES CONTRATS ---
+
+model ContractHistory {
+  idHistory         Int      @id @default(autoincrement())
+  externalId        String   @unique
+  fileName          String
+  contractType      String?
+  overallRiskScore  Float?
+  wordCount         Int      @default(0)
+  clausesCount      Int      @default(0)
+  activePatchCount  Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastOpenedAt      DateTime @default(now())
+  // Snapshot completète chiffré : contenu contrat + clauses + contexte + patches
+  encryptedSnapshot String   @db.LongText
+
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // --- CREDIT ET PAYMENT ---

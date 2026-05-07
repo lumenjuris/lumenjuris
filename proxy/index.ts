@@ -25,18 +25,11 @@ app.use(
   }),
 );
 
-app.options("*", cors())
-
-
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "20mb" }));
 const IS_PROD = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 3000);
 const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://localhost:5678";
 const BACKNODE_URL = IS_PROD ? process.env.BACKNODE_URL : "http://localhost:3020";
-
-
-
-
 
 // ---- Relay vers Python backend ------------------------------------------------
 function relayStreamToPython(
@@ -266,6 +259,24 @@ function handleNodeEnterpriseUpdate(req: Request, res: Response): void {
   relayToNode(req, res, "/enterprise");
 }
 
+function handleNodeContractHistory(req: Request, res: Response): void {
+  relayToNode(req, res, "/contract-history");
+}
+
+function handleNodeChatHistory(req: Request, res: Response): void {
+  relayToNode(req, res, "/chat-history");
+}
+
+function handleNodeContractHistoryItem(req: Request, res: Response): void {
+  const externalId = encodeURIComponent(req.params.externalId as string);
+  relayToNode(req, res, `/contract-history/${externalId}`);
+}
+
+function handleNodeContractHistoryTouch(req: Request, res: Response): void {
+  const externalId = encodeURIComponent(req.params.externalId as string);
+  relayToNode(req, res, `/contract-history/${externalId}/touch`);
+}
+
 function handleSignUpUser(req: Request, res: Response): void {
   relayToNode(req, res, "/user/create");
 }
@@ -312,6 +323,13 @@ app.post("/api/user/export-data", handleNodeUserExportData);
 app.delete("/api/user/account", handleNodeUserDeleteAccount);
 app.get("/api/enterprise", handleNodeEnterpriseGet);
 app.put("/api/enterprise", handleNodeEnterpriseUpdate);
+app.get("/api/contract-history", handleNodeContractHistory);
+app.post("/api/contract-history", handleNodeContractHistory);
+app.get("/api/contract-history/:externalId", handleNodeContractHistoryItem);
+app.delete("/api/contract-history/:externalId", handleNodeContractHistoryItem);
+app.patch("/api/contract-history/:externalId/touch", handleNodeContractHistoryTouch);
+app.get("/api/chat-history", handleNodeChatHistory);
+app.put("/api/chat-history", handleNodeChatHistory);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 

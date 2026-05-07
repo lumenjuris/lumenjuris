@@ -3,11 +3,11 @@ import type { AnalysisContext } from "../types/contextualAnalysis";
 import type { TextPatch } from "../store/documentTextStore";
 import type { AppliedRecommendation } from "../store/appliedRecommendationsStore";
 import type { MarketAnalysisResult } from "./marketAnalysis";
+import { fetchProxy } from "./fetchProxy";
 
 export type ContractHistoryStatus = "uploaded" | "analyzed";
 
 export interface ContractHistoryItem {
-  version: 1;
   id: string;
   fileName: string;
   createdAt: string;
@@ -22,7 +22,6 @@ export interface ContractHistoryItem {
 }
 
 export interface ContractHistorySnapshot {
-  version: 1;
   id: string;
   status: ContractHistoryStatus;
   savedAt: string;
@@ -46,24 +45,13 @@ interface CreateContractHistorySnapshotArgs {
   reviewedClauseIds: string[];
 }
 
-const HISTORY_INDEX_KEY = "contract_history_index_v1";
-const SNAPSHOT_KEY_PREFIX = "contract_history_snapshot_v1_";
-const MAX_HISTORY_ITEMS = 20;
+// ---- pure helpers (no I/O) ---------------------------------------------------
 
 export function createContractHistoryId(): string {
   if (globalThis.crypto?.randomUUID) {
     return globalThis.crypto.randomUUID();
   }
-
   return `contract-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-export function loadContractHistoryIndex(): ContractHistoryItem[] {
-  const index = readJson<ContractHistoryItem[]>(HISTORY_INDEX_KEY, []);
-
-  return index
-    .filter((item) => item?.version === 1 && item.id)
-    .sort(compareByUploadTimeDesc);
 }
 
 export function createContractHistorySnapshot({
@@ -77,7 +65,6 @@ export function createContractHistorySnapshot({
   reviewedClauseIds,
 }: CreateContractHistorySnapshotArgs): ContractHistorySnapshot {
   return {
-    version: 1,
     id,
     status: contract.processed ? "analyzed" : "uploaded",
     savedAt: new Date().toISOString(),
@@ -91,87 +78,94 @@ export function createContractHistorySnapshot({
   };
 }
 
-export function saveContractHistorySnapshot(
+// Builds a ContractHistoryItem preview from a snapshot (used for in-memory temporary entries)
+export function createContractHistoryPreviewItem(
   snapshot: ContractHistorySnapshot,
-): ContractHistoryItem | null {
-  if (!canUseLocalStorage()) return null;
+  existing?: ContractHistoryItem,
+): ContractHistoryItem {
+  return buildHistoryItem(normalizeSnapshot(snapshot), existing);
+}
+
+export function compareByUploadTimeDesc(
+  a: ContractHistoryItem,
+  b: ContractHistoryItem,
+): number {
+  return getUploadTime(b) - getUploadTime(a);
+}
+
+// ---- API calls ---------------------------------------------------------------
+
+export async function loadContractHistoryIndex(): Promise<ContractHistoryItem[]> {
+  try {
+    const res = await fetchProxy("/api/contract-history", { credentials: "include" });
+    if (!res.ok) return [];
+    const payload = (await res.json()) as { success: boolean; data?: ContractHistoryItem[] };
+    return payload.success && payload.data ? payload.data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveContractHistorySnapshot(
+  snapshot: ContractHistorySnapshot,
+): Promise<ContractHistoryItem | null> {
+  if (snapshot.status !== "analyzed" || !snapshot.contract?.processed) return null;
 
   try {
-    const normalizedSnapshot = normalizeSnapshot(snapshot);
-    const snapshotKey = buildSnapshotKey(normalizedSnapshot.id);
-    localStorage.setItem(snapshotKey, JSON.stringify(normalizedSnapshot));
-
-    const index = loadContractHistoryIndex();
-    const existing = index.find((item) => item.id === normalizedSnapshot.id);
-    const item = buildHistoryItem(normalizedSnapshot, existing);
-    const nextIndex = sortByUploadTimeDesc([
-      item,
-      ...index.filter((entry) => entry.id !== normalizedSnapshot.id),
-    ]).slice(0, MAX_HISTORY_ITEMS);
-
-    localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(nextIndex));
-    cleanupSnapshots(nextIndex);
-
-    return item;
-  } catch (error) {
-    console.warn("[contract history] save error", error);
+    const res = await fetchProxy("/api/contract-history", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ externalId: snapshot.id, snapshot }),
+    });
+    if (!res.ok) return null;
+    const payload = (await res.json()) as { success: boolean; data?: ContractHistoryItem };
+    return payload.success && payload.data ? payload.data : null;
+  } catch {
     return null;
   }
 }
 
-export function loadContractHistorySnapshot(
+export async function loadContractHistorySnapshot(
   id: string,
-): ContractHistorySnapshot | null {
-  if (!canUseLocalStorage()) return null;
-
+): Promise<ContractHistorySnapshot | null> {
   try {
-    const raw = localStorage.getItem(buildSnapshotKey(id));
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as ContractHistorySnapshot;
-    if (parsed.version !== 1 || parsed.id !== id) return null;
-
-    return normalizeSnapshot(parsed);
-  } catch (error) {
-    console.warn("[contract history] load error", error);
+    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const payload = (await res.json()) as { success: boolean; data?: ContractHistorySnapshot };
+    if (!payload.success || !payload.data) return null;
+    return normalizeSnapshot(payload.data);
+  } catch {
     return null;
   }
 }
 
-export function touchContractHistoryEntry(id: string): ContractHistoryItem[] {
-  if (!canUseLocalStorage()) return [];
-
+export async function touchContractHistoryEntry(id: string): Promise<void> {
   try {
-    const now = new Date().toISOString();
-    const nextIndex = sortByUploadTimeDesc(
-      loadContractHistoryIndex().map((item) =>
-        item.id === id ? { ...item, lastOpenedAt: now, updatedAt: now } : item,
-      ),
-    );
-
-    localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(nextIndex));
-    return nextIndex;
-  } catch (error) {
-    console.warn("[contract history] touch error", error);
-    return loadContractHistoryIndex();
+    await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}/touch`, {
+      method: "PATCH",
+      credentials: "include",
+    });
+  } catch {
+    // fire-and-forget
   }
 }
 
-export function deleteContractHistoryEntry(id: string): ContractHistoryItem[] {
-  if (!canUseLocalStorage()) return [];
-
+export async function deleteContractHistoryEntry(id: string): Promise<void> {
   try {
-    localStorage.removeItem(buildSnapshotKey(id));
-    const nextIndex = loadContractHistoryIndex().filter(
-      (item) => item.id !== id,
-    );
-    localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(nextIndex));
-    return nextIndex;
-  } catch (error) {
-    console.warn("[contract history] delete error", error);
-    return loadContractHistoryIndex();
+    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) console.warn("[contract history] delete failed:", res.status);
+  } catch {
+    console.warn("[contract history] delete error");
   }
 }
+
+// ---- internal helpers --------------------------------------------------------
 
 function buildHistoryItem(
   snapshot: ContractHistorySnapshot,
@@ -180,20 +174,16 @@ function buildHistoryItem(
   const now = new Date().toISOString();
   const content = snapshot.contract.content || "";
   const uploadDate = toIsoString(snapshot.contract.uploadDate) ?? now;
-  const clausesCount = snapshot.contract.clauses?.length ?? 0;
-  const wordCount =
-    snapshot.contract.extractionMetadata?.wordCount ?? countWords(content);
 
   return {
-    version: 1,
     id: snapshot.id,
     fileName: snapshot.contract.fileName || "Document",
     createdAt: existing?.createdAt ?? uploadDate,
     updatedAt: now,
     lastOpenedAt: existing?.lastOpenedAt ?? now,
     status: snapshot.status,
-    wordCount,
-    clausesCount,
+    wordCount: snapshot.contract.extractionMetadata?.wordCount ?? countWords(content),
+    clausesCount: snapshot.contract.clauses?.length ?? 0,
     activePatchCount: snapshot.patches.filter((patch) => patch.active).length,
     overallRiskScore: snapshot.contract.overallRiskScore,
     contractType:
@@ -203,9 +193,7 @@ function buildHistoryItem(
   };
 }
 
-function normalizeSnapshot(
-  snapshot: ContractHistorySnapshot,
-): ContractHistorySnapshot {
+function normalizeSnapshot(snapshot: ContractHistorySnapshot): ContractHistorySnapshot {
   return {
     ...snapshot,
     contract: normalizeContract(snapshot.contract),
@@ -240,36 +228,6 @@ function normalizeAppliedRecommendations(
   }));
 }
 
-function cleanupSnapshots(index: ContractHistoryItem[]) {
-  const allowedIds = new Set(index.map((item) => item.id));
-  Object.keys(localStorage)
-    .filter(
-      (key) =>
-        key.startsWith(SNAPSHOT_KEY_PREFIX) &&
-        !allowedIds.has(key.slice(SNAPSHOT_KEY_PREFIX.length)),
-    )
-    .forEach((key) => localStorage.removeItem(key));
-}
-
-function buildSnapshotKey(id: string): string {
-  return `${SNAPSHOT_KEY_PREFIX}${id}`;
-}
-
-function readJson<T>(key: string, fallback: T): T {
-  if (!canUseLocalStorage()) return fallback;
-
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function canUseLocalStorage(): boolean {
-  return typeof window !== "undefined" && Boolean(window.localStorage);
-}
-
 function countWords(content: string): number {
   return content.trim() ? content.trim().split(/\s+/).length : 0;
 }
@@ -278,19 +236,6 @@ function toIsoString(value: string | Date | undefined): string | null {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-function sortByUploadTimeDesc(
-  items: ContractHistoryItem[],
-): ContractHistoryItem[] {
-  return [...items].sort(compareByUploadTimeDesc);
-}
-
-function compareByUploadTimeDesc(
-  a: ContractHistoryItem,
-  b: ContractHistoryItem,
-): number {
-  return getUploadTime(b) - getUploadTime(a);
 }
 
 function getUploadTime(item: ContractHistoryItem): number {

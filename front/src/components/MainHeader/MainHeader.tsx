@@ -1,12 +1,17 @@
 // UI //
 import { Scale, RefreshCw } from "lucide-react";
+import type { MouseEvent } from "react";
 
 import HeaderNavigationBar from "./HeaderNavigationBar";
 
 import { Link, useLocation } from "react-router-dom";
 
+type NavigationClickHandler = (
+  event?: MouseEvent<HTMLElement>,
+) => boolean | void;
+
 interface MainHeaderProps {
-  onNavClick?: () => void;
+  onNavClick?: NavigationClickHandler;
   onReanalyze?: () => void;
   showReanalyze?: boolean;
   setIsConnected?: React.Dispatch<React.SetStateAction<boolean>>;

@@ -35,9 +35,9 @@ const UNKNOWN_CONTEXT_VALUE = "Non renseigné pour le moment";
 
 
 /**
- * Construit le prompt d'extraction de clauses à risque pour l'analyse principale (courte) ET le chunking (documents moyens/longs).
+ * Construit le prompt d'extraction de clauses à risque pour l'analyse principale.
  * 
- * @param { string } sectionLabel - Label entre le prompt et le texte, utile en cas de plusieurs chunk
+ * @param { string } sectionLabel - Label affiché entre le prompt et le texte du contrat
  * @param { string } sectionText - Le texte brut du contrat
  * @param { AnalysisContext } context - Contexte brut issu de l'analyse du contrat si présent
  * @param { boolean } retryWithAnotherPrompt - En cas d'echec du premier prompt "CONTEXTUAL_CLAUSE_ANALYSIS_PROMPT_ULTIMATE" on utilise le deuxieme "CONTEXTUAL_CLAUSE_ANALYSIS_PROMPT" qui est un peu moins poussé

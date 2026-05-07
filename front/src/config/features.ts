@@ -11,8 +11,6 @@ export const FEATURE_FLAGS = {
   ENABLE_REAL_TIME_ANALYSIS: false,
   // Nettoyage léger (déchets) post-extraction sans restructuration
   ENABLE_LIGHT_SANITIZE: true,
-  // Persistance des patches (localStorage) liée au hash du texte original
-  ENABLE_PATCH_PERSISTENCE: true,
   // Vérifications d'intégrité (hash slice + contrôle mismatch rebuild)
   ENABLE_PATCH_INTEGRITY_CHECKS: true,
   // Calcul des segments de diff (lecture seule) pour future visualisation

@@ -91,31 +91,3 @@ export function calculateRiskProfile(clauses: ClauseRisk[]): {
 
     return { overall, distribution };
 }
-
-
-
-
-/**
- * 🏗️ Création de chunks intelligents 
- * @param { string } content - Le text brut du contrat
- * @param { number } chunkSize - La taille de chaque chunk
- * @return { string[] } - Un array avec le contrat divisé en chunk
- */
-export function createSmartChunks(content: string, chunkSize: number): string[] {
-    const chunks: string[] = [];
-    const paragraphs = content.split(/\n\s*\n/);
-    let currentChunk = '';
-
-    for (const paragraph of paragraphs) {
-        if (currentChunk.length + paragraph.length > chunkSize && currentChunk.length > 0) {
-            chunks.push(currentChunk.trim());
-            currentChunk = '';
-        }
-        currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-    }
-
-    if (currentChunk.trim()) chunks.push(currentChunk.trim());
-
-    console.log(`📊 Document divisé en ${chunks.length} chunks intelligents`);
-    return chunks;
-}

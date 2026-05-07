@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { ClauseRecommendation, ClauseRisk } from '../types';
 
 export interface AppliedRecommendation {
@@ -31,8 +30,7 @@ interface AppliedRecommendationsState {
 }
 
 export const useAppliedRecommendationsStore = create<AppliedRecommendationsState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       appliedRecommendations: [],
 
 
@@ -478,23 +476,4 @@ export const useAppliedRecommendationsStore = create<AppliedRecommendationsState
         }
       },
     }),
-    {
-      name: 'applied-recommendations-store',
-      // revive Date fields on rehydrate
-      merge: (persistedState: any, currentState) => {
-        try {
-          const merged = { ...currentState, ...(persistedState || {}) } as any;
-          if (merged.appliedRecommendations) {
-            merged.appliedRecommendations = merged.appliedRecommendations.map((i: any) => ({
-              ...i,
-              appliedAt: new Date(i.appliedAt),
-            }));
-          }
-          return merged;
-        } catch {
-          return { ...currentState, ...(persistedState || {}) } as any;
-        }
-      },
-    },
-  ),
 );

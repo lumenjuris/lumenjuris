@@ -1,10 +1,8 @@
 import { create } from "zustand";
 import FEATURE_FLAGS from "../config/features";
 import { fnv1a } from "../utils/hashUtils";
-import { savePatches, loadPatches } from "../utils/patchPersistence";
 import { computeDiff, DiffSegment } from "../utils/diffUtils";
 import { useAppliedRecommendationsStore } from "./appliedRecommendationsStore";
-import { text } from "stream/consumers";
 
 export interface TextPatch {
   id: string;
@@ -91,33 +89,7 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
       patches: [],
       lastAppliedRecommendationKey: undefined,
     });
-    // tentative de restauration persistée
-    if (FEATURE_FLAGS.ENABLE_PATCH_PERSISTENCE) {
-      const loaded = loadPatches(text);
-      if (loaded && loaded.patches?.length) {
-        const restored = loaded.patches.map((p) => ({
-          id: genId(),
-          clauseId: p.clauseId,
-          recommendationKey: p.recommendationKey,
-          startOrig: p.startOrig,
-          endOrig: p.endOrig,
-          originalSlice: p.originalSlice,
-          newSlice: p.newSlice,
-          active: p.active,
-          sliceHash: FEATURE_FLAGS.ENABLE_PATCH_INTEGRITY_CHECKS
-            ? fnv1a(p.originalSlice)
-            : undefined,
-        }));
-        set({
-          patches: restored,
-          currentText: rebuildFrom(
-            text,
-            restored,
-          ) /* , viewMode: 'modified'  A SUPPRIMER*/,
-        });
-        console.log("[patch persistence] restored", restored.length);
-      }
-    }
+    
   },
 
   applyPatch: ({
@@ -204,8 +176,6 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
       currentText,
       lastAppliedRecommendationKey: recommendationKey,
     });
-    if (FEATURE_FLAGS.ENABLE_PATCH_PERSISTENCE)
-      savePatches(originalText, newPatches);
   },
 
   removePatch: (recommendationKey) => {
@@ -215,8 +185,6 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
     );
     const currentText = rebuildFrom(originalText, newPatches);
     set({ patches: newPatches, currentText });
-    if (FEATURE_FLAGS.ENABLE_PATCH_PERSISTENCE)
-      savePatches(originalText, newPatches);
   },
 
   resetAll: () => {
@@ -229,7 +197,6 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
       lastAppliedRecommendationKey: undefined,
       htmlContent: null,
     });
-    if (FEATURE_FLAGS.ENABLE_PATCH_PERSISTENCE) savePatches(originalText, []);
   },
 
   isApplied: (recommendationKey) =>

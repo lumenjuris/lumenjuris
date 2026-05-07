@@ -7,11 +7,11 @@ import {
   useEffect,
 } from "react";
 import { motion } from "framer-motion";
+import { Info } from "lucide-react";
 import { ClauseRisk } from "../../types";
 import { ClausesSidebar } from "./ClausesSidebar";
 import { isFeatureEnabled } from "../../config/features";
 import { useDocumentTextStore } from "../../store/documentTextStore";
-import { ContractAnalysisSummary } from "./ContractAnalysisSummary";
 import { AnalysisContext } from "../../types/contextualAnalysis";
 import { findBestClauseSpan } from "../../utils/textPatchLocator";
 import { formatContentToHtml } from "../../utils/documentViewerTools/formatContentToHtml";
@@ -96,6 +96,23 @@ export const DocumentViewer = forwardRef<
     const effectiveOriginal =
       originalText && originalText.length > 0 ? originalText : content;
     const displayedText = effectiveOriginal;
+    const analysisContextRows = useMemo(() => {
+      if (!contractSummary) return [];
+
+      const rows = [
+        ["Le type du contrat", contractSummary.contractType],
+        ["Secteur d'activité", contractSummary.industry],
+        ["Votre rôle", contractSummary.userRole],
+        [
+          "Contexte de la mission",
+          contractSummary.mission || contractSummary.missionContext,
+        ],
+      ];
+
+      return rows.filter((row): row is [string, string] =>
+        Boolean(row[1]?.trim()),
+      );
+    }, [contractSummary]);
 
     const [_editingClauseId, setEditingClauseId] = useState<string | null>(
       null,
@@ -229,8 +246,37 @@ export const DocumentViewer = forwardRef<
         <div className={`${showSidebar ? "flex-1" : "w-full"} flex flex-col`}>
           {/* Header */}
           <div className="p-4 border-b border-gray-200 flex-shrink-0 flex items-center justify-between gap-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              📄 {fileName}
+            <h2 className="min-w-0 text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="truncate">{fileName}</span>
+              {analysisContextRows.length > 0 && (
+                <span className="relative inline-flex shrink-0 items-center group">
+                  <button
+                    type="button"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-500 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    aria-label="Afficher les informations d'analyse"
+                    title="Informations d'analyse"
+                  >
+                    <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                  <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-3 text-left text-sm font-normal text-gray-700 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Détails de l'analyse
+                    </span>
+                    <span className="block space-y-2">
+                      {analysisContextRows.map(([label, value]) => (
+                        <span key={label} className="block">
+                          <span className="block text-xs font-medium text-gray-500">
+                            {label}
+                          </span>
+                          <span className="block text-sm leading-snug text-gray-900">
+                            {value}
+                          </span>
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                </span>
+              )}
             </h2>
             <div className="flex items-center gap-4 text-xs">
               <button
@@ -276,17 +322,16 @@ export const DocumentViewer = forwardRef<
         </div>
 
         {/* Sidebar */}
-        <div>
-          {showSidebar && (
+        {showSidebar && (
+          <div>
             <ClausesSidebar
               clauses={clauses}
               onClauseClick={handleSidebarClauseClick}
               isVisible={true}
               recommandationApplied={patches}
             />
-          )}
-          <ContractAnalysisSummary contractSummary={contractSummary} />
-        </div>
+          </div>
+        )}
       </div>
     );
   },
