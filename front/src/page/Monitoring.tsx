@@ -26,7 +26,7 @@ const formatUsd = (value: number) =>
   }).format(value);
 
 export const Monitoring = () => {
-  const { isConnected: userConnected, userData } = useUserStore();
+  const { userData } = useUserStore();
   const [llmUsage, setLlmUsage] = useState<LlmUsage[]>([]);
   const [llmUsageLoading, setLlmUsageLoading] = useState(false);
   const [llmUsageError, setLlmUsageError] = useState("");
@@ -65,10 +65,8 @@ export const Monitoring = () => {
     return () => window.clearInterval(intervalId);
   }, []);
 
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : userData?.profile.role !== "ADMIN" ? (
-    <Navigate to="/dashboard" />
+  return userData?.profile.role !== "ADMIN" ? (
+    <Navigate to="/dashboard" replace />
   ) : (
     <>
       <MainHeader />

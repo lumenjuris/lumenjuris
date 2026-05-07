@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, Navigate } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
-import { useUserStore } from "../../store/userStore";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
@@ -29,11 +28,7 @@ const navItems = [
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { isConnected: userConnected } = useUserStore();
-
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : (
+  return (
     <div
       className="flex min-h-screen w-full bg-[#f8f9fb]"
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}

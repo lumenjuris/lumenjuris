@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 import path from "path";
 import http from "http";
 
-
 // Charge d'abord server/.env puis la racine
 dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
 dotenv.config();
@@ -19,7 +18,7 @@ app.use(
       /^http:\/\/localhost:\d+$/,
       /^http:\/\/127\.0\.0\.1:\d+$/,
       /^https:\/\/.*\.odns\.fr$/,
-      "http://localhost:5173"
+      "http://localhost:5173",
     ],
     credentials: true,
   }),
@@ -29,7 +28,9 @@ app.use(express.json({ limit: "20mb" }));
 const IS_PROD = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 3000);
 const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://localhost:5678";
-const BACKNODE_URL = IS_PROD ? process.env.BACKNODE_URL : "http://localhost:3020";
+const BACKNODE_URL = IS_PROD
+  ? process.env.BACKNODE_URL
+  : "http://localhost:3020";
 
 // ---- Relay vers Python backend ------------------------------------------------
 function relayStreamToPython(
@@ -81,8 +82,6 @@ function relayJsonToPython(
 
 // Relay requêtes vers le serveur Node
 function relayToNode(req: Request, res: Response, targetPath: string): void {
-
-
   fetch(`${BACKNODE_URL}${targetPath}`, {
     method: req.method,
     headers: {
@@ -138,7 +137,6 @@ type PythonJsonResponse = Record<string, any> & {
   openai_tokens?: OpenAiUsagePayload;
 };
 
-
 async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
   const usage = data.openai_tokens;
   delete data.openai_tokens;
@@ -166,7 +164,6 @@ async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
     console.error("OpenAI usage log error:", e.message);
   }
 }
-
 
 function handleExtractPdfText(req: Request, res: Response): void {
   relayStreamToPython(req, res, "/extract-pdf-text");
@@ -204,8 +201,8 @@ function handleInseeRequest(req: Request, res: Response): void | Response {
   if (typeof req.params.siren !== "string") {
     return res.json({
       success: false,
-      message: "Bad request, le parsing de du siren n'est pas conforme."
-    })
+      message: "Bad request, le parsing de du siren n'est pas conforme.",
+    });
   }
   const siren = encodeURIComponent(req.params.siren);
   relayToNode(req, res, `/enterprise/insee/${siren}`);
@@ -339,7 +336,10 @@ app.get("/api/contract-history", handleNodeContractHistory);
 app.post("/api/contract-history", handleNodeContractHistory);
 app.get("/api/contract-history/:externalId", handleNodeContractHistoryItem);
 app.delete("/api/contract-history/:externalId", handleNodeContractHistoryItem);
-app.patch("/api/contract-history/:externalId/touch", handleNodeContractHistoryTouch);
+app.patch(
+  "/api/contract-history/:externalId/touch",
+  handleNodeContractHistoryTouch,
+);
 app.get("/api/chat-history", handleNodeChatHistory);
 app.put("/api/chat-history", handleNodeChatHistory);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
@@ -348,23 +348,19 @@ app.get("/api/google", handleNodeGoogle);
 app.post("/api/billing/customer", handleBillingCustomer);
 app.post("/api/billing/payment-intent", handleBillingPaymentIntent);
 
-
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {
   return res.send({
     status: "OK",
     port: PORT,
     urlBackendPython: BACKEND_URL,
-    urlBackendNodejs: BACKNODE_URL
-  })
-})
-
-
+    urlBackendNodejs: BACKNODE_URL,
+  });
+});
 
 // Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`Serveur proxy running on : http://localhost:${PORT}`);
-  console.log(`Backend Python url : ${BACKEND_URL}`)
-  console.log(`Backend NodeJs url : ${BACKNODE_URL}`)
+  console.log(`Backend Python url : ${BACKEND_URL}`);
+  console.log(`Backend NodeJs url : ${BACKNODE_URL}`);
 });
-
