@@ -251,13 +251,14 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
 
       {isConnected ? (
         <section className="flex items-center gap-3">
-          {!userData?.enterprise && (
+          {!userData?.enterprise ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="absolute top-2 rounded-full w-6 h-6 bg-transparent border border-destructive flex justify-center items-center animate-ping"></div>
-                    <AlertCircleIcon className="size-6 text-destructive" />
+                    <Bell className="h-5 w-5 text-gray-400" />
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 animate-ping rounded-full bg-destructive opacity-75"></span>
                   </button>
                 }
               />
@@ -272,12 +273,12 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 </Link>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : (
+            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <Bell className="h-5 w-5 text-gray-400" />
+            </button>
           )}
 
-          <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <Bell className="h-5 w-5 text-gray-400" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-green-500" />
-          </button>
           <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
             {userAvatarUrl ? (
               <img

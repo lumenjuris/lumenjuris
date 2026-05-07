@@ -21,7 +21,7 @@ const MainHeader = ({
 
   return (
     <header className="h-16 border-b border-gray-200 bg-white sticky top-0 z-10">
-      <div className="max-w-[1500px] ml-auto px-4 lg:px-6 flex justify-between items-center h-full">
+      <div className="max-w-[1500px] ml-auto px-4 lg:px-6 flex justify-between items-center h-full 2xl:max-w-full 2xl:ml-64">
         <section className="flex justify-center gap-10">
           <Link to="/dashboard">
             <button

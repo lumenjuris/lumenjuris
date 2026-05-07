@@ -1,5 +1,5 @@
 import InputFile from "../components/common/InputFile";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useCallback } from "react";
 import {
   FileText,
@@ -18,6 +18,8 @@ import {
   Clock,
   FileCheck,
 } from "lucide-react";
+
+import { useUserStore } from "../store/userStore";
 
 const kpiCards = [
   {
