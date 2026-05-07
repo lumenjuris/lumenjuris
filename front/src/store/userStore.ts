@@ -41,8 +41,10 @@ export const useUserStore = create<UserState>((set) => ({
         });
       }
     } catch (error) {
-      console.error('🛑🛑🛑 ERREUR SERVEUR GET USER', error);
-      set({ userInfoError: 'Un problème est survenu, veuillez vous reconnecter.' });
+      console.error("🛑🛑🛑 ERREUR SERVEUR GET USER", error);
+      set({
+        userInfoError: "Un problème est survenu, veuillez vous reconnecter.",
+      });
     }
   },
 
@@ -55,17 +57,31 @@ export const useUserStore = create<UserState>((set) => ({
       });
       const logoutResponse = await response.json();
       if (logoutResponse.success) {
-        set({ isConnected: false, userData: null, userAvatarUrl: null, userInfoError: null });
+        set({
+          isConnected: false,
+          userData: null,
+          userAvatarUrl: null,
+          userInfoError: null,
+        });
         return true;
       }
       set({ userInfoError: logoutResponse.message });
       return false;
     } catch (error) {
-      set({ userInfoError: "Une erreur s'est produite, vous n'avez pas été déconnecté..." });
+      set({
+        userInfoError:
+          "Une erreur s'est produite, vous n'avez pas été déconnecté...",
+      });
       console.error(error);
       return false;
     }
   },
 
-  reset: () => set({ userData: null, isConnected: false, userAvatarUrl: null, userInfoError: null }),
+  reset: () =>
+    set({
+      userData: null,
+      isConnected: false,
+      userAvatarUrl: null,
+      userInfoError: null,
+    }),
 }));

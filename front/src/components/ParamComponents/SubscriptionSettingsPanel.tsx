@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CreditCard } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 
 type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "PENDING";
-type BillingInterval = "month" | "year";
+export type BillingInterval = "month" | "year";
 
 export type SubscriptionData = {
   status: SubscriptionStatus;
@@ -27,7 +27,6 @@ export type CreditsData = {
 type SubscriptionSettingsPanelProps = {
   subscription: SubscriptionData | null;
   credits: CreditsData | null;
-  onSubscribeClick: (interval: BillingInterval) => void;
   onManageSubscriptionClick: () => void;
 };
 
@@ -36,13 +35,6 @@ const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   CANCELLED: "Annulé",
   EXPIRED: "Expiré",
   PENDING: "En attente",
-};
-
-const STATUS_STYLE: Record<SubscriptionStatus, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-  EXPIRED: "bg-gray-100 text-gray-600",
-  PENDING: "bg-amber-100 text-amber-700",
 };
 
 const formatDate = (iso: string) =>
@@ -58,44 +50,6 @@ const formatPrice = (price: number) =>
     currency: "EUR",
     maximumFractionDigits: 2,
   }).format(price / 100);
-
-function BillingToggle({
-  value,
-  onChange,
-}: {
-  value: BillingInterval;
-  onChange: (v: BillingInterval) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5">
-      <button
-        type="button"
-        onClick={() => onChange("month")}
-        className={`rounded-full px-4 py-1.5 text-sm transition-all ${
-          value === "month"
-            ? "bg-white font-medium text-gray-900 shadow-sm"
-            : "text-gray-500 hover:text-gray-700"
-        }`}
-      >
-        Mensuel
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("year")}
-        className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm transition-all ${
-          value === "year"
-            ? "bg-white font-medium text-gray-900 shadow-sm"
-            : "text-gray-500 hover:text-gray-700"
-        }`}
-      >
-        Annuel
-        <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
-          2 mois offerts
-        </span>
-      </button>
-    </div>
-  );
-}
 
 function CreditBar({
   label,
@@ -130,15 +84,6 @@ function CreditBar({
   );
 }
 
-const MOCK_SUBSCRIPTION: SubscriptionData = {
-  status: "ACTIVE",
-  planName: "Plan Essentiel",
-  price: 2900,
-  interval: "year",
-  startAt: "2025-01-15",
-  expiresAt: "2026-01-15",
-};
-
 const MOCK_CREDITS: CreditsData = {
   creditAnalyse: 7,
   creditSignature: 1,
@@ -151,19 +96,17 @@ const MOCK_CREDITS: CreditsData = {
 export function SubscriptionSettingsPanel(
   _props: Partial<SubscriptionSettingsPanelProps> = {},
 ) {
-  const { subscription = MOCK_SUBSCRIPTION, credits = MOCK_CREDITS } = _props;
-  const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("month");
+  const { subscription = null, credits = MOCK_CREDITS } = _props;
+  const navigate = useNavigate();
 
   const isActive = subscription?.status === "ACTIVE";
   const isAnnual = subscription?.interval === "year";
+  const priceLabel = isAnnual ? "paiement unique" : "mois";
 
   const expiresAtLabel = (() => {
     if (!isActive) return "Date de fin";
     return isAnnual ? "Accès valable jusqu'au" : "Prochain prélèvement";
   })();
-
-  const priceLabel = isAnnual ? "paiement unique" : "mois";
 
   return (
     <div className="space-y-6">
@@ -184,21 +127,9 @@ export function SubscriptionSettingsPanel(
             Souscrivez à un abonnement LumenJuris pour accéder à toutes les
             fonctionnalités.
           </p>
-          <div className="mt-5">
-            <BillingToggle
-              value={billingInterval}
-              onChange={setBillingInterval}
-            />
-          </div>
-          {billingInterval === "year" && (
-            <p className="mt-2 text-xs text-gray-500">
-              Un seul paiement pour 12 mois d'accès — l'équivalent de 10 mois au
-              tarif mensuel.
-            </p>
-          )}
           <Button
             type="button"
-            onClick={() => {}}
+            onClick={() => navigate("/souscription")}
             className="mt-4 bg-lumenjuris text-white hover:bg-lumenjuris/90"
           >
             Voir les offres
@@ -212,10 +143,10 @@ export function SubscriptionSettingsPanel(
                 <p className="text-sm font-semibold text-gray-900">
                   {subscription.planName}
                 </p>
-                <Badge variant="success">
+                <Badge variant={subscription.status}>
                   {STATUS_LABEL[subscription.status]}
                 </Badge>
-                {isAnnual && <Badge variant="success">Annuel</Badge>}
+                {isAnnual && <Badge variant="ACTIVE">Annuel</Badge>}
               </div>
               <p className="mt-0.5 text-sm text-gray-500">
                 {formatPrice(subscription.price)} /{" "}
@@ -272,8 +203,21 @@ export function SubscriptionSettingsPanel(
       )}
 
       {subscription !== null && (
-        <div className="flex justify-end">
-          <Button type="button" variant="outline" onClick={() => {}}>
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="hover:bg-gray-100"
+            onClick={() => navigate("/souscription")}
+          >
+            Changer d'offre
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="hover:bg-gray-100"
+            onClick={_props.onManageSubscriptionClick ?? (() => {})}
+          >
             Gérer mon abonnement
           </Button>
         </div>

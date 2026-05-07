@@ -10,13 +10,13 @@ import {
   LogOutIcon,
   MonitorCheck,
   AlertCircleIcon,
+  HandCoinsIcon,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "../ui/DropDownMenu";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -81,11 +81,23 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 pathname === "/calculateur" ||
                 pathname === "/veille" ||
                 pathname === "/conformite"
-                  ? " text-gray-800 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
             >
-              <LayoutDashboard className="size-5" />
+              <LayoutDashboard
+                className={
+                  pathname === "/dashboard" ||
+                  pathname === "/generateur" ||
+                  pathname === "/signature" ||
+                  pathname === "/chatjuridique" ||
+                  pathname === "/calculateur" ||
+                  pathname === "/veille" ||
+                  pathname === "/conformite"
+                    ? "size-6"
+                    : "size-5"
+                }
+              />
             </Button>
           </Link>
         )}
@@ -97,11 +109,13 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               data-slot="icon"
               className={
                 pathname === "/analyzer"
-                  ? " text-gray-800 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
             >
-              <FileCheckIcon className="size-5" />
+              <FileCheckIcon
+                className={pathname === "/analyzer" ? "size-6" : "size-5"}
+              />
             </Button>
           </Link>
         )}
@@ -112,12 +126,14 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               size="icon"
               className={
                 pathname === "/sandbox"
-                  ? " text-gray-800 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
               onClick={onNavClick}
             >
-              <ScatterChartIcon />
+              <ScatterChartIcon
+                className={pathname === "/sandbox" ? "size-6" : "size-5"}
+              />
             </Button>
           </Link>
         )}
@@ -128,19 +144,21 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               size="icon"
               className={
                 pathname === "/monitoring"
-                  ? " text-gray-800 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
+                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
               onClick={onNavClick}
             >
-              <MonitorCheck />
+              <MonitorCheck
+                className={pathname === "/monitoring" ? "size-6" : "size-5"}
+              />
             </Button>
           </Link>
         )}
       </nav>
 
       {/* AFFICHAGE MENU ECRANS LARGE */}
-      <nav className="hidden lg:flex items-center gap-1">
+      <nav className="hidden lg:flex items-center 2xl:gap-1">
         {isConnected && (
           <Link to="/dashboard">
             <Button
@@ -160,7 +178,19 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
             >
-              <LayoutDashboard />
+              <LayoutDashboard
+                className={
+                  pathname === "/dashboard" ||
+                  pathname === "/generateur" ||
+                  pathname === "/signature" ||
+                  pathname === "/chatjuridique" ||
+                  pathname === "/calculateur" ||
+                  pathname === "/veille" ||
+                  pathname === "/conformite"
+                    ? "size-5"
+                    : ""
+                }
+              />
               Dashboard
             </Button>
           </Link>
@@ -177,7 +207,9 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
             >
-              <FileCheckIcon />
+              <FileCheckIcon
+                className={pathname === "/analyzer" ? "size-5" : ""}
+              />
               Analyse
             </Button>
           </Link>
@@ -187,6 +219,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             <Button
               variant="ghost"
               size="lg"
+              data-slot="icon"
               className={
                 pathname === "/sandbox"
                   ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
@@ -194,7 +227,9 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               }
               onClick={onNavClick}
             >
-              <ScatterChartIcon />
+              <ScatterChartIcon
+                className={pathname === "/sandbox" ? "size-5" : ""}
+              />
               Sandbox
             </Button>
           </Link>
@@ -211,7 +246,9 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               }
               onClick={onNavClick}
             >
-              <MonitorCheck />
+              <MonitorCheck
+                className={pathname === "/monitoring" ? "size-5" : ""}
+              />
               Monitoring
             </Button>
           </Link>
@@ -236,7 +273,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4 text-gray-400"
               >
                 <p>Pensez à compléter les informations manquantes dans : </p>
-                <Link to="/mon-compte" onClick={onNavClick}>
+                <Link to="/mon-compte" state={{ origin: "header-alert" }}>
                   <button className="font-semibold text-gray-100">{`Mon compte > Mon entreprise`}</button>
                 </Link>
               </DropdownMenuContent>
@@ -275,9 +312,9 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               ) : (
                 <DropdownMenuTrigger
                   render={
-                    <button className="hidden md:flex items-center gap-1 cursor-pointer text-sm font-medium text-gray-800">
+                    <button className="hidden md:flex items-center gap-1 cursor-pointer text-sm font-medium text-gray-800 line-clamp-1">
                       {userData?.profile.prenom
-                        ? `${userData.profile.prenom} ${userData.profile.nom.slice(0, 1)}.`
+                        ? `${userData.profile.prenom.slice(0, 6)} ${userData.profile.nom.slice(0, 1)}.`
                         : `${userData?.profile.nom.slice(0, 12)}.`}
                       <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                     </button>
@@ -288,16 +325,15 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               <DropdownMenuContent
                 sideOffset={14}
                 alignOffset={2}
-                className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4"
+                className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4 py-2 flex flex-col items-start gap-2"
               >
                 <button
                   onClick={handleUserLogout}
                   className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
                 >
-                  <LogOutIcon size={14} />
+                  <LogOutIcon size={16} />
                   Logout
                 </button>
-                <DropdownMenuSeparator className="bg-gray-400" />
                 <button
                   onClick={() => {
                     if (onNavClick?.() === false) return;
@@ -305,30 +341,94 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                   }}
                   className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
                 >
-                  <User size={14} />
+                  <User size={16} />
                   Mon compte
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/souscription");
+                  }}
+                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
+                >
+                  <HandCoinsIcon size={16} />
+                  Formules
                 </button>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </section>
       ) : (
-        <nav>
-          <Link to="/inscription">
-            <Button
-              variant="ghost"
-              size="lg"
-              className={
-                pathname === "/inscription"
-                  ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background"
-              }
-              onClick={onNavClick}
-            >
-              <LogInIcon />
-              Se connecter
-            </Button>
-          </Link>
+        <nav className="flex items-center gap-1 pr-2">
+          {isMobile ? (
+            <>
+              <Link to="/souscription">
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  className={
+                    pathname === "/souscription"
+                      ? " text-gray-500 tracking-wide font-semibold hover:cursor-default"
+                      : "text-gray-400 hover:bg-lumenjuris-background"
+                  }
+                >
+                  <HandCoinsIcon
+                    className={pathname === "/souscription" ? "size-6" : ""}
+                  />
+                </Button>
+              </Link>
+              <Link to="/inscription">
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  className={
+                    pathname === "/inscription"
+                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
+                      : "text-gray-400 hover:bg-lumenjuris-background"
+                  }
+                >
+                  <LogInIcon
+                    className={pathname === "/inscription" ? "size-6" : ""}
+                  />
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              {" "}
+              <Link to="/souscription">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className={
+                    pathname === "/souscription"
+                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
+                      : "text-gray-400 hover:bg-lumenjuris-background"
+                  }
+                >
+                  <HandCoinsIcon
+                    className={pathname === "/souscription" ? "size-5" : ""}
+                  />
+                  Tarifs
+                </Button>
+              </Link>
+              <Link to="/inscription">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className={
+                    pathname === "/inscription"
+                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
+                      : "text-gray-400 hover:bg-lumenjuris-background"
+                  }
+                >
+                  <LogInIcon
+                    className={pathname === "/inscription" ? "size-5" : ""}
+                  />
+                  Se connecter
+                </Button>
+              </Link>
+            </>
+          )}
         </nav>
       )}
     </div>

@@ -7,7 +7,7 @@ import { useUserStore } from "../store/userStore";
 import { Button } from "../components/ui/Button";
 
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 export function Inscription() {
   const [isLoginOnScreen, setIsLoginOnScreen] = useState(true);

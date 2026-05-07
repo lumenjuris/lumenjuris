@@ -17,9 +17,10 @@ import { fetchProxy } from "../utils/fetchProxy";
 export function useEnterpriseSettings(
   initialSettings: EnterpriseSettings = createEmptyEnterpriseSettings(),
 ) {
-  const [enterpriseSettings, setEnterpriseSettings] = useState<EnterpriseSettings>(
-    () => normalizeEnterpriseSettings(initialSettings),
-  );
+  const [enterpriseSettings, setEnterpriseSettings] =
+    useState<EnterpriseSettings>(() =>
+      normalizeEnterpriseSettings(initialSettings),
+    );
   const [enterpriseDraft, setEnterpriseDraft] = useState<EnterpriseSettings>(
     () => normalizeEnterpriseSettings(initialSettings),
   );
@@ -86,9 +87,9 @@ export function useEnterpriseSettings(
         selectedIdccKey: enterpriseDraft.selectedIdccKey,
       }),
     });
-    const payload = (await response.json().catch(() => null)) as
-      | ApiResponse<EnterpriseSettings>
-      | null;
+    const payload = (await response
+      .json()
+      .catch(() => null)) as ApiResponse<EnterpriseSettings> | null;
 
     if (!response.ok || !payload?.success) {
       throw new Error(
@@ -167,9 +168,9 @@ export function useEnterpriseSettings(
           signal: abortController.signal,
         },
       );
-      const payload = (await response.json().catch(() => null)) as
-        | InseePreviewResponse
-        | null;
+      const payload = (await response
+        .json()
+        .catch(() => null)) as InseePreviewResponse | null;
 
       if (!response.ok || !payload?.success || !payload.data) {
         setInseePrefillError(

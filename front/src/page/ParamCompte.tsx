@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { SETTINGS_TABS } from "../config/paramSettings";
 import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
 import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
@@ -37,7 +37,18 @@ const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
 };
 
 export function ParamCompte() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const state = location.state as {
+      tab?: SettingsTab;
+      origin?: string;
+    } | null;
+    if (state?.tab) return state.tab;
+    if (state?.origin === "header-alert") return "enterprise";
+    return "account";
+  });
   const [panelMinHeight, setPanelMinHeight] = useState<number | null>(null);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>(
     EMPTY_ACCOUNT_PROFILE,
@@ -56,8 +67,14 @@ export function ParamCompte() {
   const [enterpriseUpdateError, setEnterpriseUpdateError] = useState(false);
   const [enterpriseInitialSettings, setEnterpriseInitialSettings] =
     useState<EnterpriseSettings>(createEmptyEnterpriseSettings());
-
   const enterprise = useEnterpriseSettings(enterpriseInitialSettings);
+
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const accountMeasureRef = useRef<HTMLElement>(null);
   const enterpriseMeasureRef = useRef<HTMLElement>(null);
@@ -184,6 +201,17 @@ export function ParamCompte() {
       ...current,
       [field]: value,
     }));
+  };
+
+  const handleCancelProfileEdit = () => {
+    if (!userData) return;
+    setAccountProfile({
+      prenom: userData.profile.prenom ?? "",
+      nom: userData.profile.nom ?? "",
+      email: userData.profile.email,
+      isVerified: userData.profile.isVerified,
+      cgu: false,
+    });
   };
 
   const persistAccountSettings = async ({
@@ -428,6 +456,7 @@ export function ParamCompte() {
       provider={accountProvider}
       isTwoFactorEnabled={isTwoFactorEnabled}
       onProfileFieldChange={handleProfileFieldChange}
+      onCancelProfileEdit={handleCancelProfileEdit}
       onUpdateProfileClick={() => setActiveConfirmationModal("profile_update")}
       profileUpdateSuccess={profileUpdateSuccess}
       onProfileUpdateSuccessClose={() => setProfileUpdateSuccess(false)}

@@ -6,7 +6,7 @@ import type {
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/InputGroup";
-import { SettingsField } from "../ui/SettingsField";
+import { SettingsDisplayField, SettingsField } from "../ui/SettingsField";
 import { SettingsToggleRow } from "../ui/SettingsToggleRow";
 import {
   Dialog,
@@ -20,8 +20,8 @@ import {
 import { Field, FieldLabel, FieldError } from "../ui/Field";
 import { EyeOffIcon, EyeIcon } from "lucide-react";
 import { AlertBanner } from "../common/AlertBanner";
+import { useState, useRef, useEffect } from "react";
 
-import { useState, useRef } from "react";
 import { fetchProxy } from "../../utils/fetchProxy";
 
 
@@ -44,6 +44,7 @@ type AccountSettingsPanelProps = {
   onProfileUpdateErrorClose: () => void;
   onPasswordChange: (value: string) => void;
   onPasswordBlur: () => void;
+  onCancelProfileEdit: () => void;
   onTwoFactorCheckedChange: (checked: boolean) => void;
   onPasswordAdded: () => void;
   onExportDataClick: () => void;
@@ -62,6 +63,7 @@ export function AccountSettingsPanel({
   onProfileUpdateSuccessClose,
   profileUpdateError,
   onProfileUpdateErrorClose,
+  onCancelProfileEdit,
   onTwoFactorCheckedChange,
   onPasswordAdded,
   onExportDataClick,
@@ -80,6 +82,11 @@ export function AccountSettingsPanel({
   const [serverErrorMessage, setServerErrorMessage] = useState("");
   const [passwordDialogMode, setPasswordDialogMode] =
     useState<PasswordDialogMode>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  useEffect(() => {
+    if (profileUpdateSuccess) setIsEditingProfile(false);
+  }, [profileUpdateSuccess]);
 
   const googleConnectionPanelMode =
     provider?.provider === "GOOGLE"
@@ -222,49 +229,81 @@ export function AccountSettingsPanel({
           />
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <SettingsField label="Prénom">
-            <Input
-              value={profile.prenom}
-              onChange={(event) =>
-                onProfileFieldChange("prenom", event.target.value)
-              }
-            />
-          </SettingsField>
-          <SettingsField label="Nom">
-            <Input
-              value={profile.nom}
-              onChange={(event) =>
-                onProfileFieldChange("nom", event.target.value)
-              }
-            />
-          </SettingsField>
-          <SettingsField label="Email">
-            <Input
-              type="email"
-              value={profile.email}
-              onChange={(event) =>
-                onProfileFieldChange("email", event.target.value)
-              }
-            />
-          </SettingsField>
-        </div>
-
-        <section className="flex flex-wrap gap-2">
-          <Button
-            onClick={onUpdateProfileClick}
-            className="bg-lumenjuris text-white"
-          >
-            Mettre à jour mon profile
-          </Button>
-          <Button
-            variant="outline"
-            className="hover:bg-gray-100"
-            onClick={() => setPasswordDialogMode("change")}
-          >
-            Changer mon mot de passe
-          </Button>
-        </section>
+        {isEditingProfile ? (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <SettingsField label="Prénom">
+                <Input
+                  value={profile.prenom}
+                  onChange={(event) =>
+                    onProfileFieldChange("prenom", event.target.value)
+                  }
+                />
+              </SettingsField>
+              <SettingsField label="Nom">
+                <Input
+                  value={profile.nom}
+                  onChange={(event) =>
+                    onProfileFieldChange("nom", event.target.value)
+                  }
+                />
+              </SettingsField>
+              <SettingsField label="Email">
+                <Input
+                  type="email"
+                  value={profile.email}
+                  onChange={(event) =>
+                    onProfileFieldChange("email", event.target.value)
+                  }
+                />
+              </SettingsField>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onCancelProfileEdit();
+                  setIsEditingProfile(false);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={onUpdateProfileClick}
+                className="bg-lumenjuris text-white hover:bg-lumenjuris/90"
+              >
+                Enregistrer
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <SettingsDisplayField label="Prénom" value={profile.prenom} />
+              <SettingsDisplayField label="Nom" value={profile.nom} />
+              <SettingsDisplayField label="Email" value={profile.email} />
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="hover:bg-gray-100"
+                onClick={() => setPasswordDialogMode("change")}
+              >
+                Changer mon mot de passe
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setIsEditingProfile(true)}
+                className="bg-lumenjuris text-white hover:bg-lumenjuris/90"
+              >
+                Mettre à jour mon profil
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* Dialog partagé — "Changer" ou "Ajouter" un mot de passe */}
         <Dialog

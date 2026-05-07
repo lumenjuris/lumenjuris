@@ -11,7 +11,7 @@ import { TwoFactorCodeModal } from "../ui/TwoFactorCodeModal";
 import { useUserStore } from "../../store/userStore";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 
 
 import { fetchProxy } from "../../utils/fetchProxy";
@@ -50,6 +50,8 @@ const LoginForm = ({
 
   const navigate = useNavigate();
   const { fetchUser } = useUserStore();
+  const location = useLocation();
+  const locationState = location.state as { plan?: object } | null;
 
   useEffect(() => {
     setForgotPassword(false);
@@ -95,7 +97,11 @@ const LoginForm = ({
       }
 
       await fetchUser();
-      navigate("/dashboard");
+      locationState?.plan
+        ? navigate("/souscription", {
+            state: { plan: locationState?.plan || null },
+          })
+        : navigate("/dashboard");
     } catch (error) {
       setServerError(true);
       setSubmitLoading(false);
@@ -130,7 +136,7 @@ const LoginForm = ({
   };
 
   const handleSubmitGoogle = () => {
-    window.location.href = "http://localhost:3020/auth/google";
+    window.location.href = "/api/google";
   };
 
   const handleSubmitForgotPassword = async (

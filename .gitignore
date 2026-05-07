@@ -18,7 +18,6 @@ front/.env.production
 front/dist/
 
 
-
 #backend nodeJS
 backNode/.env
 backNode/.env.production

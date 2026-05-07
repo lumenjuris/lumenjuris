@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from "react";
+import { useState } from "react";
 import { ArrowLeft, Lock, Scale } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { SettingsTab, SettingsTabItem } from "../../types/paramSettings";
@@ -38,6 +39,7 @@ export function ParamLayout({
   preferenceMeasurePanel,
   preferenceSubscriptionPanel,
 }: ParamLayoutProps) {
+
   return (
     <>
       {" "}

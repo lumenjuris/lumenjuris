@@ -16,6 +16,7 @@ import { Inscription } from "./page/Inscription";
 import { Sandbox } from "./page/Sandbox";
 import { ParamCompte } from "./page/ParamCompte";
 import { Monitoring } from "./page/Monitoring";
+import { Subscription } from "./page/Subscription";
 
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
@@ -44,6 +45,7 @@ export function App() {
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/souscription" element={<Subscription />} />
       </Routes>
     </>
   );

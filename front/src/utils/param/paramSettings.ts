@@ -66,14 +66,14 @@ export function getSelectedConventionLabel(enterprise: EnterpriseSettings) {
 export function hasEnterpriseDisplayData(enterprise: EnterpriseSettings) {
   return Boolean(
     enterprise.name?.trim() ||
-      enterprise.siren?.trim() ||
-      enterprise.codeNaf?.trim() ||
-      enterprise.intituleNaf?.trim() ||
-      enterprise.statusJuridiqueCode?.trim() ||
-      enterprise.statusJuridique?.trim() ||
-      enterprise.address?.address?.trim() ||
-      enterprise.address?.codePostal?.trim() ||
-      enterprise.address?.pays?.trim(),
+    enterprise.siren?.trim() ||
+    enterprise.codeNaf?.trim() ||
+    enterprise.intituleNaf?.trim() ||
+    enterprise.statusJuridiqueCode?.trim() ||
+    enterprise.statusJuridique?.trim() ||
+    enterprise.address?.address?.trim() ||
+    enterprise.address?.codePostal?.trim() ||
+    enterprise.address?.pays?.trim(),
   );
 }
 

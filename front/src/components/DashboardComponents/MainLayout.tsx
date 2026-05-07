@@ -10,7 +10,6 @@ import {
   Newspaper,
   Lock,
   Scale,
-  Search,
   PanelLeft,
 } from "lucide-react";
 
