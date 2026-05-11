@@ -87,22 +87,16 @@ routerUser.post("/create", async (req: Request, res: Response) => {
     const { idUser } = createdUser.data;
     const token = await new Token().createToken(idUser, "verifyAccount");
     const url = `${process.env.HOST}/user/verify/${token.token}`;
-    const mailer = await new Mailer(email).sendVerifyAccount(
-      url,
-      `${prenom} ${nom}`,
-    );
 
-    // Le signup n'appelle plus INSEE côté serveur.
-    // Si le front a déjà présenté puis validé un profil entreprise, il peut l'envoyer tel quel ici.
-    const enterpriseSave =
-      enterprise && typeof enterprise === "object" && !Array.isArray(enterprise)
-        ? await new Enterprise().updateByUser(idUser, enterprise)
-        : null;
+    if (enterprise && typeof enterprise === "object" && !Array.isArray(enterprise)) {
+      await new Enterprise().updateByUser(idUser, enterprise);
+    }
+
+    const mailer = await new Mailer(email).sendVerifyAccount(url, `${prenom} ${nom}`);
 
     return res.status(200).json({
       success: mailer.success,
       message: mailer.message,
-      enterpriseSave,
     });
   } catch (err) {
     console.error(

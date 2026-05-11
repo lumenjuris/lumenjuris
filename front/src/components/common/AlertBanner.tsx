@@ -45,6 +45,7 @@ export function AlertBanner({ variant, title, detail, duration = 5000, accent = 
   useEffect(() => { onCloseRef.current = onClose; });
 
   useEffect(() => {
+    if (!duration) return;
     const start = Date.now();
     let raf: number;
     const tick = () => {
@@ -75,9 +76,11 @@ export function AlertBanner({ variant, title, detail, duration = 5000, accent = 
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="h-0.5 bg-black/10">
-        <div className={`h-full ${cfg.bar}`} style={{ width: `${progress}%` }} />
-      </div>
+      {!!duration && (
+        <div className="h-0.5 bg-black/10">
+          <div className={`h-full ${cfg.bar}`} style={{ width: `${progress}%` }} />
+        </div>
+      )}
     </div>
   );
 }
