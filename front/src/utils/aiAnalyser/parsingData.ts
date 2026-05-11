@@ -71,23 +71,3 @@ function mapTypeToCategory(type: string): 'termination' | 'penalty' | 'responsib
 
     return 'other';
 }
-/**
- * 📊 Calcul du profil de risque
- */
-export function calculateRiskProfile(clauses: ClauseRisk[]): {
-    overall: 'low' | 'medium' | 'high';
-    distribution: { high: number; medium: number; low: number };
-} {
-    const distribution = {
-        high: clauses.filter(c => c.riskScore >= 4).length,
-        medium: clauses.filter(c => c.riskScore === 3).length,
-        low: clauses.filter(c => c.riskScore < 3).length
-    };
-    const avgRisk = clauses.length > 0 ? clauses.reduce((sum, c) => sum + c.riskScore, 0) / clauses.length : 0;
-
-    let overall: 'low' | 'medium' | 'high' = 'low';
-    if (avgRisk >= 3.5 || distribution.high > 2) overall = 'high';
-    else if (avgRisk >= 2.5 || distribution.high > 0 || distribution.medium > 1) overall = 'medium';
-
-    return { overall, distribution };
-}

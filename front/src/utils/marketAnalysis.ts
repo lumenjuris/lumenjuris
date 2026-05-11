@@ -3,7 +3,6 @@
    ------------------------------------------------------------------ */
 
 import { ClauseRisk } from '../types';
-import { logCost } from './costEstimator';
 import { callOpenAI } from './aiClient';
 
 export interface MissingClause {

@@ -45,8 +45,6 @@ export const useRecoStore = create<RecoState>()(
               benefits = '',
               risk = '';
             try {
-              const ctrl = new AbortController();
-              const timeout = setTimeout(() => ctrl.abort(), 10000);
               const prompt =
                 `Améliore cette clause pour réduire les risques.\nClause:\n"""${cl.content}"""\n` +
                 `Réponds JSON: {"clause":"...", "benefits":"...", "risk":"..."}`;
@@ -54,7 +52,7 @@ export const useRecoStore = create<RecoState>()(
                 [{ role: 'user', content: prompt }],
                 { model: 'gpt-4o', temperature: 0.2 }
               );
-              clearTimeout(timeout);
+
               const obj = JSON.parse(txt);
               altTxt = obj.clause;
               benefits = obj.benefits;
