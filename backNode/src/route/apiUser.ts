@@ -12,6 +12,36 @@ import { Enterprise } from "../services/classEnterprise";
 
 const routerUser: Router = express.Router();
 
+type TokenValidationResult =
+  | { valid: true; tokenEntry: { idToken: number; userId: number; token: string; type: string; status: string; expiresAt: Date } }
+  | { valid: false; reason: "invalid" | "already-used" | "expired" };
+
+async function validateToken(token: string, expectedType?: string): Promise<TokenValidationResult> {
+  const tokenEntry = await prisma.token.findUnique({ where: { token } });
+
+   // Token introuvable
+  if (!tokenEntry || (expectedType && tokenEntry.type !== expectedType)) {
+    return { valid: false, reason: "invalid" };
+  }
+
+  // Token déjà utilisé
+  if (tokenEntry.status === "USED") {
+    return { valid: false, reason: "already-used" };
+  }
+
+  // Token expiré
+  if (tokenEntry.expiresAt < new Date()) {
+    await prisma.token.update({ where: { token }, data: { status: "EXPIRED" } });
+    return { valid: false, reason: "expired" };
+  }
+
+  // Etat inconnu (failback)
+  if (tokenEntry.status !== "ACTIVE") {
+    return { valid: false, reason: "invalid" };
+  }
+  return { valid: true, tokenEntry };
+}
+
 function normalizePreferenceUI(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return {
@@ -92,44 +122,12 @@ routerUser.get(
     try {
       const { token } = req.params;
 
-      const tokenEntry = await prisma.token.findUnique({
-        where: { token },
-        include: { user: true },
-      });
-
-      // Token introuvable
-      if (!tokenEntry) {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=invalid`,
-        );
+      const result = await validateToken(token);
+      if (!result.valid) {
+        return res.redirect(`${process.env.HOST_FRONT}/verify-account?reason=${result.reason}`);
       }
 
-      // Token déjà utilisé
-      if (tokenEntry.status === "USED") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
-        );
-      }
-
-      // Token expiré
-      if (tokenEntry.expiresAt < new Date()) {
-        await prisma.token.update({
-          where: { token },
-          data: { status: "EXPIRED" },
-        });
-
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=expired`,
-        );
-      }
-
-      if (tokenEntry.status !== "ACTIVE") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
-        );
-      }
-
-      const idUser = tokenEntry.userId;
+      const idUser = result.tokenEntry.userId;
 
       const updatedUser = await prisma.user.update({
         where: { idUser },
@@ -632,41 +630,12 @@ routerUser.get(
     try {
       const { token } = req.params;
 
-      const tokenEntry = await prisma.token.findUnique({
-        where: { token },
-      });
-
-      if (!tokenEntry || tokenEntry.type !== "forgotPassword") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=invalid`,
-        );
+      const result = await validateToken(token, "forgotPassword");
+      if (!result.valid) {
+        return res.redirect(`${process.env.HOST_FRONT}/reset-password?reason=${result.reason}`);
       }
 
-      if (tokenEntry.status === "USED") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=already-used`,
-        );
-      }
-
-      if (tokenEntry.expiresAt < new Date()) {
-        await prisma.token.update({
-          where: { token },
-          data: { status: "EXPIRED" },
-        });
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=expired`,
-        );
-      }
-
-      if (tokenEntry.status !== "ACTIVE") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=already-used`,
-        );
-      }
-
-      return res.redirect(
-        `${process.env.HOST_FRONT}/reset-password?token=${token}`,
-      );
+      return res.redirect(`${process.env.HOST_FRONT}/reset-password?token=${token}`);
     } catch (err) {
       console.error(
         "Erreur lors de la validation du token reset password:",
@@ -691,43 +660,17 @@ routerUser.post("/updatepassword", async (req: Request, res: Response) => {
       });
     }
 
-    const tokenEntry = await prisma.token.findUnique({
-      where: { token },
-    });
-
-    if (!tokenEntry || tokenEntry.type !== "forgotPassword") {
-      return res.status(400).json({
-        success: false,
-        message: "Token invalide.",
-      });
+    const result = await validateToken(token, "forgotPassword");
+    if (!result.valid) {
+      const messages = {
+        "invalid": "Token invalide.",
+        "already-used": "Ce lien a déjà été utilisé.",
+        "expired": "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
+      };
+      return res.status(400).json({ success: false, message: messages[result.reason] });
     }
 
-    if (tokenEntry.status === "USED") {
-      return res.status(400).json({
-        success: false,
-        message: "Ce lien a déjà été utilisé.",
-      });
-    }
-
-    if (tokenEntry.expiresAt < new Date()) {
-      await prisma.token.update({
-        where: { token },
-        data: { status: "EXPIRED" },
-      });
-      return res.status(400).json({
-        success: false,
-        message: "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
-      });
-    }
-
-    if (tokenEntry.status !== "ACTIVE") {
-      return res.status(400).json({
-        success: false,
-        message: "Token invalide ou déjà utilisé.",
-      });
-    }
-
-    const updated = await new User().update(tokenEntry.userId, { password });
+    const updated = await new User().update(result.tokenEntry.userId, { password });
 
     if (!updated.success) {
       return res.status(500).json({

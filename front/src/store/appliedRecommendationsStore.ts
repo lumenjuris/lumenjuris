@@ -29,6 +29,23 @@ interface AppliedRecommendationsState {
   generatePDFDocument: (originalContent?: string, fileName?: string) => void;
 }
 
+// Applique chaque recommandation au contenu via regex tolérante aux espaces multiples/retours ligne.
+// Fallback sur remplacement simple si la regex ne matche pas (cas exact unique).
+function applyRecommendationsToContent(original: string, recommendations: AppliedRecommendation[]): string {
+  return recommendations.reduce((content, applied) => {
+    const originalClauseText = applied.originalClause.content;
+    const newClauseText = applied.recommendation.clauseText;
+    if (!originalClauseText) return content;
+    const escaped = originalClauseText
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s+');
+    const re = new RegExp(escaped, 'g');
+    return re.test(content)
+      ? content.replace(re, newClauseText)
+      : content.replace(originalClauseText, newClauseText);
+  }, original);
+}
+
 export const useAppliedRecommendationsStore = create<AppliedRecommendationsState>()(
   (set, get) => ({
       appliedRecommendations: [],
@@ -115,25 +132,7 @@ export const useAppliedRecommendationsStore = create<AppliedRecommendationsState
 
           if (originalContent && appliedRecommendations.length > 0) {
             // Générer le document modifié avec les recommandations appliquées
-            let modifiedContent = originalContent;
-
-            // Appliquer chaque recommandation (remplacements robustes)
-            appliedRecommendations.forEach((applied) => {
-              const originalClauseText = applied.originalClause.content;
-              const newClauseText = applied.recommendation.clauseText;
-              if (!originalClauseText) return;
-              // Créer une regex tolérante aux espaces multiples et retours ligne
-              const escaped = originalClauseText
-                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                .replace(/\s+/g, '\\s+');
-              const re = new RegExp(escaped, 'g');
-              if (re.test(modifiedContent)) {
-                modifiedContent = modifiedContent.replace(re, newClauseText);
-              } else {
-                // Fallback: remplacement simple (cas exact unique)
-                modifiedContent = modifiedContent.replace(originalClauseText, newClauseText);
-              }
-            });
+            const modifiedContent = applyRecommendationsToContent(originalContent, appliedRecommendations);
 
             // Créer le document Word
             const doc = new Document({
@@ -316,16 +315,10 @@ export const useAppliedRecommendationsStore = create<AppliedRecommendationsState
           }
         } catch (error) {
           console.error('Erreur lors de la génération du document Word:', error);
-          // Fallback vers un fichier texte simple
-          const appliedRecommendations = get().appliedRecommendations;
           let content = `DOCUMENT MODIFIÉ AVEC RECOMMANDATIONS APPLIQUÉES\n\n`;
 
           if (originalContent && appliedRecommendations.length > 0) {
-            let modifiedContent = originalContent;
-            appliedRecommendations.forEach((applied) => {
-              modifiedContent = modifiedContent.replace(applied.originalClause.content, applied.recommendation.clauseText);
-            });
-            content += modifiedContent;
+            content += applyRecommendationsToContent(originalContent, appliedRecommendations);
           } else {
             content += 'Aucune recommandation appliquée';
           }
@@ -353,24 +346,8 @@ export const useAppliedRecommendationsStore = create<AppliedRecommendationsState
           const maxWidth = pageWidth - margin * 2;
 
           if (originalContent && appliedRecommendations.length > 0) {
-            // Générer le PDF du document modifié
-            let modifiedContent = originalContent;
-
-            // Appliquer chaque recommandation
-            appliedRecommendations.forEach((applied) => {
-              const originalClauseText = applied.originalClause.content;
-              const newClauseText = applied.recommendation.clauseText;
-              if (!originalClauseText) return;
-              const escaped = originalClauseText
-                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                .replace(/\s+/g, '\\s+');
-              const re = new RegExp(escaped, 'g');
-              if (re.test(modifiedContent)) {
-                modifiedContent = modifiedContent.replace(re, newClauseText);
-              } else {
-                modifiedContent = modifiedContent.replace(originalClauseText, newClauseText);
-              }
-            });
+            // Générer le PDF du document modifié avec les recommandations appliquées
+            const modifiedContent = applyRecommendationsToContent(originalContent, appliedRecommendations);
 
             // En-tête
             doc.setFontSize(16);
