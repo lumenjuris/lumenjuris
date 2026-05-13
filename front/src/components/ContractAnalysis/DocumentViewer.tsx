@@ -60,6 +60,9 @@ interface DocumentViewerProps {
   setRecommendationIndex: (number: number) => void;
   activeClauseId: string | null;
   isFullscreen?: boolean;
+  onSuggestedClauses?: () => void;
+  onReanalyze?: () => void;
+  isLoadingSuggested?: boolean;
 }
 
 export interface DocumentViewerRef {
@@ -81,6 +84,9 @@ export const DocumentViewer = forwardRef<
       setRecommendationIndex: _setRecommendationIndex,
       activeClauseId,
       isFullscreen = false,
+      onSuggestedClauses,
+      onReanalyze,
+      isLoadingSuggested = false,
     },
     ref,
   ) => {
@@ -331,6 +337,9 @@ export const DocumentViewer = forwardRef<
               onClauseClick={handleSidebarClauseClick}
               isVisible={true}
               recommandationApplied={patches}
+              onSuggestedClauses={onSuggestedClauses}
+              onReanalyze={onReanalyze}
+              isLoadingSuggested={isLoadingSuggested}
             />
           </div>
         )}

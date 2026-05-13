@@ -815,12 +815,6 @@ export default function ContractAnalysis() {
     }
   };
 
-  const handleQuestionClick = (question: string) => {
-    // This function is now a placeholder, as the chat is in the modal.
-    // You could use it to open the modal and pre-fill the chat with a question.
-    console.log("Question clicked:", question);
-  };
-
   const handleNavClick = (event?: React.MouseEvent<HTMLElement>) => {
     if (!confirmLeavingUnfinishedAnalysis()) {
       event?.preventDefault();
@@ -1127,6 +1121,9 @@ export default function ContractAnalysis() {
                       activeClauseId={selectedClause}
                       isFullscreen={sidebarCollapsed}
                       ref={documentViewerRef}
+                      onSuggestedClauses={handleMarketAnalysisClick}
+                      onReanalyze={() => {}}
+                      isLoadingSuggested={isMarketAnalysisLoading}
                     />
                   </div>
                 </div>
@@ -1136,11 +1133,7 @@ export default function ContractAnalysis() {
                   <ActionButtons
                     onNewAnalysis={handleNewAnalysis}
                     onShareReport={handleShareReport}
-                    onMarketAnalysis={handleMarketAnalysisClick}
-                    isMarketAnalysisLoading={isMarketAnalysisLoading}
                     isProcessed={Boolean(contract?.processed)}
-                    analysisResult={marketAnalysis}
-                    onQuestionClick={handleQuestionClick}
                   />
                 </div>
               </div>
@@ -1159,13 +1152,13 @@ export default function ContractAnalysis() {
         />
       )}
 
-      {/* Analyse comparative de marché */}
-      {showMarketAnalysis && marketAnalysis && currentAnalysisContext && (
+      {/* Clauses suggérées */}
+      {showMarketAnalysis && marketAnalysis && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">
-                📊 Analyse Comparative & Standards
+                Clauses Suggérées
               </h2>
               <button
                 onClick={() => setShowMarketAnalysis(false)}
@@ -1178,13 +1171,12 @@ export default function ContractAnalysis() {
               <Suspense
                 fallback={
                   <div className="p-6 text-center text-sm text-gray-500">
-                    Chargement de l'analyse comparative...
+                    Chargement des clauses suggérées...
                   </div>
                 }
               >
                 <MarketComparison
                   analysisResult={marketAnalysis}
-                  onQuestionClick={handleQuestionClick}
                   isLoading={isMarketAnalysisLoading}
                 />
               </Suspense>
