@@ -261,7 +261,8 @@ export default function ContractAnalysis() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data?.credits) {
-          setAnalyseCredit(data.data.credits.creditAnalyse ?? null);
+          const { creditIncluded = 0, creditAdded = 0 } = data.data.credits;
+          setAnalyseCredit(creditIncluded + creditAdded);
         } else {
           setAnalyseCredit(null);
         }
@@ -492,7 +493,7 @@ export default function ContractAnalysis() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ removeAnalyzeCredit: 100 }),
+          body: JSON.stringify({ removeCredit: 100 }),
         }).catch(console.error);
       }
     } catch (error) {

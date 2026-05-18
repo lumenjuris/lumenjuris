@@ -14,27 +14,12 @@ import { fetchProxy } from "../../utils/fetchProxy";
 import { CreditsPanel } from "../SubscriptionComponents/CreditsPanel";
 import { formatPrice } from "../../utils/format/formatPrice";
 import { formatDate } from "../../utils/format/formatDate";
-
-type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "PENDING";
-export type BillingInterval = "month" | "year";
-
-export type SubscriptionData = {
-  status: SubscriptionStatus;
-  planName: string;
-  price: number;
-  interval: BillingInterval;
-  startAt: string;
-  expiresAt: string;
-};
-
-export type CreditsData = {
-  creditAnalyse: number;
-  creditSignature: number;
-  creditGenerationDoc: number;
-  totalAnalyse: number;
-  totalSignature: number;
-  totalGenerationDoc: number;
-};
+import { CreditBar } from "../common/CreditBar";
+import type {
+  SubscriptionData,
+  SubscriptionStatus,
+} from "../../types/subscriptionData";
+import type { CreditsData } from "../../types/creditsData";
 
 const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   ACTIVE: "Actif",
@@ -42,39 +27,6 @@ const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   EXPIRED: "Expiré",
   PENDING: "En attente",
 };
-
-function CreditBar({
-  label,
-  used,
-  total,
-}: {
-  label: string;
-  used: number;
-  total: number;
-}) {
-  const remaining = Math.max(0, total - used);
-  const pct = total > 0 ? Math.round((remaining / total) * 100) : 0;
-  const isLow = pct <= 20;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span
-          className={isLow ? "font-semibold text-red-600" : "text-gray-500"}
-        >
-          {remaining}
-        </span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-        <div
-          className={`h-full rounded-full transition-all ${isLow ? "bg-red-500" : "bg-lumenjuris"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
 
 export function SubscriptionSettingsPanel() {
   const navigate = useNavigate();
@@ -235,20 +187,17 @@ export function SubscriptionSettingsPanel() {
 
           <div className="space-y-3">
             <CreditBar
-              label="Analyses"
-              used={credits.totalAnalyse - credits.creditAnalyse}
-              total={credits.totalAnalyse}
+              label="Crédits inclus"
+              used={credits.totalIncluded - credits.creditIncluded}
+              total={credits.totalIncluded}
             />
-            <CreditBar
-              label="Signatures"
-              used={credits.totalSignature - credits.creditSignature}
-              total={credits.totalSignature}
-            />
-            <CreditBar
-              label="Génération de documents"
-              used={credits.totalGenerationDoc - credits.creditGenerationDoc}
-              total={credits.totalGenerationDoc}
-            />
+            {credits.creditAdded > 0 && (
+              <CreditBar
+                label="Crédits achetés"
+                used={0}
+                total={credits.creditAdded}
+              />
+            )}
           </div>
         </div>
       )}

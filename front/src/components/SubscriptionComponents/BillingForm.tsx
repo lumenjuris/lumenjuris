@@ -11,6 +11,8 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Label } from "../ui/Label";
 import { formatPrice } from "../../utils/format/formatPrice";
+import type { BillingInterval } from "../../types/subscriptionData";
+import type { CreditsPayload } from "../../types/creditsData";
 
 const PROXY_URL: string =
   import.meta.env.VITE_URL_PROXY || "http://localhost:3000";
@@ -27,20 +29,16 @@ const CARD_ELEMENT_OPTIONS = {
   },
 };
 
-type BillingInterval = "month" | "year";
-
-export type CreditsPayload = {
-  addAnalyzeCredit?: number;
-  addSignatureCredit?: number;
-  addGenerationCredit?: number;
-};
-
 type BillingFormProps = {
   planName: string;
   price: number;
   interval?: BillingInterval;
   onBack: () => void;
-  onSuccess: (planName: string, interval: BillingInterval, price: number) => void;
+  onSuccess: (
+    planName: string,
+    interval: BillingInterval,
+    price: number,
+  ) => void;
   onError?: () => void;
   mode?: "plan" | "credits";
   creditsPayload?: CreditsPayload;
@@ -91,9 +89,7 @@ async function addCreditsToAccount(payload: CreditsPayload): Promise<void> {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
-  }).catch((err) =>
-    console.error("Erreur lors de l'ajout des crédits:", err),
-  );
+  }).catch((err) => console.error("Erreur lors de l'ajout des crédits:", err));
 }
 
 export function BillingForm({
@@ -114,7 +110,8 @@ export function BillingForm({
 
   const isCreditsMode = mode === "credits";
   const annualPrice = price * 12;
-  const paymentAmount = !isCreditsMode && interval === "year" ? annualPrice : price;
+  const paymentAmount =
+    !isCreditsMode && interval === "year" ? annualPrice : price;
 
   const priceLabel = isCreditsMode
     ? `${formatPrice(price)} — paiement unique`

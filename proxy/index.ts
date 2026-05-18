@@ -314,6 +314,10 @@ function handleBillingRemoveCredits(req: Request, res: Response): void {
   relayToNode(req, res, "/billing/remove-credits");
 }
 
+function handleBillingCredits(req: Request, res: Response): void {
+  relayToNode(req, res, "/billing/credits");
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post("/extract-pdf-text", handleExtractPdfText);
 
@@ -368,6 +372,7 @@ app.post("/api/billing/subscription", handleBillingSubscription);
 app.get("/api/billing/subscription", handleBillingSubscription);
 app.put("/api/billing/add-credits", handleBillingAddCredits);
 app.put("/api/billing/remove-credits", handleBillingRemoveCredits);
+app.get("/api/billing/credits", handleBillingCredits);
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

@@ -5,31 +5,9 @@ import { BillingStripePanel } from "./BillingStripePanel";
 import { AlertBanner } from "../common/AlertBanner";
 import { formatPrice } from "../../utils/format/formatPrice";
 
-const CREDIT_TYPES = [
-  {
-    key: "analyse" as const,
-    label: "Analyses de contrat",
-    blockSize: 100,
-    pricePerBlock: 500,
-    unit: "crédits",
-  },
-  {
-    key: "signature" as const,
-    label: "Signatures électroniques",
-    blockSize: 5,
-    pricePerBlock: 300,
-    unit: "crédits",
-  },
-  {
-    key: "generation" as const,
-    label: "Génération de documents",
-    blockSize: 5,
-    pricePerBlock: 300,
-    unit: "crédits",
-  },
-] as const;
+const BLOCK_SIZE = 100;
+const PRICE_PER_BLOCK = 500;
 
-type CreditKey = (typeof CREDIT_TYPES)[number]["key"];
 type View = "select" | "pay" | "result";
 type PaymentResult = "success" | "error";
 
@@ -43,51 +21,17 @@ export function CreditsPanel({ onSuccess, onClose }: CreditsPanelProps) {
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(
     null,
   );
-  const [blocks, setBlocks] = useState<Record<CreditKey, number>>({
-    analyse: 0,
-    signature: 0,
-    generation: 0,
-  });
+  const [blocks, setBlocks] = useState(0);
 
-  const increment = (key: CreditKey) =>
-    setBlocks((prev) => ({ ...prev, [key]: prev[key] + 1 }));
+  const increment = () => setBlocks((prev) => prev + 1);
+  const decrement = () => setBlocks((prev) => Math.max(0, prev - 1));
 
-  const decrement = (key: CreditKey) =>
-    setBlocks((prev) => ({ ...prev, [key]: Math.max(0, prev[key] - 1) }));
+  const totalCredits = blocks * BLOCK_SIZE;
+  const totalPrice = blocks * PRICE_PER_BLOCK;
+  const isEmpty = blocks === 0;
 
-  const totalPrice = CREDIT_TYPES.reduce(
-    (sum, creditType) =>
-      sum + blocks[creditType.key] * creditType.pricePerBlock,
-    0,
-  );
-
-  const isEmpty = totalPrice === 0;
-
-  const creditsPayload = {
-    addAnalyzeCredit:
-      blocks.analyse > 0
-        ? blocks.analyse * CREDIT_TYPES[0].blockSize
-        : undefined,
-    addSignatureCredit:
-      blocks.signature > 0
-        ? blocks.signature * CREDIT_TYPES[1].blockSize
-        : undefined,
-    addGenerationCredit:
-      blocks.generation > 0
-        ? blocks.generation * CREDIT_TYPES[2].blockSize
-        : undefined,
-  };
-
-  const planLabel = [
-    blocks.analyse > 0 &&
-      `${blocks.analyse * CREDIT_TYPES[0].blockSize} analyses`,
-    blocks.signature > 0 &&
-      `${blocks.signature * CREDIT_TYPES[1].blockSize} signatures`,
-    blocks.generation > 0 &&
-      `${blocks.generation * CREDIT_TYPES[2].blockSize} générations`,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const creditsPayload = { addCredit: totalCredits };
+  const planLabel = `${totalCredits} crédits`;
 
   const handlePaymentSuccess = () => {
     setPaymentResult("success");
@@ -140,44 +84,38 @@ export function CreditsPanel({ onSuccess, onClose }: CreditsPanelProps) {
         Sélectionnez le nombre de crédits à ajouter.
       </p>
 
-      <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-        {CREDIT_TYPES.map((type) => (
-          <div
-            key={type.key}
-            className="flex items-center justify-between px-4 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-800">{type.label}</p>
-              <p className="text-xs text-gray-400">
-                +{type.blockSize} {type.unit} / ajout —{" "}
-                {formatPrice(type.pricePerBlock)} / ajout
-              </p>
-            </div>
-
-            <div className="ml-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => decrement(type.key)}
-                disabled={blocks[type.key] === 0}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-
-              <span className="w-6 text-center text-sm font-semibold text-gray-900 tabular-nums">
-                {blocks[type.key]}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => increment(type.key)}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-lumenjuris/40 bg-lumenjuris/5 text-lumenjuris transition hover:bg-lumenjuris/10"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
+      <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-gray-800">Crédits</p>
+            <p className="text-xs text-gray-400">
+              +{BLOCK_SIZE} crédits / ajout — {formatPrice(PRICE_PER_BLOCK)} / ajout
+            </p>
           </div>
-        ))}
+
+          <div className="ml-4 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={decrement}
+              disabled={blocks === 0}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+
+            <span className="w-6 text-center text-sm font-semibold text-gray-900 tabular-nums">
+              {blocks}
+            </span>
+
+            <button
+              type="button"
+              onClick={increment}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-lumenjuris/40 bg-lumenjuris/5 text-lumenjuris transition hover:bg-lumenjuris/10"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Total */}

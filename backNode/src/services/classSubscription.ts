@@ -150,6 +150,7 @@ export class Subscription {
           credits: credits
             ? {
                 creditIncluded: credits.creditIncluded,
+                creditAdded: credits.creditAdded,
                 totalIncluded: subscription.plan.creditIncluded,
               }
             : null,

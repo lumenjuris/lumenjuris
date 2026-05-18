@@ -2,18 +2,22 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "../ui/Button";
-import { BillingForm, type CreditsPayload } from "./BillingForm";
+import { BillingForm } from "./BillingForm";
+import { BillingInterval } from "../../types/subscriptionData";
+import type { CreditsPayload } from "../../types/creditsData";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_CLIENT ?? "");
-
-type BillingInterval = "month" | "year";
 
 type BillingStripePanelProps = {
   planName: string;
   price: number;
   interval?: BillingInterval;
   onBack: () => void;
-  onSuccess: (planName: string, interval: BillingInterval, price: number) => void;
+  onSuccess: (
+    planName: string,
+    interval: BillingInterval,
+    price: number,
+  ) => void;
   onError?: () => void;
   mode?: "plan" | "credits";
   creditsPayload?: CreditsPayload;
