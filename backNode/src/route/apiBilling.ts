@@ -155,34 +155,17 @@ routerBilling.put(
   authMiddleware,
   async (req: Request, res: Response) => {
     const userId = Number(req.idUser);
-    const { addSignatureCredit, addAnalyzeCredit, addGenerationCredit } =
-      req.body;
+    const { addCredit } = req.body;
 
-    if (addSignatureCredit && typeof addSignatureCredit !== "number") {
+    if (!addCredit || typeof addCredit !== "number" || addCredit < 0) {
       return res.status(500).json({
         success: false,
-        message: "L'ajout de crédit doit-être défini par un nombre.",
-      });
-    }
-    if (addAnalyzeCredit && typeof addAnalyzeCredit !== "number") {
-      return res.status(500).json({
-        success: false,
-        message: "L'ajout de crédit doit-être défini par un nombre.",
-      });
-    }
-    if (addGenerationCredit && typeof addGenerationCredit !== "number") {
-      res.status(500).json({
-        success: false,
-        message: "L'ajout de crédit doit-être défini par un nombre.",
+        message:
+          "L'ajout de crédit doit-être défini par un nombre entier positif.",
       });
     }
 
-    const addedCredits = await new Credit().addCredit(
-      userId,
-      addSignatureCredit,
-      addAnalyzeCredit,
-      addGenerationCredit,
-    );
+    const addedCredits = await new Credit().addCredit(userId, addCredit);
 
     return res.status(addedCredits.success ? 200 : 500).json(addedCredits);
   },
@@ -193,36 +176,19 @@ routerBilling.put(
   authMiddleware,
   async (req: Request, res: Response) => {
     const userId = Number(req.idUser);
-    const {
-      removeSignatureCredit,
-      removeAnalyzeCredit,
-      removeGenerationCredit,
-    } = req.body;
+    const { removeCredit } = req.body;
 
-    if (removeSignatureCredit && typeof removeSignatureCredit !== "number") {
+    if (!removeCredit || typeof removeCredit !== "number" || removeCredit < 0) {
       return res.status(500).json({
         success: false,
-        message: "Le retrait de crédit doit-être défini par un nombre.",
-      });
-    }
-    if (removeAnalyzeCredit && typeof removeAnalyzeCredit !== "number") {
-      return res.status(500).json({
-        success: false,
-        message: "Le retrait de crédit doit-être défini par un nombre.",
-      });
-    }
-    if (removeGenerationCredit && typeof removeGenerationCredit !== "number") {
-      return res.status(500).json({
-        success: false,
-        message: "Le retrait de crédit doit-être défini par un nombre.",
+        message:
+          "Le retrait de crédit doit-être défini par un nombre entier positif.",
       });
     }
 
     const removedCredits = await new Credit().removeCredit(
       userId,
-      removeSignatureCredit,
-      removeAnalyzeCredit,
-      removeGenerationCredit,
+      removeCredit,
     );
     console.log("REMOVE CREDIT : ", removedCredits);
 

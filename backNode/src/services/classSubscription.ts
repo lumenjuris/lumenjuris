@@ -77,14 +77,11 @@ export class Subscription {
         where: { userId },
         create: {
           userId,
-          creditAnalyse: plan.creditAnalyse,
-          creditSignature: plan.creditSignature,
-          creditGenerationDoc: plan.creditGenerationDoc,
+          creditIncluded: plan.creditIncluded,
+          creditAdded: 0,
         },
         update: {
-          creditAnalyse: plan.creditAnalyse,
-          creditSignature: plan.creditSignature,
-          creditGenerationDoc: plan.creditGenerationDoc,
+          creditIncluded: plan.creditIncluded,
         },
       });
 
@@ -152,12 +149,8 @@ export class Subscription {
           },
           credits: credits
             ? {
-                creditAnalyse: credits.creditAnalyse,
-                creditSignature: credits.creditSignature,
-                creditGenerationDoc: credits.creditGenerationDoc,
-                totalAnalyse: subscription.plan.creditAnalyse,
-                totalSignature: subscription.plan.creditSignature,
-                totalGenerationDoc: subscription.plan.creditGenerationDoc,
+                creditIncluded: credits.creditIncluded,
+                totalIncluded: subscription.plan.creditIncluded,
               }
             : null,
         },
@@ -202,9 +195,8 @@ export class Subscription {
       await prisma.userCredit.create({
         data: {
           userId,
-          creditAnalyse: plan.creditAnalyse,
-          creditSignature: plan.creditSignature,
-          creditGenerationDoc: plan.creditGenerationDoc,
+          creditIncluded: plan.creditIncluded,
+          creditAdded: 0,
         },
       });
 

@@ -1,6 +1,5 @@
 import { prisma } from "../../prisma/singletonPrisma";
 import { SubscriptionStatus } from "../../prisma/generated/enums";
-import { StringWithAggregatesFilter } from "../generated/commonInputTypes";
 
 type ReturnData<T = any> = {
   success: boolean;
@@ -9,12 +8,7 @@ type ReturnData<T = any> = {
 };
 
 export class Credit {
-  async addCredit(
-    userId: number,
-    addSignatureCredit?: number,
-    addAnalyzeCredit?: number,
-    addGenerationCredit?: number,
-  ): Promise<ReturnData> {
+  async addCredit(userId: number, addCredit: number): Promise<ReturnData> {
     try {
       const user = await prisma.user.findUnique({ where: { idUser: userId } });
       if (!user)
@@ -31,28 +25,17 @@ export class Credit {
       )
         return { success: false, message: "Aucun abonnement actif !" };
 
-      const data: any = {};
-      if (addSignatureCredit)
-        data.creditSignature = { increment: addSignatureCredit };
-
-      if (addAnalyzeCredit)
-        data.creditAnalyse = { increment: addAnalyzeCredit };
-
-      if (addGenerationCredit)
-        data.creditGenerationDoc = { increment: addGenerationCredit };
-
       const addedCredits = await prisma.userCredit.update({
         where: { userId },
-        data,
+        data: { creditAdded: { increment: addCredit } },
       });
 
       return {
         success: true,
         message: "Les nouveaux crédits ont bien été ajoutés.",
         data: {
-          creditSignature: addedCredits.creditSignature,
-          creditAnalyse: addedCredits.creditAnalyse,
-          creditGeneration: addedCredits.creditGenerationDoc,
+          creditAdded: addedCredits.creditAdded,
+          creditIncluded: addedCredits.creditIncluded,
         },
       };
     } catch (error) {
@@ -66,9 +49,7 @@ export class Credit {
 
   async removeCredit(
     userId: number,
-    removeSignatureCredit?: number,
-    removeAnalyzeCredit?: number,
-    removeGenerationCredit?: number,
+    removeCredit: number,
   ): Promise<ReturnData> {
     try {
       const user = await prisma.user.findUnique({ where: { idUser: userId } });
@@ -80,6 +61,7 @@ export class Credit {
         where: { userId },
         select: { status: true },
       });
+
       if (
         !activeSubscription ||
         activeSubscription.status !== SubscriptionStatus.ACTIVE
@@ -95,60 +77,44 @@ export class Credit {
           message: "Vous ne semblez pas avoir de crédits.",
         };
       if (
-        remainingCredits.creditAnalyse === 0 &&
-        remainingCredits.creditGenerationDoc === 0 &&
-        remainingCredits.creditSignature === 0
+        remainingCredits.creditIncluded === 0 &&
+        remainingCredits.creditAdded === 0
       )
         return { success: false, message: "Tous vos crédits sont épuisés !" };
 
       // On retire les crédits s'il en reste
-      if (
-        removeSignatureCredit &&
-        remainingCredits.creditSignature >= removeSignatureCredit
-      ) {
-        const signatureCreditsRemoved = await prisma.userCredit.update({
+      if (remainingCredits.creditAdded >= removeCredit) {
+        const creditsRemoved = await prisma.userCredit.update({
           where: { userId },
-          data: { creditSignature: { decrement: removeSignatureCredit } },
+          data: { creditAdded: { decrement: removeCredit } },
         });
         return {
           success: true,
-          message: "Crédits Signature retirés.",
-          data: signatureCreditsRemoved.creditSignature,
+          message: "Crédits retirés de vos crédits supplémentaires.",
+          data: creditsRemoved.creditAdded,
         };
-      }
-      if (
-        removeAnalyzeCredit &&
-        remainingCredits?.creditAnalyse >= removeAnalyzeCredit
+      } else if (
+        remainingCredits.creditAdded < removeCredit &&
+        remainingCredits.creditIncluded >= removeCredit
       ) {
-        const analyzeCReditsRemove = await prisma.userCredit.update({
+        const creditsRemoved = await prisma.userCredit.update({
           where: { userId },
-          data: { creditAnalyse: { decrement: removeAnalyzeCredit } },
+          data: { creditIncluded: { decrement: removeCredit } },
         });
         return {
           success: true,
-          message: "Crédits Analyse retirés.",
-          data: analyzeCReditsRemove,
-        };
-      }
-      if (
-        removeGenerationCredit &&
-        remainingCredits.creditGenerationDoc >= removeGenerationCredit
-      ) {
-        const generationCreditsRemove = await prisma.userCredit.update({
-          where: { userId },
-          data: { creditGenerationDoc: { decrement: removeGenerationCredit } },
-        });
-        return {
-          success: true,
-          message: "Crédits Generation de doc retirés.",
-          data: generationCreditsRemove.creditGenerationDoc,
+          message: "Crédits retirés des crédits inclus dans votre abonnement.",
+          data: creditsRemoved.creditIncluded,
         };
       }
 
       return {
         success: false,
         message: "Crédits insuffisants !",
-        data: remainingCredits.creditSignature,
+        data: {
+          creditAdded: remainingCredits.creditAdded,
+          creditIncluded: remainingCredits.creditIncluded,
+        },
       };
     } catch (error) {
       console.error("REMOVE CREDIT ERROR:", error);
@@ -168,9 +134,8 @@ export class Credit {
       const remainingCredits = await prisma.userCredit.findUnique({
         where: { userId },
         select: {
-          creditSignature: true,
-          creditAnalyse: true,
-          creditGenerationDoc: true,
+          creditIncluded: true,
+          creditAdded: true,
         },
       });
 

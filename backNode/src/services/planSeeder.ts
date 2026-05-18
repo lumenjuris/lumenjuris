@@ -4,9 +4,7 @@ type PlanSeed = {
   name: string;
   price: number;
   interval: string;
-  creditAnalyse: number;
-  creditSignature: number;
-  creditGenerationDoc: number;
+  creditIncluded: number;
 };
 
 const PLANS_SEED: PlanSeed[] = [
@@ -14,41 +12,31 @@ const PLANS_SEED: PlanSeed[] = [
     name: "Freemium",
     price: 0,
     interval: "month",
-    creditAnalyse: 500,
-    creditSignature: 20,
-    creditGenerationDoc: 30,
+    creditIncluded: 500,
   },
   {
     name: "Starter",
     price: 2900,
     interval: "month",
-    creditAnalyse: 500,
-    creditSignature: 5,
-    creditGenerationDoc: 5,
+    creditIncluded: 500,
   },
   {
     name: "Starter",
     price: 28800,
     interval: "year",
-    creditAnalyse: 500,
-    creditSignature: 5,
-    creditGenerationDoc: 5,
+    creditIncluded: 500,
   },
   {
     name: "Pro",
     price: 7900,
     interval: "month",
-    creditAnalyse: 2000,
-    creditSignature: 20,
-    creditGenerationDoc: 30,
+    creditIncluded: 2000,
   },
   {
     name: "Pro",
     price: 78000,
     interval: "year",
-    creditAnalyse: 2000,
-    creditSignature: 20,
-    creditGenerationDoc: 30,
+    creditIncluded: 2000,
   },
 ];
 
