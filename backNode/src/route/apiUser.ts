@@ -13,7 +13,6 @@ import { Subscription } from "../services/classSubscription";
 
 const routerUser: Router = express.Router();
 
-
 routerUser.post("/create", async (req: Request, res: Response) => {
   try {
     const { email, nom, prenom, password, cgu, enterprise } = req.body;
@@ -372,6 +371,7 @@ routerUser.get(
         message: "Les préférences utilisateur ont été récupérées avec succès.",
         data: {
           dyslexicMode: userPreference?.dyslexicMode ?? false,
+          emailNotifications: userPreference?.emailNotifications ?? true,
         },
       });
     } catch (err) {
@@ -393,19 +393,33 @@ routerUser.put(
   async (req: Request, res: Response) => {
     try {
       const idUser = Number(req.idUser);
-      const dyslexicMode = Boolean(req.body?.dyslexicMode);
+      const body = req.body ?? {};
+
+      const existing = await prisma.userPreference.findUnique({
+        where: { userId: idUser },
+      });
+
+      const dyslexicMode =
+        "dyslexicMode" in body
+          ? Boolean(body.dyslexicMode)
+          : (existing?.dyslexicMode ?? false);
+
+      const emailNotifications =
+        "emailNotifications" in body
+          ? Boolean(body.emailNotifications)
+          : (existing?.emailNotifications ?? true);
 
       await prisma.userPreference.upsert({
         where: { userId: idUser },
-        update: { dyslexicMode },
-        create: { userId: idUser, dyslexicMode },
+        update: { dyslexicMode, emailNotifications },
+        create: { userId: idUser, dyslexicMode, emailNotifications },
       });
 
       return res.status(200).json({
         success: true,
         message:
           "Les préférences utilisateur ont été mises à jour avec succès.",
-        data: { dyslexicMode },
+        data: { dyslexicMode, emailNotifications },
       });
     } catch (err) {
       console.error(

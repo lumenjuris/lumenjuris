@@ -3,13 +3,27 @@ import { fetchProxy } from "../utils/fetchProxy";
 
 interface PreferencesState {
   isDyslexicMode: boolean;
+  isEmailNotifications: boolean;
   loadPreferences: () => Promise<void>;
   setDyslexicMode: (value: boolean) => Promise<void>;
+  setEmailNotifications: (value: boolean) => Promise<void>;
   reset: () => void;
+}
+
+async function updatePreference(payload: Record<string, boolean>) {
+  const res = await fetchProxy("/api/user/preferences", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => null);
+  return { ok: res.ok, data };
 }
 
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   isDyslexicMode: false,
+  isEmailNotifications: true,
 
   loadPreferences: async () => {
     try {
@@ -18,7 +32,10 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.success) {
-        set({ isDyslexicMode: Boolean(data.data?.dyslexicMode) });
+        set({
+          isDyslexicMode: Boolean(data.data?.dyslexicMode),
+          isEmailNotifications: data.data?.emailNotifications !== false,
+        });
       }
     } catch (error) {
       console.log("PREF STORE ERROR :", error);
@@ -28,24 +45,28 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   setDyslexicMode: async (value: boolean) => {
     const previous = get().isDyslexicMode;
     set({ isDyslexicMode: value });
-
-    try {
-      const res = await fetchProxy("/api/user/preferences", {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dyslexicMode: value }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.success) {
-        set({ isDyslexicMode: previous });
-      } else {
-        set({ isDyslexicMode: Boolean(data.data?.dyslexicMode) });
-      }
-    } catch {
+    const { ok, data } = await updatePreference({ dyslexicMode: value }).catch(
+      () => ({ ok: false, data: null }),
+    );
+    if (!ok || !data?.success) {
       set({ isDyslexicMode: previous });
+    } else {
+      set({ isDyslexicMode: Boolean(data.data?.dyslexicMode) });
     }
   },
 
-  reset: () => set({ isDyslexicMode: false }),
+  setEmailNotifications: async (value: boolean) => {
+    const previous = get().isEmailNotifications;
+    set({ isEmailNotifications: value });
+    const { ok, data } = await updatePreference({
+      emailNotifications: value,
+    }).catch(() => ({ ok: false, data: null }));
+    if (!ok || !data?.success) {
+      set({ isEmailNotifications: previous });
+    } else {
+      set({ isEmailNotifications: Boolean(data.data?.emailNotifications) });
+    }
+  },
+
+  reset: () => set({ isDyslexicMode: false, isEmailNotifications: true }),
 }));

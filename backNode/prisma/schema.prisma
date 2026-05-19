@@ -78,8 +78,9 @@ model AuthProviderAccount {
 }
 
 model UserPreference {
-  idUserPreference Int     @id @default(autoincrement())
-  dyslexicMode     Boolean @default(false)
+  idUserPreference   Int     @id @default(autoincrement())
+  dyslexicMode       Boolean @default(false)
+  emailNotifications Boolean @default(true)
 
   //relation
   userId Int  @unique

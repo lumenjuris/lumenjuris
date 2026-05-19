@@ -63,6 +63,12 @@ export function ParamCompte() {
     (state) => state.isDyslexicMode,
   );
   const setDyslexicMode = usePreferencesStore((state) => state.setDyslexicMode);
+  const isEmailNotificationsEnabled = usePreferencesStore(
+    (state) => state.isEmailNotifications,
+  );
+  const setEmailNotifications = usePreferencesStore(
+    (state) => state.setEmailNotifications,
+  );
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false);
   const [profileUpdateError, setProfileUpdateError] = useState(false);
   const [enterpriseUpdateSuccess, setEnterpriseUpdateSuccess] = useState(false);
@@ -283,6 +289,10 @@ export function ParamCompte() {
     void setDyslexicMode(checked);
   };
 
+  const handleEmailNotificationsCheckedChange = (checked: boolean) => {
+    void setEmailNotifications(checked);
+  };
+
   const handleTabChange = (nextTab: SettingsTab) => {
     if (nextTab === activeTab) {
       return;
@@ -430,6 +440,8 @@ export function ParamCompte() {
     <PreferenceSettingsPanel
       isDyslexicModeEnabled={isDyslexicModeEnabled}
       onDyslexicModeCheckedChange={handlePreferenceCheckedChange}
+      isEmailNotificationsEnabled={isEmailNotificationsEnabled}
+      onEmailNotificationsCheckedChange={handleEmailNotificationsCheckedChange}
     />
   );
 

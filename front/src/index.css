@@ -10,7 +10,7 @@
 /* Polices lors de l'activation du mode Dyslexyque */
 .dyslexic-font {
   font-family:
-    "Lexend", "OpenDyslexic", "Atkinson Hyperlegible", Arial, sans-serif;
+    "Lexend", "Atkinson Hyperlegible", "OpenDyslexic", Arial, sans-serif;
 }
 
 /* Utilitaires line-clamp pour la sidebar */
