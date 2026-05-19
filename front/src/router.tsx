@@ -22,16 +22,32 @@ import { Subscription } from "./page/Subscription";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { useUserStore } from "./store/userStore";
+import { usePreferencesStore } from "./store/preferencesStore";
 
 export function App() {
   const authStatus = useUserStore((state) => state.authStatus);
   const fetchUser = useUserStore((state) => state.fetchUser);
+  const isDyslexicMode = usePreferencesStore((state) => state.isDyslexicMode);
+  const loadPreferences = usePreferencesStore((state) => state.loadPreferences);
+  const resetPreferences = usePreferencesStore((state) => state.reset);
 
   useEffect(() => {
     if (authStatus === "idle") {
       void fetchUser();
     }
   }, [authStatus, fetchUser]);
+
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      void loadPreferences();
+    } else if (authStatus === "unauthenticated") {
+      resetPreferences();
+    }
+  }, [authStatus, loadPreferences, resetPreferences]);
+
+  useEffect(() => {
+    document.body.classList.toggle("dyslexic-font", isDyslexicMode);
+  }, [isDyslexicMode]);
 
   return (
     <>

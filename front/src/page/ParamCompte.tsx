@@ -16,7 +16,6 @@ import type {
   ApiResponse,
   EnterpriseSettings,
   SettingsTab,
-  UserPreferenceSettings,
 } from "../types/paramSettings";
 import {
   createEmptyEnterpriseSettings,
@@ -25,8 +24,8 @@ import {
 } from "../utils/param/paramSettings";
 
 import { useUserStore } from "../store/userStore";
+import { usePreferencesStore } from "../store/preferencesStore";
 import { fetchProxy } from "../utils/fetchProxy";
-
 
 const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
   prenom: "",
@@ -60,7 +59,10 @@ export function ParamCompte() {
     useState(false);
   const [activeConfirmationModal, setActiveConfirmationModal] =
     useState<AccountConfirmationModal | null>(null);
-  const [isDyslexicModeEnabled, setIsDyslexicModeEnabled] = useState(false);
+  const isDyslexicModeEnabled = usePreferencesStore(
+    (state) => state.isDyslexicMode,
+  );
+  const setDyslexicMode = usePreferencesStore((state) => state.setDyslexicMode);
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false);
   const [profileUpdateError, setProfileUpdateError] = useState(false);
   const [enterpriseUpdateSuccess, setEnterpriseUpdateSuccess] = useState(false);
@@ -116,43 +118,6 @@ export function ParamCompte() {
     );
     setIsTwoFactorEnabled(Boolean(userData.profile.twoFactorEnabled));
   }, [userData]);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const loadPreferences = async () => {
-      try {
-        const preferenceResponse = await fetchProxy("/api/user/preferences", {
-          credentials: "include",
-        });
-        const preferencePayload = (await preferenceResponse
-          .json()
-          .catch(() => null)) as ApiResponse<UserPreferenceSettings> | null;
-
-        if (
-          preferenceResponse.ok &&
-          preferencePayload?.success &&
-          preferencePayload.data &&
-          !isCancelled
-        ) {
-          setIsDyslexicModeEnabled(
-            Boolean(preferencePayload.data.preferenceUI.dyslexicMode),
-          );
-        }
-      } catch (error) {
-        console.error(
-          "Impossible de charger les préférences utilisateur.",
-          error,
-        );
-      }
-    };
-
-    void loadPreferences();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
 
   useLayoutEffect(() => {
     const measurePanels = () => {
@@ -315,45 +280,7 @@ export function ParamCompte() {
   };
 
   const handlePreferenceCheckedChange = (checked: boolean) => {
-    const previousValue = isDyslexicModeEnabled;
-    setIsDyslexicModeEnabled(checked);
-
-    void fetchProxy("/api/user/preferences", {
-      method: "PUT",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        preferenceUI: {
-          dyslexicMode: checked,
-        },
-      }),
-    })
-      .then(async (response) => {
-        const payload = (await response
-          .json()
-          .catch(() => null)) as ApiResponse<{
-          preferenceUI: {
-            dyslexicMode: boolean;
-          };
-        }> | null;
-
-        if (!response.ok || !payload?.success || !payload.data) {
-          throw new Error(
-            payload?.message ||
-              "Impossible de mettre a jour les preferences utilisateur.",
-          );
-        }
-
-        setIsDyslexicModeEnabled(
-          Boolean(payload.data.preferenceUI.dyslexicMode),
-        );
-      })
-      .catch((error) => {
-        console.error(error);
-        setIsDyslexicModeEnabled(previousValue);
-      });
+    void setDyslexicMode(checked);
   };
 
   const handleTabChange = (nextTab: SettingsTab) => {

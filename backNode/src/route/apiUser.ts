@@ -13,18 +13,6 @@ import { Subscription } from "../services/classSubscription";
 
 const routerUser: Router = express.Router();
 
-function normalizePreferenceUI(input: unknown) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return {
-      dyslexicMode: false,
-    };
-  }
-  const candidate = input as { dyslexicMode?: unknown };
-
-  return {
-    dyslexicMode: Boolean(candidate.dyslexicMode),
-  };
-}
 
 routerUser.post("/create", async (req: Request, res: Response) => {
   try {
@@ -383,7 +371,7 @@ routerUser.get(
         success: true,
         message: "Les préférences utilisateur ont été récupérées avec succès.",
         data: {
-          preferenceUI: normalizePreferenceUI(userPreference?.preferenceUI),
+          dyslexicMode: userPreference?.dyslexicMode ?? false,
         },
       });
     } catch (err) {
@@ -405,26 +393,19 @@ routerUser.put(
   async (req: Request, res: Response) => {
     try {
       const idUser = Number(req.idUser);
-      const preferenceUI = normalizePreferenceUI(req.body?.preferenceUI);
+      const dyslexicMode = Boolean(req.body?.dyslexicMode);
 
       await prisma.userPreference.upsert({
         where: { userId: idUser },
-        update: {
-          preferenceUI,
-        },
-        create: {
-          userId: idUser,
-          preferenceUI,
-        },
+        update: { dyslexicMode },
+        create: { userId: idUser, dyslexicMode },
       });
 
       return res.status(200).json({
         success: true,
         message:
           "Les préférences utilisateur ont été mises à jour avec succès.",
-        data: {
-          preferenceUI,
-        },
+        data: { dyslexicMode },
       });
     } catch (err) {
       console.error(
