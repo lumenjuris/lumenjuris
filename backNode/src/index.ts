@@ -14,7 +14,7 @@ import routerBilling from "./route/apiBilling";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
 import { seedPlans } from "./services/planSeeder";
-// import { internalApiKeyMiddleware } from "./middleware/internalApiKey";
+// import { internalApiKeyMiddleware } from "./middleware/internalApiKeyMiddleware";
 
 /**
  * Préparation du serveur nodejs/express pour ce backend

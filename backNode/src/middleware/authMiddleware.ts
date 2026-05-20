@@ -1,34 +1,17 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 
-interface CustomJwtPayload extends JwtPayload {
-  idUser: string;
-  role: string;
-}
-
-//MiddleWare pour vérifier la signature JWT d'un utilisateur et savoir si il est bien connecté.
 export function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  const token = req.cookies.authLumenJuris;
-  console.log("AUTH COOKIE :", req.cookies, req.headers);
-  if (!token) {
-    return res.status(401).send("Unauthorized");
+  const userId = req.headers["x-user-id"] as string | undefined;
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
-  try {
-    const payload = jwt.verify(
-      token,
-      process.env.JWT_SECRET!,
-    ) as CustomJwtPayload;
-    req.idUser = payload.userId;
-    req.role = payload.role;
-    next();
-  } catch (err) {
-    console.error(err);
-    res.status(401).send("Token invalide ou expiré");
-  }
+  req.idUser = userId;
+  req.role = (req.headers["x-user-role"] as string) || "USER";
+  next();
 }
 
 export function authMiddlewareAdmin(
@@ -36,23 +19,10 @@ export function authMiddlewareAdmin(
   res: Response,
   next: NextFunction,
 ) {
-  const token = req.cookies.token;
-
-  if (!token) {
-    return res.status(401).send("Unauthorized");
-  }
-
-  try {
-    const payload = jwt.verify(
-      token,
-      process.env.JWT_SECRET!,
-    ) as CustomJwtPayload;
-    if (payload.role !== "ADMIN") {
-      return res.status(401).send("Unauthorized");
+  authMiddleware(req, res, () => {
+    if (req.role !== "ADMIN") {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     next();
-  } catch (err) {
-    console.error(err);
-    res.status(401).send("Token invalide ou expiré");
-  }
+  });
 }

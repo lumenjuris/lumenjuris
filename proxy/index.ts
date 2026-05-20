@@ -1,9 +1,11 @@
 /* eslint-disable no-console */
 import express, { Request, Response } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import path from "path";
 import http from "http";
+import { proxyAuthMiddleware } from "./middleware/authMiddleware.js";
 
 // Charge d'abord server/.env puis la racine
 dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
@@ -24,6 +26,7 @@ app.use(
   }),
 );
 
+app.use(cookieParser());
 app.use(express.json({ limit: "20mb" }));
 const IS_PROD = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 3000);
@@ -88,6 +91,12 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
       "Content-Type": "application/json",
       cookie: req.headers.cookie || "",
       "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+      ...(res.locals.userId !== undefined
+        ? {
+            "x-user-id": String(res.locals.userId),
+            "x-user-role": String(res.locals.role ?? "USER"),
+          }
+        : {}),
     },
     body: req.method === "GET" ? undefined : JSON.stringify(req.body),
   })
@@ -202,7 +211,7 @@ function handleInseeRequest(req: Request, res: Response): void | Response {
   if (typeof req.params.siren !== "string") {
     return res.json({
       success: false,
-      message: "Bad request, le parsing de du siren n'est pas conforme.",
+      message: "Bad request, le parsing du siren n'est pas conforme.",
     });
   }
   const siren = encodeURIComponent(req.params.siren);
@@ -338,42 +347,56 @@ app.post(
 );
 
 // Node - Requêtes Backend
+const auth = proxyAuthMiddleware;
+
+// Routes publiques (pas d'auth requise)
 app.post("/api/signup", handleSignUpUser);
-app.get("/api/insee/:siren", handleInseeRequest);
-app.get("/api/llm/usage", handleLlmCurrentUsage);
-app.get("/api/user/get", handleNodeUserGet);
-app.put("/api/user", handleNodeUserUpdate);
 app.post("/api/user/auth/login", handleNodeLogin);
-app.post("/api/user/auth/logout", handleNodeLogout);
-app.get("/api/user/preferences", handleNodeUserPreferences);
-app.put("/api/user/preferences", handleNodeUserPreferences);
-app.post("/api/user/two-factor", handleNodeUserTwoFactor);
-app.post("/api/user/two-factor/verify", handleNodeUserTwoFactorVerify);
-app.post("/api/user/export-data", handleNodeUserExportData);
-app.delete("/api/user/account", handleNodeUserDeleteAccount);
-app.get("/api/enterprise", handleNodeEnterpriseGet);
-app.put("/api/enterprise", handleNodeEnterpriseUpdate);
-app.get("/api/contract-history", handleNodeContractHistory);
-app.post("/api/contract-history", handleNodeContractHistory);
-app.get("/api/contract-history/:externalId", handleNodeContractHistoryItem);
-app.delete("/api/contract-history/:externalId", handleNodeContractHistoryItem);
-app.patch(
-  "/api/contract-history/:externalId/touch",
-  handleNodeContractHistoryTouch,
-);
-app.get("/api/chat-history", handleNodeChatHistory);
-app.put("/api/chat-history", handleNodeChatHistory);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 app.get("/api/google", handleNodeGoogle);
-app.post("/api/billing/customer", handleBillingCustomer);
-app.post("/api/billing/payment-intent", handleBillingPaymentIntent);
-app.get("/api/billing/plans", handleBillingPlans);
-app.post("/api/billing/subscription", handleBillingSubscription);
-app.get("/api/billing/subscription", handleBillingSubscription);
-app.put("/api/billing/add-credits", handleBillingAddCredits);
-app.put("/api/billing/remove-credits", handleBillingRemoveCredits);
-app.get("/api/billing/credits", handleBillingCredits);
+
+// Routes protégées (JWT vérifié par le proxy)
+app.post("/api/user/auth/logout", auth, handleNodeLogout);
+app.get("/api/insee/:siren", auth, handleInseeRequest);
+app.get("/api/llm/usage", auth, handleLlmCurrentUsage);
+app.get("/api/user/get", auth, handleNodeUserGet);
+app.put("/api/user", auth, handleNodeUserUpdate);
+app.get("/api/user/preferences", auth, handleNodeUserPreferences);
+app.put("/api/user/preferences", auth, handleNodeUserPreferences);
+app.post("/api/user/two-factor", auth, handleNodeUserTwoFactor);
+app.post("/api/user/two-factor/verify", auth, handleNodeUserTwoFactorVerify);
+app.post("/api/user/export-data", auth, handleNodeUserExportData);
+app.delete("/api/user/account", auth, handleNodeUserDeleteAccount);
+app.get("/api/enterprise", auth, handleNodeEnterpriseGet);
+app.put("/api/enterprise", auth, handleNodeEnterpriseUpdate);
+app.get("/api/contract-history", auth, handleNodeContractHistory);
+app.post("/api/contract-history", auth, handleNodeContractHistory);
+app.get(
+  "/api/contract-history/:externalId",
+  auth,
+  handleNodeContractHistoryItem,
+);
+app.delete(
+  "/api/contract-history/:externalId",
+  auth,
+  handleNodeContractHistoryItem,
+);
+app.patch(
+  "/api/contract-history/:externalId/touch",
+  auth,
+  handleNodeContractHistoryTouch,
+);
+app.get("/api/chat-history", auth, handleNodeChatHistory);
+app.put("/api/chat-history", auth, handleNodeChatHistory);
+app.post("/api/billing/customer", auth, handleBillingCustomer);
+app.post("/api/billing/payment-intent", auth, handleBillingPaymentIntent);
+app.get("/api/billing/plans", auth, handleBillingPlans);
+app.post("/api/billing/subscription", auth, handleBillingSubscription);
+app.get("/api/billing/subscription", auth, handleBillingSubscription);
+app.put("/api/billing/add-credits", auth, handleBillingAddCredits);
+app.put("/api/billing/remove-credits", auth, handleBillingRemoveCredits);
+app.get("/api/billing/credits", auth, handleBillingCredits);
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {
