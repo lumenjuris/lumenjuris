@@ -1,12 +1,17 @@
 import { ClauseRisk } from "../../types";
 
+export interface ParsedAIResponse {
+    clauses: ClauseRisk[];
+    isSensitive: boolean;
+}
+
 /**
- * 📊 Parsing de la réponse IA et création des objets ClauseRisk
+ * 📊 Parsing de la réponse IA et création des objets ClauseRisk + détermination de sensibilité
  *
- * @param response 
- * @returns { ClauseRisk[]}
+ * @param response
+ * @returns { ParsedAIResponse }
  */
-export function parseAIResponse(response: string): ClauseRisk[] {
+export function parseAIResponse(response: string): ParsedAIResponse {
     console.log('[DEBUG] 🔍 Parsing de la réponse IA brute...');
     let cleanedText = response.trim();
     if (cleanedText.startsWith('```json')) { cleanedText = cleanedText.substring(7).trim() }
@@ -15,7 +20,7 @@ export function parseAIResponse(response: string): ClauseRisk[] {
         const parsedResponse = JSON.parse(cleanedText);
         if (!parsedResponse.clauses || !Array.isArray(parsedResponse.clauses)) {
             console.error('❌ [ERREUR] Réponse JSON invalide: la clé "clauses" est manquante ou n\'est pas un tableau.');
-            return [];
+            return { clauses: [], isSensitive: true };
         }
 
         const clauses: ClauseRisk[] = [];
@@ -40,12 +45,15 @@ export function parseAIResponse(response: string): ClauseRisk[] {
             }
         });
 
-        return clauses;
+        const score = typeof parsedResponse.sensitivityScore === 'number' ? parsedResponse.sensitivityScore : 100;
+        const isSensitive = score > 60;
+        console.log(`[DEBUG] 🏷️ sensitivityScore: ${score} → isSensitive: ${isSensitive}`);
+        return { clauses, isSensitive };
 
     } catch (error) {
         console.error('❌ [ERREUR] Erreur de parsing JSON:', error);
         console.error('[DEBUG] 📄 Réponse reçue (après nettoyage):', cleanedText);
-        return [];
+        return { clauses: [], isSensitive: true };
     }
 }
 /**

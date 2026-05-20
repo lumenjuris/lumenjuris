@@ -107,6 +107,7 @@ export interface ContractAnalysis {
   jurisdiction: string;
   contractType: string;
   aiConfidenceScore: number;
+  isSensitive?: boolean;
   reviewHistory?: ReviewAction[];
   // Nouveaux champs pour l'analyse contextuelle
   reponses_questions_mandant?: Record<string, string>;

@@ -11,6 +11,11 @@ import { saveAnalysisToCache, loadAnalysisFromCache } from "./cachedAnalysis";
 import { parseAIResponse } from "./parsingData";
 import { buildClauseExtractionPromptForAI } from "./buildingPrompt";
 
+export interface AnalyzeContractResult {
+  clauses: ClauseRisk[];
+  isSensitive: boolean;
+}
+
 export type AnalysisProgressMode =
   | "direct"
   | "fallback"
@@ -53,7 +58,7 @@ export async function analyzeContractWithAI(
   content: string,
   context?: AnalysisContext,
   options?: AnalyzeContractOptions,
-): Promise<ClauseRisk[]> {
+): Promise<AnalyzeContractResult> {
   console.log(`🧠 === ANALYSE IA OPENAI DÉMARRE ===`);
   console.log(`📄 Contenu: ${content.length} caractères`);
   console.log("🛑🛑 CONTENU :", content.slice(0, 1000));
@@ -85,7 +90,7 @@ export async function analyzeContractWithAI(
   }
 
   const cached = loadAnalysisFromCache(content, context);
-  if (cached && cached.length > 0) {
+  if (cached && cached.clauses.length > 0) {
     console.log("🗂️ Analyse servie depuis le cache (sessionStorage)");
     emitAnalysisProgress(options?.onProgress, {
       mode: "cached",
@@ -104,7 +109,7 @@ export async function analyzeContractWithAI(
   try {
     console.log(`📄 Taille du contenu: ${content.length} caractères`);
     const timeStart = Date.now();
-    let clauses: ClauseRisk[] = [];
+    let result: { clauses: ClauseRisk[]; isSensitive: boolean } = { clauses: [], isSensitive: true };
     const totalAttempts = 3;
 
     for (let i = 0; i < totalAttempts; i++) {
@@ -116,22 +121,22 @@ export async function analyzeContractWithAI(
       };
 
       console.log(`📁 Analyse directe du document complet avec GPT-5.2`);
-      clauses = await analyzeDirectlyWithGPT52(
+      result = await analyzeDirectlyWithGPT52(
         content,
         context,
         retryState,
         progressContext,
       );
 
-      if (clauses.length > 0) break;
+      if (result.clauses.length > 0) break;
     }
 
     // si clauses est toujours vide, contrat considéré parfait
-    if (clauses.length === 0) {
+    if (result.clauses.length === 0) {
       console.log("✅ Contrat parfait, aucune clause à risque détectée.");
     }
 
-    saveAnalysisToCache(content, clauses, context);
+    saveAnalysisToCache(content, result, context);
 
     const timeEnd = Date.now();
     const timeProcess = (timeEnd - timeStart) / 1000;
@@ -141,11 +146,12 @@ export async function analyzeContractWithAI(
       "s",
     );
 
-    return clauses;
+    return result;
   } catch (error) {
     console.error("❌ Erreur lors de l'analyse OpenAI:", error);
     console.log("🔄 Fallback vers analyse locale...");
-    return analyzeContractLocally(content);
+    const clauses = await analyzeContractLocally(content);
+    return { clauses, isSensitive: true };
   }
 }
 
@@ -157,7 +163,7 @@ async function analyzeDirectlyWithGPT52(
   context?: AnalysisContext,
   retryState?: boolean,
   progressContext?: AnalysisProgressContext,
-): Promise<ClauseRisk[]> {
+): Promise<{ clauses: ClauseRisk[]; isSensitive: boolean }> {
   console.log("🎯 Analyse directe avec GPT-5.2");
   const reasoning = "none";
   const verbosity = "low";
@@ -185,7 +191,7 @@ async function analyzeDirectlyWithGPT52(
     reasoning,
     verbosity,
   );
-  const clauses = parseAIResponse(responseText);
+  const { clauses, isSensitive } = parseAIResponse(responseText);
   emitAnalysisProgress(progressContext?.onProgress, {
     mode: "direct",
     state: "completed",
@@ -197,7 +203,7 @@ async function analyzeDirectlyWithGPT52(
     failedChunks: 0,
     message: `Analyse terminée : ${clauses.length} clause(s).`,
   });
-  return clauses;
+  return { clauses, isSensitive };
 }
 
 /**

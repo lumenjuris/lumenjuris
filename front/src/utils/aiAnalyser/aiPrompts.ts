@@ -39,9 +39,11 @@ Chaque objet dans le tableau représente une clause à risque et DOIT contenir l
 - "startIndex": (Number) L'index de début de la clause dans le texte original.
 - "endIndex": (Number) L'index de fin de la clause dans le texte original.
 - "keywords": (Array of Strings) Une liste de 3 à 5 expressions-clés (2 à 4 mots chacune) qui résument le principe juridique de la clause. Ces mots-clés doivent être parfaits pour une recherche de jurisprudence (ex: "droit d'accès bailleur", "maintenance locaux commerciaux", "accès sans notification préalable"). NE PAS inclure de noms de sociétés ou de personnes.
+- "sensitivityScore": (Number) Note de 0 à 100 évaluant librement la criticité globale de ce contrat selon ton propre jugement. Aucun barème imposé.
 
 EXEMPLE DE SORTIE JSON:
 {
+  "sensitivityScore": 72,
   "clauses": [
     {
       "type": "Accès aux locaux",
@@ -187,10 +189,11 @@ Chaque objet dans le tableau représente une clause à risque et DOIT contenir l
 - "startIndex": (Number) L'index de début de la clause dans le texte original.
 - "endIndex": (Number) L'index de fin de la clause dans le texte original.
 - "keywords": (Array of Strings) Une liste de 3 à 5 expressions-clés (2 à 4 mots chacune) qui résument le principe juridique de la clause. Ces mots-clés doivent être parfaits pour une recherche de jurisprudence (ex: "droit d'accès bailleur", "maintenance locaux commerciaux", "accès sans notification préalable"). NE PAS inclure de noms de sociétés ou de personnes.
+- "sensitivityScore": (Number) Note de 0 à 100 évaluant librement la criticité globale de ce contrat selon ton propre jugement. Aucun barème imposé.
 
 {
-
-   "clauses": [
+  "sensitivityScore": 72,
+  "clauses": [
     {
       "type": "Accès aux locaux",
       "text": "La CC SCMB conserve le droit d'accès à l'espace de travail à tout moment...",
@@ -692,6 +695,7 @@ FORMAT DE SORTIE OBLIGATOIRE (JSON PUR)
 Tu dois répondre avec UN SEUL objet JSON, sans aucun texte avant ou après.
 
 {
+  "sensitivityScore": 72,
   "clauses": [
     {
       "type": "Type juridique de la clause",
@@ -718,8 +722,9 @@ Index EXACTS obligatoires
 Keywords = concepts juridiques génériques
 Aucun nom propre ou référence factuelle
 JSON pur uniquement
+sensitivityScore = note de 0 à 100 selon ta propre appréciation de la criticité globale du contrat. Aucun barème imposé.
 Si aucune clause n’est risquée, retourner exactement :
-{ "clauses": [] }
+{ "sensitivityScore": 10, "clauses": [] }
 
 DÉMARRAGE
 

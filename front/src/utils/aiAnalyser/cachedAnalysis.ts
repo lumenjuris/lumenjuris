@@ -2,10 +2,12 @@
 import { AnalysisContext } from "../../types/contextualAnalysis";
 import { ClauseRisk } from "../../types";
 
+export interface CachedAnalysisResult {
+  clauses: ClauseRisk[];
+  isSensitive: boolean;
+}
 
-
-
-const ANALYSIS_CACHE_NS = 'analysisV2:';
+const ANALYSIS_CACHE_NS = 'analysisV3:';
 
 
 // --- Fonctions de Cache ---
@@ -38,18 +40,18 @@ export function contextCacheKeyPart(context?: AnalysisContext): string {
     return hashString(JSON.stringify(shallow));
 }
 
-export function loadAnalysisFromCache(content: string, context?: AnalysisContext): ClauseRisk[] | null {
+export function loadAnalysisFromCache(content: string, context?: AnalysisContext): CachedAnalysisResult | null {
     try {
         const key = ANALYSIS_CACHE_NS + hashString(content) + ':' + contextCacheKeyPart(context);
         const raw = sessionStorage.getItem(key);
         if (!raw) return null;
-        return JSON.parse(raw);
+        return JSON.parse(raw) as CachedAnalysisResult;
     } catch { return null; }
 }
 
-export function saveAnalysisToCache(content: string, clauses: ClauseRisk[], context?: AnalysisContext): void {
+export function saveAnalysisToCache(content: string, result: CachedAnalysisResult, context?: AnalysisContext): void {
     try {
         const key = ANALYSIS_CACHE_NS + hashString(content) + ':' + contextCacheKeyPart(context);
-        sessionStorage.setItem(key, JSON.stringify(clauses));
+        sessionStorage.setItem(key, JSON.stringify(result));
     } catch { /* ignore */ }
 }

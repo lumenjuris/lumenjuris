@@ -75,15 +75,16 @@ interface Props {
   context?: AnalysisContext;
   onClose: () => void;
   recommendationIndex: number;
-  setRecommendationIndex: (number: number) => void
+  setRecommendationIndex: (number: number) => void;
+  isSensitive?: boolean;
 }
-export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose, recommendationIndex, setRecommendationIndex }) => {
+export const EnhancedClauseDetail: React.FC<Props> = ({ clause, context, onClose, recommendationIndex, setRecommendationIndex, isSensitive = true }) => {
   if (!clause) return
 
 
   const [tab, setTab] = useState<Tab>('overview');
   const [expanded, setExpanded] = useState(false);
-  const [clauseAiModel, setClauseAiModel] = useState<OpenAIModelId>('gpt-5.4-nano');
+  const [clauseAiModel, setClauseAiModel] = useState<OpenAIModelId>(isSensitive ? 'gpt-5.4-nano' : 'gpt-4o');
   const [alternatives, setAlternatives] = useState<Recommendation[] | null>(null);
   const setContextClause = useChatStore(s => s.setContextClause);
 

@@ -80,6 +80,7 @@ export function processContractAnalysisResults(
   analysisResults: RawClauseRisk[],
   analysisType: "standard" | "contextual",
   context?: AnalysisContext,
+  isSensitive?: boolean,
 ): ContractAnalysis {
   const processedClauses: ClauseRisk[] = analysisResults.map((clause) => ({
     ...clause,
@@ -89,6 +90,7 @@ export function processContractAnalysisResults(
   return {
     ...baseContract,
     clauses: processedClauses,
+    isSensitive: isSensitive ?? true,
     overallRiskScore:
       analysisResults.length > 0
         ? analysisResults.reduce((sum, c) => sum + c.riskScore, 0) /

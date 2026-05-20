@@ -432,7 +432,7 @@ export default function ContractAnalysis() {
     }
 
     try {
-      const analysisResults = await analyzeContractWithAI(
+      const { clauses: analysisResults, isSensitive } = await analyzeContractWithAI(
         baseContract.content,
         analysisContext,
         {
@@ -454,6 +454,7 @@ export default function ContractAnalysis() {
         analysisResults,
         analysisType,
         analysisContext,
+        isSensitive,
       );
       const completedEntry: TemporaryHistoryEntry = {
         ...latestEntry,
@@ -1149,6 +1150,7 @@ export default function ContractAnalysis() {
           onClose={handleCloseModal}
           recommendationIndex={recommendationIndex}
           setRecommendationIndex={handleIncrementIndexRecommendation}
+          isSensitive={contract?.isSensitive ?? true}
         />
       )}
 
