@@ -49,6 +49,9 @@ const LoginForm = ({
   );
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState("");
+  const [verificationError, setVerificationError] = useState(false);
+  const verificationErrorMessage =
+    "Pour valider votre compte veuillez cliquer sur le lien qui vous a été envoyé par email.";
 
   const navigate = useNavigate();
   const { fetchUser } = useUserStore();
@@ -87,6 +90,12 @@ const LoginForm = ({
             "Une erreur est survenue, veuillez réessayer...",
         );
         console.error("🛑🛑🛑 ERREUR CONNEXION", dataResponse);
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (!dataResponse.data.isVerified) {
+        setVerificationError(true);
         setSubmitLoading(false);
         return;
       }
@@ -177,6 +186,7 @@ const LoginForm = ({
           title="Champs manquants !"
           variant="error"
           detail="Vérifiez votre adresse email et votre mot de passe."
+          duration={8000}
           onClose={() => setSubmitError(false)}
         />
       )}
@@ -185,6 +195,7 @@ const LoginForm = ({
           title="Email manquant !"
           variant="error"
           detail="Pour réinitialiser votre mot de passe veuillez renseigner votre adresse email."
+          duration={8000}
           onClose={() => {
             setForgotPassword(true);
             setSubmitForgotError(false);
@@ -197,8 +208,22 @@ const LoginForm = ({
           title="Connexion impossible !"
           variant="error"
           detail={serverErrorMessage}
+          duration={8000}
           onClose={() => {
             setServerError(false);
+            setSubmitLoading(false);
+          }}
+        />
+      )}
+
+      {verificationError && (
+        <AlertBanner
+          title="Votre compte n'a pas été validé !"
+          variant="error"
+          detail={verificationErrorMessage}
+          duration={10000}
+          onClose={() => {
+            setVerificationError(false);
             setSubmitLoading(false);
           }}
         />
