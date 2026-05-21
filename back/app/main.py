@@ -160,6 +160,81 @@ async def legifrance_search(req: SearchRequest):
     return {"success": True, "query": query, "resultats": resultats}
 
 
+def _structure_decision_summary(decision: Dict[str, Any]) -> Dict[str, Any]:
+    """Enrichit une décision avec un résumé structuré (litige + résultat) via OpenAI."""
+    if not _openai_client:
+        return decision
+
+    title = decision.get("title", "")
+    court = decision.get("court", "")
+    date = decision.get("date", "")
+    summary = decision.get("summary", "")
+    solution = decision.get("solution", "")
+    zones = decision.get("zones", {}) or {}
+    highlights = decision.get("highlights", "")
+
+    # Assembler tout le contenu textuel disponible
+    content_parts = []
+    if zones.get("expose_moyens"):
+        content_parts.append(f"Exposé des moyens : {zones['expose_moyens']}")
+    if zones.get("motivation"):
+        content_parts.append(f"Motivation : {zones['motivation']}")
+    if zones.get("dispositif"):
+        content_parts.append(f"Dispositif : {zones['dispositif']}")
+    if highlights:
+        content_parts.append(f"Extraits pertinents : {highlights}")
+    if summary:
+        content_parts.append(f"Résumé : {summary}")
+
+    # Si aucun contenu réel disponible, ne pas appeler le LLM (évite les hallucinations)
+    has_content = bool(content_parts or solution)
+    if not has_content:
+        return decision
+
+    context_lines = []
+    if title:
+        context_lines.append(f"Décision : {title}")
+    if court:
+        context_lines.append(f"Juridiction : {court}")
+    if date:
+        context_lines.append(f"Date : {date}")
+    if solution:
+        context_lines.append(f"Solution : {solution}")
+    context_lines.extend(content_parts)
+
+    prompt = (
+        "Tu es un juriste expert en droit français. Analyse cette décision de justice et rédige deux phrases précises :\n"
+        "1. LITIGE : Décris factuellement le litige (quelles parties, quel contrat ou situation, quel désaccord précis).\n"
+        "2. RESULTAT : Indique le résultat concret (cassation/rejet/irrecevabilité, au profit de qui, pour quel motif juridique).\n\n"
+        "Sois factuel et précis. N'invente rien qui ne soit pas dans le texte. "
+        "Format STRICT (deux lignes) :\n"
+        "LITIGE: <phrase factuelle>\n"
+        "RESULTAT: <phrase factuelle>\n\n"
+        + "\n".join(context_lines)
+    )
+
+    try:
+        resp = _openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=250,
+        )
+        text = resp.choices[0].message.content.strip()
+        # Normaliser : séparer LITIGE: et RESULTAT: même s'ils sont sur la même ligne
+        import re as _re
+        litige_m = _re.search(r'LITIGE:\s*(.+?)(?=RESULTAT:|$)', text, _re.DOTALL)
+        resultat_m = _re.search(r'RESULTAT:\s*(.+?)$', text, _re.DOTALL)
+        if litige_m:
+            decision["litige"] = litige_m.group(1).strip()
+        if resultat_m:
+            decision["resultat"] = resultat_m.group(1).strip()
+    except Exception as e:
+        logger.warning(f"[structure_decision_summary] Erreur OpenAI: {e}")
+
+    return decision
+
+
 @app.post("/jurisprudence")
 async def jurisprudence(req: JurisprudenceRequest):
     if not req.queries:
@@ -179,7 +254,11 @@ async def jurisprudence(req: JurisprudenceRequest):
             if url and url not in seen_urls:
                 all_results.append(res)
                 seen_urls.add(url)
-    return all_results[:3]
+    decisions = all_results[:3]
+    enriched = await asyncio.gather(
+        *[run_in_threadpool(_structure_decision_summary, d) for d in decisions]
+    )
+    return list(enriched)
 
 
 @app.post("/analyze-clause")

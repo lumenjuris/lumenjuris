@@ -68,6 +68,8 @@ export interface JurisprudenceCase {
   url: string;
   keyPrinciples?: string[];
   date?: string;
+  litige?: string;
+  resultat?: string;
 }
 
 export interface KeywordSearchLink {

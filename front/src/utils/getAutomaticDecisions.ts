@@ -54,6 +54,8 @@ function mapApiResponseToJurisprudence(apiResponse: any[]): JurisprudenceCase[] 
     citation: item.citation,
     date: item.date,
     keyPrinciples: item.keyPrinciples,
+    litige: item.litige,
+    resultat: item.resultat,
   }));
 }
 

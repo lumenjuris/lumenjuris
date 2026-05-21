@@ -66,19 +66,41 @@ export const RenderTabCases : React.FC<TabCasesProps> = ({
                         {automaticDecisions.map((decision, index) => {
                             const displayTitle = decision.title || `Décision ${index + 1}`;
                             return (
-                                <a
+                                <div
                                     key={decision.id || `decision-${index}`}
-                                    href={decision.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block p-3 border rounded-md bg-slate-50 hover:bg-slate-100 hover:border-blue-400 transition-colors"
+                                    className="block p-3 border rounded-md bg-slate-50 space-y-2"
                                 >
-                                    <h5 className="font-medium text-blue-700 mb-1 text-sm">{displayTitle}</h5>
-                                    {decision.summary && <p className="text-sm text-slate-600 line-clamp-4">{decision.summary}</p>}
-                                    <div className="mt-2 flex items-center gap-2 text-sm flex-wrap">
-                                        {decision.court && <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">{decision.court}</span>}
+                                    <a
+                                        href={decision.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block font-medium text-blue-700 hover:underline text-sm"
+                                    >
+                                        {displayTitle}
+                                    </a>
+                                    <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                        {decision.court && <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs">{decision.court}</span>}
+                                        {decision.date && <span className="text-slate-400 text-xs">{decision.date}</span>}
                                     </div>
-                                </a>
+                                    {(decision.litige || decision.resultat) ? (
+                                        <div className="space-y-1.5 pt-1 border-t border-slate-200">
+                                            {decision.litige && (
+                                                <div>
+                                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Litige</span>
+                                                    <p className="text-xs text-slate-700 mt-0.5">{decision.litige}</p>
+                                                </div>
+                                            )}
+                                            {decision.resultat && (
+                                                <div>
+                                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Résultat</span>
+                                                    <p className="text-xs text-slate-700 mt-0.5">{decision.resultat}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : decision.summary ? (
+                                        <p className="text-xs text-slate-600 line-clamp-4 pt-1 border-t border-slate-200">{decision.summary}</p>
+                                    ) : null}
+                                </div>
                             );
                         })}
                     </div>
