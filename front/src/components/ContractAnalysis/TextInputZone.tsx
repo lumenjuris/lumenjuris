@@ -36,14 +36,19 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
     onTextSubmit(textContent.trim(), autoName);
   };
 
+  const ACCEPTED_MIME_TYPES = new Set([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+
   // Fonction onDrop pour react-dropzone
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        // Vérifier que c'est un PDF
-        if (file.type !== "application/pdf") {
-          alert("Seuls les fichiers PDF sont acceptés.");
+        if (!ACCEPTED_MIME_TYPES.has(file.type)) {
+          alert("Seuls les fichiers PDF, DOC et DOCX (Word) sont acceptés.");
           return;
         }
         onFileUpload(file);
@@ -165,11 +170,16 @@ Le prestataire s'engage à...
             {/* Composant input file avec React-dropzone pour le drag & drop */}
             <InputFile
               onDrop={onDrop}
-              accepted={{ "application/pdf": [".pdf"] }}
+              accepted={{
+                "application/pdf": [".pdf"],
+                "application/msword": [".doc"],
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                  [".docx"],
+              }}
               multiple={false}
-              fieldTitle="Importez votre contrat PDF"
-              fieldDescription="Cliquez ici ou glissez-déposez votre fichier PDF"
-              supportedFileType="PDF uniquement"
+              fieldTitle="Importez votre contrat"
+              fieldDescription="Cliquez ici ou glissez-déposez votre fichier"
+              supportedFileType="PDF, DOC, DOCX"
               disabled={isBlocked}
             />
           </div>

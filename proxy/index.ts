@@ -496,8 +496,8 @@ async function handleAnalyzeContract(
   try {
     const clauses = await analyzeContractWithAI(content, context);
     res.json({ success: true, clauses });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Erreur interne";
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erreur interne";
     console.error("analyze-contract error:", message);
     res.status(500).json({ success: false, message });
   }

@@ -1,7 +1,9 @@
 /* eslint-disable no-console */
 const IS_PROD = process.env.NODE_ENV === "production";
 const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://localhost:5678";
-const BACKNODE_URL = IS_PROD ? process.env.BACKNODE_URL : "http://localhost:3020";
+const BACKNODE_URL = IS_PROD
+  ? process.env.BACKNODE_URL
+  : "http://localhost:3020";
 
 type OpenAiUsagePayload = {
   model?: string;
@@ -17,7 +19,7 @@ async function logTokens(usage: OpenAiUsagePayload | undefined): Promise<void> {
   try {
     await fetch(
       `${BACKNODE_URL}/llm/increment/${encodeURIComponent(usage.model)}/${input}/${output}`,
-      { method: "PUT" },
+      { method: "PUT", credentials: "include" },
     );
   } catch {
     // token logging is best-effort
@@ -41,7 +43,10 @@ export async function callOpenAI(
     body: JSON.stringify({ messages, ...options }),
   });
   if (!r.ok) throw new Error(`openai-chat error ${r.status}`);
-  const d = (await r.json()) as { content?: string; openai_tokens?: OpenAiUsagePayload };
+  const d = (await r.json()) as {
+    content?: string;
+    openai_tokens?: OpenAiUsagePayload;
+  };
   void logTokens(d.openai_tokens);
   if (typeof d.content !== "string") throw new Error("openai-chat: no content");
   return d.content;
@@ -59,8 +64,12 @@ export async function callOpenAi52(
     body: JSON.stringify({ prompt, reasoning, verbosity, model }),
   });
   if (!r.ok) throw new Error(`openai-chat-5 error ${r.status}`);
-  const d = (await r.json()) as { content?: string; openai_tokens?: OpenAiUsagePayload };
+  const d = (await r.json()) as {
+    content?: string;
+    openai_tokens?: OpenAiUsagePayload;
+  };
   void logTokens(d.openai_tokens);
-  if (typeof d.content !== "string") throw new Error("openai-chat-5: no content");
+  if (typeof d.content !== "string")
+    throw new Error("openai-chat-5: no content");
   return d.content;
 }

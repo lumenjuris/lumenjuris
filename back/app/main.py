@@ -15,6 +15,8 @@ semaphore = asyncio.Semaphore(5)
 
 from back.services.pdf_processing import (
     allowed_file,
+    is_word_file,
+    extract_text_from_word,
     corriger_espaces,
     extract_clauses_ia_robuste,
     _extract_text_from_pdf_content,
@@ -122,16 +124,26 @@ def extract_token_usage(response: Any, model: str) -> Dict[str, Any]:
 
 @app.post("/extract-pdf-text")
 async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False)):
-    """Traite un fichier PDF de manière synchrone et retourne le texte et les clauses."""
+    """Traite un fichier PDF ou Word et retourne le texte et les clauses."""
     if file.filename == "" or not allowed_file(file.filename):
-        raise HTTPException(status_code=400, detail="Type de fichier non autorisé")
-
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé (PDF ou WORD requis)")
 
     content = await file.read()
-    html_formatte = _extract_html_from_pdf_dict(content)
-    print("EXTRACT PDF CONTENT IN HTML : ", html_formatte[:1000])
-    texte_brut = _extract_text_from_pdf_content(content, scan) #  remplcé par html_formatte
-    texte_corrige = corriger_espaces(texte_brut)
+
+    if is_word_file(file.filename):
+        try:
+            texte_brut, html_formatte = extract_text_from_word(content)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        texte_corrige = corriger_espaces(texte_brut)
+        extraction_method = "word"
+    else:
+        html_formatte = _extract_html_from_pdf_dict(content)
+        print("EXTRACT PDF CONTENT IN HTML : ", html_formatte[:1000])
+        texte_brut = _extract_text_from_pdf_content(content, scan)
+        texte_corrige = corriger_espaces(texte_brut)
+        extraction_method = "server"
+
     clauses_detectees = extract_clauses_ia_robuste(texte_corrige)
     texte_des_clauses = " ".join(c.get("text", "") for c in clauses_detectees)
     keywords = _extract_keywords_basic(texte_des_clauses, max_terms=10)
@@ -143,7 +155,7 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
         "clauses": clauses_detectees,
         "keywords": keywords or [],
         "filename": file.filename,
-        "extraction_method": "server",
+        "extraction_method": extraction_method,
         "extraction_quality": "high" if len(texte_corrige) > 1000 else "medium",
         "pages": 1,
         "is_protected": False,
