@@ -32,7 +32,10 @@ import { useAppliedRecommendationsStore } from "../store/appliedRecommendationsS
 import type { AppliedRecommendation } from "../store/appliedRecommendationsStore";
 import { useDocumentTextStore } from "../store/documentTextStore";
 import type { TextPatch } from "../store/documentTextStore";
-import type { ContractAnalysis as ContractAnalysisType } from "../types";
+import type {
+  ContractAnalysis as ContractAnalysisType,
+  ClauseRisk,
+} from "../types";
 import type {
   AnalysisContext,
   EnterpriseAnalysisContext,
@@ -42,10 +45,11 @@ import type {
   ConventionCollectiveOption,
   EnterpriseSettings,
 } from "../types/paramSettings";
+import type { AnalysisProgress } from "../types/analysisProgress";
 import {
-  analyzeContractWithAI,
-  type AnalysisProgress,
-} from "../utils/aiAnalyser/aiAnalyzer";
+  loadAnalysisFromCache,
+  saveAnalysisToCache,
+} from "../utils/aiAnalyser/cachedAnalysis";
 import {
   compareByUploadTimeDesc,
   createContractHistoryId,
@@ -431,19 +435,54 @@ export default function ContractAnalysis() {
     }
 
     try {
-      const analysisResults = await analyzeContractWithAI(
+      const cached = loadAnalysisFromCache(
         baseContract.content,
         analysisContext,
-        {
-          onProgress: (progress) => {
-            updateTemporaryHistoryEntry(historyId, (currentEntry) => ({
-              ...currentEntry,
-              analysisProgress: progress,
-              processingPhase: "analysis",
-            }));
-          },
-        },
       );
+      let analysisResults: ClauseRisk[];
+
+      if (cached && cached.length > 0) {
+        analysisResults = cached;
+      } else {
+        updateTemporaryHistoryEntry(historyId, (currentEntry) => ({
+          ...currentEntry,
+          analysisProgress: {
+            mode: "direct",
+            state: "running",
+            currentAttempt: 1,
+            totalAttempts: 3,
+            totalChunks: 1,
+            completedChunks: 0,
+            successfulChunks: 0,
+            failedChunks: 0,
+            message: "Analyse du document en cours.",
+          } satisfies AnalysisProgress,
+          processingPhase: "analysis",
+        }));
+
+        const response = await fetchProxy("/api/analyze-contract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            content: baseContract.content,
+            context: analysisContext,
+          }),
+        });
+
+        if (!response.ok)
+          throw new Error(`Analyse échouée (${response.status})`);
+        const data = (await response.json()) as {
+          success: boolean;
+          clauses: ClauseRisk[];
+        };
+        analysisResults = data.clauses ?? [];
+        saveAnalysisToCache(
+          baseContract.content,
+          analysisResults,
+          analysisContext,
+        );
+      }
 
       const latestEntry = temporaryHistoryEntriesRef.current[historyId];
       if (!latestEntry) return;

@@ -5,7 +5,10 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import path from "path";
 import http from "http";
-import { proxyAuthMiddleware } from "./middleware/authMiddleware.js";
+
+import { proxyAuthMiddleware } from "./src/middleware/authMiddleware.js";
+import { analyzeContractWithAI } from "./src/services/aiAnalyser/aiAnalyzer.js";
+import type { AnalysisContext } from "./src/services/aiAnalyser/types.js";
 
 // Charge d'abord server/.env puis la racine
 dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
@@ -328,6 +331,30 @@ function handleBillingCredits(req: Request, res: Response): void {
   relayToNode(req, res, "/billing/credits");
 }
 
+async function handleAnalyzeContract(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { content, context } = req.body as {
+    content?: string;
+    context?: AnalysisContext;
+  };
+  if (!content || typeof content !== "string") {
+    res
+      .status(400)
+      .json({ success: false, message: "Le champ 'content' est requis." });
+    return;
+  }
+  try {
+    const clauses = await analyzeContractWithAI(content, context);
+    res.json({ success: true, clauses });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Erreur interne";
+    console.error("analyze-contract error:", message);
+    res.status(500).json({ success: false, message });
+  }
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post("/extract-pdf-text", handleExtractPdfText);
 
@@ -397,6 +424,7 @@ app.get("/api/billing/subscription", auth, handleBillingSubscription);
 app.put("/api/billing/add-credits", auth, handleBillingAddCredits);
 app.put("/api/billing/remove-credits", auth, handleBillingRemoveCredits);
 app.get("/api/billing/credits", auth, handleBillingCredits);
+app.post("/api/analyze-contract", auth, handleAnalyzeContract);
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

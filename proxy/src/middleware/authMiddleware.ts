@@ -11,7 +11,9 @@ export function proxyAuthMiddleware(
   res: Response,
   next: NextFunction,
 ): void {
-  const token: string | undefined = (req as Request & { cookies: Record<string, string> }).cookies?.authLumenJuris;
+  const token: string | undefined = (
+    req as Request & { cookies: Record<string, string> }
+  ).cookies?.authLumenJuris;
   if (!token) {
     res.status(401).json({ success: false, message: "Unauthorized" });
     return;
@@ -22,6 +24,8 @@ export function proxyAuthMiddleware(
     res.locals.role = payload.role ?? "USER";
     next();
   } catch {
-    res.status(401).json({ success: false, message: "Token invalide ou expiré" });
+    res
+      .status(401)
+      .json({ success: false, message: "Token invalide ou expiré" });
   }
 }

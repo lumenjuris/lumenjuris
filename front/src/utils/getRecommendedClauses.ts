@@ -2,7 +2,15 @@
 import { ClauseRisk } from '../types';
 import { AnalysisContext } from '../types/contextualAnalysis';
 import { callOpenAI, callOpenAi52, type OpenAIModelId } from './aiClient';
-import { buildEnterpriseContextBlockFromAnalysisContext } from './aiAnalyser/buildingPrompt';
+function buildEnterpriseContextBlockFromAnalysisContext(context?: AnalysisContext): string {
+  if (!context?.enterpriseContext) return "";
+  const { collectiveAgreement, companyLegalForm } = context.enterpriseContext;
+  const unknown = "Non renseigné pour le moment";
+  return [
+    "- Convention collective applicable : " + (collectiveAgreement?.trim() || unknown),
+    "- Forme juridique de l'entreprise utilisatrice : " + (companyLegalForm?.trim() || unknown),
+  ].join("\n");
+}
 
 // Interface améliorée pour les recommandations de clauses
 export interface ClauseRecommendation {

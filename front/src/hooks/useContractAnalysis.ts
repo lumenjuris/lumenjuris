@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from "react";
 import type { ClauseRisk, ContractAnalysis } from "../types";
 import type { AnalysisContext } from "../types/contextualAnalysis";
 import { extractDocumentContent } from "../utils/documentExtractor";
-import type { AnalysisProgress } from "../utils/aiAnalyser/aiAnalyzer";
+import type { AnalysisProgress } from "../types/analysisProgress";
 import {
   performCompleteMarketAnalysis,
   MarketAnalysisResult,
