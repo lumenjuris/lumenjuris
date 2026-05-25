@@ -10,6 +10,7 @@ import { prisma } from "../../prisma/singletonPrisma";
 
 const routerAuthGoogle: Router = express.Router();
 
+
 //Route auth vers Google
 routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
   const state = crypto.randomUUID();

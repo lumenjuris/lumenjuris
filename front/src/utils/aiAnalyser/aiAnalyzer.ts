@@ -200,6 +200,7 @@ async function analyzeDirectlyWithGPT52(
   return clauses;
 }
 
+
 /**
  * 🔄 ANALYSE LOCALE (Fallback)
  * En cas d'echec de l'analayse déclanchement de ce fallback qui utilise des patterns pour detecter des clauses à risque
