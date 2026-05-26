@@ -4,7 +4,6 @@ import { useUserStore } from "../store/userStore";
 import { Navigate } from "react-router-dom";
 import { fetchProxy } from "../utils/fetchProxy";
 
-
 type LlmUsage = {
   model: string;
   tokenInput: number;
