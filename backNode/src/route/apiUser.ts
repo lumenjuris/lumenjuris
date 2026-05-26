@@ -14,6 +14,86 @@ import { normalizeAccountParameters } from "../utils/normalizeAccountParameters"
 
 const routerUser: Router = express.Router();
 
+type TokenValidationResult =
+  | {
+      valid: true;
+      tokenEntry: {
+        idToken: number;
+        userId: number;
+        token: string;
+        type: string;
+        status: string;
+        expiresAt: Date;
+      };
+    }
+  | { valid: false; reason: "invalid" | "already-used" | "expired" };
+
+async function validateToken(
+  token: string,
+  expectedType?: string,
+): Promise<TokenValidationResult> {
+  const tokenEntry = await prisma.token.findUnique({ where: { token } });
+
+  // Token introuvable
+  if (!tokenEntry || (expectedType && tokenEntry.type !== expectedType)) {
+    return { valid: false, reason: "invalid" };
+  }
+
+  // Token déjà utilisé
+  if (tokenEntry.status === "USED") {
+    return { valid: false, reason: "already-used" };
+  }
+
+  // Token expiré
+  if (tokenEntry.expiresAt < new Date()) {
+    await prisma.token.update({
+      where: { token },
+      data: { status: "EXPIRED" },
+    });
+    return { valid: false, reason: "expired" };
+  }
+
+  // Etat inconnu (failback)
+  if (tokenEntry.status !== "ACTIVE") {
+    return { valid: false, reason: "invalid" };
+  }
+  return { valid: true, tokenEntry };
+}
+
+const ALL_VEILLE_TAGS = [
+  "Rupture",
+  "Temps de travail",
+  "Rémunération",
+  "Santé/Sécurité",
+  "Discipline",
+  "Relations collectives",
+  "Protection sociale",
+  "Recrutement",
+] as const;
+
+function normalizePreferenceUI(input: unknown) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { dyslexicMode: false, veilleActiveTags: [...ALL_VEILLE_TAGS] };
+  }
+  const candidate = input as {
+    dyslexicMode?: unknown;
+    veilleActiveTags?: unknown;
+  };
+
+  const veilleActiveTags = Array.isArray(candidate.veilleActiveTags)
+    ? (candidate.veilleActiveTags as unknown[]).filter(
+        (t): t is string =>
+          typeof t === "string" &&
+          (ALL_VEILLE_TAGS as readonly string[]).includes(t),
+      )
+    : [...ALL_VEILLE_TAGS];
+
+  return {
+    dyslexicMode: Boolean(candidate.dyslexicMode),
+    veilleActiveTags,
+  };
+}
+
 routerUser.post("/create", async (req: Request, res: Response) => {
   try {
     const { email, nom, prenom, password, cgu, enterprise } = req.body;
@@ -46,22 +126,30 @@ routerUser.post("/create", async (req: Request, res: Response) => {
     const { idUser } = createdUser.data;
     const token = await new Token().createToken(idUser, "verifyAccount");
     const url = `${process.env.HOST}/user/verify/${token.token}`;
+
+    if (
+      enterprise &&
+      typeof enterprise === "object" &&
+      !Array.isArray(enterprise)
+    ) {
+      const nested = enterprise as any;
+      const enterpriseInput = {
+        ...nested,
+        address: nested.address?.address ?? nested.address ?? null,
+        codePostal: nested.address?.codePostal ?? nested.codePostal ?? null,
+        pays: nested.address?.pays ?? nested.pays ?? null,
+      };
+      await new Enterprise().updateByUser(idUser, enterpriseInput);
+    }
+
     const mailer = await new Mailer(email).sendVerifyAccount(
       url,
       `${prenom} ${nom}`,
     );
 
-    // Le signup n'appelle plus INSEE côté serveur.
-    // Si le front a déjà présenté puis validé un profil entreprise, il peut l'envoyer tel quel ici.
-    const enterpriseSave =
-      enterprise && typeof enterprise === "object" && !Array.isArray(enterprise)
-        ? await new Enterprise().updateByUser(idUser, enterprise)
-        : null;
-
     return res.status(200).json({
       success: mailer.success,
       message: mailer.message,
-      enterpriseSave,
     });
   } catch (err) {
     console.error(
@@ -81,44 +169,14 @@ routerUser.get(
     try {
       const { token } = req.params;
 
-      const tokenEntry = await prisma.token.findUnique({
-        where: { token },
-        include: { user: true },
-      });
-
-      // Token introuvable
-      if (!tokenEntry) {
+      const result = await validateToken(token);
+      if (!result.valid) {
         return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=invalid`,
+          `${process.env.HOST_FRONT}/verify-account?reason=${result.reason}`,
         );
       }
 
-      // Token déjà utilisé
-      if (tokenEntry.status === "USED") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
-        );
-      }
-
-      // Token expiré
-      if (tokenEntry.expiresAt < new Date()) {
-        await prisma.token.update({
-          where: { token },
-          data: { status: "EXPIRED" },
-        });
-
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=expired`,
-        );
-      }
-
-      if (tokenEntry.status !== "ACTIVE") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/verify-account?reason=already-used`,
-        );
-      }
-
-      const idUser = tokenEntry.userId;
+      const idUser = result.tokenEntry.userId;
 
       const updatedUser = await prisma.user.update({
         where: { idUser },
@@ -595,20 +653,23 @@ routerUser.post("/forgotpassword", async (req: Request, res: Response) => {
         "forgotPassword",
       );
       const url = `${process.env.HOST}/user/resetpassword/${token.token}`;
-      const mailer = await new Mailer(email).sendResetPassword(
+      await new Mailer(email).sendResetPassword(
         url,
         `${user.prenom} ${user.nom}`,
       );
-
-      return res.status(200).json({
-        success: mailer.success,
-        message: mailer.message,
-      });
-    } else {
-      return;
     }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Si cet email est associé à un compte, vous recevrez un lien de réinitialisation.",
+    });
   } catch (error) {
-    console.log("🛑🛑🛑🛑 USER RESET", error);
+    console.error("Erreur lors de la demande de réinitialisation:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Une erreur est survenue, veuillez réessayer.",
+    });
   }
 });
 
@@ -619,35 +680,10 @@ routerUser.get(
     try {
       const { token } = req.params;
 
-      const tokenEntry = await prisma.token.findUnique({
-        where: { token },
-      });
-
-      if (!tokenEntry || tokenEntry.type !== "forgotPassword") {
+      const result = await validateToken(token, "forgotPassword");
+      if (!result.valid) {
         return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=invalid`,
-        );
-      }
-
-      if (tokenEntry.status === "USED") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=already-used`,
-        );
-      }
-
-      if (tokenEntry.expiresAt < new Date()) {
-        await prisma.token.update({
-          where: { token },
-          data: { status: "EXPIRED" },
-        });
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=expired`,
-        );
-      }
-
-      if (tokenEntry.status !== "ACTIVE") {
-        return res.redirect(
-          `${process.env.HOST_FRONT}/reset-password?reason=already-used`,
+          `${process.env.HOST_FRONT}/reset-password?reason=${result.reason}`,
         );
       }
 
@@ -678,43 +714,21 @@ routerUser.post("/updatepassword", async (req: Request, res: Response) => {
       });
     }
 
-    const tokenEntry = await prisma.token.findUnique({
-      where: { token },
+    const result = await validateToken(token, "forgotPassword");
+    if (!result.valid) {
+      const messages = {
+        invalid: "Token invalide.",
+        "already-used": "Ce lien a déjà été utilisé.",
+        expired: "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
+      };
+      return res
+        .status(400)
+        .json({ success: false, message: messages[result.reason] });
+    }
+
+    const updated = await new User().update(result.tokenEntry.userId, {
+      password,
     });
-
-    if (!tokenEntry || tokenEntry.type !== "forgotPassword") {
-      return res.status(400).json({
-        success: false,
-        message: "Token invalide.",
-      });
-    }
-
-    if (tokenEntry.status === "USED") {
-      return res.status(400).json({
-        success: false,
-        message: "Ce lien a déjà été utilisé.",
-      });
-    }
-
-    if (tokenEntry.expiresAt < new Date()) {
-      await prisma.token.update({
-        where: { token },
-        data: { status: "EXPIRED" },
-      });
-      return res.status(400).json({
-        success: false,
-        message: "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
-      });
-    }
-
-    if (tokenEntry.status !== "ACTIVE") {
-      return res.status(400).json({
-        success: false,
-        message: "Token invalide ou déjà utilisé.",
-      });
-    }
-
-    const updated = await new User().update(tokenEntry.userId, { password });
 
     if (!updated.success) {
       return res.status(500).json({

@@ -1193,19 +1193,61 @@ def _legifrance_search(query: str, limit: int = 3) -> List[Dict[str, Any]]:
 
             if not _is_authorized_domain(url_decision):
                 continue
+
+            # Extraire le texte des extraits et la solution depuis la réponse Légifrance
+            raw_text = it.get('text', '') or ''
+            # Nettoyer les balises <mark> et les marqueurs [...]
+            import re as _re
+            clean_text = _re.sub(r'<[^>]+>', '', raw_text).replace('[...]', '…').strip()
+            solution = it.get('solution', '') or ''
+
             out.append({
-                'title': title, # Utilisation du nouveau titre
-                'court': str(court or ''), # Juridiction vide si non trouvée
+                'title': title,
+                'court': str(court or ''),
                 'year': year,
                 'url': url_decision,
                 'summary': '',
                 'date': str(date_str or ''),
+                'solution': solution,
+                'zones': {'expose_moyens': clean_text[:1500]} if clean_text else {},
+                'highlights': '',
             })
         logger.info(f"✅ [Légifrance Search] {len(out)} résultats trouvés")
         return out
     except Exception as e:
         logger.warning(f"Legifrance search error: {e}")
     return []
+
+def _judilibre_get_decision_text(decision_id: str, token: str) -> Dict[str, str]:
+    """Récupère le texte complet d'une décision Judilibre par son identifiant JURITEXT."""
+    try:
+        base = JUDI_ENDPOINT or 'https://api.piste.gouv.fr/dila/judilibre/v1/search'
+        decision_url = base.replace('/search', '/decision')
+        headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
+        r = requests.get(decision_url, params={'id': decision_id}, headers=headers, timeout=8, proxies=_PROXIES)
+        if not r.ok:
+            return {}
+        data = r.json() or {}
+        zones = data.get('zones', {}) or {}
+        result = {}
+        for zone_key in ('expose_moyens', 'motivation', 'dispositif'):
+            val = zones.get(zone_key, [])
+            if isinstance(val, list):
+                text = ' '.join(v for v in val if isinstance(v, str))
+            elif isinstance(val, str):
+                text = val
+            else:
+                text = ''
+            if text:
+                result[zone_key] = text[:1200]
+        sol = data.get('solution', '') or data.get('solution_alt', '')
+        if sol:
+            result['solution'] = sol
+        return result
+    except Exception as e:
+        logger.warning(f"[Judilibre GET decision] Erreur pour {decision_id}: {e}")
+        return {}
+
 
 def _judilibre_search(query: str, limit: int = 3) -> List[Dict[str, Any]]:
     """Recherche via Judilibre (décisions judiciaires)."""
@@ -1267,6 +1309,15 @@ def _judilibre_search(query: str, limit: int = 3) -> List[Dict[str, Any]]:
             if not url_decision or not _is_authorized_domain(url_decision):
                 continue
 
+            # Fetch du texte complet via l'endpoint /decision
+            decision_id = res.get('id', '')
+            if not decision_id:
+                import re as _re
+                m = _re.search(r'JURITEXT\w+', url_decision, _re.IGNORECASE)
+                decision_id = m.group(0).upper() if m else ''
+
+            decision_text = _judilibre_get_decision_text(decision_id, token) if decision_id else {}
+
             out.append({
                 'title': title,
                 'court': court,
@@ -1274,7 +1325,10 @@ def _judilibre_search(query: str, limit: int = 3) -> List[Dict[str, Any]]:
                 'url': url_decision,
                 'summary': res.get('summary', ''),
                 'date': date_str,
-                'relevanceScore': res.get('score', 0.8)  # Utiliser le score si disponible
+                'relevanceScore': res.get('score', 0.8),
+                'solution': decision_text.get('solution', res.get('solution', '') or res.get('solution_alt', '')),
+                'zones': {k: decision_text[k] for k in ('expose_moyens', 'motivation', 'dispositif') if k in decision_text},
+                'highlights': '',
             })
         logger.info(f"✅ [Judilibre Search] {len(out)} résultats trouvés")
         return out

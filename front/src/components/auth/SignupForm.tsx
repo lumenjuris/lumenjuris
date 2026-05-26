@@ -60,6 +60,7 @@ const SignupForm = ({
 
   const [submitError, setSubmitError] = useState(false);
   const [submitCguError, setSubmitCguError] = useState(false);
+  const [submitPending, setSubmitPending] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [serverError, setServerError] = useState(false);
@@ -80,64 +81,74 @@ const SignupForm = ({
 
     if (!lastName || !email || !password) {
       setSubmitError(true);
-    } else if (acceptCgu === false) {
+      return;
+    }
+    if (acceptCgu === false) {
       setSubmitCguError(true);
-    } else {
-      setSubmitLoading(true);
-      const trimedLastName = lastName.trim();
-      const trimedFirstName = firstName.trim();
-      try {
-        const signupResponse = await fetchProxy("/api/signup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            nom: trimedLastName,
-            prenom: trimedFirstName,
-            password: password,
-            cgu: acceptCgu,
-          }),
-          credentials: "include",
-        });
-
-        const data = await signupResponse.json();
-        console.log("▶️▶️ RETOUR PROXY INSCRIPTION :", data);
-
-        if (!signupResponse.ok) {
-          setServerError(true);
-          setServerErrorMessage(data.message);
-          throw new Error(`BackNode Auth Error : ${signupResponse.status}`);
-        } else {
-          setSubmitSuccess(true);
-          setSuccessMessage(data.message);
-        }
-      } catch (error) {
-        setServerError(true);
-        setServerErrorMessage(
-          "Une erreur s'est produite, nous n'avons pas pu créer votre compte...",
-        );
-        console.error("🛑🛑🛑 ERREUR SERVEUR INSCRIPTION", error);
-      }
+      return;
     }
 
+    setSubmitLoading(true);
+    setSubmitPending(true);
+    const trimedLastName = lastName.trim();
+    const trimedFirstName = firstName.trim();
+
+    let enterpriseData: object | null = null;
     if (siren) {
-      const trimedSiren = siren.trim();
       try {
-        const sirenResponse = await fetchProxy(`/api/insee/${trimedSiren}`, {
+        const sirenResponse = await fetchProxy(`/api/insee/${siren.trim()}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
+          cache: "no-store",
         });
-        if (!sirenResponse.ok) {
-          console.log("SIREN RESPONSE ERROR :", sirenResponse.status);
-        } else {
-          console.log("SIREN RESPONSE :", sirenResponse.status);
+        if (sirenResponse.ok) {
+          const sirenPayload = await sirenResponse.json();
+          if (sirenPayload?.success && sirenPayload?.data) {
+            enterpriseData = sirenPayload.data;
+          }
         }
-      } catch (error) {
-        console.log("SIREN RESPONSE ERROR :", error);
+      } catch {
+        // INSEE lookup best-effort, on continue sans données entreprise
       }
+    }
+
+    try {
+      const signupResponse = await fetchProxy("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          nom: trimedLastName,
+          prenom: trimedFirstName,
+          password,
+          cgu: acceptCgu,
+          ...(enterpriseData ? { enterprise: enterpriseData } : {}),
+        }),
+        credentials: "include",
+      });
+
+      const data = await signupResponse.json();
+
+      if (!signupResponse.ok) {
+        setSubmitPending(false);
+        setServerError(true);
+        setServerErrorMessage(data.message);
+        throw new Error(`BackNode Auth Error : ${signupResponse.status}`);
+      } else {
+        setSubmitPending(false);
+        setSubmitSuccess(true);
+        setSuccessMessage(
+          `Votre compte a été créé. Un email de vérification a été envoyé à ${email}. Veuillez vérifier votre boîte de réception et vos spams.`,
+        );
+      }
+    } catch (error) {
+      setSubmitPending(false);
+      setServerError(true);
+      setServerErrorMessage(
+        "Une erreur s'est produite, nous n'avons pas pu créer votre compte...",
+      );
+      console.error("🛑🛑🛑 ERREUR SERVEUR INSCRIPTION", error);
     }
   };
 
@@ -248,6 +259,15 @@ const SignupForm = ({
             setSubmitLoading(false);
             setServerErrorMessage("");
           }}
+        />
+      )}
+      {submitPending && (
+        <AlertBanner
+          title="Inscription réussie !"
+          variant="info"
+          detail={`Votre compte a été créé. Un email de vérification est en cours d'envoi à ${email}. Veuillez attendre quelques secondes...`}
+          duration={0}
+          onClose={() => setSubmitPending(false)}
         />
       )}
       {submitSuccess && (

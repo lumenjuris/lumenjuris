@@ -23,6 +23,7 @@ dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
 dotenv.config();
 
 const app = express();
+app.set("etag", false);
 
 //Cors adapté pour prod
 app.use(
@@ -125,6 +126,12 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
         res.setHeader("set-cookie", setCookieHeader);
       }
 
+      // 304 n'a pas de body — on le remonte en 200 vide pour ne pas bloquer le front
+      if (r.status === 304) {
+        res.status(200).json({ success: false, status: 304, raw: "" });
+        return;
+      }
+
       const contentType = r.headers.get("content-type") || "";
 
       if (contentType.includes("application/json")) {
@@ -192,6 +199,10 @@ function handleExtractDocumentText(req: Request, res: Response): void {
 
 function handleLegifranceSearch(req: Request, res: Response): void {
   relayJsonToPython(req, res, "/legifrance-search");
+}
+
+function handleClassifyVeille(req: Request, res: Response): void {
+  relayJsonToPython(req, res, "/classify-veille");
 }
 
 function handleJurisprudence(req: Request, res: Response): void {
@@ -503,6 +514,15 @@ async function handleAnalyzeContract(
   }
 }
 
+function handleNodeVeille(req: Request, res: Response): void {
+  const qs = req.query.nocache === "1" ? "?nocache=1" : "";
+  relayToNode(req, res, `/veille${qs}`);
+}
+
+function handleNodeVeilleDebug(_req: Request, res: Response): void {
+  relayToNode(_req, res, "/veille/debug");
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post(
   ["/extract-document-text", "/api/extract-document-text"],
@@ -515,6 +535,7 @@ app.post(
   handleLegifranceSearch,
 );
 app.post(["/jurisprudence", "/api/jurisprudence"], handleJurisprudence);
+app.post(["/classify-veille", "/api/classify-veille"], handleClassifyVeille);
 app.post(["/analyze-clause", "/api/analyze-clause"], handleAnalyzeClause);
 app.post(["/api/chat", "/chat"], handleChat);
 app.post(["/api/openai-chat", "/openai-chat"], handleOpenAiChat);
@@ -533,6 +554,10 @@ app.post("/api/user/auth/login", handleNodeLogin);
 app.post("/api/auth/forgotpassword", handleNodeUserForgotPassword);
 app.post("/api/user/resetpassword", handleNodeUserResetPassword);
 app.get("/api/google", handleNodeGoogle);
+app.post("/api/billing/customer", handleBillingCustomer);
+app.post("/api/billing/payment-intent", handleBillingPaymentIntent);
+app.get("/api/veille", handleNodeVeille);
+app.get("/api/veille/debug", handleNodeVeilleDebug);
 
 // Routes protégées (JWT vérifié par le proxy)
 app.post("/api/user/auth/logout", auth, handleNodeLogout);

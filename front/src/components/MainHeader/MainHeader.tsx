@@ -1,10 +1,10 @@
 // UI //
-import { Scale, RefreshCw } from "lucide-react";
+import { Scale } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import HeaderNavigationBar from "./HeaderNavigationBar";
 
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 type NavigationClickHandler = (
   event?: MouseEvent<HTMLElement>,
@@ -12,18 +12,10 @@ type NavigationClickHandler = (
 
 interface MainHeaderProps {
   onNavClick?: NavigationClickHandler;
-  onReanalyze?: () => void;
-  showReanalyze?: boolean;
   setIsConnected?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const MainHeader = ({
-  onNavClick,
-  onReanalyze,
-  showReanalyze,
-}: MainHeaderProps) => {
-  const { pathname } = useLocation();
-
+const MainHeader = ({ onNavClick }: MainHeaderProps) => {
   return (
     <header className="h-16 border-b border-gray-200 bg-white sticky top-0 z-10">
       <div className="max-w-[1500px] ml-auto px-4 lg:px-6 flex justify-between items-center h-full 2xl:max-w-full 2xl:ml-64">
@@ -46,15 +38,6 @@ const MainHeader = ({
               </div>
             </button>
           </Link>
-          {pathname === "/analyzer" && showReanalyze && (
-            <button
-              onClick={onReanalyze}
-              className="flex items-center justify-center w-10 h-10 text-gray-600 hover:bg-lumenjuris-background rounded-lg transition-colors"
-              title="Réanalyser le document"
-            >
-              <RefreshCw className="size-5" />
-            </button>
-          )}
         </section>
 
         <HeaderNavigationBar onNavClick={onNavClick} />

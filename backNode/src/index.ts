@@ -11,6 +11,7 @@ import routerEnterprise from "./route/apiEnterprise";
 import routerContractHistory from "./route/apiContractHistory";
 import routerChatHistory from "./route/apiChatHistory";
 import routerBilling from "./route/apiBilling";
+import routerVeille from "./route/apiVeille";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
 import { seedPlans } from "./services/planSeeder";
@@ -27,6 +28,7 @@ const HOST_PROXY: string =
     : "https://proxy.lumenjuris.com";
 
 const app = express();
+app.set("etag", false);
 const port = process.env.PORT || 3020;
 app.use(express.json({ limit: "20mb" }));
 app.use(cookieParser());
@@ -48,6 +50,7 @@ app.use("/enterprise", routerEnterprise);
 app.use("/contract-history", routerContractHistory);
 app.use("/chat-history", routerChatHistory);
 app.use("/billing", routerBilling);
+app.use("/veille", routerVeille);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

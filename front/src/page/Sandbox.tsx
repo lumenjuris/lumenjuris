@@ -11,6 +11,20 @@ import { Navigate } from "react-router-dom";
 
 import { fetchProxy } from "../utils/fetchProxy";
 
+interface DebugFeed {
+  url: string;
+  label: string;
+  status: "ok" | "error";
+  error?: string;
+  itemCount: number;
+  items: {
+    title: string;
+    description: string;
+    date: string;
+    source: string;
+    link?: string;
+  }[];
+}
 
 const PRESETS: {
   label: string;
@@ -76,7 +90,91 @@ export function Sandbox() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authResult, setAuthResult] = useState<string>("");
 
-  const { userData } = useUserStore();
+  const [debugFeeds, setDebugFeeds] = useState<DebugFeed[]>([]);
+  const [debugLoading, setDebugLoading] = useState(false);
+  const [debugError, setDebugError] = useState("");
+  const [expandedFeed, setExpandedFeed] = useState<number | null>(null);
+  const [classifyLoading, setClassifyLoading] = useState(false);
+  const [classifyError, setClassifyError] = useState("");
+  // map "feedIndex-itemIndex" → tag | null
+  const [classifyTags, setClassifyTags] = useState<
+    Record<string, string | null>
+  >({});
+
+  const { isConnected: userConnected, userData } = useUserStore();
+
+  const applyAiFilter = async () => {
+    const allItems: {
+      feedIdx: number;
+      itemIdx: number;
+      title: string;
+      description: string;
+    }[] = [];
+    debugFeeds.forEach((feed, fi) => {
+      feed.items.forEach((item, ii) =>
+        allItems.push({
+          feedIdx: fi,
+          itemIdx: ii,
+          title: item.title,
+          description: item.description,
+        }),
+      );
+    });
+    if (allItems.length === 0) return;
+
+    setClassifyLoading(true);
+    setClassifyError("");
+    setClassifyTags({});
+    try {
+      const res = await fetchProxy("/api/classify-veille", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          articles: allItems.map((a) => ({
+            title: a.title,
+            description: a.description,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw: (string | null)[] = await res.json();
+      const tags: Record<string, string | null> = {};
+      allItems.forEach((a, i) => {
+        tags[`${a.feedIdx}-${a.itemIdx}`] = raw[i] ?? null;
+      });
+      setClassifyTags(tags);
+    } catch (e) {
+      setClassifyError((e as Error).message);
+    } finally {
+      setClassifyLoading(false);
+    }
+  };
+
+  const fetchDebug = async () => {
+    setDebugLoading(true);
+    setDebugError("");
+    try {
+      const res = await fetchProxy("/api/veille/debug", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = (await res.json()) as {
+        success: boolean;
+        feeds?: DebugFeed[];
+      };
+      if (payload.success && payload.feeds) {
+        setDebugFeeds(payload.feeds);
+        setExpandedFeed(null);
+      } else {
+        setDebugError("Réponse inattendue du serveur.");
+      }
+    } catch (e) {
+      setDebugError((e as Error).message);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
 
   const spawn = (preset: (typeof PRESETS)[number]) => {
     setBanners((prev) => [
@@ -100,29 +198,22 @@ export function Sandbox() {
     try {
       setInseeLoading(true);
       setInseeResult("");
-
       const response = await fetchProxy(
         `/api/insee/${encodeURIComponent(inseeSiren)}`,
-        {
-          credentials: "include",
-        },
+        { credentials: "include" },
       );
-
       const rawText = await response.text();
-
       let parsed: unknown = null;
       try {
         parsed = rawText ? JSON.parse(rawText) : null;
       } catch {
         parsed = null;
       }
-
       setInseeResult(
         JSON.stringify(
           {
             ok: response.ok,
             status: response.status,
-            statusText: response.statusText,
             body: parsed ?? rawText ?? "",
           },
           null,
@@ -132,9 +223,7 @@ export function Sandbox() {
     } catch (error) {
       setInseeResult(
         JSON.stringify(
-          {
-            error: error instanceof Error ? error.message : String(error),
-          },
+          { error: error instanceof Error ? error.message : String(error) },
           null,
           2,
         ),
@@ -148,15 +237,12 @@ export function Sandbox() {
     try {
       setAuthLoading(true);
       setAuthResult("");
-
       const response = await fetchProxy(
         action === "login" ? "/api/user/auth/login" : "/api/user/auth/logout",
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body:
             action === "login"
               ? JSON.stringify({
@@ -166,23 +252,19 @@ export function Sandbox() {
               : undefined,
         },
       );
-
       const rawText = await response.text();
-
       let parsed: unknown = null;
       try {
         parsed = rawText ? JSON.parse(rawText) : null;
       } catch {
         parsed = null;
       }
-
       setAuthResult(
         JSON.stringify(
           {
             action,
             ok: response.ok,
             status: response.status,
-            statusText: response.statusText,
             body: parsed ?? rawText ?? "",
           },
           null,
@@ -217,9 +299,9 @@ export function Sandbox() {
           </h1>
         </div>
 
+        {/* AlertBanner */}
         <section className="space-y-4">
           <h2 className="text-base font-semibold text-gray-800">AlertBanner</h2>
-
           <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -247,7 +329,6 @@ export function Sandbox() {
                 />
               </div>
             </div>
-
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-medium text-gray-500 shrink-0">
@@ -279,7 +360,6 @@ export function Sandbox() {
               </label>
             </div>
           </div>
-
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((preset) => (
               <button
@@ -291,7 +371,6 @@ export function Sandbox() {
               </button>
             ))}
           </div>
-
           <div className="space-y-2">
             {banners.map((b) => (
               <AlertBanner
@@ -307,9 +386,9 @@ export function Sandbox() {
           </div>
         </section>
 
+        {/* Auth */}
         <section className="space-y-4">
           <h2 className="text-base font-semibold text-gray-800">Test Auth</h2>
-
           <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -327,16 +406,15 @@ export function Sandbox() {
                 {authLoading ? "Chargement..." : "Logout"}
               </button>
             </div>
-
             <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
               {authResult || "Le résultat du test auth s'affichera ici."}
             </pre>
           </div>
         </section>
 
+        {/* INSEE */}
         <section className="space-y-4">
           <h2 className="text-base font-semibold text-gray-800">Test INSEE</h2>
-
           <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <input
@@ -354,11 +432,152 @@ export function Sandbox() {
                 {inseeLoading ? "Chargement..." : "Tester"}
               </button>
             </div>
-
             <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap">
               {inseeResult || "Le résultat du test INSEE s'affichera ici."}
             </pre>
           </div>
+        </section>
+
+        {/* Debug RSS */}
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">
+            Debug flux RSS
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={fetchDebug}
+                disabled={debugLoading}
+                className="text-sm px-4 py-2 rounded-lg border border-gray-300 hover:border-gray-500 transition-colors bg-gray-50 text-gray-700 font-mono disabled:opacity-50"
+              >
+                {debugLoading ? "Chargement…" : "Fetch flux bruts"}
+              </button>
+              {debugFeeds.length > 0 && (
+                <button
+                  onClick={applyAiFilter}
+                  disabled={classifyLoading}
+                  className="text-sm px-4 py-2 rounded-lg border border-lumenjuris/40 hover:border-lumenjuris transition-colors bg-lumenjuris/5 text-lumenjuris font-medium disabled:opacity-50"
+                >
+                  {classifyLoading
+                    ? "Classification…"
+                    : "Appliquer le filtre IA"}
+                </button>
+              )}
+            </div>
+            {debugError && (
+              <p className="text-xs text-red-600 bg-red-50 rounded px-3 py-2">
+                {debugError}
+              </p>
+            )}
+            {classifyError && (
+              <p className="text-xs text-red-600 bg-red-50 rounded px-3 py-2">
+                {classifyError}
+              </p>
+            )}
+          </div>
+
+          {debugFeeds.length > 0 && (
+            <div className="space-y-2">
+              {debugFeeds.map((feed, fi) => (
+                <div
+                  key={fi}
+                  className="bg-white border border-gray-200 rounded-xl overflow-hidden"
+                >
+                  <button
+                    onClick={() =>
+                      setExpandedFeed(expandedFeed === fi ? null : fi)
+                    }
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${feed.status === "ok" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {feed.status === "ok"
+                          ? `${feed.itemCount} items`
+                          : "erreur"}
+                      </span>
+                      <span className="text-sm font-medium text-gray-800 truncate">
+                        {feed.label}
+                      </span>
+                      <span className="text-xs text-gray-400 truncate hidden sm:block">
+                        {feed.url}
+                      </span>
+                    </div>
+                    <span className="text-gray-400 text-xs shrink-0 ml-2">
+                      {expandedFeed === fi ? "▲" : "▼"}
+                    </span>
+                  </button>
+
+                  {expandedFeed === fi && (
+                    <div className="border-t border-gray-100">
+                      {feed.status === "error" ? (
+                        <p className="px-4 py-3 text-xs text-red-600 font-mono">
+                          {feed.error}
+                        </p>
+                      ) : feed.items.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-gray-400 italic">
+                          Aucun item dans ce flux.
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-gray-50">
+                          {feed.items.map((item, ii) => {
+                            const aiTag = classifyTags[`${fi}-${ii}`];
+                            const hasAiResult = `${fi}-${ii}` in classifyTags;
+                            return (
+                              <div key={ii} className="px-4 py-2.5 space-y-0.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    {item.link ? (
+                                      <a
+                                        href={item.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-gray-800 hover:text-lumenjuris underline underline-offset-2"
+                                      >
+                                        {item.title || (
+                                          <span className="italic text-gray-400">
+                                            (sans titre)
+                                          </span>
+                                        )}
+                                      </a>
+                                    ) : (
+                                      <p className="text-xs font-medium text-gray-800">
+                                        {item.title || (
+                                          <span className="italic text-gray-400">
+                                            (sans titre)
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {hasAiResult && (
+                                    <span
+                                      className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${aiTag ? "bg-lumenjuris/10 text-lumenjuris" : "bg-gray-100 text-gray-400 italic"}`}
+                                    >
+                                      {aiTag ?? "null"}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.description && (
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {item.description}
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-300">
+                                  {item.date}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </>

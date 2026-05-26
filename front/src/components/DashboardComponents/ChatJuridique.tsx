@@ -1,15 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { MessageSquare, Send, Download, Clock, Plus, Trash2, Loader2 } from "lucide-react";
+import {
+  MessageSquare,
+  Send,
+  Download,
+  Clock,
+  Plus,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { fetchProxy } from "../../utils/fetchProxy";
 
-
-
-
-
-
 type Message = { role: "user" | "bot" | "error"; text: string };
-type Conversation = { id: string; title: string; createdAt: string; messages: Message[] };
+type Conversation = {
+  id: string;
+  title: string;
+  createdAt: string;
+  messages: Message[];
+};
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -40,7 +48,9 @@ export function ChatJuridique() {
         }
       })
       .catch(() => {})
-      .finally(() => { loadedRef.current = true; });
+      .finally(() => {
+        loadedRef.current = true;
+      });
   }, []);
 
   // Sauvegarde différée en DB à chaque modification (ignorée avant le chargement initial)
@@ -72,91 +82,108 @@ export function ChatJuridique() {
     setActiveId(conv.id);
   }, []);
 
-  const deleteConversation = useCallback((id: string) => {
-    setConversations((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      if (activeId === id) setActiveId(next[0]?.id ?? null);
-      return next;
-    });
-  }, [activeId]);
-
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isSending) return;
-
-    let convId = activeId;
-
-    // Crée la conversation si vide
-    if (!convId) {
-      const conv: Conversation = {
-        id: crypto.randomUUID(),
-        title: text.slice(0, 40),
-        createdAt: new Date().toISOString(),
-        messages: [],
-      };
-      setConversations((prev) => [conv, ...prev]);
-      setActiveId(conv.id);
-      convId = conv.id;
-    }
-
-    const userMsg: Message = { role: "user", text };
-
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === convId
-          ? {
-              ...c,
-              title: c.messages.length === 0 ? text.slice(0, 40) : c.title,
-              messages: [...c.messages, userMsg],
-            }
-          : c
-      )
-    );
-    setInput("");
-    setIsSending(true);
-
-    // Ajout du contexte et de l'historique des messages précédents
-    const previousMessages = conversations.find((c) => c.id === convId)?.messages ?? [];
-
-    try {
-      const res = await fetchProxy("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          context: "Tu es un assistant juridique spécialisé en droit du travail français. Réponds avec précision en citant les articles du Code du travail pertinents.",
-          history: previousMessages
-            .filter((m) => m.role === "user" || m.role === "bot")
-            .map((m) => ({ role: m.role === "bot" ? "assistant" : "user", content: m.text })),
-        }),
+  const deleteConversation = useCallback(
+    (id: string) => {
+      setConversations((prev) => {
+        const next = prev.filter((c) => c.id !== id);
+        if (activeId === id) setActiveId(next[0]?.id ?? null);
+        return next;
       });
+    },
+    [activeId],
+  );
 
-      if (!res.ok) {
-        let detail = `Erreur HTTP ${res.status}`;
-        try { detail = (await res.json()).detail ?? detail; } catch {}
-        throw new Error(detail);
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isSending) return;
+
+      let convId = activeId;
+
+      // Crée la conversation si vide
+      if (!convId) {
+        const conv: Conversation = {
+          id: crypto.randomUUID(),
+          title: text.slice(0, 40),
+          createdAt: new Date().toISOString(),
+          messages: [],
+        };
+        setConversations((prev) => [conv, ...prev]);
+        setActiveId(conv.id);
+        convId = conv.id;
       }
 
-      const data = await res.json();
-      const botMsg: Message = { role: "bot", text: data.response };
+      const userMsg: Message = { role: "user", text };
+
       setConversations((prev) =>
-        prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, botMsg] } : c)
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                title: c.messages.length === 0 ? text.slice(0, 40) : c.title,
+                messages: [...c.messages, userMsg],
+              }
+            : c,
+        ),
       );
-    } catch (err) {
-      const errMsg: Message = {
-        role: "error",
-        text: err instanceof Error ? err.message : "Une erreur est survenue.",
-      };
-      setConversations((prev) =>
-        prev.map((c) => c.id === convId ? { ...c, messages: [...c.messages, errMsg] } : c)
-      );
-    } finally {
-      setIsSending(false);
-    }
-  }, [activeId, isSending]);
+      setInput("");
+      setIsSending(true);
+
+      // Ajout du contexte et de l'historique des messages précédents
+      const previousMessages =
+        conversations.find((c) => c.id === convId)?.messages ?? [];
+
+      try {
+        const res = await fetchProxy("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            model: "gpt-5.4-nano",
+            context:
+              "Tu es un assistant juridique spécialisé en droit du travail français. Réponds avec précision en citant les articles du Code du travail pertinents.",
+            history: previousMessages
+              .filter((m) => m.role === "user" || m.role === "bot")
+              .map((m) => ({
+                role: m.role === "bot" ? "assistant" : "user",
+                content: m.text,
+              })),
+          }),
+        });
+
+        if (!res.ok) {
+          let detail = `Erreur HTTP ${res.status}`;
+          try {
+            detail = (await res.json()).detail ?? detail;
+          } catch {}
+          throw new Error(detail);
+        }
+
+        const data = await res.json();
+        const botMsg: Message = { role: "bot", text: data.response };
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId ? { ...c, messages: [...c.messages, botMsg] } : c,
+          ),
+        );
+      } catch (err) {
+        const errMsg: Message = {
+          role: "error",
+          text: err instanceof Error ? err.message : "Une erreur est survenue.",
+        };
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId ? { ...c, messages: [...c.messages, errMsg] } : c,
+          ),
+        );
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [activeId, isSending],
+  );
 
   return (
     <div className="flex h-[calc(100vh-9rem)] gap-0 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-
       {/* liste des conversations */}
       <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex-col hidden md:flex">
         <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -172,7 +199,11 @@ export function ChatJuridique() {
 
         {conversations.length === 0 ? (
           <div className="flex-1 flex items-center justify-center px-4">
-            <p className="text-xs text-gray-400 text-center">Aucune conversation.<br />Cliquez sur + pour commencer.</p>
+            <p className="text-xs text-gray-400 text-center">
+              Aucune conversation.
+              <br />
+              Cliquez sur + pour commencer.
+            </p>
           </div>
         ) : (
           <ul className="flex-1 overflow-auto px-3 py-3 space-y-1">
@@ -184,20 +215,29 @@ export function ChatJuridique() {
                   onClick={() => setActiveId(conv.id)}
                   onKeyDown={(e) => e.key === "Enter" && setActiveId(conv.id)}
                   className={`group w-full text-left px-3 py-3 rounded-xl transition-colors flex items-start justify-between gap-2 cursor-pointer ${
-                    activeId === conv.id ? "bg-lumenjuris/10 border border-lumenjuris/20" : "hover:bg-gray-50"
+                    activeId === conv.id
+                      ? "bg-lumenjuris/10 border border-lumenjuris/20"
+                      : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-medium truncate ${activeId === conv.id ? "text-lumenjuris" : "text-gray-700"}`}>
+                    <p
+                      className={`text-sm font-medium truncate ${activeId === conv.id ? "text-lumenjuris" : "text-gray-700"}`}
+                    >
                       {conv.title}
                     </p>
                     <div className="flex items-center gap-1 mt-1">
                       <Clock className="h-3 w-3 text-gray-400 shrink-0" />
-                      <span className="text-[11px] text-gray-400">{relativeTime(conv.createdAt)}</span>
+                      <span className="text-[11px] text-gray-400">
+                        {relativeTime(conv.createdAt)}
+                      </span>
                     </div>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(conv.id);
+                    }}
                     title="Supprimer"
                     className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:text-red-500 transition-all shrink-0 mt-0.5"
                   >
@@ -243,16 +283,21 @@ export function ChatJuridique() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lumenjuris/10 border border-lumenjuris/20">
                   <MessageSquare className="h-6 w-6 text-lumenjuris" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900">Un doute juridique ?</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Un doute juridique ?
+                </h2>
                 <p className="text-sm text-gray-500 max-w-sm">
-                  Posez vos questions sur le droit du travail, les contrats RH ou la jurisprudence française.
+                  Posez vos questions sur le droit du travail, les contrats RH
+                  ou la jurisprudence française.
                 </p>
               </div>
               <div className="w-full flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-white shadow-sm focus-within:border-lumenjuris transition-colors">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && !e.shiftKey && sendMessage(input)
+                  }
                   placeholder="Posez votre question..."
                   className="flex-1 text-sm text-gray-700 placeholder:text-gray-400 outline-none bg-transparent"
                   autoFocus
@@ -263,11 +308,16 @@ export function ChatJuridique() {
                   disabled={!input.trim() || isSending}
                   className="flex h-8 w-8 items-center justify-center rounded-lg bg-lumenjuris text-white hover:bg-lumenjuris-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
                 >
-                  {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  {isSending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
               <p className="text-[11px] text-gray-400">
-                Réponses basées sur le Code du travail et la jurisprudence française
+                Réponses basées sur le Code du travail et la jurisprudence
+                française
               </p>
             </div>
           </div>
@@ -275,7 +325,10 @@ export function ChatJuridique() {
           <>
             <div className="flex-1 overflow-auto px-8 py-8 space-y-8 bg-gray-50">
               {activeConv.messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={i}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                >
                   {m.role === "user" ? (
                     <div className="max-w-[70%] bg-gray-900 text-white text-sm rounded-2xl px-5 py-3.5 leading-relaxed">
                       {m.text}
@@ -307,7 +360,9 @@ export function ChatJuridique() {
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && !e.shiftKey && sendMessage(input)
+                  }
                   placeholder="Posez votre question..."
                   className="flex-1 text-sm text-gray-700 placeholder:text-gray-400 outline-none bg-transparent"
                   disabled={isSending}
@@ -317,11 +372,16 @@ export function ChatJuridique() {
                   disabled={!input.trim() || isSending}
                   className="flex h-8 w-8 items-center justify-center rounded-lg bg-lumenjuris text-white hover:bg-lumenjuris-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
                 >
-                  {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  {isSending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
               <p className="text-[11px] text-gray-400 mt-1.5 text-center">
-                Réponses basées sur le Code du travail et la jurisprudence française
+                Réponses basées sur le Code du travail et la jurisprudence
+                française
               </p>
             </div>
           </>
@@ -330,4 +390,3 @@ export function ChatJuridique() {
     </div>
   );
 }
-

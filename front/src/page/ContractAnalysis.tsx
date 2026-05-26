@@ -65,10 +65,6 @@ import {
 import type { MarketAnalysisResult } from "../utils/marketAnalysis";
 
 import { fetchProxy } from "../utils/fetchProxy";
-// ---------------------------------------------------------------------
-// SUPPRIMER LA FONCTION DÉPLACÉE PAR ERREUR (elle existe déjà en utils)
-// ---------------------------------------------------------------------
-
 function getProcessingStatusLines(
   phase: string,
   analysisProgress?: AnalysisProgress | null,
@@ -191,6 +187,9 @@ export default function ContractAnalysis() {
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const currentHistoryIdRef = useRef<string | null>(null);
   const [historyItems, setHistoryItems] = useState<ContractHistoryItem[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+  );
 
   useEffect(() => {
     loadContractHistoryIndex()
@@ -868,12 +867,6 @@ export default function ContractAnalysis() {
     }
   };
 
-  const handleQuestionClick = (question: string) => {
-    // This function is now a placeholder, as the chat is in the modal.
-    // You could use it to open the modal and pre-fill the chat with a question.
-    console.log("Question clicked:", question);
-  };
-
   const handleNavClick = (event?: React.MouseEvent<HTMLElement>) => {
     if (!confirmLeavingUnfinishedAnalysis()) {
       event?.preventDefault();
@@ -1032,159 +1025,160 @@ export default function ContractAnalysis() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <MainHeader
-        onNavClick={handleNavClick}
-        onReanalyze={handleNewAnalysis}
-        showReanalyze={!!contract}
+      <MainHeader onNavClick={handleNavClick} />
+
+      <DocumentHistorySidebar
+        items={visibleHistoryItems}
+        activeId={currentHistoryId}
+        onOpen={handleOpenHistoryItem}
+        onDelete={handleDeleteHistoryItem}
+        onCollapse={setSidebarCollapsed}
+        onNewAnalysis={handleNewAnalysis}
+        defaultCollapsed={
+          typeof window !== "undefined" && window.innerWidth < 768
+        }
       />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
-          <DocumentHistorySidebar
-            items={visibleHistoryItems}
-            activeId={currentHistoryId}
-            onOpen={handleOpenHistoryItem}
-            onDelete={handleDeleteHistoryItem}
-          />
-
-          <div className="min-w-0 flex-1 w-full">
-            {!contract && (
-              <div className="max-w-5xl mx-auto space-y-8">
-                <div className="mx-auto max-w-2xl text-center">
-                  <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                    Analyse de contrat
-                  </h1>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Importez un document ou collez son contenu pour identifier
-                    les clauses à risque en droit français.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <UploadZone
-                    onFileSelect={onFileUpload}
-                    onTextSubmit={onTextSubmit}
-                    isProcessing={displayedIsProcessing}
-                    processingPhase={displayedProcessingPhase}
-                    analyseCredit={analyseCredit}
-                  />
-                </div>
+      <main
+        className={`px-4 py-8 transition-all duration-300 ease-in-out overflow-x-hidden ${
+          sidebarCollapsed ? "pl-12 md:pl-14" : "pl-12 md:pl-72"
+        }`}
+      >
+        <div className="min-w-0 w-full">
+          {!contract && (
+            <div className="max-w-5xl mx-auto space-y-8">
+              <div className="mx-auto max-w-2xl text-center">
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                  Analyse de contrat
+                </h1>
+                <p className="mt-2 text-sm text-gray-500">
+                  Importez un document ou collez son contenu pour identifier les
+                  clauses à risque en droit français.
+                </p>
               </div>
-            )}
 
-            {showAnalysisForm && contract && !displayedIsProcessing && (
-              <div className="max-w-4xl mx-auto mb-8">
-                <ContextualAnalysisForm
-                  onSubmit={onContextualAnalysis}
-                  onSkip={onStandardAnalysis}
-                  extractedText={contract.content}
-                  isVisible={showAnalysisForm}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <UploadZone
+                  onFileSelect={onFileUpload}
+                  onTextSubmit={onTextSubmit}
+                  isProcessing={displayedIsProcessing}
+                  processingPhase={displayedProcessingPhase}
+                  analyseCredit={analyseCredit}
                 />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Zone de chargement pour l'analyse approfondie */}
-            {displayedIsProcessing &&
-              (displayedProcessingPhase === "enhanced" ||
-                displayedProcessingPhase === "analysis" ||
-                displayedProcessingPhase === "scoring") &&
-              contract && (
-                <div className="max-w-4xl mx-auto mb-8">
-                  <div className="bg-white border border-blue-200 rounded-xl p-8 shadow-lg">
-                    {/* Barre de progression en temps réel */}
-                    <div className="mb-8">
-                      <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-400 via-purple-500 to-green-500 h-4 rounded-full transition-all duration-1000 ease-out relative">
-                          {/* Animation de progression continue */}
-                          <div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse"
-                            style={{
-                              animation: "shimmer 2s ease-in-out infinite",
-                            }}
-                          ></div>
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 via-purple-600 to-green-600 transition-all duration-500 ease-out"
-                            style={{
-                              width: "100%",
-                              animation: "fillProgress 15s ease-out forwards",
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                      <div className="flex justify-center mt-3">
-                        <span className="text-sm text-gray-700 font-medium">
-                          {displayedProcessingPhase === "analysis"
-                            ? "🔍 Analyse des clauses..."
-                            : displayedProcessingPhase === "scoring"
-                              ? "⚖️ Évaluation des risques..."
-                              : "💡 Finalisation du rapport..."}
-                        </span>
+          {showAnalysisForm && contract && !displayedIsProcessing && (
+            <div className="max-w-4xl mx-auto mb-8">
+              <ContextualAnalysisForm
+                onSubmit={onContextualAnalysis}
+                onSkip={onStandardAnalysis}
+                extractedText={contract.content}
+                isVisible={showAnalysisForm}
+              />
+            </div>
+          )}
+
+          {/* Zone de chargement pour l'analyse approfondie */}
+          {displayedIsProcessing &&
+            (displayedProcessingPhase === "enhanced" ||
+              displayedProcessingPhase === "analysis" ||
+              displayedProcessingPhase === "scoring") &&
+            contract && (
+              <div className="max-w-4xl mx-auto mb-8">
+                <div className="bg-white border border-blue-200 rounded-xl p-8 shadow-lg">
+                  {/* Barre de progression en temps réel */}
+                  <div className="mb-8">
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-400 via-purple-500 to-green-500 h-4 rounded-full transition-all duration-1000 ease-out relative">
+                        {/* Animation de progression continue */}
+                        <div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse"
+                          style={{
+                            animation: "shimmer 2s ease-in-out infinite",
+                          }}
+                        ></div>
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 via-purple-600 to-green-600 transition-all duration-500 ease-out"
+                          style={{
+                            width: "100%",
+                            animation: "fillProgress 15s ease-out forwards",
+                          }}
+                        ></div>
                       </div>
                     </div>
-
-                    <div className="space-y-2 text-sm text-slate-600">
-                      {processingStatusLines.map((line) => (
-                        <p key={line}>{line}</p>
-                      ))}
+                    <div className="flex justify-center mt-3">
+                      <span className="text-sm text-gray-700 font-medium">
+                        {displayedProcessingPhase === "analysis"
+                          ? "🔍 Analyse des clauses..."
+                          : displayedProcessingPhase === "scoring"
+                            ? "⚖️ Évaluation des risques..."
+                            : "💡 Finalisation du rapport..."}
+                      </span>
                     </div>
                   </div>
-                </div>
-              )}
 
-            {contract?.processed && !displayedIsProcessing && (
-              <div className="max-w-7xl mx-auto">
-                {/* Tableau de bord des risques supprimé (allègement UI) */}
-
-                {/* Zone principale - Document avec sidebar intégrée */}
-                <div id="clauses-section" className="mb-6">
-                  <div className="bg-white rounded-lg shadow-lg">
-                    {/* Message informatif si pas encore d'analyse */}
-                    {contract.clauses.length === 0 && (
-                      <div className="p-4 bg-blue-50 border-b border-blue-200">
-                        <div className="flex items-center gap-2 text-blue-800">
-                          <span className="text-lg">📄</span>
-                          <span className="font-medium">
-                            Texte extrait - En attente d'analyse
-                          </span>
-                        </div>
-                        <p className="text-sm text-blue-600 mt-1">
-                          Le surlignage des clauses apparaîtra après l'analyse
-                          contextuelle ou standard
-                        </p>
-                      </div>
-                    )}
-
-                    <DocumentViewer
-                      content={contract.content}
-                      clauses={sortedClauses}
-                      onClauseClick={handleClauseClick}
-                      fileName={contract.fileName || "Document"}
-                      contractSummary={currentAnalysisContext ?? undefined}
-                      recommendationIndex={recommendationIndex}
-                      setRecommendationIndex={
-                        handleIncrementIndexRecommendation
-                      }
-                      activeClauseId={selectedClause}
-                      ref={documentViewerRef}
-                    />
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {processingStatusLines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
                   </div>
-                </div>
-
-                {/* Boutons d'action - Centrés */}
-                <div className="flex justify-center">
-                  <ActionButtons
-                    onNewAnalysis={handleNewAnalysis}
-                    onShareReport={handleShareReport}
-                    onMarketAnalysis={handleMarketAnalysisClick}
-                    isMarketAnalysisLoading={isMarketAnalysisLoading}
-                    isProcessed={Boolean(contract?.processed)}
-                    analysisResult={marketAnalysis}
-                    onQuestionClick={handleQuestionClick}
-                  />
                 </div>
               </div>
             )}
-          </div>
+
+          {contract?.processed && !displayedIsProcessing && (
+            <div
+              className={sidebarCollapsed ? "w-full px-3" : "max-w-7xl mx-auto"}
+            >
+              {/* Tableau de bord des risques supprimé (allègement UI) */}
+
+              {/* Zone principale - Document avec sidebar intégrée */}
+              <div id="clauses-section" className="mb-6">
+                <div className="bg-white rounded-lg shadow-lg">
+                  {/* Message informatif si pas encore d'analyse */}
+                  {contract.clauses.length === 0 && (
+                    <div className="p-4 bg-blue-50 border-b border-blue-200">
+                      <div className="flex items-center gap-2 text-blue-800">
+                        <span className="text-lg">📄</span>
+                        <span className="font-medium">
+                          Texte extrait - En attente d'analyse
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Le surlignage des clauses apparaîtra après l'analyse
+                        contextuelle ou standard
+                      </p>
+                    </div>
+                  )}
+
+                  <DocumentViewer
+                    content={contract.content}
+                    clauses={sortedClauses}
+                    onClauseClick={handleClauseClick}
+                    fileName={contract.fileName || "Document"}
+                    contractSummary={currentAnalysisContext ?? undefined}
+                    recommendationIndex={recommendationIndex}
+                    setRecommendationIndex={handleIncrementIndexRecommendation}
+                    activeClauseId={selectedClause}
+                    isFullscreen={sidebarCollapsed}
+                    ref={documentViewerRef}
+                    onSuggestedClauses={handleMarketAnalysisClick}
+                    isLoadingSuggested={isMarketAnalysisLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Boutons d'action - Centrés */}
+              <div className="flex justify-center">
+                <ActionButtons
+                  onShareReport={handleShareReport}
+                  isProcessed={Boolean(contract?.processed)}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -1196,16 +1190,17 @@ export default function ContractAnalysis() {
           onClose={handleCloseModal}
           recommendationIndex={recommendationIndex}
           setRecommendationIndex={handleIncrementIndexRecommendation}
+          isSensitive={contract?.isSensitive ?? true}
         />
       )}
 
-      {/* Analyse comparative de marché */}
-      {showMarketAnalysis && marketAnalysis && currentAnalysisContext && (
+      {/* Clauses suggérées */}
+      {showMarketAnalysis && marketAnalysis && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-900">
-                📊 Analyse Comparative & Standards
+                Clauses Suggérées
               </h2>
               <button
                 onClick={() => setShowMarketAnalysis(false)}
@@ -1218,13 +1213,12 @@ export default function ContractAnalysis() {
               <Suspense
                 fallback={
                   <div className="p-6 text-center text-sm text-gray-500">
-                    Chargement de l'analyse comparative...
+                    Chargement des clauses suggérées...
                   </div>
                 }
               >
                 <MarketComparison
                   analysisResult={marketAnalysis}
-                  onQuestionClick={handleQuestionClick}
                   isLoading={isMarketAnalysisLoading}
                 />
               </Suspense>

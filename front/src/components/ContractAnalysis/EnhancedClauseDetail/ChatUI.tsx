@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useChatStore } from '../../../store/chatStore';
-import { Send, MessageSquare, AlertTriangle, HelpCircle } from 'lucide-react';
-import { type OpenAIModelId } from '../../../utils/aiClient';
+import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import { useChatStore } from "../../../store/chatStore";
+import { Send, MessageSquare, AlertTriangle, HelpCircle } from "lucide-react";
+import { type OpenAIModelId } from "../../../utils/aiClient";
 
 interface ClauseAIModelOption {
   value: OpenAIModelId;
@@ -25,26 +26,26 @@ export const ChatUI: React.FC<ChatUIProps> = ({
 }) => {
   // Connexion au store Zustand
   const { messages, isSending, sendMessage, contextClause } = useChatStore();
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Suggestions de questions
   const SUGGESTIONS = [
-    'Quels sont les principaux risques de cette clause ?',
-    'Cette clause est-elle conforme à la loi ?',
-    'Comment pourrais-je la renégocier ?',
-    'Propose une alternative plus équilibrée.',
+    "Quels sont les principaux risques de cette clause ?",
+    "Cette clause est-elle conforme à la loi ?",
+    "Comment pourrais-je la renégocier ?",
+    "Propose une alternative plus équilibrée.",
   ];
 
   // Fait défiler la vue vers le dernier message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = () => {
     if (input.trim()) {
       sendMessage(input, clauseAiModel);
-      setInput('');
+      setInput("");
     }
   };
 
@@ -57,7 +58,9 @@ export const ChatUI: React.FC<ChatUIProps> = ({
       <div className="flex flex-col items-center justify-center h-full bg-slate-50 text-slate-500 p-4 text-center">
         <MessageSquare size={40} className="mb-4" />
         <h4 className="font-semibold">Aucune clause sélectionnée</h4>
-        <p className="text-sm">Cliquez sur une clause dans le document pour démarrer l'assistance.</p>
+        <p className="text-sm">
+          Cliquez sur une clause dans le document pour démarrer l'assistance.
+        </p>
       </div>
     );
   }
@@ -70,18 +73,24 @@ export const ChatUI: React.FC<ChatUIProps> = ({
           <div className="flex items-center gap-2">
             <HelpCircle size={16} className="text-slate-600" />
             <div className="leading-tight">
-              <h4 className="text-sm font-semibold text-slate-800">Questions</h4>
-              <p className="text-[11px] text-slate-500">Analyse contextualisée</p>
+              <h4 className="text-sm font-semibold text-slate-800">
+                Questions
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Analyse contextualisée
+              </p>
             </div>
           </div>
           <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             Modèle
             <select
               value={clauseAiModel}
-              onChange={(event) => onClauseAiModelChange(event.target.value as OpenAIModelId)}
+              onChange={(event) =>
+                onClauseAiModelChange(event.target.value as OpenAIModelId)
+              }
               className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium normal-case tracking-normal text-slate-800 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
-              {clauseAiModelOptions.map(option => (
+              {clauseAiModelOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -107,21 +116,33 @@ export const ChatUI: React.FC<ChatUIProps> = ({
       {/* Zone des messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 bg-slate-50/60">
         {messages.map((msg, index) => (
-          <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-            {msg.role !== 'user' && (
+          <div
+            key={index}
+            className={`flex items-start gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
+          >
+            {msg.role !== "user" && (
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                {msg.role === 'error' ? <AlertTriangle size={18} className="text-red-500" /> : <MessageSquare size={18} className="text-slate-600" />}
+                {msg.role === "error" ? (
+                  <AlertTriangle size={18} className="text-red-500" />
+                ) : (
+                  <MessageSquare size={18} className="text-slate-600" />
+                )}
               </div>
             )}
             <div
-              className={`max-w-[80%] p-3 rounded-lg text-sm leading-relaxed ${msg.role === 'user'
-                ? 'bg-slate-800 text-white rounded-br-none'
-                : msg.role === 'assistant'
-                  ? 'bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm'
-                  : 'bg-red-100 text-red-800 border border-red-200 rounded-bl-none'
-                }`}
+              className={`max-w-[80%] p-3 rounded-lg text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-slate-800 text-white rounded-br-none"
+                  : msg.role === "assistant"
+                    ? "bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-medium [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1 [&_li]:leading-relaxed [&_strong]:font-semibold [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:rounded [&_code]:text-xs [&_p]:mb-2 [&_p:last-child]:mb-0"
+                    : "bg-red-100 text-red-800 border border-red-200 rounded-bl-none"
+              }`}
             >
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
@@ -145,7 +166,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Posez votre question sur la clause..."
             className="w-full pl-4 pr-10 py-2 border rounded-full focus:outline-none focus:ring-1 focus:ring-slate-600 text-sm placeholder:text-slate-400"
             disabled={isSending}

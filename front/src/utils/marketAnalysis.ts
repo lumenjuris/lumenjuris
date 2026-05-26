@@ -28,8 +28,6 @@ export interface ContextualQuestion {
 
 export interface MarketAnalysisResult {
   clausesManquantes: MissingClause[];
-  ecartAuxStandards: MarketDeviation[];
-  questionsProposees: ContextualQuestion[];
   scoreConformite: number;
 }
 

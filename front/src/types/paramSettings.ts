@@ -34,6 +34,7 @@ export type AccountProvider = {
 export type UserPreferenceSettings = {
   preferenceUI: {
     dyslexicMode: boolean;
+    veilleActiveTags: string[];
   };
 };
 
