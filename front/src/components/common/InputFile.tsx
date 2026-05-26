@@ -31,8 +31,6 @@ const InputFile = ({
   accepted,
   multiple = false,
 }: InputFileProps) => {
-
-
   // Props pour react-dropzone | Remplace les props de la balise <input/>
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -46,7 +44,7 @@ const InputFile = ({
     <div
       {...getRootProps()}
       className={twMerge(
-        `border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer has-disabled:opacity-50 has-disabled:cursor-not-allowed ${fieldClassName}`,
+        `border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors has-disabled:opacity-50 has-disabled:cursor-not-allowed ${disabled ? "cursor-not-allowed" : "cursor-pointer"} ${fieldClassName}`,
       )}
     >
       <input {...getInputProps()} className="hidden" />

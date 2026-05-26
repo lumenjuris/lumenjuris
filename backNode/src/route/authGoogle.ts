@@ -7,6 +7,7 @@ import { createCookieAuth } from "../securite/cookieAuth";
 import { User } from "../services/classUser";
 import { Google } from "../services/classGoogle";
 import { prisma } from "../../prisma/singletonPrisma";
+import { Subscription } from "../services/classSubscription";
 
 const routerAuthGoogle: Router = express.Router();
 
@@ -89,7 +90,7 @@ routerAuthGoogle.get(
     if (findUser) {
       return (
         createCookieAuth(findUser.idUser, "USER", res),
-        res.redirect(`http://localhost:5173/dashboard`)
+        res.redirect(`${process.env.HOST_FRONT}`)
       );
     }
 
@@ -117,9 +118,14 @@ routerAuthGoogle.get(
       userId: newUser.data?.idUser!,
     });
 
+    // Activation freemium
+    new Subscription()
+      .activateFreemium(newUser.data?.idUser!)
+      .catch(console.error);
+
     //Créer session JWT cookie http only
     createCookieAuth(newUser.data?.idUser!, "USER", res);
-    res.redirect(`http://localhost:5173/dashboard`);
+    res.redirect(`${process.env.HOST_FRONT}`);
   },
 );
 

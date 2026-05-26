@@ -2,6 +2,9 @@ import nodemailer from "nodemailer";
 import { templateVerifyAccount } from "./template/verifyAccount";
 import { templateResetPassword } from "./template/resetPassword";
 import { templateTwoFactor } from "./template/twoFactor";
+import { templateInvoiceEmail } from "./template/invoiceEmail";
+import { templateWelcomeFreemium } from "./template/welcomeFreemium";
+import { generateInvoicePDF, type InvoiceData } from "../pdf/invoicePDF";
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -35,16 +38,20 @@ export class Mailer {
     };
   }
 
-  private createOption(html: string, subject: string) {
+  private createOption(
+    html: string,
+    subject: string,
+    attachments?: Array<{ filename: string; content: Buffer; contentType: string }>,
+  ) {
     const textBrutFallback = html.replace(/<[^>]*>/g, "");
-    const mailOptions = {
+    return {
       from: '"Lumen Juris" <no-reply@lumenjuris.com>',
       to: this.email,
-      subject, //Le titre qui sera affiché avant l'ouverture de l'email
-      text: textBrutFallback, // fallback en cas de non gestion du texte html
+      subject,
+      text: textBrutFallback,
       html,
+      ...(attachments?.length ? { attachments } : {}),
     };
-    return mailOptions;
   }
 
   private createHtmlHeader() {
@@ -203,6 +210,59 @@ export class Mailer {
       return {
         success: true,
         message: `Un code de vérification a été envoyé à ${this.email}. Il est valide 15 minutes.`,
+      };
+    } catch (err) {
+      return this.errorCatching(err);
+    }
+  }
+
+  async sendWelcomeFreemium(username?: string) {
+    try {
+      const html = this.createHtmlFullContent(templateWelcomeFreemium(username));
+      const mailOptions = this.createOption(
+        html,
+        "Bienvenue sur Lumen Juris — votre formule Freemium est activée",
+      );
+      const sending = await transporter.sendMail(mailOptions);
+
+      if (!sending.messageId) {
+        throw new Error(
+          `Echec lors de l'envoi du mail de bienvenue, messageId indisponible.\n ${sending}`,
+        );
+      }
+      return { success: true };
+    } catch (err) {
+      return this.errorCatching(err);
+    }
+  }
+
+  async sendInvoice(invoiceData: InvoiceData, username?: string) {
+    try {
+      const pdfBuffer = await generateInvoicePDF(invoiceData);
+      const html = this.createHtmlFullContent(
+        templateInvoiceEmail(invoiceData, username),
+      );
+      const mailOptions = this.createOption(
+        html,
+        `Votre facture Lumen Juris — ${invoiceData.invoiceNumber}`,
+        [
+          {
+            filename: `facture-${invoiceData.invoiceNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      );
+      const sending = await transporter.sendMail(mailOptions);
+
+      if (!sending.messageId) {
+        throw new Error(
+          `Echec lors de l'envoi de la facture, messageId indisponible.\n ${sending}`,
+        );
+      }
+      return {
+        success: true,
+        message: `La facture ${invoiceData.invoiceNumber} a été envoyée à ${this.email}.`,
       };
     } catch (err) {
       return this.errorCatching(err);

@@ -3,6 +3,8 @@ import type { Request, Response, Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { StripeLumenJuris } from "../../billing/stripe.service";
 import { prisma } from "../../prisma/singletonPrisma";
+import { Subscription } from "../services/classSubscription";
+import { Credit } from "../services/classCredit";
 
 const routerBilling: Router = express.Router();
 
@@ -96,4 +98,113 @@ routerBilling.post(
   },
 );
 
+// Retourne tous les plans disponibles
+routerBilling.get("/plans", async (_req: Request, res: Response) => {
+  try {
+    const plans = await prisma.plan.findMany({
+      orderBy: { price: "asc" },
+    });
+    return res.status(200).json({ success: true, plans });
+  } catch (err) {
+    console.error("GET /billing/plans error:", err);
+    return res.status(500).json({ success: false, message: "Erreur serveur." });
+  }
+});
+
+// Enregistre un abonnement en BDD après confirmation du paiement Stripe
+routerBilling.post(
+  "/subscription",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const idUser = Number(req.idUser);
+    const { planName, interval, amount, stripePaymentIntentId } = req.body;
+
+    if (!planName || !interval || typeof amount !== "number") {
+      return res.status(400).json({
+        success: false,
+        message: "Paramètres manquants : planName, interval, amount requis.",
+      });
+    }
+
+    const result = await new Subscription().createOrUpdate(
+      idUser,
+      planName,
+      interval,
+      amount,
+      stripePaymentIntentId,
+    );
+
+    return res.status(result.success ? 201 : 400).json(result);
+  },
+);
+
+routerBilling.get(
+  "/subscription",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const idUser = Number(req.idUser);
+
+    const result = await new Subscription().get(idUser);
+
+    return res.status(result.success ? 200 : 500).json(result);
+  },
+);
+
+routerBilling.put(
+  "/add-credits",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const userId = Number(req.idUser);
+    const { addCredit } = req.body;
+
+    if (!addCredit || typeof addCredit !== "number" || addCredit < 0) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "L'ajout de crédit doit-être défini par un nombre entier positif.",
+      });
+    }
+
+    const addedCredits = await new Credit().addCredit(userId, addCredit);
+
+    return res.status(addedCredits.success ? 200 : 500).json(addedCredits);
+  },
+);
+
+routerBilling.put(
+  "/remove-credits",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const userId = Number(req.idUser);
+    const { removeCredit } = req.body;
+
+    if (!removeCredit || typeof removeCredit !== "number" || removeCredit < 0) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Le retrait de crédit doit-être défini par un nombre entier positif.",
+      });
+    }
+
+    const removedCredits = await new Credit().removeCredit(
+      userId,
+      removeCredit,
+    );
+    console.log("REMOVE CREDIT : ", removedCredits);
+
+    return res.status(removedCredits.success ? 200 : 500).json(removedCredits);
+  },
+
+  routerBilling.get(
+    "/credits",
+    authMiddleware,
+    async (req: Request, res: Response) => {
+      const userId = Number(req.idUser);
+
+      const result = await new Credit().getUserCredits(userId);
+
+      return res.status(result.success ? 200 : 500).json(result);
+    },
+  ),
+);
 export default routerBilling;

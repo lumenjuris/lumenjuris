@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from "react";
 import type { ClauseRisk, ContractAnalysis } from "../types";
 import type { AnalysisContext } from "../types/contextualAnalysis";
 import { extractDocumentContent } from "../utils/documentExtractor";
-import type { AnalysisProgress } from "../utils/aiAnalyser/aiAnalyzer";
+import type { AnalysisProgress } from "../types/analysisProgress";
 import {
   performCompleteMarketAnalysis,
   MarketAnalysisResult,
@@ -106,7 +106,8 @@ export function processContractAnalysisResults(
       ...baseContract.extractionMetadata,
       wordCount: baseContract.extractionMetadata?.wordCount || 0,
       language: baseContract.extractionMetadata?.language || "fr",
-      extractionMethod: baseContract.extractionMetadata?.extractionMethod || "text",
+      extractionMethod:
+        baseContract.extractionMetadata?.extractionMethod || "text",
       fileSize: baseContract.extractionMetadata?.fileSize || "0KB",
       extractionTime: baseContract.extractionMetadata?.extractionTime || "0ms",
       aiSummary:

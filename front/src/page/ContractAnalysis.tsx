@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, Navigate, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import {
@@ -10,9 +10,7 @@ import {
 import MainHeader from "../components/MainHeader/MainHeader";
 
 // ===> ACTION 3 : CORRIGER L'IMPORT ICI
-import {
-  EnhancedClauseDetail,
-} from "../components/ContractAnalysis/EnhancedClauseDetail/EnhancedClauseDetail";
+import { EnhancedClauseDetail } from "../components/ContractAnalysis/EnhancedClauseDetail/EnhancedClauseDetail";
 import { clearEnhancedClauseCaches } from "../components/ContractAnalysis/EnhancedClauseDetail/enhancedClauseCaches";
 import { ActionButtons } from "../components/ContractAnalysis/ActionButtons";
 import { ContextualAnalysisForm } from "../components/ContractAnalysis/ContextualAnalysisForm";
@@ -34,7 +32,10 @@ import { useAppliedRecommendationsStore } from "../store/appliedRecommendationsS
 import type { AppliedRecommendation } from "../store/appliedRecommendationsStore";
 import { useDocumentTextStore } from "../store/documentTextStore";
 import type { TextPatch } from "../store/documentTextStore";
-import type { ContractAnalysis as ContractAnalysisType } from "../types";
+import type {
+  ContractAnalysis as ContractAnalysisType,
+  ClauseRisk,
+} from "../types";
 import type {
   AnalysisContext,
   EnterpriseAnalysisContext,
@@ -44,10 +45,11 @@ import type {
   ConventionCollectiveOption,
   EnterpriseSettings,
 } from "../types/paramSettings";
+import type { AnalysisProgress } from "../types/analysisProgress";
 import {
-  analyzeContractWithAI,
-  type AnalysisProgress,
-} from "../utils/aiAnalyser/aiAnalyzer";
+  loadAnalysisFromCache,
+  saveAnalysisToCache,
+} from "../utils/aiAnalyser/cachedAnalysis";
 import {
   compareByUploadTimeDesc,
   createContractHistoryId,
@@ -62,7 +64,6 @@ import {
 } from "../utils/contractHistory";
 import type { MarketAnalysisResult } from "../utils/marketAnalysis";
 
-import { useUserStore } from "../store/userStore";
 import { fetchProxy } from "../utils/fetchProxy";
 function getProcessingStatusLines(
   phase: string,
@@ -174,28 +175,6 @@ export default function ContractAnalysis() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { isConnected: userConnected, fetchUser } = useUserStore();
-  const [hasCheckedUser, setHasCheckedUser] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (userConnected) {
-      setHasCheckedUser(true);
-      return;
-    }
-
-    fetchUser().finally(() => {
-      if (isMounted) {
-        setHasCheckedUser(true);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchUser, userConnected]);
-
   // États locaux
   const [selectedClause, setSelectedClause] = useState<string | null>(null);
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
@@ -204,6 +183,7 @@ export default function ContractAnalysis() {
     new Set(),
   );
   const [showMarketAnalysis, setShowMarketAnalysis] = useState(false);
+  const [analyseCredit, setAnalyseCredit] = useState<number | null>(null);
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const currentHistoryIdRef = useRef<string | null>(null);
   const [historyItems, setHistoryItems] = useState<ContractHistoryItem[]>([]);
@@ -212,7 +192,9 @@ export default function ContractAnalysis() {
   );
 
   useEffect(() => {
-    loadContractHistoryIndex().then(setHistoryItems).catch(() => {});
+    loadContractHistoryIndex()
+      .then(setHistoryItems)
+      .catch(() => {});
   }, []);
   const [temporaryHistoryEntries, setTemporaryHistoryEntries] = useState<
     Record<string, TemporaryHistoryEntry>
@@ -244,9 +226,9 @@ export default function ContractAnalysis() {
           credentials: "include",
           signal: abortController.signal,
         });
-        const payload = (await response.json().catch(() => null)) as
-          | ApiResponse<EnterpriseGetData>
-          | null;
+        const payload = (await response
+          .json()
+          .catch(() => null)) as ApiResponse<EnterpriseGetData> | null;
 
         if (!response.ok || !payload?.success) {
           setEnterpriseContext(undefined);
@@ -272,6 +254,23 @@ export default function ContractAnalysis() {
     return () => {
       abortController.abort();
     };
+  }, []);
+
+  useEffect(() => {
+    fetchProxy("/api/billing/subscription", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.credits) {
+          const { creditIncluded = 0, creditAdded = 0 } = data.data.credits;
+          setAnalyseCredit(creditIncluded + creditAdded);
+        } else {
+          setAnalyseCredit(null);
+        }
+      })
+      .catch(() => setAnalyseCredit(null));
   }, []);
 
   // Store pour les recommandations appliquées
@@ -319,7 +318,8 @@ export default function ContractAnalysis() {
   const activeTemporaryEntry = currentHistoryId
     ? temporaryHistoryEntries[currentHistoryId]
     : undefined;
-  const displayedIsProcessing = activeTemporaryEntry?.isProcessing ?? isProcessing;
+  const displayedIsProcessing =
+    activeTemporaryEntry?.isProcessing ?? isProcessing;
   const displayedProcessingPhase =
     activeTemporaryEntry?.processingPhase ?? processingPhase;
   const displayedAnalysisProgress =
@@ -334,8 +334,10 @@ export default function ContractAnalysis() {
     );
     const temporaryIds = new Set(temporaryItems.map((item) => item.id));
 
-    return [...temporaryItems, ...historyItems.filter((item) => !temporaryIds.has(item.id))]
-      .sort(compareByUploadTimeDesc);
+    return [
+      ...temporaryItems,
+      ...historyItems.filter((item) => !temporaryIds.has(item.id)),
+    ].sort(compareByUploadTimeDesc);
   }, [historyItems, temporaryHistoryEntries]);
 
   const updateTemporaryHistoryEntry = (
@@ -432,19 +434,54 @@ export default function ContractAnalysis() {
     }
 
     try {
-      const { clauses: analysisResults, isSensitive } = await analyzeContractWithAI(
+      const cached = loadAnalysisFromCache(
         baseContract.content,
         analysisContext,
-        {
-          onProgress: (progress) => {
-            updateTemporaryHistoryEntry(historyId, (currentEntry) => ({
-              ...currentEntry,
-              analysisProgress: progress,
-              processingPhase: "analysis",
-            }));
-          },
-        },
       );
+      let analysisResults: ClauseRisk[];
+
+      if (cached && cached.length > 0) {
+        analysisResults = cached;
+      } else {
+        updateTemporaryHistoryEntry(historyId, (currentEntry) => ({
+          ...currentEntry,
+          analysisProgress: {
+            mode: "direct",
+            state: "running",
+            currentAttempt: 1,
+            totalAttempts: 3,
+            totalChunks: 1,
+            completedChunks: 0,
+            successfulChunks: 0,
+            failedChunks: 0,
+            message: "Analyse du document en cours.",
+          } satisfies AnalysisProgress,
+          processingPhase: "analysis",
+        }));
+
+        const response = await fetchProxy("/api/analyze-contract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            content: baseContract.content,
+            context: analysisContext,
+          }),
+        });
+
+        if (!response.ok)
+          throw new Error(`Analyse échouée (${response.status})`);
+        const data = (await response.json()) as {
+          success: boolean;
+          clauses: ClauseRisk[];
+        };
+        analysisResults = data.clauses ?? [];
+        saveAnalysisToCache(
+          baseContract.content,
+          analysisResults,
+          analysisContext,
+        );
+      }
 
       const latestEntry = temporaryHistoryEntriesRef.current[historyId];
       if (!latestEntry) return;
@@ -454,7 +491,6 @@ export default function ContractAnalysis() {
         analysisResults,
         analysisType,
         analysisContext,
-        isSensitive,
       );
       const completedEntry: TemporaryHistoryEntry = {
         ...latestEntry,
@@ -470,7 +506,10 @@ export default function ContractAnalysis() {
       // sur ce comportement -> au rechargement, DocumentViewer utilise le fallback formatContentToHtml
       // (qui fonctionne) plutôt que injectClausesIntoHtml (qui échoue sur le HTML brut Python).
       const savedItem = await saveContractHistorySnapshot(
-        createTemporaryHistorySnapshot({ ...completedEntry, htmlContent: null }),
+        createTemporaryHistorySnapshot({
+          ...completedEntry,
+          htmlContent: null,
+        }),
       );
       if (savedItem) {
         setHistoryItems(await loadContractHistoryIndex());
@@ -486,6 +525,14 @@ export default function ContractAnalysis() {
           marketAnalysis: completedEntry.marketAnalysis,
         });
         setShowAnalysisForm(false);
+
+        // Fetch destiné à retirer des crédits à l'utilisateur après une analyse de document ayant abouti
+        fetchProxy("/api/billing/remove-credits", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ removeCredit: 100 }),
+        }).catch(console.error);
       }
     } catch (error) {
       console.error("Erreur analyse:", error);
@@ -559,8 +606,8 @@ export default function ContractAnalysis() {
   ).some((entry) => !entry.contract.processed || entry.isProcessing);
   const shouldWarnBeforeLeaving = Boolean(
     hasTemporaryUnfinishedAnalysis ||
-      isProcessing ||
-      (contract && (!contract.processed || showAnalysisForm)),
+    isProcessing ||
+    (contract && (!contract.processed || showAnalysisForm)),
   );
 
   const confirmLeavingUnfinishedAnalysis = () => {
@@ -768,6 +815,7 @@ export default function ContractAnalysis() {
   const onStandardAnalysis = () => {
     const analysisHistoryId = currentHistoryIdRef.current;
     if (!analysisHistoryId || !contract) return;
+    if (analyseCredit !== null && analyseCredit < 100) return;
 
     if (!temporaryHistoryEntriesRef.current[analysisHistoryId]) {
       rememberTemporaryContract(analysisHistoryId, contract);
@@ -781,6 +829,7 @@ export default function ContractAnalysis() {
   const onContextualAnalysis = (context: AnalysisContext) => {
     const analysisHistoryId = currentHistoryIdRef.current;
     if (!analysisHistoryId || !contract) return;
+    if (analyseCredit !== null && analyseCredit < 100) return;
 
     if (!temporaryHistoryEntriesRef.current[analysisHistoryId]) {
       rememberTemporaryContract(analysisHistoryId, contract);
@@ -838,7 +887,11 @@ export default function ContractAnalysis() {
       documentPreparationRef.current = null;
     } else if (currentHistoryId) {
       const currentEntry = temporaryHistoryEntriesRef.current[currentHistoryId];
-      if (currentEntry && !currentEntry.isProcessing && !currentEntry.contract.processed) {
+      if (
+        currentEntry &&
+        !currentEntry.isProcessing &&
+        !currentEntry.contract.processed
+      ) {
         // Formulaire en cours -> confirmation requise avant de supprimer
         if (!confirmLeavingUnfinishedAnalysis()) return;
         documentPreparationRef.current = null;
@@ -970,26 +1023,9 @@ export default function ContractAnalysis() {
     displayedAnalysisProgress,
   );
 
-  if (!hasCheckedUser && !userConnected) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <MainHeader />
-        <main className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
-            Chargement de l'analyseur...
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return !userConnected ? (
-    <Navigate to="/inscription" replace />
-  ) : (
+  return (
     <div className="min-h-screen bg-gray-50">
-      <MainHeader
-        onNavClick={handleNavClick}
-      />
+      <MainHeader onNavClick={handleNavClick} />
 
       <DocumentHistorySidebar
         items={visibleHistoryItems}
@@ -998,7 +1034,9 @@ export default function ContractAnalysis() {
         onDelete={handleDeleteHistoryItem}
         onCollapse={setSidebarCollapsed}
         onNewAnalysis={handleNewAnalysis}
-        defaultCollapsed={typeof window !== "undefined" && window.innerWidth < 768}
+        defaultCollapsed={
+          typeof window !== "undefined" && window.innerWidth < 768
+        }
       />
 
       <main
@@ -1006,140 +1044,142 @@ export default function ContractAnalysis() {
           sidebarCollapsed ? "pl-12 md:pl-14" : "pl-12 md:pl-72"
         }`}
       >
-          <div className="min-w-0 w-full">
-            {!contract && (
-              <div className="max-w-5xl mx-auto space-y-8">
-                <div className="mx-auto max-w-2xl text-center">
-                  <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                    Analyse de contrat
-                  </h1>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Importez un document ou collez son contenu pour identifier
-                    les clauses à risque en droit français.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                  <UploadZone
-                    onFileSelect={onFileUpload}
-                    onTextSubmit={onTextSubmit}
-                    isProcessing={displayedIsProcessing}
-                    processingPhase={displayedProcessingPhase}
-                  />
-                </div>
+        <div className="min-w-0 w-full">
+          {!contract && (
+            <div className="max-w-5xl mx-auto space-y-8">
+              <div className="mx-auto max-w-2xl text-center">
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                  Analyse de contrat
+                </h1>
+                <p className="mt-2 text-sm text-gray-500">
+                  Importez un document ou collez son contenu pour identifier les
+                  clauses à risque en droit français.
+                </p>
               </div>
-            )}
 
-            {showAnalysisForm && contract && !displayedIsProcessing && (
-              <div className="max-w-4xl mx-auto mb-8">
-                <ContextualAnalysisForm
-                  onSubmit={onContextualAnalysis}
-                  onSkip={onStandardAnalysis}
-                  extractedText={contract.content}
-                  isVisible={showAnalysisForm}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <UploadZone
+                  onFileSelect={onFileUpload}
+                  onTextSubmit={onTextSubmit}
+                  isProcessing={displayedIsProcessing}
+                  processingPhase={displayedProcessingPhase}
+                  analyseCredit={analyseCredit}
                 />
               </div>
-            )}
+            </div>
+          )}
 
-        {/* Zone de chargement pour l'analyse approfondie */}
-            {displayedIsProcessing &&
-              (displayedProcessingPhase === "enhanced" ||
-                displayedProcessingPhase === "analysis" ||
-                displayedProcessingPhase === "scoring") &&
-              contract && (
-                <div className="max-w-4xl mx-auto mb-8">
-                  <div className="bg-white border border-blue-200 rounded-xl p-8 shadow-lg">
-                    {/* Barre de progression en temps réel */}
-                    <div className="mb-8">
-                      <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-400 via-purple-500 to-green-500 h-4 rounded-full transition-all duration-1000 ease-out relative">
-                          {/* Animation de progression continue */}
-                          <div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse"
-                            style={{
-                              animation: "shimmer 2s ease-in-out infinite",
-                            }}
-                          ></div>
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 via-purple-600 to-green-600 transition-all duration-500 ease-out"
-                            style={{
-                              width: "100%",
-                              animation: "fillProgress 15s ease-out forwards",
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                      <div className="flex justify-center mt-3">
-                        <span className="text-sm text-gray-700 font-medium">
-                          {displayedProcessingPhase === "analysis"
-                            ? "🔍 Analyse des clauses..."
-                            : displayedProcessingPhase === "scoring"
-                              ? "⚖️ Évaluation des risques..."
-                              : "💡 Finalisation du rapport..."}
-                        </span>
+          {showAnalysisForm && contract && !displayedIsProcessing && (
+            <div className="max-w-4xl mx-auto mb-8">
+              <ContextualAnalysisForm
+                onSubmit={onContextualAnalysis}
+                onSkip={onStandardAnalysis}
+                extractedText={contract.content}
+                isVisible={showAnalysisForm}
+              />
+            </div>
+          )}
+
+          {/* Zone de chargement pour l'analyse approfondie */}
+          {displayedIsProcessing &&
+            (displayedProcessingPhase === "enhanced" ||
+              displayedProcessingPhase === "analysis" ||
+              displayedProcessingPhase === "scoring") &&
+            contract && (
+              <div className="max-w-4xl mx-auto mb-8">
+                <div className="bg-white border border-blue-200 rounded-xl p-8 shadow-lg">
+                  {/* Barre de progression en temps réel */}
+                  <div className="mb-8">
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-400 via-purple-500 to-green-500 h-4 rounded-full transition-all duration-1000 ease-out relative">
+                        {/* Animation de progression continue */}
+                        <div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse"
+                          style={{
+                            animation: "shimmer 2s ease-in-out infinite",
+                          }}
+                        ></div>
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 via-purple-600 to-green-600 transition-all duration-500 ease-out"
+                          style={{
+                            width: "100%",
+                            animation: "fillProgress 15s ease-out forwards",
+                          }}
+                        ></div>
                       </div>
                     </div>
-
-                    <div className="space-y-2 text-sm text-slate-600">
-                      {processingStatusLines.map((line) => (
-                        <p key={line}>{line}</p>
-                      ))}
+                    <div className="flex justify-center mt-3">
+                      <span className="text-sm text-gray-700 font-medium">
+                        {displayedProcessingPhase === "analysis"
+                          ? "🔍 Analyse des clauses..."
+                          : displayedProcessingPhase === "scoring"
+                            ? "⚖️ Évaluation des risques..."
+                            : "💡 Finalisation du rapport..."}
+                      </span>
                     </div>
                   </div>
-                </div>
-              )}
 
-            {contract?.processed && !displayedIsProcessing && (
-              <div className={sidebarCollapsed ? "w-full px-3" : "max-w-7xl mx-auto"}>
-                {/* Tableau de bord des risques supprimé (allègement UI) */}
-
-            {/* Zone principale - Document avec sidebar intégrée */}
-                <div id="clauses-section" className="mb-6">
-                  <div className="bg-white rounded-lg shadow-lg">
-                    {/* Message informatif si pas encore d'analyse */}
-                    {contract.clauses.length === 0 && (
-                      <div className="p-4 bg-blue-50 border-b border-blue-200">
-                        <div className="flex items-center gap-2 text-blue-800">
-                          <span className="text-lg">📄</span>
-                          <span className="font-medium">
-                            Texte extrait - En attente d'analyse
-                          </span>
-                        </div>
-                        <p className="text-sm text-blue-600 mt-1">
-                          Le surlignage des clauses apparaîtra après l'analyse
-                          contextuelle ou standard
-                        </p>
-                      </div>
-                    )}
-
-                    <DocumentViewer
-                      content={contract.content}
-                      clauses={sortedClauses}
-                      onClauseClick={handleClauseClick}
-                      fileName={contract.fileName || "Document"}
-                      contractSummary={currentAnalysisContext ?? undefined}
-                      recommendationIndex={recommendationIndex}
-                      setRecommendationIndex={handleIncrementIndexRecommendation}
-                      activeClauseId={selectedClause}
-                      isFullscreen={sidebarCollapsed}
-                      ref={documentViewerRef}
-                      onSuggestedClauses={handleMarketAnalysisClick}
-                      isLoadingSuggested={isMarketAnalysisLoading}
-                    />
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {processingStatusLines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
                   </div>
-                </div>
-
-                {/* Boutons d'action - Centrés */}
-                <div className="flex justify-center">
-                  <ActionButtons
-                    onShareReport={handleShareReport}
-                    isProcessed={Boolean(contract?.processed)}
-                  />
                 </div>
               </div>
             )}
-          </div>
+
+          {contract?.processed && !displayedIsProcessing && (
+            <div
+              className={sidebarCollapsed ? "w-full px-3" : "max-w-7xl mx-auto"}
+            >
+              {/* Tableau de bord des risques supprimé (allègement UI) */}
+
+              {/* Zone principale - Document avec sidebar intégrée */}
+              <div id="clauses-section" className="mb-6">
+                <div className="bg-white rounded-lg shadow-lg">
+                  {/* Message informatif si pas encore d'analyse */}
+                  {contract.clauses.length === 0 && (
+                    <div className="p-4 bg-blue-50 border-b border-blue-200">
+                      <div className="flex items-center gap-2 text-blue-800">
+                        <span className="text-lg">📄</span>
+                        <span className="font-medium">
+                          Texte extrait - En attente d'analyse
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Le surlignage des clauses apparaîtra après l'analyse
+                        contextuelle ou standard
+                      </p>
+                    </div>
+                  )}
+
+                  <DocumentViewer
+                    content={contract.content}
+                    clauses={sortedClauses}
+                    onClauseClick={handleClauseClick}
+                    fileName={contract.fileName || "Document"}
+                    contractSummary={currentAnalysisContext ?? undefined}
+                    recommendationIndex={recommendationIndex}
+                    setRecommendationIndex={handleIncrementIndexRecommendation}
+                    activeClauseId={selectedClause}
+                    isFullscreen={sidebarCollapsed}
+                    ref={documentViewerRef}
+                    onSuggestedClauses={handleMarketAnalysisClick}
+                    isLoadingSuggested={isMarketAnalysisLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Boutons d'action - Centrés */}
+              <div className="flex justify-center">
+                <ActionButtons
+                  onShareReport={handleShareReport}
+                  isProcessed={Boolean(contract?.processed)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Détails de la clause sélectionnée */}

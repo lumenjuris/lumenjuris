@@ -1,7 +1,19 @@
-/* ------------------------------------------------------------------
-   Détection automatique du type de contrat et du rôle utilisateur
-   ------------------------------------------------------------------ */
+import type { AnalysisContext } from "../types/contextualAnalysis";
+import { fetchProxy } from "./fetchProxy";
 
+<<<<<<< HEAD
+export async function detectContractWithAI(
+  text: string,
+): Promise<AnalysisContext> {
+  const res = await fetchProxy("/api/detect-contract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(`detect-contract error ${res.status}`);
+  return (await res.json()) as AnalysisContext;
+=======
 import { AnalysisContext } from '../types/contextualAnalysis';
 import { callOpenAI } from './aiClient';
 
@@ -70,4 +82,5 @@ Réponds UNIQUEMENT avec le JSON, sans explication.`;
       contractObjective: '',
     };
   }
+>>>>>>> main
 }

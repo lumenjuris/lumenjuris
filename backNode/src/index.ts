@@ -8,26 +8,24 @@ import routerGoogleAuth from "./route/authGoogle";
 import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
 import routerEnterprise from "./route/apiEnterprise";
-import routerContractHistory from "./route/apiContractHistory"
+import routerContractHistory from "./route/apiContractHistory";
 import routerChatHistory from "./route/apiChatHistory";
 import routerBilling from "./route/apiBilling";
 import routerVeille from "./route/apiVeille";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
+import { seedPlans } from "./services/planSeeder";
+// import { internalApiKeyMiddleware } from "./middleware/internalApiKeyMiddleware";
 
 /**
  * Préparation du serveur nodejs/express pour ce backend
  * Ici sera traité toute les opérations avec la base de données
  */
 
-
-
-const HOST_PROXY: string = process.env.HOST_PROXY
-  || process.env.NODE_ENV == "dev"
-  ? "http://localhost:3000" :
-  "https://proxy.lumenjuris.com";
-
-
+const HOST_PROXY: string =
+  process.env.HOST_PROXY || process.env.NODE_ENV == "dev"
+    ? "http://localhost:3000"
+    : "https://proxy.lumenjuris.com";
 
 const app = express();
 app.set("etag", false);
@@ -42,6 +40,8 @@ app.use(
     credentials: true,
   }),
 );
+
+// app.use(internalApiKeyMiddleware);
 
 app.use("/", routerGoogleAuth);
 app.use("/llm", routerLlm);
@@ -81,6 +81,11 @@ app.listen(port, async () => {
       "Erreur lors de l'initialisation des utilisateurs de bootstrap:",
       err,
     );
+  }
+  try {
+    await seedPlans();
+  } catch (err) {
+    console.error("Erreur lors du seeding des plans:", err);
   }
   //await sandbox()
 });

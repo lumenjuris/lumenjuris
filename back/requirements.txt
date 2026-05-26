@@ -7,3 +7,5 @@ PyMuPDF
 pdfplumber
 google-cloud-vision
 python-multipart
+python-docx
+mammoth

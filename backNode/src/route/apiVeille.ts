@@ -31,14 +31,16 @@ const ALL_TAGS: VeilleTag[] = [
 ];
 
 const IMPACT_BY_TAG: Record<VeilleTag, string> = {
-  "Rupture": "Vérifiez vos procédures de rupture de contrat",
-  "Temps de travail": "Contrôlez la conformité de vos accords de temps de travail",
-  "Rémunération": "Vérifiez vos éléments de rémunération et bulletins de paie",
+  Rupture: "Vérifiez vos procédures de rupture de contrat",
+  "Temps de travail":
+    "Contrôlez la conformité de vos accords de temps de travail",
+  Rémunération: "Vérifiez vos éléments de rémunération et bulletins de paie",
   "Santé/Sécurité": "Mettez à jour votre DUERP et procédures de prévention",
-  "Discipline": "Revoyez vos procédures disciplinaires internes",
-  "Relations collectives": "Suivez l'évolution des négociations et accords collectifs",
+  Discipline: "Revoyez vos procédures disciplinaires internes",
+  "Relations collectives":
+    "Suivez l'évolution des négociations et accords collectifs",
   "Protection sociale": "Vérifiez la conformité de vos obligations sociales",
-  "Recrutement": "Adaptez vos pratiques de recrutement aux nouvelles règles",
+  Recrutement: "Adaptez vos pratiques de recrutement aux nouvelles règles",
 };
 
 // ── Feeds ────────────────────────────────────────────────────────────────────
@@ -50,37 +52,99 @@ interface FeedConfig {
 
 const RSS_FEEDS: FeedConfig[] = [
   // ── Légifrance – textes législatifs ─────────────────────────────────────────
-  { url: "https://legifrss.org/latest?nature=loi&q=salari%C3%A9", label: "Légifrance" },
-  { url: "https://legifrss.org/latest?nature=loi&q=emploi", label: "Légifrance" },
-  { url: "https://legifrss.org/latest?nature=loi&q=licenciement", label: "Légifrance" },
-  { url: "https://legifrss.org/latest?nature=decret&q=travail", label: "Légifrance" },
-  { url: "https://legifrss.org/latest?nature=decret&q=salaire", label: "Légifrance" },
+  {
+    url: "https://legifrss.org/latest?nature=loi&q=salari%C3%A9",
+    label: "Légifrance",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=loi&q=emploi",
+    label: "Légifrance",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=loi&q=licenciement",
+    label: "Légifrance",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=decret&q=travail",
+    label: "Légifrance",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=decret&q=salaire",
+    label: "Légifrance",
+  },
   // ── Légifrance – jurisprudence sociale ──────────────────────────────────────
-  { url: "https://legifrss.org/latest?nature=jurisprudence&q=salaire", label: "Légifrance – Jurisprudence" },
-  { url: "https://legifrss.org/latest?nature=jurisprudence&q=emploi", label: "Légifrance – Jurisprudence" },
-  { url: "https://legifrss.org/latest?nature=jurisprudence&q=salari%C3%A9", label: "Légifrance – Jurisprudence" },
-  { url: "https://legifrss.org/latest?nature=jurisprudence&q=travail", label: "Légifrance – Jurisprudence" },
-  { url: "https://legifrss.org/latest?nature=jurisprudence&q=licenciement", label: "Légifrance – Jurisprudence" },
+  {
+    url: "https://legifrss.org/latest?nature=jurisprudence&q=salaire",
+    label: "Légifrance – Jurisprudence",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=jurisprudence&q=emploi",
+    label: "Légifrance – Jurisprudence",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=jurisprudence&q=salari%C3%A9",
+    label: "Légifrance – Jurisprudence",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=jurisprudence&q=travail",
+    label: "Légifrance – Jurisprudence",
+  },
+  {
+    url: "https://legifrss.org/latest?nature=jurisprudence&q=licenciement",
+    label: "Légifrance – Jurisprudence",
+  },
   // ── Parlement ────────────────────────────────────────────────────────────────
   {
     url: "https://www.senat.fr/rss/textes.rss",
     label: "Sénat",
-    filterKeywords: ["travail", "emploi", "licenciement", "salarié", "retraite", "social", "prud", "convention collective"],
+    filterKeywords: [
+      "travail",
+      "emploi",
+      "licenciement",
+      "salarié",
+      "retraite",
+      "social",
+      "prud",
+      "convention collective",
+    ],
   },
   {
     url: "http://www2.assemblee-nationale.fr/feeds/detail/documents-parlementaires",
     label: "Assemblée nationale",
-    filterKeywords: ["travail", "emploi", "licenciement", "salarié", "retraite", "social", "prud", "convention collective"],
+    filterKeywords: [
+      "travail",
+      "emploi",
+      "licenciement",
+      "salarié",
+      "retraite",
+      "social",
+      "prud",
+      "convention collective",
+    ],
   },
   // ── Ministère du Travail ─────────────────────────────────────────────────────
-  { url: "https://travail-emploi.gouv.fr/spip.php?page=backend", label: "Ministère du Travail" },
+  {
+    url: "https://travail-emploi.gouv.fr/spip.php?page=backend",
+    label: "Ministère du Travail",
+  },
   // ── Service-public.fr ────────────────────────────────────────────────────────
-  { url: "https://www.service-public.fr/rss/particuliers/travail.rss", label: "Service-public.fr" },
+  {
+    url: "https://www.service-public.fr/rss/particuliers/travail.rss",
+    label: "Service-public.fr",
+  },
   // ── Juricaf ──────────────────────────────────────────────────────────────────
   {
     url: "https://juricaf.org/recherche/+/facet_pays:France?format=rss",
     label: "Juricaf",
-    filterKeywords: ["travail", "emploi", "licenciement", "salarié", "disciplin", "rupture", "prud"],
+    filterKeywords: [
+      "travail",
+      "emploi",
+      "licenciement",
+      "salarié",
+      "disciplin",
+      "rupture",
+      "prud",
+    ],
   },
 ];
 
@@ -89,11 +153,18 @@ function formatDate(raw: string | undefined): string {
   if (!raw) return "";
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // ── Collecte brute d'un flux ─────────────────────────────────────────────────
@@ -122,7 +193,9 @@ async function fetchFeedRaw(config: FeedConfig): Promise<RawArticle[]> {
 
   for (const item of feed.items ?? []) {
     const title = item.title ?? "";
-    const description = stripHtml(item.contentSnippet ?? item.content ?? item.summary ?? "");
+    const description = stripHtml(
+      item.contentSnippet ?? item.content ?? item.summary ?? "",
+    );
     const combined = `${title} ${description}`.toLowerCase();
 
     if (filterKeywords) {
@@ -142,10 +215,15 @@ async function fetchFeedRaw(config: FeedConfig): Promise<RawArticle[]> {
 }
 
 // ── Classification via backend Python ────────────────────────────────────────
-async function classifyBatch(articles: RawArticle[]): Promise<(VeilleTag | null)[]> {
+async function classifyBatch(
+  articles: RawArticle[],
+): Promise<(VeilleTag | null)[]> {
   if (articles.length === 0) return [];
 
-  const payload = articles.map((a) => ({ title: a.title, description: a.description }));
+  const payload = articles.map((a) => ({
+    title: a.title,
+    description: a.description,
+  }));
   const r = await fetch(`${PROXY_URL}/classify-veille`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -154,7 +232,7 @@ async function classifyBatch(articles: RawArticle[]): Promise<(VeilleTag | null)
   if (!r.ok) throw new Error(`classify-veille ${r.status}`);
   const raw: (string | null)[] = await r.json();
   const results: (VeilleTag | null)[] = raw.map((v) =>
-    v && (ALL_TAGS as string[]).includes(v) ? (v as VeilleTag) : null
+    v && (ALL_TAGS as string[]).includes(v) ? (v as VeilleTag) : null,
   );
 
   return results;
@@ -212,7 +290,8 @@ async function fetchAndClassifyAll(): Promise<VeilleArticle[]> {
         tag,
         date: a.date,
         title: a.title,
-        summary: a.description || "Consultez le texte complet pour plus de détails.",
+        summary:
+          a.description || "Consultez le texte complet pour plus de détails.",
         impact: IMPACT_BY_TAG[tag],
         source: a.source,
         link: a.link,
@@ -249,7 +328,10 @@ routerVeille.get("/", async (req: Request, res: Response) => {
     return res.json({ success: true, data: articles, cached: false });
   } catch (err) {
     console.error("[veille] fetch error:", err);
-    return res.status(500).json({ success: false, message: "Erreur lors de la récupération des flux RSS." });
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la récupération des flux RSS.",
+    });
   }
 });
 
@@ -258,16 +340,33 @@ routerVeille.get("/debug", async (_req: Request, res: Response) => {
     RSS_FEEDS.map(async (config) => {
       try {
         const items = await fetchFeedRaw(config);
-        return { url: config.url, label: config.label, status: "ok" as const, itemCount: items.length, items };
+        return {
+          url: config.url,
+          label: config.label,
+          status: "ok" as const,
+          itemCount: items.length,
+          items,
+        };
       } catch (err) {
-        return { url: config.url, label: config.label, status: "error" as const, error: (err as Error).message, itemCount: 0, items: [] };
+        return {
+          url: config.url,
+          label: config.label,
+          status: "error" as const,
+          error: (err as Error).message,
+          itemCount: 0,
+          items: [],
+        };
       }
     }),
   );
 
   return res.json({
     success: true,
-    feeds: results.map((r) => (r.status === "fulfilled" ? r.value : { status: "error", error: String(r.reason) })),
+    feeds: results.map((r) =>
+      r.status === "fulfilled"
+        ? r.value
+        : { status: "error", error: String(r.reason) },
+    ),
   });
 });
 
