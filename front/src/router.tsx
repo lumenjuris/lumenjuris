@@ -9,6 +9,7 @@ import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
 import { Calculateur } from "./components/DashboardComponents/Calculateur";
 import { Veille } from "./components/DashboardComponents/Veille";
 import { Conformite } from "./components/DashboardComponents/Conformite";
+import { MesFiligranes } from "./components/DashboardComponents/MesFiligranes";
 
 import { Dashboard } from "./page/Dashboard";
 import { VerifyAccount } from "./page/VerifyAccount";
@@ -64,6 +65,7 @@ export function App() {
           {/* Sous-ensemble (charge panneau latéral et header) */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/generateur" element={<Generateur />} />
+          <Route path="/generateur/filigranes" element={<MesFiligranes />} />
           <Route path="/signature" element={<Signature />} />
           <Route path="/chatjuridique" element={<ChatJuridique />} />
           <Route path="/calculateur" element={<Calculateur />} />

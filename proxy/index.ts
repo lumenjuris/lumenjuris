@@ -527,6 +527,37 @@ function handleNodeVeilleDebug(_req: Request, res: Response): void {
   relayToNode(_req, res, "/veille/debug");
 }
 
+function handleUserUploadsGet(req: Request, res: Response): void {
+  relayToNode(req, res, "/user-uploads");
+}
+
+function handleUserUploadsPost(req: Request, res: Response): void {
+  relayToNode(req, res, "/user-uploads/upload");
+}
+
+function handleUserUploadsRename(req: Request, res: Response): void {
+  const filename = encodeURIComponent(req.params.filename as string);
+  relayToNode(req, res, `/user-uploads/${filename}`);
+}
+
+function handleUserUploadsDelete(req: Request, res: Response): void {
+  const filename = encodeURIComponent(req.params.filename as string);
+  relayToNode(req, res, `/user-uploads/${filename}`);
+}
+
+async function handleUserUploadsAsset(req: Request, res: Response): Promise<void> {
+  try {
+    const filename = encodeURIComponent(req.params.filename as string);
+    const r = await fetch(`${BACKNODE_URL}/userassets/${filename}`);
+    if (!r.ok || !r.body) { res.status(r.status).end(); return; }
+    res.setHeader("content-type", r.headers.get("content-type") || "image/webp");
+    const { Readable } = await import("stream");
+    Readable.fromWeb(r.body as any).pipe(res);
+  } catch {
+    if (!res.headersSent) res.status(502).end();
+  }
+}
+
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
 app.post(
   ["/extract-document-text", "/api/extract-document-text"],
@@ -562,6 +593,11 @@ app.post("/api/billing/customer", handleBillingCustomer);
 app.post("/api/billing/payment-intent", handleBillingPaymentIntent);
 app.get("/api/veille", handleNodeVeille);
 app.get("/api/veille/debug", handleNodeVeilleDebug);
+app.get("/api/user-uploads", handleUserUploadsGet);
+app.post("/api/user-uploads/upload", handleUserUploadsPost);
+app.put("/api/user-uploads/:filename", handleUserUploadsRename);
+app.delete("/api/user-uploads/:filename", handleUserUploadsDelete);
+app.get("/api/user-uploads/assets/:filename", handleUserUploadsAsset);
 
 // Routes protégées (JWT vérifié par le proxy)
 app.post("/api/user/auth/logout", auth, handleNodeLogout);

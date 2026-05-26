@@ -62,7 +62,8 @@ model User {
   preference      UserPreference?
   documentCustom  DocumentCustom[]
   contractHistory ContractHistory[]
-  chatHistory     ChatHistory?
+  chatHistory ChatHistory?
+  userUpload UserUpload?
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -256,6 +257,17 @@ model Llm {
   tokenPriceOutput Int
 
   llmUsage LlmUsage[]
+}
+
+
+// --- ASSETS UTILISATEUR (filigranes) ---
+
+model UserUpload {
+  idUserUpload    Int    @id @default(autoincrement())
+  uploadedImages  Json
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
 
 model LlmUsage {
