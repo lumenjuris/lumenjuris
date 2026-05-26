@@ -1,12 +1,12 @@
 // Pricing as of August 2025. Prices are per 1,000,000 tokens.
 const MODEL_PRICING = {
-  'gpt-4o': {
-    input: 5.00, // $ per 1M input tokens
-    output: 15.00, // $ per 1M output tokens
+  "gpt-4o": {
+    input: 5.0, // $ per 1M input tokens
+    output: 15.0, // $ per 1M output tokens
   },
-  'gpt-4o-mini': {
+  "gpt-4o-mini": {
     input: 0.15, // $ per 1M input tokens
-    output: 0.60, // $ per 1M output tokens
+    output: 0.6, // $ per 1M output tokens
   },
 };
 
@@ -43,10 +43,14 @@ export function calculateCost(model: ModelName, usage: TokenUsage): number {
  * @param analysisStep A descriptive name for the analysis step (e.g., "Missing Clauses").
  * @returns The calculated cost for the step.
  */
-export function logCost(model: ModelName, usage: TokenUsage, analysisStep: string): number {
+export function logCost(
+  model: ModelName,
+  usage: TokenUsage,
+  analysisStep: string,
+): number {
   const cost = calculateCost(model, usage);
   console.log(
-    `💰 Costo [${analysisStep}]: $${cost.toFixed(6)} (Model: ${model}, Input: ${usage.prompt_tokens}, Output: ${usage.completion_tokens})`
+    `💰 Costo [${analysisStep}]: $${cost.toFixed(6)} (Model: ${model}, Input: ${usage.prompt_tokens}, Output: ${usage.completion_tokens})`,
   );
   return cost;
 }

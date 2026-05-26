@@ -20,7 +20,10 @@ export interface LightSanitizeReport {
   aborted: boolean;
 }
 
-export function lightSanitize(input: string, maxRemovalRatio = 0.015): { text: string; report: LightSanitizeReport } {
+export function lightSanitize(
+  input: string,
+  maxRemovalRatio = 0.015,
+): { text: string; report: LightSanitizeReport } {
   const report: LightSanitizeReport = {
     originalLength: input.length,
     sanitizedLength: input.length,
@@ -41,7 +44,7 @@ export function lightSanitize(input: string, maxRemovalRatio = 0.015): { text: s
   let work = input;
 
   // Retirer BOM éventuel
-  if (work.charCodeAt(0) === 0xFEFF) {
+  if (work.charCodeAt(0) === 0xfeff) {
     work = work.slice(1);
     report.trimmedBom = true;
   }
@@ -50,46 +53,58 @@ export function lightSanitize(input: string, maxRemovalRatio = 0.015): { text: s
 
   // 1. Retirer caractères de contrôle invisibles (sauf \n, \r, \t) + nulls
   const beforeCtrl = work.length;
-  work = work.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  work = work.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
   report.removedControlChars = beforeCtrl - work.length;
 
   // 1b. Retirer soft hyphen (discrétionnaire) & zero-width marks (préserver indices propres)
   const beforeSoft = work.length;
-  work = work.replace(/\u00AD/g, '');
+  work = work.replace(/\u00AD/g, "");
   report.removedSoftHyphen = beforeSoft - work.length;
   const beforeZW = work.length;
-  work = work.replace(/[\u200B-\u200D\u2060\uFEFF]/g, '');
+  work = work.replace(/[\u200B-\u200D\u2060\uFEFF]/g, "");
   report.removedZeroWidth = beforeZW - work.length;
 
   // 2. Normaliser fins de ligne CRLF -> LF (conserve structure)
-  work = work.replace(/\r\n?/g, '\n');
+  work = work.replace(/\r\n?/g, "\n");
 
   // 3. Collapser espaces consécutifs horizontaux uniquement (ne pas toucher aux \n). On remplace runs de 2+ espaces par un seul espace.
-  work = work.replace(/ {2,}/g, (m) => { report.collapsedSpaces += (m.length - 1); return ' '; });
+  work = work.replace(/ {2,}/g, (m) => {
+    report.collapsedSpaces += m.length - 1;
+    return " ";
+  });
 
   // 4. Retirer espaces immédiatement avant ponctuation simple , ; : ! ? .
-  work = work.replace(/\s+([,;:!?\.])/g, ' $1') // d'abord garantir un espace unique avant de normaliser
-    .replace(/ ([,;:!?\.])/g, '$1');
+  work = work
+    .replace(/\s+([,;:!?\.])/g, " $1") // d'abord garantir un espace unique avant de normaliser
+    .replace(/ ([,;:!?\.])/g, "$1");
 
   // 5. Réduire répétitions de ponctuation (3+ mêmes) à 2 (préserve emphase modérée) ex: "!!!!" -> "!!"
-  work = work.replace(/([!?.;,])\1{2,}/g, (m, p1) => { report.collapsedPunctuation += (m.length - 2); return p1 + p1; });
+  work = work.replace(/([!?.;,])\1{2,}/g, (m, p1) => {
+    report.collapsedPunctuation += m.length - 2;
+    return p1 + p1;
+  });
 
   // 6. Retirer espaces multiples autour des parenthèses/guillemets simples
-  work = work.replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')')
+  work = work
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
     .replace(/\s+"/g, '"')
     .replace(/"\s+/g, '"')
     .replace(/\s+'/g, "'")
     .replace(/'\s+/g, "'");
 
   // 7. Ne pas compacter les \n; mais supprimer les lignes contenant uniquement des espaces
-  work = work.replace(/^[ \t]+$/gm, '');
+  work = work.replace(/^[ \t]+$/gm, "");
 
   // 8. Trim extrémités sans toucher structure interne
   work = work.trim();
 
-  const removedNonWhitespace = originalNonWhitespace - (work.match(/\S/g) || []).length;
-  report.ratioRemovedNonWhitespace = originalNonWhitespace === 0 ? 0 : removedNonWhitespace / originalNonWhitespace;
+  const removedNonWhitespace =
+    originalNonWhitespace - (work.match(/\S/g) || []).length;
+  report.ratioRemovedNonWhitespace =
+    originalNonWhitespace === 0
+      ? 0
+      : removedNonWhitespace / originalNonWhitespace;
 
   // Garde-fou
   if (report.ratioRemovedNonWhitespace > maxRemovalRatio) {
