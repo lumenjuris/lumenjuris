@@ -49,6 +49,21 @@ try:
 except ImportError:
     pdfplumber = None
 
+try:
+    import mammoth
+    MAMMOTH_AVAILABLE = True
+except ImportError:
+    mammoth = None
+    MAMMOTH_AVAILABLE = False
+    print("⚠️ mammoth non installé - extraction Word indisponible")
+
+try:
+    from docx import Document as DocxDocument
+    DOCX_AVAILABLE = True
+except ImportError:
+    DocxDocument = None
+    DOCX_AVAILABLE = False
+
 # --- CORRECTION POUR L'ANALYSEUR DE CODE (PYLANCE) ---
 if TYPE_CHECKING:
     # Ceci permet à Pylance de connaître le type sans causer d'erreur à l'exécution
@@ -139,11 +154,46 @@ else:
 # Configuration
 # ---------------------------------------------------------
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB max
-ALLOWED_EXTENSIONS = {'pdf'}
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 
 def allowed_file(filename):
     """Vérifie si le fichier est autorisé"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def is_word_file(filename: str) -> bool:
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    return ext in ('doc', 'docx')
+
+def extract_text_from_word(content: bytes) -> tuple:
+    """Extrait (text, html) d'un fichier Word (.doc/.docx).
+    Essaie mammoth en priorité (produit du HTML propre), puis python-docx en fallback.
+    """
+    if MAMMOTH_AVAILABLE:
+        try:
+            html_result = mammoth.convert_to_html(io.BytesIO(content))
+            text_result = mammoth.extract_raw_text(io.BytesIO(content))
+            html = html_result.value or ""
+            text = text_result.value or ""
+            if text.strip():
+                return text, html
+        except Exception as e:
+            print(f"⚠️ mammoth échoué: {e}")
+
+    if DOCX_AVAILABLE:
+        try:
+            doc = DocxDocument(io.BytesIO(content))
+            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+            text = "\n".join(paragraphs)
+            html = "".join(f"<p>{html_module.escape(p)}</p>" for p in paragraphs)
+            if text.strip():
+                return text, html
+        except Exception as e:
+            print(f"⚠️ python-docx échoué: {e}")
+
+    raise ValueError(
+        "Impossible d'extraire le texte du fichier Word. "
+        "Vérifiez que python-docx et mammoth sont installés."
+    )
 
 # ---------------------------------------------------------
 # Outils de correction/cleaning du texte OCR

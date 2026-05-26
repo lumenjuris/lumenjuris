@@ -3,11 +3,15 @@ import { SettingsToggleRow } from "../ui/SettingsToggleRow";
 type PreferenceSettingsPanelProps = {
   isDyslexicModeEnabled: boolean;
   onDyslexicModeCheckedChange: (checked: boolean) => void;
+  isEmailNotificationsEnabled: boolean;
+  onEmailNotificationsCheckedChange: (checked: boolean) => void;
 };
 
 export function PreferenceSettingsPanel({
   isDyslexicModeEnabled,
   onDyslexicModeCheckedChange,
+  isEmailNotificationsEnabled,
+  onEmailNotificationsCheckedChange,
 }: PreferenceSettingsPanelProps) {
   return (
     <div className="space-y-6">
@@ -24,6 +28,12 @@ export function PreferenceSettingsPanel({
         label="Mode dyslexique"
         checked={isDyslexicModeEnabled}
         onCheckedChange={onDyslexicModeCheckedChange}
+      />
+
+      <SettingsToggleRow
+        label="Notifications par email"
+        checked={isEmailNotificationsEnabled}
+        onCheckedChange={onEmailNotificationsCheckedChange}
       />
     </div>
   );

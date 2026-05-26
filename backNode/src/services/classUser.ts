@@ -137,7 +137,7 @@ export class User {
       const isValid = await bcrypt.compare(password, findUser.password);
 
       return {
-        success: isValid,
+        success: isValid ? true : false,
         message: isValid
           ? "Connexion réussie"
           : "Email ou mot de passe invalide",

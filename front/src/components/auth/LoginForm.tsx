@@ -13,7 +13,6 @@ import { useUserStore } from "../../store/userStore";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 
-
 import { fetchProxy } from "../../utils/fetchProxy";
 
 interface LoginFormProps {
@@ -26,6 +25,9 @@ interface LoginFormProps {
   emailSent: boolean;
   setEmailSent: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+const PROXY_URL: string =
+  import.meta.env.VITE_URL_PROXY || "http://localhost:3000";
 
 const LoginForm = ({
   email,
@@ -47,6 +49,9 @@ const LoginForm = ({
   );
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState("");
+  const [verificationError, setVerificationError] = useState(false);
+  const verificationErrorMessage =
+    "Pour valider votre compte veuillez cliquer sur le lien qui vous a été envoyé par email.";
 
   const navigate = useNavigate();
   const { fetchUser } = useUserStore();
@@ -85,6 +90,12 @@ const LoginForm = ({
             "Une erreur est survenue, veuillez réessayer...",
         );
         console.error("🛑🛑🛑 ERREUR CONNEXION", dataResponse);
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (!dataResponse.data.isVerified) {
+        setVerificationError(true);
         setSubmitLoading(false);
         return;
       }
@@ -135,8 +146,9 @@ const LoginForm = ({
     }).catch(() => null);
   };
 
+  // Connexion via Google
   const handleSubmitGoogle = () => {
-    window.location.href = "/api/google";
+    window.location.href = `${PROXY_URL}/api/google`;
   };
 
   const handleSubmitForgotPassword = async (
@@ -174,6 +186,7 @@ const LoginForm = ({
           title="Champs manquants !"
           variant="error"
           detail="Vérifiez votre adresse email et votre mot de passe."
+          duration={8000}
           onClose={() => setSubmitError(false)}
         />
       )}
@@ -182,6 +195,7 @@ const LoginForm = ({
           title="Email manquant !"
           variant="error"
           detail="Pour réinitialiser votre mot de passe veuillez renseigner votre adresse email."
+          duration={8000}
           onClose={() => {
             setForgotPassword(true);
             setSubmitForgotError(false);
@@ -194,8 +208,22 @@ const LoginForm = ({
           title="Connexion impossible !"
           variant="error"
           detail={serverErrorMessage}
+          duration={8000}
           onClose={() => {
             setServerError(false);
+            setSubmitLoading(false);
+          }}
+        />
+      )}
+
+      {verificationError && (
+        <AlertBanner
+          title="Votre compte n'a pas été validé !"
+          variant="error"
+          detail={verificationErrorMessage}
+          duration={10000}
+          onClose={() => {
+            setVerificationError(false);
             setSubmitLoading(false);
           }}
         />
@@ -295,7 +323,7 @@ const LoginForm = ({
 
             <div className="w-full h-px bg-border"></div>
 
-            <div className="grid gap-2">
+            <div className="grid gap-3">
               <Button
                 className="text-background border border-lumenjuris"
                 disabled={submitLoading || submitError}
@@ -305,6 +333,11 @@ const LoginForm = ({
                 <LogInIcon />
                 Se connecter
               </Button>
+              <div className="flex items-center gap-3">
+                <div className="w-full h-px bg-gray-300"></div>
+                <span className="text-gray-400">OU</span>
+                <div className="w-full h-px bg-gray-300"></div>
+              </div>
               <button
                 className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris hover:bg-lumenjuris-background"
                 type="button"

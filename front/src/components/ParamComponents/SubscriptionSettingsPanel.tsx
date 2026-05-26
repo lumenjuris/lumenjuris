@@ -1,34 +1,25 @@
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CreditCard } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
-
-type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "PENDING";
-export type BillingInterval = "month" | "year";
-
-export type SubscriptionData = {
-  status: SubscriptionStatus;
-  planName: string;
-  price: number;
-  interval: BillingInterval;
-  startAt: string;
-  expiresAt: string;
-};
-
-export type CreditsData = {
-  creditAnalyse: number;
-  creditSignature: number;
-  creditGenerationDoc: number;
-  totalAnalyse: number;
-  totalSignature: number;
-  totalGenerationDoc: number;
-};
-
-type SubscriptionSettingsPanelProps = {
-  subscription: SubscriptionData | null;
-  credits: CreditsData | null;
-  onManageSubscriptionClick: () => void;
-};
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/Dialog";
+import { fetchProxy } from "../../utils/fetchProxy";
+import { CreditsPanel } from "../SubscriptionComponents/CreditsPanel";
+import { formatPrice } from "../../utils/format/formatPrice";
+import { formatDate } from "../../utils/format/formatDate";
+import { CreditBar } from "../common/CreditBar";
+import type {
+  SubscriptionData,
+  SubscriptionStatus,
+} from "../../types/subscriptionData";
+import type { CreditsData } from "../../types/creditsData";
 
 const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   ACTIVE: "Actif",
@@ -37,67 +28,39 @@ const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   PENDING: "En attente",
 };
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(price / 100);
-
-function CreditBar({
-  label,
-  used,
-  total,
-}: {
-  label: string;
-  used: number;
-  total: number;
-}) {
-  const remaining = Math.max(0, total - used);
-  const pct = total > 0 ? Math.round((remaining / total) * 100) : 0;
-  const isLow = pct <= 20;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span
-          className={isLow ? "font-semibold text-red-600" : "text-gray-500"}
-        >
-          {remaining} / {total}
-        </span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-        <div
-          className={`h-full rounded-full transition-all ${isLow ? "bg-red-500" : "bg-lumenjuris"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-const MOCK_CREDITS: CreditsData = {
-  creditAnalyse: 7,
-  creditSignature: 1,
-  creditGenerationDoc: 2,
-  totalAnalyse: 10,
-  totalSignature: 5,
-  totalGenerationDoc: 3,
-};
-
-export function SubscriptionSettingsPanel(
-  _props: Partial<SubscriptionSettingsPanelProps> = {},
-) {
-  const { subscription = null, credits = MOCK_CREDITS } = _props;
+export function SubscriptionSettingsPanel() {
   const navigate = useNavigate();
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(
+    null,
+  );
+  const [credits, setCredits] = useState<CreditsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const fetchSubscription = useCallback(() => {
+    fetchProxy("/api/billing/subscription", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          setSubscription(data.data.subscription ?? null);
+          setCredits(data.data.credits ?? null);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchSubscription();
+  }, [fetchSubscription]);
+
+  const handleCreditSuccess = () => {
+    setDialogOpen(false);
+    fetchSubscription();
+  };
 
   const isActive = subscription?.status === "ACTIVE";
   const isAnnual = subscription?.interval === "year";
@@ -107,6 +70,20 @@ export function SubscriptionSettingsPanel(
     if (!isActive) return "Date de fin";
     return isAnnual ? "Accès valable jusqu'au" : "Prochain prélèvement";
   })();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Gérez votre formule d'abonnement LumenJuris.
+          </p>
+        </div>
+        <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -179,24 +156,46 @@ export function SubscriptionSettingsPanel(
 
       {credits !== null && (
         <div className="space-y-4 rounded-2xl border border-gray-200 bg-white px-5 py-4">
-          <p className="text-sm font-semibold text-gray-900">
-            Crédits restants ce mois
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-900">
+              Crédits restants ce mois
+            </p>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-xs hover:bg-gray-100"
+                  >
+                    Ajouter des crédits
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Ajouter des crédits</DialogTitle>
+                </DialogHeader>
+                <CreditsPanel
+                  onSuccess={handleCreditSuccess}
+                  onClose={() => setDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+
           <div className="space-y-3">
             <CreditBar
-              label="Analyses"
-              used={credits.totalAnalyse - credits.creditAnalyse}
-              total={credits.totalAnalyse}
+              label="Crédits inclus"
+              used={credits.totalIncluded - credits.creditIncluded}
+              total={credits.totalIncluded}
             />
+
             <CreditBar
-              label="Signatures"
-              used={credits.totalSignature - credits.creditSignature}
-              total={credits.totalSignature}
-            />
-            <CreditBar
-              label="Génération de documents"
-              used={credits.totalGenerationDoc - credits.creditGenerationDoc}
-              total={credits.totalGenerationDoc}
+              label="Crédits ajoutés"
+              used={0}
+              total={credits.creditAdded}
             />
           </div>
         </div>
@@ -211,14 +210,6 @@ export function SubscriptionSettingsPanel(
             onClick={() => navigate("/souscription")}
           >
             Changer d'offre
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="hover:bg-gray-100"
-            onClick={_props.onManageSubscriptionClick ?? (() => {})}
-          >
-            Gérer mon abonnement
           </Button>
         </div>
       )}

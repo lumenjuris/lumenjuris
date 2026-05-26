@@ -6,8 +6,7 @@ import { cn } from "../../utils/shadcnUtils/cn";
 
 import { useUserStore } from "../../store/userStore";
 import { BillingStripePanel } from "./BillingStripePanel";
-
-type BillingInterval = "month" | "year";
+import type { BillingInterval } from "../../types/subscriptionData";
 
 type Plan = {
   name: string;
@@ -31,7 +30,7 @@ const PLANS: Plan[] = [
     features: [
       "Jusqu'à 10 contrats actifs",
       "Générateur CDI & CDD",
-      "Analyse de conformité (5/mois)",
+      "Analyse de conformité : jusqu'à 5/mois",
       "Chat juridique RH (50 questions)",
       "Support par email",
     ],
@@ -47,7 +46,7 @@ const PLANS: Plan[] = [
     features: [
       "Contrats illimités",
       "Tous les modèles juridiques",
-      "Analyse de conformité illimitée",
+      "Analyse de conformité : jusqu'à 20/mois",
       "Chat juridique RH illimité",
       "Calculateur juridique",
       "Veille information temps réel",
@@ -135,9 +134,10 @@ export function PlansPanel() {
             onClick={() => {
               setPaymentSuccess(false);
               setSelectedPlan(null);
+              navigate("/dashboard");
             }}
           >
-            Retour aux offres
+            Aller sur mon tableau de bord
           </Button>
         </div>
       </div>
@@ -152,7 +152,9 @@ export function PlansPanel() {
           price={selectedPlan.price}
           interval={selectedPlan.interval}
           onBack={() => setSelectedPlan(null)}
-          onSuccess={() => setPaymentSuccess(true)}
+          onSuccess={() => {
+            setPaymentSuccess(true);
+          }}
         />
       </div>
     );

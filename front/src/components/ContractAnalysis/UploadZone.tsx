@@ -7,13 +7,15 @@ interface UploadZoneProps {
   onTextSubmit: (text: string, fileName: string) => void;
   isProcessing: boolean;
   processingPhase?: string;
+  analyseCredit?: number | null;
 }
 
 export const UploadZone: React.FC<UploadZoneProps> = ({
   onFileSelect,
   onTextSubmit,
   isProcessing,
-  processingPhase
+  processingPhase,
+  analyseCredit,
 }) => {
   // Définition des étapes avec leurs détails
   const steps = [
@@ -85,6 +87,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
       onTextSubmit={onTextSubmit}
       onFileUpload={onFileSelect}
       isProcessing={false}
+      analyseCredit={analyseCredit}
     />
   );
 };

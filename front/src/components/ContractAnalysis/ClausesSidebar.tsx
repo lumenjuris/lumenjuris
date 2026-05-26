@@ -1,8 +1,8 @@
-import React from 'react';
-import { Lightbulb, RefreshCw } from 'lucide-react';
-import { ClauseRisk } from '../../types';
-import { ClauseRiskCard } from './ClauseRiskCard';
-import { TextPatch } from '../../store/documentTextStore';
+import React from "react";
+import { Lightbulb, RefreshCw } from "lucide-react";
+import { ClauseRisk } from "../../types";
+import { ClauseRiskCard } from "./ClauseRiskCard";
+import { TextPatch } from "../../store/documentTextStore";
 
 interface ClausesSidebarProps {
   clauses: ClauseRisk[];
@@ -22,7 +22,6 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
   onSuggestedClauses,
   isLoadingSuggested = false,
 }) => {
-
   if (!isVisible || !clauses || clauses.length === 0) {
     return null;
   }
@@ -49,7 +48,7 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
             className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-white text-green-600 hover:bg-green-50 border border-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Lightbulb className="w-4 h-4" />
-            {isLoadingSuggested ? 'Analyse en cours...' : 'Clauses suggérées'}
+            {isLoadingSuggested ? "Analyse en cours..." : "Clauses suggérées"}
           </button>
 
           <button

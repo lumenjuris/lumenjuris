@@ -10,9 +10,6 @@ import {
 } from "lucide-react";
 import { fetchProxy } from "../utils/fetchProxy";
 
-
-
-
 type ViewState = "form" | "success" | "error";
 
 const ERROR_MESSAGES: Record<string, { title: string; detail: string }> = {

@@ -8,18 +8,34 @@ import { prisma } from "../../prisma/singletonPrisma";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { Google } from "../services/classGoogle";
 import { Enterprise } from "../services/classEnterprise";
+import { Subscription } from "../services/classSubscription";
+import { normalizeAccountParameters } from "../utils/normalizeAccountParameters";
+import { normalizePreferenceUI } from "../utils/normalizePreferenceUI";
 //import { TokenState } from "../../prisma/generated/enums"
 
 const routerUser: Router = express.Router();
 
 type TokenValidationResult =
-  | { valid: true; tokenEntry: { idToken: number; userId: number; token: string; type: string; status: string; expiresAt: Date } }
+  | {
+      valid: true;
+      tokenEntry: {
+        idToken: number;
+        userId: number;
+        token: string;
+        type: string;
+        status: string;
+        expiresAt: Date;
+      };
+    }
   | { valid: false; reason: "invalid" | "already-used" | "expired" };
 
-async function validateToken(token: string, expectedType?: string): Promise<TokenValidationResult> {
+async function validateToken(
+  token: string,
+  expectedType?: string,
+): Promise<TokenValidationResult> {
   const tokenEntry = await prisma.token.findUnique({ where: { token } });
 
-   // Token introuvable
+  // Token introuvable
   if (!tokenEntry || (expectedType && tokenEntry.type !== expectedType)) {
     return { valid: false, reason: "invalid" };
   }
@@ -31,7 +47,10 @@ async function validateToken(token: string, expectedType?: string): Promise<Toke
 
   // Token expiré
   if (tokenEntry.expiresAt < new Date()) {
-    await prisma.token.update({ where: { token }, data: { status: "EXPIRED" } });
+    await prisma.token.update({
+      where: { token },
+      data: { status: "EXPIRED" },
+    });
     return { valid: false, reason: "expired" };
   }
 
@@ -40,29 +59,6 @@ async function validateToken(token: string, expectedType?: string): Promise<Toke
     return { valid: false, reason: "invalid" };
   }
   return { valid: true, tokenEntry };
-}
-
-const ALL_VEILLE_TAGS = [
-  "Rupture", "Temps de travail", "Rémunération", "Santé/Sécurité",
-  "Discipline", "Relations collectives", "Protection sociale", "Recrutement",
-] as const;
-
-function normalizePreferenceUI(input: unknown) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return { dyslexicMode: false, veilleActiveTags: [...ALL_VEILLE_TAGS] };
-  }
-  const candidate = input as { dyslexicMode?: unknown; veilleActiveTags?: unknown };
-
-  const veilleActiveTags = Array.isArray(candidate.veilleActiveTags)
-    ? (candidate.veilleActiveTags as unknown[]).filter(
-        (t): t is string => typeof t === "string" && (ALL_VEILLE_TAGS as readonly string[]).includes(t)
-      )
-    : [...ALL_VEILLE_TAGS];
-
-  return {
-    dyslexicMode: Boolean(candidate.dyslexicMode),
-    veilleActiveTags,
-  };
 }
 
 routerUser.post("/create", async (req: Request, res: Response) => {
@@ -98,7 +94,11 @@ routerUser.post("/create", async (req: Request, res: Response) => {
     const token = await new Token().createToken(idUser, "verifyAccount");
     const url = `${process.env.HOST}/user/verify/${token.token}`;
 
-    if (enterprise && typeof enterprise === "object" && !Array.isArray(enterprise)) {
+    if (
+      enterprise &&
+      typeof enterprise === "object" &&
+      !Array.isArray(enterprise)
+    ) {
       const nested = enterprise as any;
       const enterpriseInput = {
         ...nested,
@@ -109,7 +109,10 @@ routerUser.post("/create", async (req: Request, res: Response) => {
       await new Enterprise().updateByUser(idUser, enterpriseInput);
     }
 
-    const mailer = await new Mailer(email).sendVerifyAccount(url, `${prenom} ${nom}`);
+    const mailer = await new Mailer(email).sendVerifyAccount(
+      url,
+      `${prenom} ${nom}`,
+    );
 
     return res.status(200).json({
       success: mailer.success,
@@ -135,7 +138,9 @@ routerUser.get(
 
       const result = await validateToken(token);
       if (!result.valid) {
-        return res.redirect(`${process.env.HOST_FRONT}/verify-account?reason=${result.reason}`);
+        return res.redirect(
+          `${process.env.HOST_FRONT}/verify-account?reason=${result.reason}`,
+        );
       }
 
       const idUser = result.tokenEntry.userId;
@@ -154,6 +159,9 @@ routerUser.get(
 
       // Auth cookie
       createCookieAuth(idUser, updatedUser.role, res);
+
+      // Activation freemium plan
+      new Subscription().activateFreemium(idUser).catch(console.error);
 
       return res.redirect(`${process.env.HOST_FRONT}/dashboard?verified=true`);
     } catch (err) {
@@ -388,7 +396,9 @@ routerUser.get(
         success: true,
         message: "Les préférences utilisateur ont été récupérées avec succès.",
         data: {
-          preferenceUI: normalizePreferenceUI(userPreference?.preferenceUI),
+          accountParameters: normalizeAccountParameters(
+            userPreference?.accountParameters,
+          ),
         },
       });
     } catch (err) {
@@ -410,26 +420,21 @@ routerUser.put(
   async (req: Request, res: Response) => {
     try {
       const idUser = Number(req.idUser);
-      const preferenceUI = normalizePreferenceUI(req.body?.preferenceUI);
+      const accountParameters = normalizeAccountParameters(
+        req.body?.accountParameters,
+      );
 
       await prisma.userPreference.upsert({
         where: { userId: idUser },
-        update: {
-          preferenceUI,
-        },
-        create: {
-          userId: idUser,
-          preferenceUI,
-        },
+        update: { accountParameters },
+        create: { userId: idUser, accountParameters },
       });
 
       return res.status(200).json({
         success: true,
         message:
           "Les préférences utilisateur ont été mises à jour avec succès.",
-        data: {
-          preferenceUI,
-        },
+        data: { accountParameters },
       });
     } catch (err) {
       console.error(
@@ -439,6 +444,68 @@ routerUser.put(
         success: false,
         message:
           "Une erreur est survenue lors de la mise à jour des préférences utilisateur.",
+      });
+    }
+  },
+);
+
+routerUser.get(
+  "/preferences/ui",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const idUser = Number(req.idUser);
+      const userPreference = await prisma.userPreference.findUnique({
+        where: { userId: idUser },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Les préférences UI ont été récupérées avec succès.",
+        data: {
+          preferenceUI: normalizePreferenceUI(userPreference?.preferenceUI),
+        },
+      });
+    } catch (err) {
+      console.error(
+        `Erreur lors de la récupération des préférences UI, error : \n ${err}`,
+      );
+      return res.status(500).json({
+        success: false,
+        message:
+          "Une erreur est survenue lors de la récupération des préférences UI.",
+      });
+    }
+  },
+);
+
+routerUser.put(
+  "/preferences/ui",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const idUser = Number(req.idUser);
+      const preferenceUI = normalizePreferenceUI(req.body?.preferenceUI);
+
+      await prisma.userPreference.upsert({
+        where: { userId: idUser },
+        update: { preferenceUI },
+        create: { userId: idUser, preferenceUI },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Les préférences UI ont été mises à jour avec succès.",
+        data: { preferenceUI },
+      });
+    } catch (err) {
+      console.error(
+        `Erreur lors de la mise à jour des préférences UI, error : \n ${err}`,
+      );
+      return res.status(500).json({
+        success: false,
+        message:
+          "Une erreur est survenue lors de la mise à jour des préférences UI.",
       });
     }
   },
@@ -623,7 +690,8 @@ routerUser.post("/forgotpassword", async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: "Si cet email est associé à un compte, vous recevrez un lien de réinitialisation.",
+      message:
+        "Si cet email est associé à un compte, vous recevrez un lien de réinitialisation.",
     });
   } catch (error) {
     console.error("Erreur lors de la demande de réinitialisation:", error);
@@ -643,10 +711,14 @@ routerUser.get(
 
       const result = await validateToken(token, "forgotPassword");
       if (!result.valid) {
-        return res.redirect(`${process.env.HOST_FRONT}/reset-password?reason=${result.reason}`);
+        return res.redirect(
+          `${process.env.HOST_FRONT}/reset-password?reason=${result.reason}`,
+        );
       }
 
-      return res.redirect(`${process.env.HOST_FRONT}/reset-password?token=${token}`);
+      return res.redirect(
+        `${process.env.HOST_FRONT}/reset-password?token=${token}`,
+      );
     } catch (err) {
       console.error(
         "Erreur lors de la validation du token reset password:",
@@ -674,14 +746,18 @@ routerUser.post("/updatepassword", async (req: Request, res: Response) => {
     const result = await validateToken(token, "forgotPassword");
     if (!result.valid) {
       const messages = {
-        "invalid": "Token invalide.",
+        invalid: "Token invalide.",
         "already-used": "Ce lien a déjà été utilisé.",
-        "expired": "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
+        expired: "Ce lien a expiré. Veuillez effectuer une nouvelle demande.",
       };
-      return res.status(400).json({ success: false, message: messages[result.reason] });
+      return res
+        .status(400)
+        .json({ success: false, message: messages[result.reason] });
     }
 
-    const updated = await new User().update(result.tokenEntry.userId, { password });
+    const updated = await new User().update(result.tokenEntry.userId, {
+      password,
+    });
 
     if (!updated.success) {
       return res.status(500).json({

@@ -7,13 +7,19 @@ interface TextInputZoneProps {
   onTextSubmit: (text: string, fileName: string) => void;
   onFileUpload: (file: File) => void;
   isProcessing: boolean;
+  analyseCredit?: number | null;
 }
 
 export const TextInputZone: React.FC<TextInputZoneProps> = ({
   onTextSubmit,
   onFileUpload,
   isProcessing,
+  analyseCredit,
 }) => {
+  const isBlocked =
+    analyseCredit !== null &&
+    analyseCredit !== undefined &&
+    analyseCredit < 100;
   const [activeTab, setActiveTab] = useState<"text" | "file">("file");
   const [textContent, setTextContent] = useState("");
 
@@ -30,14 +36,19 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
     onTextSubmit(textContent.trim(), autoName);
   };
 
+  const ACCEPTED_MIME_TYPES = new Set([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+
   // Fonction onDrop pour react-dropzone
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        // Vérifier que c'est un PDF
-        if (file.type !== "application/pdf") {
-          alert("Seuls les fichiers PDF sont acceptés.");
+        if (!ACCEPTED_MIME_TYPES.has(file.type)) {
+          alert("Seuls les fichiers PDF, DOC et DOCX (Word) sont acceptés.");
           return;
         }
         onFileUpload(file);
@@ -71,7 +82,6 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
-
           <Type size={20} />
           Saisir le texte directement
         </button>
@@ -134,9 +144,9 @@ Le prestataire s'engage à...
 
               <button
                 onClick={handleTextSubmit}
-                disabled={!isTextValid || isProcessing}
+                disabled={!isTextValid || isProcessing || isBlocked}
                 className={`w-full py-4 px-6 rounded-lg font-medium transition-all flex items-center justify-center gap-3 ${
-                  isTextValid && !isProcessing
+                  isTextValid && !isProcessing && !isBlocked
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg transform hover:scale-[1.02]"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
@@ -160,42 +170,73 @@ Le prestataire s'engage à...
             {/* Composant input file avec React-dropzone pour le drag & drop */}
             <InputFile
               onDrop={onDrop}
-              accepted={{ "application/pdf": [".pdf"] }}
+              accepted={{
+                "application/pdf": [".pdf"],
+                "application/msword": [".doc"],
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                  [".docx"],
+              }}
               multiple={false}
-              fieldTitle="Importez votre contrat PDF"
-              fieldDescription="Cliquez ici ou glissez-déposez votre fichier PDF"
-              supportedFileType="PDF uniquement"
+              fieldTitle="Importez votre contrat"
+              fieldDescription="Cliquez ici ou glissez-déposez votre fichier"
+              supportedFileType="PDF, DOC, DOCX"
+              disabled={isBlocked}
             />
-
-            {/* Message supprimé pour éviter duplication avec App.tsx */}
           </div>
         )}
       </div>
 
-      {/* Aide */}
-      <div className="mt-6 bg-gray-50 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-2">
-          Conseils pour une meilleure analyse
-        </h4>
-        <ul className="text-sm text-gray-600 space-y-1">
-          <li>
-            • <strong>Pour le texte :</strong> Copiez l'intégralité du contrat
-            avec tous les articles
-          </li>
-          <li>
-            • <strong>Pour le PDF :</strong> Assurez-vous que le texte est
-            sélectionnable (pas d'image scannée)
-          </li>
-          <li>
-            • <strong>Qualité :</strong> Plus le contrat est complet, plus
-            l'analyse sera précise
-          </li>
-          <li>
-            • <strong>Format :</strong> Les contrats structurés avec des
-            articles numérotés donnent de meilleurs résultats
-          </li>
-        </ul>
-      </div>
+      {/* Affiche l'alerte crédits insuffisants ou l'aide */}
+      {isBlocked ? (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <svg
+            className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-red-700">
+              Crédits d'analyse insuffisants
+            </p>
+            <p className="mt-0.5 text-sm text-red-600">
+              Il vous reste <strong>{analyseCredit}</strong> crédit
+              {analyseCredit !== 1 ? "s" : ""} d'analyse, mais 100 crédits sont
+              nécessaires pour lancer une analyse. Rechargez vos crédits depuis
+              votre espace abonnement.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-6 bg-gray-50 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 mb-2">
+            Conseils pour une meilleure analyse
+          </h4>
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li>
+              • <strong>Pour le texte :</strong> Copiez l'intégralité du contrat
+              avec tous les articles
+            </li>
+            <li>
+              • <strong>Pour le PDF :</strong> Assurez-vous que le texte est
+              sélectionnable (pas d'image scannée)
+            </li>
+            <li>
+              • <strong>Qualité :</strong> Plus le contrat est complet, plus
+              l'analyse sera précise
+            </li>
+            <li>
+              • <strong>Format :</strong> Les contrats structurés avec des
+              articles numérotés donnent de meilleurs résultats
+            </li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

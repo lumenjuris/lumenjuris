@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -117,11 +117,7 @@ function NavItemRow({ item }: { item: NavItem }) {
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { isConnected: userConnected } = useUserStore();
-
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : (
+  return (
     <div
       className="flex min-h-screen w-full bg-[#f8f9fb]"
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}

@@ -6,7 +6,7 @@ export interface AltProposal {
 
 export interface ClauseAI {
   summary: string;
-  riskLevel: 'High' | 'Medium' | 'Low';
+  riskLevel: "High" | "Medium" | "Low";
   riskScore: number;
   litigation: string;
   issues: string[];
@@ -24,13 +24,13 @@ export interface ClauseRisk {
   suggestion: string;
   legalReference?: string | string[];
   category:
-    | 'penalty'
-    | 'termination'
-    | 'responsibility'
-    | 'confidentiality'
-    | 'nonCompete'
-    | 'warranty'
-    | 'other';
+    | "penalty"
+    | "termination"
+    | "responsibility"
+    | "confidentiality"
+    | "nonCompete"
+    | "warranty"
+    | "other";
   canLiiCases?: CanLiiCase[];
   riskFactors?: RiskFactor[];
   alternativeWording?: string[];
@@ -38,7 +38,7 @@ export interface ClauseRisk {
   page?: number;
   keywords?: string[]; // Mots-clés pour le surlignage
   startIndex?: number; // Coordonnée de début pour un surlignage précis
-  endIndex?: number;   // Coordonnée de fin pour un surlignage précis
+  endIndex?: number; // Coordonnée de fin pour un surlignage précis
   // Nouveau champ pour les réponses contextuelles
   reponse_question_specifique?: string;
 }
@@ -86,7 +86,7 @@ export interface Recommendation {
 
 export interface RiskFactor {
   factor: string;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
   description: string;
   mitigation: string;
 }
@@ -104,7 +104,7 @@ export interface ContractAnalysis {
   content: string;
   clauses: ClauseRisk[];
   overallRiskScore: number;
-  riskProfile: 'conservative' | 'moderate' | 'aggressive';
+  riskProfile: "conservative" | "moderate" | "aggressive";
   processed: boolean;
   jurisdiction: string;
   contractType: string;
@@ -124,7 +124,7 @@ export interface ContractAnalysis {
     extractionTime: string;
     protectionDetected?: boolean;
     isProtected?: boolean;
-    extractionQuality?: 'high' | 'medium' | 'low';
+    extractionQuality?: "high" | "medium" | "low";
     aiSummary?: string;
   };
 }
@@ -132,7 +132,7 @@ export interface ContractAnalysis {
 export interface ReviewAction {
   id: string;
   timestamp: Date;
-  action: 'accepted' | 'rejected' | 'modified';
+  action: "accepted" | "rejected" | "modified";
   clauseId: string;
   userNote?: string;
   originalSuggestion: string;
@@ -158,7 +158,7 @@ export interface CategoryStats {
 
 export interface ComplianceCheck {
   regulation: string;
-  status: 'compliant' | 'non-compliant' | 'requires-review';
+  status: "compliant" | "non-compliant" | "requires-review";
   details: string;
   recommendations: string[];
 }

@@ -121,7 +121,9 @@ export const DocumentViewer = forwardRef<
       );
     }, [contractSummary]);
 
-    const [_editingClauseId, setEditingClauseId] = useState<string | null>(null);
+    const [_editingClauseId, setEditingClauseId] = useState<string | null>(
+      null,
+    );
     const [isMobileClausesOpen, setIsMobileClausesOpen] = useState(false);
 
     const lastClick = useRef(0);
@@ -150,9 +152,11 @@ export const DocumentViewer = forwardRef<
 
     const scrollAndHighlightClause = (clause: ClauseRisk) => {
       if (!documentRef.current || !clause.id) return;
-      const span = documentRef.current.querySelector(`[data-clause-risk-id="${clause.id}"]`);
+      const span = documentRef.current.querySelector(
+        `[data-clause-risk-id="${clause.id}"]`,
+      );
       if (span) {
-        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        span.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     };
 
@@ -167,8 +171,6 @@ export const DocumentViewer = forwardRef<
       onClauseClick(clause.id);
     };
 
-
-    
     // Construction du HTML à rendre dans TipTap
     const htmlFormattedContent = useMemo(() => {
       if (htmlContent) {
@@ -188,8 +190,6 @@ export const DocumentViewer = forwardRef<
         clauses,
       });
     }, [htmlContent, displayedText, clauses, activePatchCount, patches]);
-
-
 
     // Initialisation de l'éditeur TipTap
     const skipNextEditorSyncRef = useRef(false);
@@ -279,7 +279,6 @@ export const DocumentViewer = forwardRef<
       };
     }, [htmlFormattedContent, clauses, onClauseClick]);
 
-
     return (
       <div
         className={`bg-white rounded-lg shadow-sm border border-gray-200 h-full ${showSidebar ? "flex" : ""}`}
@@ -321,25 +320,39 @@ export const DocumentViewer = forwardRef<
               )}
             </h2>
             <div className="flex items-center gap-2 text-xs">
-              {clauses.length > 0 && (() => {
-                const maxRisk = Math.max(...clauses.map((c) => c.riskScore));
-                const riskStyle =
-                  maxRisk === 5
-                    ? { backgroundColor: "#fee2e2", borderColor: "#fecaca", color: "#7f1d1d" }
-                    : maxRisk >= 3
-                      ? { backgroundColor: "#ffedd5", borderColor: "#fed7aa", color: "#7c2d12" }
-                      : { backgroundColor: "#dcfce7", borderColor: "#bbf7d0", color: "#14532d" };
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileClausesOpen(true)}
-                    style={riskStyle}
-                    className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-opacity shrink-0 hover:opacity-80"
-                  >
-                    ⚖️ Voir les {clauses.length} clause{clauses.length > 1 ? "s" : ""}
-                  </button>
-                );
-              })()}
+              {clauses.length > 0 &&
+                (() => {
+                  const maxRisk = Math.max(...clauses.map((c) => c.riskScore));
+                  const riskStyle =
+                    maxRisk === 5
+                      ? {
+                          backgroundColor: "#fee2e2",
+                          borderColor: "#fecaca",
+                          color: "#7f1d1d",
+                        }
+                      : maxRisk >= 3
+                        ? {
+                            backgroundColor: "#ffedd5",
+                            borderColor: "#fed7aa",
+                            color: "#7c2d12",
+                          }
+                        : {
+                            backgroundColor: "#dcfce7",
+                            borderColor: "#bbf7d0",
+                            color: "#14532d",
+                          };
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileClausesOpen(true)}
+                      style={riskStyle}
+                      className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-opacity shrink-0 hover:opacity-80"
+                    >
+                      ⚖️ Voir les {clauses.length} clause
+                      {clauses.length > 1 ? "s" : ""}
+                    </button>
+                  );
+                })()}
               <button
                 onClick={() => resetAll()}
                 disabled={activePatchCount === 0}
@@ -413,7 +426,8 @@ export const DocumentViewer = forwardRef<
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
               <h3 className="font-semibold text-gray-900 text-sm">
-                ⚖️ {clauses.length} clause{clauses.length > 1 ? "s" : ""} détectée{clauses.length > 1 ? "s" : ""}
+                ⚖️ {clauses.length} clause{clauses.length > 1 ? "s" : ""}{" "}
+                détectée{clauses.length > 1 ? "s" : ""}
               </h3>
               <button
                 type="button"
