@@ -79,6 +79,7 @@ model AuthProviderAccount {
 
 model UserPreference {
   idUserPreference  Int   @id @default(autoincrement())
+  preferenceUI      Json?
   accountParameters Json?
 
   //relation

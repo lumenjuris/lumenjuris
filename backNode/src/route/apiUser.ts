@@ -10,6 +10,7 @@ import { Google } from "../services/classGoogle";
 import { Enterprise } from "../services/classEnterprise";
 import { Subscription } from "../services/classSubscription";
 import { normalizeAccountParameters } from "../utils/normalizeAccountParameters";
+import { normalizePreferenceUI } from "../utils/normalizePreferenceUI";
 //import { TokenState } from "../../prisma/generated/enums"
 
 const routerUser: Router = express.Router();
@@ -58,40 +59,6 @@ async function validateToken(
     return { valid: false, reason: "invalid" };
   }
   return { valid: true, tokenEntry };
-}
-
-const ALL_VEILLE_TAGS = [
-  "Rupture",
-  "Temps de travail",
-  "Rémunération",
-  "Santé/Sécurité",
-  "Discipline",
-  "Relations collectives",
-  "Protection sociale",
-  "Recrutement",
-] as const;
-
-function normalizePreferenceUI(input: unknown) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return { dyslexicMode: false, veilleActiveTags: [...ALL_VEILLE_TAGS] };
-  }
-  const candidate = input as {
-    dyslexicMode?: unknown;
-    veilleActiveTags?: unknown;
-  };
-
-  const veilleActiveTags = Array.isArray(candidate.veilleActiveTags)
-    ? (candidate.veilleActiveTags as unknown[]).filter(
-        (t): t is string =>
-          typeof t === "string" &&
-          (ALL_VEILLE_TAGS as readonly string[]).includes(t),
-      )
-    : [...ALL_VEILLE_TAGS];
-
-  return {
-    dyslexicMode: Boolean(candidate.dyslexicMode),
-    veilleActiveTags,
-  };
 }
 
 routerUser.post("/create", async (req: Request, res: Response) => {
@@ -477,6 +444,68 @@ routerUser.put(
         success: false,
         message:
           "Une erreur est survenue lors de la mise à jour des préférences utilisateur.",
+      });
+    }
+  },
+);
+
+routerUser.get(
+  "/preferences/ui",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const idUser = Number(req.idUser);
+      const userPreference = await prisma.userPreference.findUnique({
+        where: { userId: idUser },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Les préférences UI ont été récupérées avec succès.",
+        data: {
+          preferenceUI: normalizePreferenceUI(userPreference?.preferenceUI),
+        },
+      });
+    } catch (err) {
+      console.error(
+        `Erreur lors de la récupération des préférences UI, error : \n ${err}`,
+      );
+      return res.status(500).json({
+        success: false,
+        message:
+          "Une erreur est survenue lors de la récupération des préférences UI.",
+      });
+    }
+  },
+);
+
+routerUser.put(
+  "/preferences/ui",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const idUser = Number(req.idUser);
+      const preferenceUI = normalizePreferenceUI(req.body?.preferenceUI);
+
+      await prisma.userPreference.upsert({
+        where: { userId: idUser },
+        update: { preferenceUI },
+        create: { userId: idUser, preferenceUI },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Les préférences UI ont été mises à jour avec succès.",
+        data: { preferenceUI },
+      });
+    } catch (err) {
+      console.error(
+        `Erreur lors de la mise à jour des préférences UI, error : \n ${err}`,
+      );
+      return res.status(500).json({
+        success: false,
+        message:
+          "Une erreur est survenue lors de la mise à jour des préférences UI.",
       });
     }
   },

@@ -264,6 +264,10 @@ function handleNodeUserPreferences(req: Request, res: Response): void {
   relayToNode(req, res, `/user/preferences`);
 }
 
+function handleNodeUserPreferencesUI(req: Request, res: Response): void {
+  relayToNode(req, res, `/user/preferences/ui`);
+}
+
 function handleNodeUserTwoFactor(req: Request, res: Response): void {
   relayToNode(req, res, `/user/two-factor`);
 }
@@ -567,6 +571,8 @@ app.get("/api/user/get", auth, handleNodeUserGet);
 app.put("/api/user", auth, handleNodeUserUpdate);
 app.get("/api/user/preferences", auth, handleNodeUserPreferences);
 app.put("/api/user/preferences", auth, handleNodeUserPreferences);
+app.get("/api/user/preferences/ui", auth, handleNodeUserPreferencesUI);
+app.put("/api/user/preferences/ui", auth, handleNodeUserPreferencesUI);
 app.post("/api/user/two-factor", auth, handleNodeUserTwoFactor);
 app.post("/api/user/two-factor/verify", auth, handleNodeUserTwoFactorVerify);
 app.post("/api/user/export-data", auth, handleNodeUserExportData);
