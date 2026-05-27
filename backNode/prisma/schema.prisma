@@ -63,6 +63,7 @@ model User {
   documentCustom  DocumentCustom[]
   contractHistory ContractHistory[]
   chatHistory     ChatHistory?
+  userLlmUsage    UserLlmUsage[]
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -255,7 +256,8 @@ model Llm {
   tokenPriceInput  Int
   tokenPriceOutput Int
 
-  llmUsage LlmUsage[]
+  llmUsage     LlmUsage[]
+  userLlmUsage UserLlmUsage[]
 }
 
 model LlmUsage {
@@ -271,4 +273,23 @@ model LlmUsage {
   llm   Llm @relation(fields: [llmId], references: [idLlm])
 
   @@unique([llmId, startAt])
+}
+
+model UserLlmUsage {
+  idUserLlmUsage Int      @id @default(autoincrement())
+  startAt        DateTime
+  expiresAt      DateTime
+  totalCostUsd   Decimal  @db.Decimal(18, 6)
+  tokenInput     Int
+  tokenOutput    Int
+
+  //relation
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  llmId Int
+  llm   Llm @relation(fields: [llmId], references: [idLlm])
+
+  @@unique([llmId, startAt, userId])
+  @@index([userId])
 }

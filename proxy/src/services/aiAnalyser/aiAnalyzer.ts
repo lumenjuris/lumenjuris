@@ -39,18 +39,22 @@ async function logTokens(
   model: string,
   inputTokens: number,
   outputTokens: number,
+  userId?: number,
 ): Promise<void> {
   try {
     await fetch(
       `${BACKNODE_URL}/llm/increment/${encodeURIComponent(model)}/${Math.trunc(inputTokens)}/${Math.trunc(outputTokens)}`,
-      { method: "PUT", credentials: "include" },
+      {
+        method: "PUT",
+        headers: userId ? { "x-user-id": String(userId) } : {},
+      },
     );
   } catch {
     // token logging is best-effort
   }
 }
 
-async function callPythonOpenAi(prompt: string): Promise<string> {
+async function callPythonOpenAi(prompt: string, userId?: number): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat-5`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -78,6 +82,7 @@ async function callPythonOpenAi(prompt: string): Promise<string> {
       data.openai_tokens.model,
       data.openai_tokens.input_tokens ?? 0,
       data.openai_tokens.output_tokens ?? 0,
+      userId,
     );
   }
 
@@ -103,6 +108,7 @@ function localFallback(content: string): ClauseRisk[] {
 export async function analyzeContractWithAI(
   content: string,
   context?: AnalysisContext,
+  userId?: number,
 ): Promise<ClauseRisk[]> {
   const totalAttempts = 3;
 
@@ -116,7 +122,7 @@ export async function analyzeContractWithAI(
         retryState,
       );
 
-      const responseText = await callPythonOpenAi(prompt);
+      const responseText = await callPythonOpenAi(prompt, userId);
       const clauses = parseAIResponse(responseText);
 
       if (clauses.length > 0) return clauses;

@@ -1,6 +1,7 @@
 import type { Request, Response, Router } from "express"
 import express from "express"
 import { Llm } from "./../services/classLlm"
+import { authMiddleware } from "../middleware/authMiddleware"
 
 const routerLlm: Router = express.Router()
 
@@ -29,6 +30,43 @@ routerLlm.get(
                     message: "Une erreur est survenue avec le serveur.",
                     usage: [],
                 })
+        }
+    },
+)
+
+routerLlm.get(
+    "/usage/me",
+    authMiddleware,
+    async (req: Request, res: Response) => {
+        try {
+            const userId = Number(req.idUser)
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Non authentifié." })
+            }
+            const llm = new Llm()
+            const result = await llm.getUserUsage(userId)
+            return res.status(result.success ? 200 : 500).json(result)
+        } catch (err) {
+            console.error(err)
+            return res.status(500).json({ success: false, message: "Une erreur est survenue avec le serveur.", usage: [] })
+        }
+    },
+)
+
+routerLlm.get(
+    "/usage/users",
+    authMiddleware,
+    async (req: Request, res: Response) => {
+        try {
+            if (req.role !== "ADMIN") {
+                return res.status(403).json({ success: false, message: "Accès réservé aux administrateurs." })
+            }
+            const llm = new Llm()
+            const result = await llm.getAllUsersUsage()
+            return res.status(result.success ? 200 : 500).json(result)
+        } catch (err) {
+            console.error(err)
+            return res.status(500).json({ success: false, message: "Une erreur est survenue avec le serveur.", usage: [] })
         }
     },
 )
@@ -67,8 +105,11 @@ routerLlm.put(
                 return inputError()
             }
 
+            const rawUserId = req.headers["x-user-id"]
+            const userId = rawUserId ? Number(rawUserId) : undefined
+
             const llm = new Llm()
-            const updated = await llm.incrementUsage(model, input, output)
+            const updated = await llm.incrementUsage(model, input, output, userId && !Number.isNaN(userId) ? userId : undefined)
 
             return res
                 .status(updated.success ? 200 : 500)

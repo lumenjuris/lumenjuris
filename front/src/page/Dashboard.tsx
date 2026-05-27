@@ -1,5 +1,5 @@
 import InputFile from "../components/common/InputFile";
-import { Link, useNavigate, Navigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCallback } from "react";
 import {
   FileText,
@@ -18,8 +18,6 @@ import {
   Clock,
   FileCheck,
 } from "lucide-react";
-
-import { useUserStore } from "../store/userStore";
 
 const kpiCards = [
   {
@@ -190,6 +188,9 @@ export function Dashboard() {
             onDrop={onDrop}
             accepted={{
               "application/pdf": [".pdf"],
+              "application/msword": [".doc"],
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                [".docx"],
             }}
             multiple={false}
             fieldTitle="Cliquez ici ou glissez-déposez votre fichier PDF"

@@ -59,7 +59,9 @@ export class Llm {
       await this.setLlm();
 
       const today = new Date();
-      const startAt = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startAt = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const nextDay = new Date(startAt);
+      nextDay.setDate(nextDay.getDate() + 1);
 
       const models = await prisma.llm.findMany({
         orderBy: { name: "asc" },
@@ -82,9 +84,7 @@ export class Llm {
             (currentUsage?.tokenInput ?? 0) + (currentUsage?.tokenOutput ?? 0),
           totalCostUsd: currentUsage ? Number(currentUsage.totalCostUsd) : 0,
           startAt: currentUsage?.startAt ?? startAt,
-          expiresAt:
-            currentUsage?.expiresAt ??
-            new Date(today.getFullYear(), today.getMonth() + 1, 1),
+          expiresAt: currentUsage?.expiresAt ?? nextDay,
         };
       });
 
@@ -110,7 +110,7 @@ export class Llm {
    * @param {number} output
    * @returns
    */
-  async incrementUsage(model: string, input: number, output: number) {
+  async incrementUsage(model: string, input: number, output: number, userId?: number) {
     try {
       await this.setLlm();
 
@@ -130,34 +130,33 @@ export class Llm {
       const totalCost =
         (input * tokenPriceInput) / 1_000_000 +
         (output * tokenPriceOutput) / 1_000_000;
+      const totalCostUsd = totalCost / 100;
 
       const today = new Date();
-      const startAt = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startAt = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
       const expiresAt = new Date(startAt);
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      expiresAt.setDate(expiresAt.getDate() + 1);
+
+      const incrementPayload = {
+        tokenInput: { increment: input },
+        tokenOutput: { increment: output },
+        totalCostUsd: { increment: totalCostUsd },
+      };
 
       await prisma.llmUsage.upsert({
-        where: {
-          llmId_startAt: {
-            llmId: idLlm,
-            startAt,
-          },
-        },
-        update: {
-          tokenInput: { increment: input },
-          tokenOutput: { increment: output },
-          totalCostUsd: { increment: totalCost / 100 },
-        },
-        create: {
-          llmId: idLlm,
-          startAt,
-          expiresAt,
-          tokenInput: input,
-          tokenOutput: output,
-          totalCostUsd: totalCost / 100,
-        },
+        where: { llmId_startAt: { llmId: idLlm, startAt } },
+        update: incrementPayload,
+        create: { llmId: idLlm, startAt, expiresAt, tokenInput: input, tokenOutput: output, totalCostUsd },
       });
+
+      if (userId) {
+        await prisma.userLlmUsage.upsert({
+          where: { llmId_startAt_userId: { llmId: idLlm, startAt, userId } },
+          update: incrementPayload,
+          create: { llmId: idLlm, userId, startAt, expiresAt, tokenInput: input, tokenOutput: output, totalCostUsd },
+        });
+      }
 
       return {
         success: true,
@@ -169,6 +168,78 @@ export class Llm {
         success: false,
         message:
           "Une erreur est survenue lors de la mise à jour de l'utilisation de token llm",
+      };
+    }
+  }
+
+  async getUserUsage(userId: number) {
+    try {
+      await this.setLlm();
+
+      const today = new Date();
+      const startAt = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      const records = await prisma.userLlmUsage.findMany({
+        where: { userId, startAt },
+        include: { llm: { select: { name: true } } },
+      });
+
+      const usage = records.map((r) => ({
+        model: r.llm.name,
+        tokenInput: r.tokenInput,
+        tokenOutput: r.tokenOutput,
+        totalTokens: r.tokenInput + r.tokenOutput,
+        totalCostUsd: Number(r.totalCostUsd),
+        startAt: r.startAt,
+        expiresAt: r.expiresAt,
+      }));
+
+      return { success: true, usage };
+    } catch (err) {
+      console.error(err);
+      return {
+        success: false,
+        message: "Une erreur est survenue lors de la récupération de l'utilisation llm utilisateur",
+        usage: [],
+      };
+    }
+  }
+
+  async getAllUsersUsage() {
+    try {
+      const today = new Date();
+      const startAt = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      const records = await prisma.userLlmUsage.findMany({
+        where: { startAt },
+        include: {
+          llm: { select: { name: true } },
+          user: { select: { idUser: true, email: true, nom: true, prenom: true } },
+        },
+        orderBy: { totalCostUsd: "desc" },
+      });
+
+      const usage = records.map((r) => ({
+        userId: r.userId,
+        email: r.user.email,
+        nom: r.user.nom,
+        prenom: r.user.prenom,
+        model: r.llm.name,
+        tokenInput: r.tokenInput,
+        tokenOutput: r.tokenOutput,
+        totalTokens: r.tokenInput + r.tokenOutput,
+        totalCostUsd: Number(r.totalCostUsd),
+        startAt: r.startAt,
+        expiresAt: r.expiresAt,
+      }));
+
+      return { success: true, usage };
+    } catch (err) {
+      console.error(err);
+      return {
+        success: false,
+        message: "Une erreur est survenue lors de la récupération de l'utilisation llm par utilisateur",
+        usage: [],
       };
     }
   }

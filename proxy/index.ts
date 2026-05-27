@@ -76,7 +76,7 @@ function relayJsonToPython(
   req: Request,
   res: Response,
   targetPath: string,
-  handleData?: (data: PythonJsonResponse) => Promise<void>,
+  handleData?: (data: PythonJsonResponse, userId?: number) => Promise<void>,
 ): void {
   fetch(`${BACKEND_URL}${targetPath}`, {
     method: req.method,
@@ -85,7 +85,7 @@ function relayJsonToPython(
   })
     .then(async (r) => {
       const data = await r.json().catch(() => ({}));
-      if (handleData) await handleData(data);
+      if (handleData) await handleData(data, res.locals.userId as number | undefined);
       res.status(r.status).json(data);
     })
     .catch((e: any) => {
@@ -165,7 +165,7 @@ type PythonJsonResponse = Record<string, any> & {
   openai_tokens?: OpenAiUsagePayload;
 };
 
-async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
+async function logOpenAiTokens(data: PythonJsonResponse, userId?: number): Promise<void> {
   const usage = data.openai_tokens;
   delete data.openai_tokens;
 
@@ -181,7 +181,13 @@ async function logOpenAiTokens(data: PythonJsonResponse): Promise<void> {
   try {
     const logResponse = await fetch(
       `${BACKNODE_URL}/llm/increment/${encodeURIComponent(usage.model)}/${Math.trunc(inputTokens)}/${Math.trunc(outputTokens)}`,
-      { method: "PUT" },
+      {
+        method: "PUT",
+        headers: {
+          "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+          ...(userId ? { "x-user-id": String(userId) } : {}),
+        },
+      },
     );
 
     if (!logResponse.ok) {
@@ -242,6 +248,14 @@ function handleInseeRequest(req: Request, res: Response): void | Response {
 
 function handleLlmCurrentUsage(req: Request, res: Response): void {
   relayToNode(req, res, "/llm/usage");
+}
+
+function handleLlmUserUsage(req: Request, res: Response): void {
+  relayToNode(req, res, "/llm/usage/me");
+}
+
+function handleLlmUsersUsage(req: Request, res: Response): void {
+  relayToNode(req, res, "/llm/usage/users");
 }
 
 function handleNodeUserGet(req: Request, res: Response): void {
@@ -509,7 +523,7 @@ async function handleAnalyzeContract(
     return;
   }
   try {
-    const clauses = await analyzeContractWithAI(content, context);
+    const clauses = await analyzeContractWithAI(content, context, res.locals.userId as number | undefined);
     res.json({ success: true, clauses });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Erreur interne";
@@ -567,6 +581,8 @@ app.get("/api/veille/debug", handleNodeVeilleDebug);
 app.post("/api/user/auth/logout", auth, handleNodeLogout);
 app.get("/api/insee/:siren", auth, handleInseeRequest);
 app.get("/api/llm/usage", auth, handleLlmCurrentUsage);
+app.get("/api/llm/usage/me", auth, handleLlmUserUsage);
+app.get("/api/llm/usage/users", auth, handleLlmUsersUsage);
 app.get("/api/user/get", auth, handleNodeUserGet);
 app.put("/api/user", auth, handleNodeUserUpdate);
 app.get("/api/user/preferences", auth, handleNodeUserPreferences);

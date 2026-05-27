@@ -11,7 +11,7 @@ type OpenAiUsagePayload = {
   output_tokens?: number;
 };
 
-async function logTokens(usage: OpenAiUsagePayload | undefined): Promise<void> {
+async function logTokens(usage: OpenAiUsagePayload | undefined, userId?: number): Promise<void> {
   if (!usage?.model) return;
   const input = Math.trunc(Number(usage.input_tokens ?? 0));
   const output = Math.trunc(Number(usage.output_tokens ?? 0));
@@ -19,7 +19,10 @@ async function logTokens(usage: OpenAiUsagePayload | undefined): Promise<void> {
   try {
     await fetch(
       `${BACKNODE_URL}/llm/increment/${encodeURIComponent(usage.model)}/${input}/${output}`,
-      { method: "PUT", credentials: "include" },
+      {
+        method: "PUT",
+        headers: userId ? { "x-user-id": String(userId) } : {},
+      },
     );
   } catch {
     // token logging is best-effort
@@ -36,6 +39,7 @@ export interface OpenAIOptions {
 export async function callOpenAI(
   messages: { role: string; content: string }[],
   options: OpenAIOptions = {},
+  userId?: number,
 ): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat`, {
     method: "POST",
@@ -47,7 +51,7 @@ export async function callOpenAI(
     content?: string;
     openai_tokens?: OpenAiUsagePayload;
   };
-  void logTokens(d.openai_tokens);
+  void logTokens(d.openai_tokens, userId);
   if (typeof d.content !== "string") throw new Error("openai-chat: no content");
   return d.content;
 }
@@ -57,6 +61,7 @@ export async function callOpenAi52(
   reasoning: string = "low",
   verbosity: string = "low",
   model: string = "gpt-5.2",
+  userId?: number,
 ): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat-5`, {
     method: "POST",
@@ -68,7 +73,7 @@ export async function callOpenAi52(
     content?: string;
     openai_tokens?: OpenAiUsagePayload;
   };
-  void logTokens(d.openai_tokens);
+  void logTokens(d.openai_tokens, userId);
   if (typeof d.content !== "string")
     throw new Error("openai-chat-5: no content");
   return d.content;
