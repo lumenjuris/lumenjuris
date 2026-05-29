@@ -22,6 +22,19 @@ export function proxyAuthMiddleware(
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
     res.locals.userId = payload.userId;
     res.locals.role = payload.role ?? "USER";
+
+    const refreshed = jwt.sign(
+      { userId: payload.userId, role: res.locals.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" },
+    );
+    res.cookie("authLumenJuris", refreshed, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
     next();
   } catch {
     res
