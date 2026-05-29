@@ -223,12 +223,42 @@ export const DocumentViewer = forwardRef<
       editor.commands.setContent(htmlFormattedContent, { emitUpdate: false });
     }, [htmlFormattedContent, editor]);
 
+    // Ref stable vers l'éditeur pour éviter les stale closures dans les event handlers
+    const editorRef = useRef(editor);
+    useEffect(() => { editorRef.current = editor; }, [editor]);
+
     // Event delegation pour les clics sur les spans de clauses
     const tiptapWrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       const wrapper = tiptapWrapperRef.current;
       if (!wrapper) return;
+
+      // Simple clic : bloque ProseMirror pour éviter le placement de curseur
+      const handleMouseDown = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-clause-risk-id]")) {
+          event.preventDefault();
+        }
+      };
+
+      // Double-clic : intercepté en capture pour passer avant ProseMirror.
+      // On empêche la sélection native du mot et on place le curseur manuellement.
+      const handleDblClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-clause-risk-id]")) {
+          event.preventDefault();
+          event.stopPropagation();
+          const ed = editorRef.current;
+          if (ed && !ed.isDestroyed) {
+            const pos = ed.view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (pos) {
+              ed.commands.focus();
+              ed.commands.setTextSelection(pos.pos);
+            }
+          }
+        }
+      };
 
       const handleClick = (event: Event) => {
         const target = event.target as HTMLElement;
@@ -239,9 +269,15 @@ export const DocumentViewer = forwardRef<
         }
       };
 
+      wrapper.addEventListener("mousedown", handleMouseDown);
+      wrapper.addEventListener("dblclick", handleDblClick, { capture: true });
       wrapper.addEventListener("click", handleClick);
-      return () => wrapper.removeEventListener("click", handleClick);
-    }, [htmlFormattedContent]);
+      return () => {
+        wrapper.removeEventListener("mousedown", handleMouseDown);
+        wrapper.removeEventListener("dblclick", handleDblClick, { capture: true });
+        wrapper.removeEventListener("click", handleClick);
+      };
+    }, [htmlFormattedContent, clauses, onClauseClick]);
 
     return (
       <div

@@ -64,6 +64,7 @@ model User {
   contractHistory ContractHistory[]
   chatHistory     ChatHistory?
   userLlmUsage    UserLlmUsage[]
+  userUpload UserUpload?
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -258,6 +259,17 @@ model Llm {
 
   llmUsage     LlmUsage[]
   userLlmUsage UserLlmUsage[]
+}
+
+
+// --- ASSETS UTILISATEUR (filigranes) ---
+
+model UserUpload {
+  idUserUpload    Int    @id @default(autoincrement())
+  uploadedImages  Json
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
 
 model LlmUsage {
