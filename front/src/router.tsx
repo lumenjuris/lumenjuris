@@ -24,6 +24,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
+import { GenerationContract } from "./page/GenerationContract";
 
 export function App() {
   const authStatus = useUserStore((state) => state.authStatus);
@@ -73,42 +74,22 @@ export function App() {
           <Route path="/conformite" element={<Conformite />} />
         </Route>
 
-        <Route
-          path="/analyzer"
-          element={
-            <RequireAuth>
-              <ContractAnalysis />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/sandbox"
-          element={
-            <RequireAuth>
-              <Sandbox />
-            </RequireAuth>
-          }
-        />
+        {/* Entrée principale de l'application sur le dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route path="/contrat-generation" element={<RequireAuth> <GenerationContract /> </RequireAuth>} />
+
+        <Route path="/analyzer" element={<RequireAuth> <ContractAnalysis /> </RequireAuth>} />
+
+        <Route path="/sandbox" element={<RequireAuth> <Sandbox /> </RequireAuth>} />
+
         <Route path="/inscription" element={<Inscription />} />
-        <Route
-          path="/mon-compte"
-          element={
-            <RequireAuth>
-              <ParamCompte />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/monitoring"
-          element={
-            <RequireAuth>
-              <Monitoring />
-            </RequireAuth>
-          }
-        />
+
+        <Route path="/mon-compte" element={ <RequireAuth> <ParamCompte /> </RequireAuth>}/>
+        
+        <Route path="/monitoring" element={ <RequireAuth>  <Monitoring /> </RequireAuth>} />
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/souscription" element={<Subscription />} />
       </Routes>
     </>

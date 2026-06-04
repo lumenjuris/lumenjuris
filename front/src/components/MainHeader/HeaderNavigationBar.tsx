@@ -175,12 +175,12 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               onClick={onNavClick}
               className={
                 pathname === "/dashboard" ||
-                pathname === "/generateur" ||
-                pathname === "/signature" ||
-                pathname === "/chatjuridique" ||
-                pathname === "/calculateur" ||
-                pathname === "/veille" ||
-                pathname === "/conformite"
+                  pathname === "/generateur" ||
+                  pathname === "/signature" ||
+                  pathname === "/chatjuridique" ||
+                  pathname === "/calculateur" ||
+                  pathname === "/veille" ||
+                  pathname === "/conformite"
                   ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
@@ -188,12 +188,12 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               <LayoutDashboard
                 className={
                   pathname === "/dashboard" ||
-                  pathname === "/generateur" ||
-                  pathname === "/signature" ||
-                  pathname === "/chatjuridique" ||
-                  pathname === "/calculateur" ||
-                  pathname === "/veille" ||
-                  pathname === "/conformite"
+                    pathname === "/generateur" ||
+                    pathname === "/signature" ||
+                    pathname === "/chatjuridique" ||
+                    pathname === "/calculateur" ||
+                    pathname === "/veille" ||
+                    pathname === "/conformite"
                     ? "size-6"
                     : "size-5"
                 }
@@ -268,12 +268,12 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               onClick={onNavClick}
               className={
                 pathname === "/dashboard" ||
-                pathname === "/generateur" ||
-                pathname === "/signature" ||
-                pathname === "/chatjuridique" ||
-                pathname === "/calculateur" ||
-                pathname === "/veille" ||
-                pathname === "/conformite"
+                  pathname === "/generateur" ||
+                  pathname === "/signature" ||
+                  pathname === "/chatjuridique" ||
+                  pathname === "/calculateur" ||
+                  pathname === "/veille" ||
+                  pathname === "/conformite"
                   ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
                   : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
               }
@@ -281,12 +281,12 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
               <LayoutDashboard
                 className={
                   pathname === "/dashboard" ||
-                  pathname === "/generateur" ||
-                  pathname === "/signature" ||
-                  pathname === "/chatjuridique" ||
-                  pathname === "/calculateur" ||
-                  pathname === "/veille" ||
-                  pathname === "/conformite"
+                    pathname === "/generateur" ||
+                    pathname === "/signature" ||
+                    pathname === "/chatjuridique" ||
+                    pathname === "/calculateur" ||
+                    pathname === "/veille" ||
+                    pathname === "/conformite"
                     ? "size-5"
                     : ""
                 }
@@ -314,6 +314,9 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </Button>
           </Link>
         )}
+
+
+
         {isConnected && userData?.profile.role === "ADMIN" && (
           <Link to="/sandbox">
             <Button
@@ -353,7 +356,36 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </Button>
           </Link>
         )}
+
+
+        {isConnected && (
+          <Link to="/contrat-generation">
+            <Button
+              variant="ghost"
+              size="lg"
+              className={
+                pathname === "/contrat-generation"
+                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
+                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
+              }
+            >
+              <FileCheckIcon
+                className={pathname === "/contrat-generation" ? "size-6" : "size-5"}
+              />
+              Generation Contrat
+            </Button>
+          </Link>
+        )}
+
       </nav>
+
+
+
+
+
+
+
+
 
       {isConnected ? (
         <section className="flex items-center gap-3">
