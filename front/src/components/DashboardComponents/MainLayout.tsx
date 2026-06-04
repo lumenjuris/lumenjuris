@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, Navigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -11,6 +11,8 @@ import {
   Lock,
   Scale,
   PanelLeft,
+  ChevronDown,
+  Droplets,
 } from "lucide-react";
 
 
@@ -18,9 +20,29 @@ import {
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
 import { useUserStore } from "../../store/userStore";
 
-const navItems = [
+interface NavSubItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+}
+
+interface NavItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  children?: NavSubItem[];
+}
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/dashboard" },
-  { icon: FileText, label: "Générateur de modèles", path: "/generateur" },
+  {
+    icon: FileText,
+    label: "Générateur de modèles",
+    path: "/generateur",
+    children: [
+      { icon: Droplets, label: "Mes filigranes", path: "/generateur/filigranes" },
+    ],
+  },
   { icon: PenTool, label: "Signature", path: "/signature" },
   { icon: ShieldCheck, label: "Analyse de conformité", path: "/conformite" },
   { icon: MessageSquare, label: "Chat juridique RH", path: "/chatjuridique" },
@@ -28,14 +50,76 @@ const navItems = [
   { icon: Newspaper, label: "Veille information", path: "/veille" },
 ];
 
+function NavItemRow({ item }: { item: NavItem }) {
+  const location = useLocation();
+  const hasChildren = !!item.children?.length;
+  const isParentActive = location.pathname.startsWith(item.path);
+  const [open, setOpen] = useState(isParentActive);
+
+  return (
+    <li>
+      {hasChildren ? (
+        <>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
+              isParentActive
+                ? "bg-white/10 text-white font-medium"
+                : "text-gray-400 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left">{item.label}</span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+          {open && (
+            <ul className="mt-0.5 ml-6 flex flex-col gap-0.5">
+              {item.children!.map((child) => (
+                <li key={child.path}>
+                  <NavLink
+                    to={child.path}
+                    className={({ isActive }) =>
+                      `flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                        isActive
+                          ? "text-white font-medium"
+                          : "text-gray-500 hover:bg-white/5 hover:text-white"
+                      }`
+                    }
+                  >
+                    <child.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{child.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <NavLink
+          to={item.path}
+          end={item.path === "/dashboard"}
+          className={({ isActive }) =>
+            `flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
+              isActive
+                ? "bg-white/10 text-white font-medium"
+                : "text-gray-400 hover:bg-white/5 hover:text-white"
+            }`
+          }
+        >
+          <item.icon className="h-4 w-4 shrink-0" />
+          <span>{item.label}</span>
+        </NavLink>
+      )}
+    </li>
+  );
+}
+
 export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { isConnected: userConnected } = useUserStore();
-
-  return !userConnected ? (
-    <Navigate to="/inscription" />
-  ) : (
+  return (
     <div
       className="flex min-h-screen w-full bg-[#f8f9fb]"
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}
@@ -63,22 +147,7 @@ export function MainLayout() {
         <nav className="flex-1 overflow-auto pt-4 px-2">
           <ul className="flex flex-col gap-1">
             {navItems.map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  end={item.path === "/dashboard"}
-                  className={({ isActive }) =>
-                    `flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${
-                      isActive
-                        ? "bg-white/10 text-white font-medium"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
-                    }`
-                  }
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </NavLink>
-              </li>
+              <NavItemRow key={item.path} item={item} />
             ))}
           </ul>
         </nav>

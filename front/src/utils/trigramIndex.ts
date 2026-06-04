@@ -1,7 +1,13 @@
-import FEATURE_FLAGS from '../config/features';
+import FEATURE_FLAGS from "../config/features";
 
-export interface TrigramHit { pos: number; }
-export interface TrigramIndex { map: Map<string, number[]>; text: string; createdAt: number; }
+export interface TrigramHit {
+  pos: number;
+}
+export interface TrigramIndex {
+  map: Map<string, number[]>;
+  text: string;
+  createdAt: number;
+}
 
 export function buildTrigramIndex(text: string): TrigramIndex | null {
   if (!FEATURE_FLAGS.ENABLE_TRIGRAM_INDEX) return null;
@@ -9,13 +15,20 @@ export function buildTrigramIndex(text: string): TrigramIndex | null {
   for (let i = 0; i < text.length - 2; i++) {
     const tri = text.slice(i, i + 3);
     let arr = map.get(tri);
-    if (!arr) { arr = []; map.set(tri, arr); }
+    if (!arr) {
+      arr = [];
+      map.set(tri, arr);
+    }
     arr.push(i);
   }
   return { map, text, createdAt: Date.now() };
 }
 
-export function approximateLocate(index: TrigramIndex | null, snippet: string, maxCandidates = 30): number | null {
+export function approximateLocate(
+  index: TrigramIndex | null,
+  snippet: string,
+  maxCandidates = 30,
+): number | null {
   if (!index || snippet.length < 12) return null;
   // Collect trigram positions
   const scores = new Map<number, number>();
@@ -33,7 +46,9 @@ export function approximateLocate(index: TrigramIndex | null, snippet: string, m
     }
   }
   if (!scores.size) return null;
-  const ranked = [...scores.entries()].sort((a,b)=>b[1]-a[1]).slice(0, maxCandidates);
+  const ranked = [...scores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxCandidates);
   const target = snippet;
   let best: { anchor: number; distance: number } | null = null;
   for (const [anchor] of ranked) {

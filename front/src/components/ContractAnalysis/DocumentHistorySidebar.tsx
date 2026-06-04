@@ -206,7 +206,9 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
       <>
         <div
           className={`fixed inset-x-0 top-16 bottom-0 z-30 bg-black/30 md:hidden transition-opacity duration-200 ${
-            isMobileDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            isMobileDrawerOpen
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
           }`}
           onClick={() => setIsMobileDrawerOpen(false)}
         />
@@ -215,36 +217,36 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
             isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-            <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
-              <div className="flex items-center gap-2">
-                <Clock3 className="w-4 h-4 text-gray-500" />
-                <h2 className="font-semibold text-gray-900 text-sm">
-                  Historique
-                </h2>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={onNewAnalysis}
-                  className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
-                  title="Nouvelle analyse"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
-                  title="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+          <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
+            <div className="flex items-center gap-2">
+              <Clock3 className="w-4 h-4 text-gray-500" />
+              <h2 className="font-semibold text-gray-900 text-sm">
+                Historique
+              </h2>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {historyList(handleItemOpen)}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onNewAnalysis}
+                className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+                title="Nouvelle analyse"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+                title="Fermer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
+          <div className="flex-1 overflow-y-auto">
+            {historyList(handleItemOpen)}
+          </div>
+        </div>
       </>
     </>
   );

@@ -1,7 +1,7 @@
-import React from 'react';
-import { Share2, FileText, CheckCircle } from 'lucide-react';
-import { useDocumentTextStore } from '../../store/documentTextStore';
-import { useAppliedRecommendationsStore } from '../../store/appliedRecommendationsStore';
+import React from "react";
+import { Share2, FileText, CheckCircle } from "lucide-react";
+import { useDocumentTextStore } from "../../store/documentTextStore";
+import { useAppliedRecommendationsStore } from "../../store/appliedRecommendationsStore";
 
 interface ActionButtonsProps {
   onShareReport: () => void;
@@ -14,12 +14,16 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onShareReport,
   isProcessed,
   originalContent,
-  fileName
+  fileName,
 }) => {
-  const patches = useDocumentTextStore(state => state.patches);
-  const activePatchCount = patches.filter(p => p.active).length;
-  const generateWordDocument = useAppliedRecommendationsStore(s => s.generateWordDocument);
-  const hasAnyAppliedRecommendations = useAppliedRecommendationsStore(s => s.hasAnyAppliedRecommendations());
+  const patches = useDocumentTextStore((state) => state.patches);
+  const activePatchCount = patches.filter((p) => p.active).length;
+  const generateWordDocument = useAppliedRecommendationsStore(
+    (s) => s.generateWordDocument,
+  );
+  const hasAnyAppliedRecommendations = useAppliedRecommendationsStore((s) =>
+    s.hasAnyAppliedRecommendations(),
+  );
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3">
@@ -37,11 +41,16 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             <button
               onClick={() => generateWordDocument(originalContent, fileName)}
               disabled={!isProcessed || !hasAnyAppliedRecommendations}
-              className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${(!isProcessed || !hasAnyAppliedRecommendations)
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                }`}
-              title={!hasAnyAppliedRecommendations ? 'Aucune recommandation appliquée à exporter' : 'Exporter le document modifié en .docx'}
+              className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                !isProcessed || !hasAnyAppliedRecommendations
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+              }`}
+              title={
+                !hasAnyAppliedRecommendations
+                  ? "Aucune recommandation appliquée à exporter"
+                  : "Exporter le document modifié en .docx"
+              }
             >
               <FileText className="w-4 h-4 mr-2" />
               Export Word
@@ -54,7 +63,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             <div className="flex items-center space-x-2 ml-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <span className="text-sm font-medium text-gray-700">
-                {activePatchCount} recommandation{activePatchCount > 1 ? 's' : ''} appliquée{activePatchCount > 1 ? 's' : ''}
+                {activePatchCount} recommandation
+                {activePatchCount > 1 ? "s" : ""} appliquée
+                {activePatchCount > 1 ? "s" : ""}
               </span>
             </div>
           )}

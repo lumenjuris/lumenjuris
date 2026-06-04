@@ -1,11 +1,9 @@
-import { create } from 'zustand';
-import { type OpenAIModelId } from '../utils/aiClient';
-import { fetchProxy } from '../utils/fetchProxy';
-
-
+import { create } from "zustand";
+import { type OpenAIModelId } from "../utils/aiClient";
+import { fetchProxy } from "../utils/fetchProxy";
 
 type Message = {
-  role: 'user' | 'assistant' | 'error';
+  role: "user" | "assistant" | "error";
   content: string;
 };
 
@@ -32,10 +30,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
    * @param clause - La clause sur laquelle portera la discussion.
    */
   setContextClause: (clause) => {
-    set({ 
-      contextClause: clause, 
+    set({
+      contextClause: clause,
       messages: [], // Réinitialise les messages à chaque changement de clause
-      isSending: false 
+      isSending: false,
     });
   },
 
@@ -43,25 +41,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
    * Envoie un message à l'API OpenAI avec le contexte de la clause.
    * @param message - Le message de l'utilisateur.
    */
-  sendMessage: async (message, model = 'gpt-4o') => {
+  sendMessage: async (message, model = "gpt-4o") => {
     const { contextClause } = get();
     if (!contextClause) {
       set({
         messages: [
           ...get().messages,
-          { role: 'error', content: 'Erreur : Aucune clause sélectionnée pour le contexte.' },
+          {
+            role: "error",
+            content: "Erreur : Aucune clause sélectionnée pour le contexte.",
+          },
         ],
       });
       return;
     }
 
-    const userMessage: Message = { role: 'user', content: message };
+    const userMessage: Message = { role: "user", content: message };
     set({ messages: [...get().messages, userMessage], isSending: true });
 
     try {
-      const response = await fetchProxy('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetchProxy("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message,
           model,
@@ -79,12 +80,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       const data = await response.json();
-      const assistantMessage: Message = { role: 'assistant', content: data.response };
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.response,
+      };
       set({ messages: [...get().messages, assistantMessage] });
     } catch (error) {
       const errorMessage: Message = {
-        role: 'error',
-        content: error instanceof Error ? `Échec envoi: ${error.message}` : 'Une erreur inconnue est survenue.',
+        role: "error",
+        content:
+          error instanceof Error
+            ? `Échec envoi: ${error.message}`
+            : "Une erreur inconnue est survenue.",
       };
       set({ messages: [...get().messages, errorMessage] });
     } finally {

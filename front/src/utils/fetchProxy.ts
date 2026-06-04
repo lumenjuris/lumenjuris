@@ -1,8 +1,8 @@
 /**
  * Envoie une requette au server proxy
- * @param url 
- * @param req 
- * @returns 
+ * @param url
+ * @param req
+ * @returns
  */
 
 export async function fetchProxy(urlEndpoint:string, req:Record<string, any>){

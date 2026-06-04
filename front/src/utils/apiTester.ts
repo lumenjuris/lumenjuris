@@ -16,13 +16,13 @@ export interface APITestResult {
 export async function quickConnectivityTest(): Promise<boolean> {
   try {
     // Test simple de connectivité réseau
-    const response = await fetch('/', { 
-      method: 'HEAD',
-      cache: 'no-cache'
+    const response = await fetch("/", {
+      method: "HEAD",
+      cache: "no-cache",
     });
     return response.ok;
   } catch (error) {
-    console.warn('❌ Test de connectivité échoué:', error);
+    console.warn("❌ Test de connectivité échoué:", error);
     return false;
   }
 }
@@ -32,48 +32,48 @@ export async function quickConnectivityTest(): Promise<boolean> {
  */
 export async function testPDFExtractionAPI(): Promise<APITestResult> {
   const timestamp = new Date();
-  
+
   try {
     // Test de l'endpoint PDF local
-    const localResponse = await fetch('http://localhost:8000/health', {
-      method: 'GET'
+    const localResponse = await fetch("http://localhost:8000/health", {
+      method: "GET",
     });
-    
+
     if (localResponse.ok) {
       return {
         success: true,
-        message: 'API PDF locale disponible',
-        details: { port: 8000, status: 'active' },
-        timestamp
+        message: "API PDF locale disponible",
+        details: { port: 8000, status: "active" },
+        timestamp,
       };
     }
   } catch (localError) {
-    console.warn('⚠️ API locale indisponible:', localError);
+    console.warn("⚠️ API locale indisponible:", localError);
   }
-  
+
   try {
     // Test de l'API Render
-    const renderResponse = await fetch('/api/health', {
-      method: 'GET'
+    const renderResponse = await fetch("/api/health", {
+      method: "GET",
     });
-    
+
     if (renderResponse.ok) {
       return {
         success: true,
-        message: 'API Render disponible',
-        details: { service: 'render', status: 'active' },
-        timestamp
+        message: "API Render disponible",
+        details: { service: "render", status: "active" },
+        timestamp,
       };
     }
   } catch (renderError) {
-    console.warn('⚠️ API Render indisponible:', renderError);
+    console.warn("⚠️ API Render indisponible:", renderError);
   }
-  
+
   return {
     success: false,
-    message: 'Aucune API PDF disponible',
-    details: { localAPI: 'offline', renderAPI: 'offline' },
-    timestamp
+    message: "Aucune API PDF disponible",
+    details: { localAPI: "offline", renderAPI: "offline" },
+    timestamp,
   };
 }
 
@@ -126,17 +126,17 @@ export async function testPDFExtractionAPI(): Promise<APITestResult> {
  * Affiche un rapport de test formaté
  */
 export function displayTestReport(result: APITestResult): void {
-  const icon = result.success ? '✅' : '❌';
-  const status = result.success ? 'SUCCÈS' : 'ÉCHEC';
-  
+  const icon = result.success ? "✅" : "❌";
+  const status = result.success ? "SUCCÈS" : "ÉCHEC";
+
   console.log(`\n🧪 === RAPPORT DE TEST API ===`);
   console.log(`${icon} Statut: ${status}`);
   console.log(`📝 Message: ${result.message}`);
   console.log(`⏰ Timestamp: ${result.timestamp.toLocaleString()}`);
-  
+
   if (result.details) {
     console.log(`📊 Détails:`, result.details);
   }
-  
+
   console.log(`═══════════════════════════════\n`);
 }

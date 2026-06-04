@@ -39,10 +39,19 @@ const VARIANT_CONFIG = {
   },
 } as const;
 
-export function AlertBanner({ variant, title, detail, duration = 5000, accent = false, onClose }: AlertBannerProps) {
+export function AlertBanner({
+  variant,
+  title,
+  detail,
+  duration = 5000,
+  accent = false,
+  onClose,
+}: AlertBannerProps) {
   const [progress, setProgress] = useState(100);
   const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; });
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!duration) return;
@@ -65,20 +74,30 @@ export function AlertBanner({ variant, title, detail, duration = 5000, accent = 
   const cfg = VARIANT_CONFIG[variant];
 
   return (
-    <div className={`relative rounded-lg border overflow-hidden ${cfg.container} ${accent ? `border-l-4 ${cfg.accentBorder}` : ""}`}>
+    <div
+      className={`relative rounded-lg border overflow-hidden ${cfg.container} ${accent ? `border-l-4 ${cfg.accentBorder}` : ""}`}
+    >
       <div className="flex items-start gap-3 px-4 py-3">
         <cfg.Icon className={`h-4 w-4 shrink-0 mt-0.5 ${cfg.iconClass}`} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-snug">{title}</p>
-          {detail && <p className="text-xs mt-0.5 opacity-75 leading-snug">{detail}</p>}
+          {detail && (
+            <p className="text-xs mt-0.5 opacity-75 leading-snug">{detail}</p>
+          )}
         </div>
-        <button onClick={onClose} className={`shrink-0 transition-colors ${cfg.close}`}>
+        <button
+          onClick={onClose}
+          className={`shrink-0 transition-colors ${cfg.close}`}
+        >
           <X className="h-4 w-4" />
         </button>
       </div>
       {!!duration && (
         <div className="h-0.5 bg-black/10">
-          <div className={`h-full ${cfg.bar}`} style={{ width: `${progress}%` }} />
+          <div
+            className={`h-full ${cfg.bar}`}
+            style={{ width: `${progress}%` }}
+          />
         </div>
       )}
     </div>

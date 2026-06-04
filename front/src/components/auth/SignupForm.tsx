@@ -33,6 +33,9 @@ interface SignupFormProps {
   setAcceptCgu: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+const PROXY_URL: string =
+  import.meta.env.VITE_URL_PROXY || "http://localhost:3000";
+
 const SignupForm = ({
   lastName,
   setLastName,
@@ -135,7 +138,9 @@ const SignupForm = ({
       } else {
         setSubmitPending(false);
         setSubmitSuccess(true);
-        setSuccessMessage(`Votre compte a été créé. Un email de vérification a été envoyé à ${email}. Veuillez vérifier votre boîte de réception et vos spams.`);
+        setSuccessMessage(
+          `Votre compte a été créé. Un email de vérification a été envoyé à ${email}. Veuillez vérifier votre boîte de réception et vos spams.`,
+        );
       }
     } catch (error) {
       setSubmitPending(false);
@@ -147,8 +152,9 @@ const SignupForm = ({
     }
   };
 
+  // Inscription via Google
   const handleSubmitGoogle = () => {
-    window.location.href = "/api/google";
+    window.location.href = `${PROXY_URL}/api/google`;
   };
 
   const handleChangeLastname = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -474,7 +480,7 @@ const SignupForm = ({
 
           <div className="w-full h-px bg-border"></div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-3">
             <Button
               className="text-background border border-lumenjuris"
               disabled={
@@ -492,13 +498,18 @@ const SignupForm = ({
               <PenBoxIcon />
               S'inscrire
             </Button>
+            <div className="flex items-center gap-3">
+              <div className="w-full h-px bg-gray-300"></div>
+              <span className="text-gray-400">OU</span>
+              <div className="w-full h-px bg-gray-300"></div>
+            </div>
             <button
               className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris hover:bg-lumenjuris-background"
               type="button"
               onClick={handleSubmitGoogle}
             >
               <FcGoogle className="text-[20px]" />
-              Se connecter avec Google
+              S'inscrire avec Google
             </button>
           </div>
         </section>

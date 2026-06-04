@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import { MailOpen, HelpCircle, ShieldCheck } from "lucide-react";
 import { fetchProxy } from "../utils/fetchProxy";
 
-
-
 export const VerifyAccount = () => {
   const [searchParams] = useSearchParams();
 

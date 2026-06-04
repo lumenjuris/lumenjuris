@@ -121,7 +121,9 @@ export const DocumentViewer = forwardRef<
       );
     }, [contractSummary]);
 
-    const [_editingClauseId, setEditingClauseId] = useState<string | null>(null);
+    const [_editingClauseId, setEditingClauseId] = useState<string | null>(
+      null,
+    );
     const [isMobileClausesOpen, setIsMobileClausesOpen] = useState(false);
 
     const lastClick = useRef(0);
@@ -150,9 +152,11 @@ export const DocumentViewer = forwardRef<
 
     const scrollAndHighlightClause = (clause: ClauseRisk) => {
       if (!documentRef.current || !clause.id) return;
-      const span = documentRef.current.querySelector(`[data-clause-risk-id="${clause.id}"]`);
+      const span = documentRef.current.querySelector(
+        `[data-clause-risk-id="${clause.id}"]`,
+      );
       if (span) {
-        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        span.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     };
 
@@ -167,8 +171,6 @@ export const DocumentViewer = forwardRef<
       onClauseClick(clause.id);
     };
 
-
-    
     // Construction du HTML à rendre dans TipTap
     const htmlFormattedContent = useMemo(() => {
       if (htmlContent) {
@@ -188,8 +190,6 @@ export const DocumentViewer = forwardRef<
         clauses,
       });
     }, [htmlContent, displayedText, clauses, activePatchCount, patches]);
-
-
 
     // Initialisation de l'éditeur TipTap
     const skipNextEditorSyncRef = useRef(false);
@@ -223,12 +223,42 @@ export const DocumentViewer = forwardRef<
       editor.commands.setContent(htmlFormattedContent, { emitUpdate: false });
     }, [htmlFormattedContent, editor]);
 
+    // Ref stable vers l'éditeur pour éviter les stale closures dans les event handlers
+    const editorRef = useRef(editor);
+    useEffect(() => { editorRef.current = editor; }, [editor]);
+
     // Event delegation pour les clics sur les spans de clauses
     const tiptapWrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
       const wrapper = tiptapWrapperRef.current;
       if (!wrapper) return;
+
+      // Simple clic : bloque ProseMirror pour éviter le placement de curseur
+      const handleMouseDown = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-clause-risk-id]")) {
+          event.preventDefault();
+        }
+      };
+
+      // Double-clic : intercepté en capture pour passer avant ProseMirror.
+      // On empêche la sélection native du mot et on place le curseur manuellement.
+      const handleDblClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-clause-risk-id]")) {
+          event.preventDefault();
+          event.stopPropagation();
+          const ed = editorRef.current;
+          if (ed && !ed.isDestroyed) {
+            const pos = ed.view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (pos) {
+              ed.commands.focus();
+              ed.commands.setTextSelection(pos.pos);
+            }
+          }
+        }
+      };
 
       const handleClick = (event: Event) => {
         const target = event.target as HTMLElement;
@@ -239,10 +269,15 @@ export const DocumentViewer = forwardRef<
         }
       };
 
+      wrapper.addEventListener("mousedown", handleMouseDown);
+      wrapper.addEventListener("dblclick", handleDblClick, { capture: true });
       wrapper.addEventListener("click", handleClick);
-      return () => wrapper.removeEventListener("click", handleClick);
-    }, [htmlFormattedContent]);
-
+      return () => {
+        wrapper.removeEventListener("mousedown", handleMouseDown);
+        wrapper.removeEventListener("dblclick", handleDblClick, { capture: true });
+        wrapper.removeEventListener("click", handleClick);
+      };
+    }, [htmlFormattedContent, clauses, onClauseClick]);
 
     return (
       <div
@@ -285,25 +320,39 @@ export const DocumentViewer = forwardRef<
               )}
             </h2>
             <div className="flex items-center gap-2 text-xs">
-              {clauses.length > 0 && (() => {
-                const maxRisk = Math.max(...clauses.map((c) => c.riskScore));
-                const riskStyle =
-                  maxRisk === 5
-                    ? { backgroundColor: "#fee2e2", borderColor: "#fecaca", color: "#7f1d1d" }
-                    : maxRisk >= 3
-                      ? { backgroundColor: "#ffedd5", borderColor: "#fed7aa", color: "#7c2d12" }
-                      : { backgroundColor: "#dcfce7", borderColor: "#bbf7d0", color: "#14532d" };
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileClausesOpen(true)}
-                    style={riskStyle}
-                    className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-opacity shrink-0 hover:opacity-80"
-                  >
-                    ⚖️ Voir les {clauses.length} clause{clauses.length > 1 ? "s" : ""}
-                  </button>
-                );
-              })()}
+              {clauses.length > 0 &&
+                (() => {
+                  const maxRisk = Math.max(...clauses.map((c) => c.riskScore));
+                  const riskStyle =
+                    maxRisk === 5
+                      ? {
+                          backgroundColor: "#fee2e2",
+                          borderColor: "#fecaca",
+                          color: "#7f1d1d",
+                        }
+                      : maxRisk >= 3
+                        ? {
+                            backgroundColor: "#ffedd5",
+                            borderColor: "#fed7aa",
+                            color: "#7c2d12",
+                          }
+                        : {
+                            backgroundColor: "#dcfce7",
+                            borderColor: "#bbf7d0",
+                            color: "#14532d",
+                          };
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileClausesOpen(true)}
+                      style={riskStyle}
+                      className="md:hidden flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-opacity shrink-0 hover:opacity-80"
+                    >
+                      ⚖️ Voir les {clauses.length} clause
+                      {clauses.length > 1 ? "s" : ""}
+                    </button>
+                  );
+                })()}
               <button
                 onClick={() => resetAll()}
                 disabled={activePatchCount === 0}
@@ -377,7 +426,8 @@ export const DocumentViewer = forwardRef<
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
               <h3 className="font-semibold text-gray-900 text-sm">
-                ⚖️ {clauses.length} clause{clauses.length > 1 ? "s" : ""} détectée{clauses.length > 1 ? "s" : ""}
+                ⚖️ {clauses.length} clause{clauses.length > 1 ? "s" : ""}{" "}
+                détectée{clauses.length > 1 ? "s" : ""}
               </h3>
               <button
                 type="button"

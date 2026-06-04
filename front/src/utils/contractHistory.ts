@@ -95,11 +95,18 @@ export function compareByUploadTimeDesc(
 
 // ---- API calls ---------------------------------------------------------------
 
-export async function loadContractHistoryIndex(): Promise<ContractHistoryItem[]> {
+export async function loadContractHistoryIndex(): Promise<
+  ContractHistoryItem[]
+> {
   try {
-    const res = await fetchProxy("/api/contract-history", { credentials: "include" });
+    const res = await fetchProxy("/api/contract-history", {
+      credentials: "include",
+    });
     if (!res.ok) return [];
-    const payload = (await res.json()) as { success: boolean; data?: ContractHistoryItem[] };
+    const payload = (await res.json()) as {
+      success: boolean;
+      data?: ContractHistoryItem[];
+    };
     return payload.success && payload.data ? payload.data : [];
   } catch {
     return [];
@@ -109,7 +116,8 @@ export async function loadContractHistoryIndex(): Promise<ContractHistoryItem[]>
 export async function saveContractHistorySnapshot(
   snapshot: ContractHistorySnapshot,
 ): Promise<ContractHistoryItem | null> {
-  if (snapshot.status !== "analyzed" || !snapshot.contract?.processed) return null;
+  if (snapshot.status !== "analyzed" || !snapshot.contract?.processed)
+    return null;
 
   try {
     const res = await fetchProxy("/api/contract-history", {
@@ -119,7 +127,10 @@ export async function saveContractHistorySnapshot(
       body: JSON.stringify({ externalId: snapshot.id, snapshot }),
     });
     if (!res.ok) return null;
-    const payload = (await res.json()) as { success: boolean; data?: ContractHistoryItem };
+    const payload = (await res.json()) as {
+      success: boolean;
+      data?: ContractHistoryItem;
+    };
     return payload.success && payload.data ? payload.data : null;
   } catch {
     return null;
@@ -130,11 +141,17 @@ export async function loadContractHistorySnapshot(
   id: string,
 ): Promise<ContractHistorySnapshot | null> {
   try {
-    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
-      credentials: "include",
-    });
+    const res = await fetchProxy(
+      `/api/contract-history/${encodeURIComponent(id)}`,
+      {
+        credentials: "include",
+      },
+    );
     if (!res.ok) return null;
-    const payload = (await res.json()) as { success: boolean; data?: ContractHistorySnapshot };
+    const payload = (await res.json()) as {
+      success: boolean;
+      data?: ContractHistorySnapshot;
+    };
     if (!payload.success || !payload.data) return null;
     return normalizeSnapshot(payload.data);
   } catch {
@@ -155,10 +172,13 @@ export async function touchContractHistoryEntry(id: string): Promise<void> {
 
 export async function deleteContractHistoryEntry(id: string): Promise<void> {
   try {
-    const res = await fetchProxy(`/api/contract-history/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    const res = await fetchProxy(
+      `/api/contract-history/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
     if (!res.ok) console.warn("[contract history] delete failed:", res.status);
   } catch {
     console.warn("[contract history] delete error");
@@ -182,7 +202,8 @@ function buildHistoryItem(
     updatedAt: now,
     lastOpenedAt: existing?.lastOpenedAt ?? now,
     status: snapshot.status,
-    wordCount: snapshot.contract.extractionMetadata?.wordCount ?? countWords(content),
+    wordCount:
+      snapshot.contract.extractionMetadata?.wordCount ?? countWords(content),
     clausesCount: snapshot.contract.clauses?.length ?? 0,
     activePatchCount: snapshot.patches.filter((patch) => patch.active).length,
     overallRiskScore: snapshot.contract.overallRiskScore,
@@ -193,7 +214,9 @@ function buildHistoryItem(
   };
 }
 
-function normalizeSnapshot(snapshot: ContractHistorySnapshot): ContractHistorySnapshot {
+function normalizeSnapshot(
+  snapshot: ContractHistorySnapshot,
+): ContractHistorySnapshot {
   return {
     ...snapshot,
     contract: normalizeContract(snapshot.contract),

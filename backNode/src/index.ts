@@ -2,32 +2,33 @@ import express from "express";
 import type { Request, Response } from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
+import path from "path";
 //import { Llm } from "./services/classLlm"
 import { User } from "./services/classUser";
 import routerGoogleAuth from "./route/authGoogle";
 import routerLlm from "./route/apiLlm";
 import routerUser from "./route/apiUser";
 import routerEnterprise from "./route/apiEnterprise";
-import routerContractHistory from "./route/apiContractHistory"
+import routerContractHistory from "./route/apiContractHistory";
 import routerChatHistory from "./route/apiChatHistory";
 import routerBilling from "./route/apiBilling";
 import routerVeille from "./route/apiVeille";
+import routerUserUploads from "./route/apiUserUploads";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
+import { seedPlans } from "./services/planSeeder";
+// import { internalApiKeyMiddleware } from "./middleware/internalApiKeyMiddleware";
+
 
 /**
  * Préparation du serveur nodejs/express pour ce backend
  * Ici sera traité toute les opérations avec la base de données
  */
 
-
-
-const HOST_PROXY: string = process.env.HOST_PROXY
-  || process.env.NODE_ENV == "dev"
-  ? "http://localhost:3000" :
-  "https://proxy.lumenjuris.com";
-
-
+const HOST_PROXY: string =
+  process.env.HOST_PROXY || process.env.NODE_ENV == "dev"
+    ? "http://localhost:3000"
+    : "https://proxy.lumenjuris.com";
 
 const app = express();
 app.set("etag", false);
@@ -43,6 +44,9 @@ app.use(
   }),
 );
 
+// app.use(internalApiKeyMiddleware);
+
+app.use("/userassets", express.static(path.join(process.cwd(), "userassets")));
 app.use("/", routerGoogleAuth);
 app.use("/llm", routerLlm);
 app.use("/user", routerUser);
@@ -51,6 +55,7 @@ app.use("/contract-history", routerContractHistory);
 app.use("/chat-history", routerChatHistory);
 app.use("/billing", routerBilling);
 app.use("/veille", routerVeille);
+app.use("/user-uploads", routerUserUploads);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({
@@ -81,6 +86,11 @@ app.listen(port, async () => {
       "Erreur lors de l'initialisation des utilisateurs de bootstrap:",
       err,
     );
+  }
+  try {
+    await seedPlans();
+  } catch (err) {
+    console.error("Erreur lors du seeding des plans:", err);
   }
   //await sandbox()
 });
