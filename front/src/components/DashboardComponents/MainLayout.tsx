@@ -15,6 +15,8 @@ import {
   Droplets,
 } from "lucide-react";
 
+
+
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
 import { useUserStore } from "../../store/userStore";
 
@@ -150,6 +152,7 @@ export function MainLayout() {
           </ul>
         </nav>
 
+
         <div className="p-4">
           <div className="flex items-center justify-center gap-1.5 py-2">
             <Lock className="h-3 w-3 text-gray-500" />
@@ -159,6 +162,7 @@ export function MainLayout() {
           </div>
         </div>
       </aside>
+      
 
       {/* ── Main ── */}
       <div

@@ -11,11 +11,12 @@ const step = [
 ];
 
 
-type Step = {
+type Steps = {
     currentStep: number;
     totalSteps: number
 }
-function StepIndicator({ currentStep, totalSteps }: Step) {
+function StepIndicator({ currentStep, totalSteps }: Steps) {
+    console.log(totalSteps)
     return (
         <div className="flex items-center justify-between gap-0 mb-10">
             {step.map((step, i) => (
@@ -38,7 +39,7 @@ function StepIndicator({ currentStep, totalSteps }: Step) {
                         <span className={`mt-1 text-xs font-medium whitespace-nowrap transition-colors duration-300 ${currentStep >= step.id ? "text-indigo-600" : "text-gray-400"
                             }`}>{step.label}</span>
                     </div>
-                    {i < step.length - 1 && (
+                    {i < totalSteps - 1 && (
                         <div className={`w-12 h-0.5 mb-5 mx-1 transition-all duration-500 ${currentStep > step.id ? "bg-indigo-600" : "bg-gray-200"
                             }`} />
                     )}
@@ -55,9 +56,9 @@ type Field = {
     name: string;
     value: string;
     onChange?: (name: string, value: string) => void;
-    placeholder: string
+    placeholder?: string
 }
-function FormField({ label, name, value, onChange, placeholder }: Field) {
+function FormField({ label, name, value, onChange, placeholder="" }: Field) {
     return (
         <div className="flex flex-col gap-1">
             <label htmlFor={name} className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -118,7 +119,7 @@ export function GenerationContract() {
         montant_penalite: "",
     });
 
-    const handleChange = (name:string|number, value:string|number) => {
+    const handleChangeInputValue = (name:string|number, value:string|number) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
@@ -216,30 +217,30 @@ export function GenerationContract() {
                         {currentStep === 1 && (
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField label="Nom" name="partie_1_nom" value={enterpriseStored?.name ?? ""} placeholder="Désignation entreprise" />
-                                <FormField label="Forme juridique" name="partie_1_forme_juridique" value={enterpriseStored?.statusJuridique} />
-                                <FormField label="Capital (€)" name="partie_1_capital" value={formData.partie_1_capital} onChange={handleChange} placeholder="Ex : 10 000" />
-                                <FormField label="Code postal" name="partie_1_code_postal" value={enterpriseStored?.address?.codePostal} />
-                                <FormField label="Ville" name="partie_1_ville" value={formData.partie_1_ville} onChange={handleChange} placeholder="Paris" />
-                                <FormField label="Ville RCS" name="partie_1_rcs_ville" value={formData.partie_1_rcs_ville} onChange={handleChange} placeholder="Paris" />
-                                <FormField label="SIREN" name="partie_1_siren" value={enterpriseStored?.siren} />
-                                <FormField label="Représentant" name="partie_1_representant" value={formData.partie_1_representant} onChange={handleChange} placeholder="Prénom Nom" />
-                                <FormField label="Qualité" name="partie_1_qualite" value={formData.partie_1_qualite} onChange={handleChange} placeholder="Gérant, PDG…" />
-                                <FormField label="Désignation" name="partie_1_designation" value="Partie divulgatrice" />
+                                <FormField label="Forme juridique" name="partie_1_forme_juridique" value={enterpriseStored?.statusJuridique ?? ""} />
+                                <FormField label="Capital (€)" name="partie_1_capital" value={formData.partie_1_capital} onChange={handleChangeInputValue} placeholder="Ex : 10 000" />
+                                <FormField label="Code postal" name="partie_1_code_postal" value={enterpriseStored?.address?.codePostal ?? ""} />
+                                <FormField label="Ville" name="partie_1_ville" value={formData.partie_1_ville} onChange={handleChangeInputValue} placeholder="Paris" />
+                                <FormField label="Ville RCS" name="partie_1_rcs_ville" value={formData.partie_1_rcs_ville} onChange={handleChangeInputValue} placeholder="Paris" />
+                                <FormField label="SIREN" name="partie_1_siren" value={enterpriseStored?.siren ?? ""} placeholder="" />
+                                <FormField label="Représentant" name="partie_1_representant" value={formData.partie_1_representant} onChange={handleChangeInputValue} placeholder="Prénom Nom" />
+                                <FormField label="Qualité" name="partie_1_qualite" value={formData.partie_1_qualite} onChange={handleChangeInputValue} placeholder="Gérant, PDG…" />
+                                <FormField label="Désignation" name="partie_1_designation" value="Partie divulgatrice" placeholder=""/>
                             </div>
                         )}
 
                         {/* Step 2 — Partie adverse */}
                         {currentStep === 2 && (
                             <div className="grid grid-cols-2 gap-4">
-                                <FormField label="Nom" name="partie_2_nom" value={formData.partie_2_nom} onChange={handleChange} />
-                                <FormField label="Forme juridique" name="partie_2_forme_juridique" value={formData.partie_2_forme_juridique} onChange={handleChange} />
-                                <FormField label="Capital (€)" name="partie_2_capital" value={formData.partie_2_capital} onChange={handleChange} />
-                                <FormField label="Code postal" name="partie_2_code_postal" value={formData.partie_2_code_postal} onChange={handleChange} />
-                                <FormField label="Ville" name="partie_2_ville" value={formData.partie_2_ville} onChange={handleChange} />
-                                <FormField label="Ville RCS" name="partie_2_rcs_ville" value={formData.partie_2_rcs_ville} onChange={handleChange} />
-                                <FormField label="SIREN" name="partie_2_siren" value={formData.partie_2_siren} onChange={handleChange} />
-                                <FormField label="Représentant" name="partie_2_representant" value={formData.partie_2_representant} onChange={handleChange} />
-                                <FormField label="Qualité" name="partie_2_qualite" value={formData.partie_2_qualite} onChange={handleChange} />
+                                <FormField label="Nom" name="partie_2_nom" value={formData.partie_2_nom} onChange={handleChangeInputValue} />
+                                <FormField label="Forme juridique" name="partie_2_forme_juridique" value={formData.partie_2_forme_juridique} onChange={handleChangeInputValue} />
+                                <FormField label="Capital (€)" name="partie_2_capital" value={formData.partie_2_capital} onChange={handleChangeInputValue} />
+                                <FormField label="Code postal" name="partie_2_code_postal" value={formData.partie_2_code_postal} onChange={handleChangeInputValue} />
+                                <FormField label="Ville" name="partie_2_ville" value={formData.partie_2_ville} onChange={handleChangeInputValue} />
+                                <FormField label="Ville RCS" name="partie_2_rcs_ville" value={formData.partie_2_rcs_ville} onChange={handleChangeInputValue} />
+                                <FormField label="SIREN" name="partie_2_siren" value={formData.partie_2_siren} onChange={handleChangeInputValue} />
+                                <FormField label="Représentant" name="partie_2_representant" value={formData.partie_2_representant} onChange={handleChangeInputValue} />
+                                <FormField label="Qualité" name="partie_2_qualite" value={formData.partie_2_qualite} onChange={handleChangeInputValue} />
                                 <FormField label="Désignation" name="partie_2_designation" value="Partie réceptrice" />
                             </div>
                         )}
@@ -256,7 +257,7 @@ export function GenerationContract() {
                                         name="description_projet"
                                         rows={6}
                                         value={formData.description_projet}
-                                        onChange={(e) => handleChange("description_projet", e.target.value)}
+                                        onChange={(e) => handleChangeInputValue("description_projet", e.target.value)}
                                         placeholder="Décrivez le projet ou la collaboration concernée par cet accord…"
                                         className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 resize-none"
                                     />
@@ -267,12 +268,12 @@ export function GenerationContract() {
                         {/* Step 4 — Délais */}
                         {currentStep === 4 && (
                             <div className="grid grid-cols-2 gap-4">
-                                <FormField label="Délai confirmation orale (jours)" name="delai_confirmation_orale" value={formData.delai_confirmation_orale} onChange={handleChange} placeholder="Ex : 5" />
-                                <FormField label="Délai notification confidentialité (jours)" name="delai_notification_confidentialite" value={formData.delai_notification_confidentialite} onChange={handleChange} placeholder="Ex : 15" />
-                                <FormField label="Délai restitution (jours)" name="delai_restitution" value={formData.delai_restitution} onChange={handleChange} placeholder="Ex : 30" />
-                                <FormField label="Durée de l'accord (mois/ans)" name="duree_accord" value={formData.duree_accord} onChange={handleChange} placeholder="Ex : 2 ans" />
+                                <FormField label="Délai confirmation orale (jours)" name="delai_confirmation_orale" value={formData.delai_confirmation_orale} onChange={handleChangeInputValue} placeholder="Ex : 5" />
+                                <FormField label="Délai notification confidentialité (jours)" name="delai_notification_confidentialite" value={formData.delai_notification_confidentialite} onChange={handleChangeInputValue} placeholder="Ex : 15" />
+                                <FormField label="Délai restitution (jours)" name="delai_restitution" value={formData.delai_restitution} onChange={handleChangeInputValue} placeholder="Ex : 30" />
+                                <FormField label="Durée de l'accord (mois/ans)" name="duree_accord" value={formData.duree_accord} onChange={handleChangeInputValue} placeholder="Ex : 2 ans" />
                                 <div className="col-span-2">
-                                    <FormField label="Durée obligations post-accord" name="duree_obligations_post_accord" value={formData.duree_obligations_post_accord} onChange={handleChange} placeholder="Ex : 1 an" />
+                                    <FormField label="Durée obligations post-accord" name="duree_obligations_post_accord" value={formData.duree_obligations_post_accord} onChange={handleChangeInputValue} placeholder="Ex : 1 an" />
                                 </div>
                             </div>
                         )}
@@ -280,7 +281,7 @@ export function GenerationContract() {
                         {/* Step 5 — Pénalité */}
                         {currentStep === 5 && (
                             <div className="flex flex-col gap-4">
-                                <FormField label="Montant de la pénalité (€)" name="montant_penalite" value={formData.montant_penalite} onChange={handleChange} placeholder="Ex : 50 000" />
+                                <FormField label="Montant de la pénalité (€)" name="montant_penalite" value={formData.montant_penalite} onChange={handleChangeInputValue} placeholder="Ex : 50 000" />
                                 <p className="text-xs text-gray-400 mt-1">Ce montant sera appliqué en cas de violation de l'accord de confidentialité.</p>
                             </div>
                         )}

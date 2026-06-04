@@ -86,6 +86,10 @@ const formating = {
 
 export const Monitoring = () => {
   const { userData } = useUserStore();
+/*   const [llmUsage, setLlmUsage] = useState<LlmUsage[]>([]);
+  const [llmUsageLoading, setLlmUsageLoading] = useState(false);
+  const [llmUsageError, setLlmUsageError] = useState("");
+  const [llmUsageUpdatedAt, setLlmUsageUpdatedAt] = useState<Date | null>(null); */
 
   // Plage temporelle sélectionnée par l'utilisateur
   const [selectedDays, setSelectedDays] = useState<Days>(7);

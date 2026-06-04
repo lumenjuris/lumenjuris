@@ -30,7 +30,6 @@ type NavigationClickHandler = (
 ) => boolean | void;
 
 type NotificationSeverity = "news" | "alert" | "urgent";
-
 type NotificationBadge = "none" | NotificationSeverity;
 
 interface NotificationItem {
