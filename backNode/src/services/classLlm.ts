@@ -120,6 +120,8 @@ export class Llm {
     }
   }
 
+
+  
   /**
    * Incrementation des tokens utilisés lors du fonctionement de l'application
    * @param {string} model
@@ -143,7 +145,7 @@ export class Llm {
       if (!llmModel) {
         return {
           success: false,
-          message: `Model ${model} introuvable dans la table llm`,
+          message: `Model "${model}" introuvable dans la table llm`,
         };
       }
       const { idLlm, tokenPriceInput, tokenPriceOutput } = llmModel;

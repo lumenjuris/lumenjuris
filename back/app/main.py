@@ -153,6 +153,7 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
     texte_des_clauses = " ".join(c.get("text", "") for c in clauses_detectees)
     keywords = _extract_keywords_basic(texte_des_clauses, max_terms=10)
 
+
     return {
         "success": True,
         "text": texte_corrige,

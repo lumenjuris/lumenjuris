@@ -29,4 +29,26 @@ export const SETTINGS_TABS: SettingsTabItem[] = [
   },
 ];
 
+
+export const CONTRACT_GENERATING_TABS:SettingsTabItem[] = [
+  {
+    id : "static",
+    label : "Contrat statique",
+    icon : Settings,
+    description : ""
+  },
+    {
+    id : "your_models",
+    label : "Contrat depuis vos modèles",
+    icon : Settings,
+    description : ""
+  },
+    {
+    id : "enhanced_generating",
+    label : "Génération dynamique",
+    icon : Settings,
+    description : ""
+  }
+]
+
 export const ACCOUNT_PASSWORD_INPUT_ID = "account-password";
