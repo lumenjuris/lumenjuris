@@ -6,7 +6,7 @@ import { fetchProxy } from "../utils/fetchProxy";
 import { extractDocumentContent } from "../utils/documentExtractor";
 import { TextInputZone } from "../components/ContractAnalysis/TextInputZone";
 import { Link } from "react-router-dom";
-import { ArrowLeft,Scale } from "lucide-react";
+import { ArrowLeft, Scale } from "lucide-react";
 import { CONTRACT_GENERATING_TABS } from "../config/paramSettings";
 
 const step = [
@@ -94,7 +94,9 @@ export function GenerationContract() {
     console.log(userDataStored)
 
 
+
     const [form, setForm] = useState(false);
+    const [renderSection, setRenderSection] = useState<"static" | "import" | "ia">("static")
     const [contractType, setContractType] = useState("");
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -165,7 +167,7 @@ export function GenerationContract() {
                 console.log(currentCredit)
             })
             .catch(() => setCurrentCredit(null));
-    })
+    }, [])
 
 
 
@@ -213,175 +215,89 @@ export function GenerationContract() {
     // --- Contract selection screen ---
     if (!form) {
         return (
-            <>
+            <div className="">
                 <MainHeader />
 
-
-                <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:z-20 md:w-64 md:flex-col md:bg-lumenjuris-sidebar">
-                    <div className="p-4 pb-2">
-                        <Link to="/dashboard" className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-lumenjuris">
-                                <Scale className="h-5 w-5 text-white" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-bold text-white tracking-tight">
-                                    LumenJuris
-                                </span>
-                                <span className="text-[10px] text-gray-400 leading-none">
-                                    Conformité RH
-                                </span>
-                            </div>
-                        </Link>
-                    </div>
-
-                    <nav className="flex-1 overflow-auto px-2 pt-4">
-                        <ul className="flex flex-col gap-1">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                const isActive = activeTab === tab.id;
-
-                                return (
-                                    <li key={tab.id}>
-                                        <button
-                                            type="button"
-                                            onClick={() => onTabChange(tab.id)}
-                                            className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${isActive
-                                                ? "bg-white/10 text-white font-medium"
-                                                : "text-gray-400 hover:bg-white/5 hover:text-white"
-                                                }`}
-                                        >
-                                            <Icon className="h-4 w-4 shrink-0" />
-                                            <span>{tab.label}</span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                            <li className="mt-4 border-t border-white/10 pt-4">
-                                <Link
-                                    to="/dashboard"
-                                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-                                >
-                                    <ArrowLeft className="h-4 w-4 shrink-0" />
-                                    <span>Retour</span>
-                                </Link>
-                            </li>
-                        </ul>
-                    </nav>
-
-                    <div className="p-4">
-                        <div className="flex items-center justify-center gap-1.5 py-2">
-                            <Lock className="h-3 w-3 text-gray-500" />
-                            <span className="text-[10px] text-gray-500">
-                                Données sécurisées – Hébergement UE
-                            </span>
-                        </div>
-                    </div>
+                <aside className="w-fit">
+                    <li>
+                        <button onClick={() => setRenderSection("static")}>Generation statique</button>
+                    </li>
+                    <li>
+                        <button onClick={() => setRenderSection("import")}>Generation via import</button>
+                    </li>
+                    <li>
+                        <button onClick={() => setRenderSection("ia")}>Generation IA</button>
+                    </li>
                 </aside>
 
-                <div className="min-h-[calc(vh-64px)] px-4 py-6 lg:px-6 md:ml-64">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="mb-16">
-                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                                Génération de contrat !
-                            </h1>
-                        </div>
 
-                        <div className="relative">
-                            <aside className="mb-6 flex flex-col gap-2 md:hidden">
-                                {CONTRACT_GENERATING_TABS.map((tab) => {
-                                    const Icon = tab.icon;
-                                    const isActive = activeTab === tab.id;
 
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            type="button"
-                                            onClick={() => onTabChange(tab.id)}
-                                            className={`flex items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors ${isActive
-                                                ? "border-lumenjuris bg-lumenjuris text-white"
-                                                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                                                }`}
-                                        >
-                                            <Icon className="h-4 w-4 shrink-0" />
-                                            <div>
-                                                <div className="text-sm font-semibold">{tab.label}</div>
-                                                {tab.description ? (
-                                                    <div
-                                                        className={`mt-1 text-xs ${isActive ? "text-white/75" : "text-gray-400"
-                                                            }`}
-                                                    >
-                                                        {tab.description}
-                                                    </div>
-                                                ) : null}
+                {renderSection == "static" && (
+                    <div className="min-h-full min-w-full bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-6">
+                        <div className="w-full max-w-md">
+                            <h1 className="text-3xl font-bold text-gray-900 mb-1">Générer un contrat</h1>
+                            <p className="text-gray-500 mb-8 text-sm">Choisissez le type de contrat à créer.</p>
+                            <div className="flex flex-col gap-3">
+                                {contractAvailible.map((c) => (
+                                    <button
+                                        key={c}
+                                        onClick={() => { setForm(true); setContractType(c); setCurrentStep(1); }}
+                                        className="group flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-all duration-200 hover:border-indigo-400 hover:shadow-md active:scale-[0.99]"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-200">
+                                                {c}
                                             </div>
-                                        </button>
-                                    );
-                                })}
-                                <Link
-                                    to="/dashboard"
-                                    className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-left text-gray-700 transition-colors hover:bg-gray-50"
-                                >
-                                    <ArrowLeft className="h-4 w-4 shrink-0" />
-                                    <div className="text-sm font-semibold">Retour</div>
-                                </Link>
-                            </aside>
-
-
-                            <div className="min-h-full min-w-full bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-6">
-                                <div className="w-full max-w-md">
-                                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Générer un contrat</h1>
-                                    <p className="text-gray-500 mb-8 text-sm">Choisissez le type de contrat à créer.</p>
-                                    <div className="flex flex-col gap-3">
-                                        {contractAvailible.map((c) => (
-                                            <button
-                                                key={c}
-                                                onClick={() => { setForm(true); setContractType(c); setCurrentStep(1); }}
-                                                className="group flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-all duration-200 hover:border-indigo-400 hover:shadow-md active:scale-[0.99]"
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-200">
-                                                        {c}
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <p className="font-semibold text-gray-800">{
-                                                            c === "CDI" ? "Contrat à Durée Indéterminée" :
-                                                                c === "CDD" ? "Contrat à Durée Déterminée" :
-                                                                    "Accord de Confidentialité"
-                                                        }</p>
-                                                        <p className="text-xs text-gray-400">{
-                                                            c === "CDI" ? "Embauche permanente" :
-                                                                c === "CDD" ? "Mission temporaire" :
-                                                                    "Non-Disclosure Agreement"
-                                                        }</p>
-                                                    </div>
-                                                </div>
-                                                <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                            <div className="text-left">
+                                                <p className="font-semibold text-gray-800">{
+                                                    c === "CDI" ? "Contrat à Durée Indéterminée" :
+                                                        c === "CDD" ? "Contrat à Durée Déterminée" :
+                                                            "Accord de Confidentialité"
+                                                }</p>
+                                                <p className="text-xs text-gray-400">{
+                                                    c === "CDI" ? "Embauche permanente" :
+                                                        c === "CDD" ? "Mission temporaire" :
+                                                            "Non-Disclosure Agreement"
+                                                }</p>
+                                            </div>
+                                        </div>
+                                        <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                ))}
                             </div>
-
-
-                            {/* Zone input file*/}
-
-                            <TextInputZone
-                                onFileUpload={(e) => {
-                                    setIsProcessing(true)
-                                    handleFileUpload(e)
-                                }
-                                }
-                                onTextSubmit={(e) => console.log(e)}
-                                isProcessing={false}
-                                analyseCredit={1000/* currentCredit */}
-                            />
-
                         </div>
                     </div>
-                </div>
-            </>
+                )}
+
+                {/* Zone input file*/}
+
+                {renderSection == "import" && (
+                    <>
+                        <TextInputZone
+                            onFileUpload={(e) => {
+                                setIsProcessing(true)
+                                handleFileUpload(e)
+                            }}
+                            onTextSubmit={(e) => console.log(e)}
+                            isProcessing={false}
+                            analyseCredit={1000/* currentCredit */}
+                        />
+                    </>
+                )}
+
+                {renderSection == "ia" && (
+                    <>
+                        <div>
+                            <h2>Générez vous contrat à partir d'ia</h2>
+
+                        </div>
+                    </>
+                )
+
+                }
+            </div>
         )
     }
 
