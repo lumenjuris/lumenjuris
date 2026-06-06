@@ -237,7 +237,7 @@ function handleHuggingFaceGenerate(req: Request, res: Response): void {
 
 function handleInseeRequest(req: Request, res: Response): void | Response {
   if (typeof req.params.siren !== "string") {
-    return res.json({
+    return res.status(400).json({
       success: false,
       message: "Bad request, le parsing du siren n'est pas conforme.",
     });

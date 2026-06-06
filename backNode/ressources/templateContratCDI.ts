@@ -80,8 +80,6 @@ export const templateContratCDI = (
         day: "numeric",
     })
 
-
-
     return `
 CONTRAT DE TRAVAIL À DURÉE INDÉTERMINÉE (CDI)
 
@@ -291,6 +289,7 @@ auprès de la Commission Nationale de l’Informatique et des Libertés (CNIL).`
 SIGNATURES
 --------------------------------------------------
 
+
 Fait à ${signatureLocalisation},
 le ${today},
 
@@ -306,9 +305,6 @@ Fonction :
 ${signataireData.SIGNATAIRE_FUNCTION}
 
 Signature :
-
-
-
 
 Le salarié
 

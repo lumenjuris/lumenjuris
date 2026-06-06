@@ -78,7 +78,7 @@ export type InseePreviewResponse = {
 };
 
 export type SettingsTabItem = {
-  id: SettingsTab;
+  id: SettingsTab | string;
   label: string;
   icon: LucideIcon;
   description: string;

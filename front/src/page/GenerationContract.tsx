@@ -1,6 +1,13 @@
 import MainHeader from "../components/MainHeader/MainHeader"
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUserStore } from "../store/userStore";
+
+import { fetchProxy } from "../utils/fetchProxy";
+import { extractDocumentContent } from "../utils/documentExtractor";
+import { TextInputZone } from "../components/ContractAnalysis/TextInputZone";
+import { Link } from "react-router-dom";
+import { ArrowLeft,Scale } from "lucide-react";
+import { CONTRACT_GENERATING_TABS } from "../config/paramSettings";
 
 const step = [
     { id: 1, label: "Votre société" },
@@ -58,7 +65,7 @@ type Field = {
     onChange?: (name: string, value: string) => void;
     placeholder?: string
 }
-function FormField({ label, name, value, onChange, placeholder="" }: Field) {
+function FormField({ label, name, value, onChange, placeholder = "" }: Field) {
     return (
         <div className="flex flex-col gap-1">
             <label htmlFor={name} className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -91,6 +98,8 @@ export function GenerationContract() {
     const [contractType, setContractType] = useState("");
     const [currentStep, setCurrentStep] = useState(1);
 
+    const [isProcessing, setIsProcessing] = useState(false)
+
     const [formData, setFormData] = useState({
         partie_1_capital: "",
         partie_1_ville: "",
@@ -119,7 +128,7 @@ export function GenerationContract() {
         montant_penalite: "",
     });
 
-    const handleChangeInputValue = (name:string|number, value:string|number) => {
+    const handleChangeInputValue = (name: string | number, value: string | number) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
@@ -132,54 +141,261 @@ export function GenerationContract() {
         else { setForm(false); setCurrentStep(1); }
     };
 
+    const handleReturnContractChoice = () => setForm(false)
+
     const handleNext = () => {
         if (currentStep < step.length) setCurrentStep((s) => s + 1);
     };
+
+    const [currentCredit, setCurrentCredit] = useState<number | null>(null)
+
+    useEffect(() => {
+        fetchProxy("/api/billing/subscription", {
+            method: "GET",
+            credentials: "include",
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success && data.data?.credits) {
+                    const { creditIncluded = 0, creditAdded = 0 } = data.data.credits;
+                    setCurrentCredit(creditIncluded + creditAdded);
+                } else {
+                    setCurrentCredit(null);
+                }
+                console.log(currentCredit)
+            })
+            .catch(() => setCurrentCredit(null));
+    })
+
+
+
+    const handleFileUpload = useCallback(
+        async (file: File) => {
+            console.log(file)
+            //Récupérer le document et extraire son texte
+            const contentFile = await extractDocumentContent(file)
+            console.log(contentFile)
+            const { text } = contentFile
+            console.log(text)
+
+            //Envoyer le texte à l'analyse ia pour savoi quelles sont les éléments qui dynamique du contrat pour en faire un template
+            const resOpenai = await fetchProxy("/openai-chat", {
+                method: "POST",
+                credentials: "include",
+                body: JSON.stringify({
+                    messages: "Quels sont les éléments liées aux parties qui pourraient être non statique sur plusieurs contrat de ce type",
+                    model: "gpt-4o",
+                    temperature: 0.2,
+                    max_tokens: 1000,
+                    response_format: 'json'
+                })
+            })
+            const data = await resOpenai.json()
+            console.log(data)
+            //
+
+            setIsProcessing(false)
+        },
+        [isProcessing],
+    );
+
+
+
+
+
+
+
+
+
+
+
 
     // --- Contract selection screen ---
     if (!form) {
         return (
             <>
                 <MainHeader />
-                <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-6">
-                    <div className="w-full max-w-md">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-1">Générer un contrat</h1>
-                        <p className="text-gray-500 mb-8 text-sm">Choisissez le type de contrat à créer.</p>
-                        <div className="flex flex-col gap-3">
-                            {contractAvailible.map((c) => (
-                                <button
-                                    key={c}
-                                    onClick={() => { setForm(true); setContractType(c); setCurrentStep(1); }}
-                                    className="group flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-all duration-200 hover:border-indigo-400 hover:shadow-md active:scale-[0.99]"
+
+
+                <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 md:z-20 md:w-64 md:flex-col md:bg-lumenjuris-sidebar">
+                    <div className="p-4 pb-2">
+                        <Link to="/dashboard" className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-lumenjuris">
+                                <Scale className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-white tracking-tight">
+                                    LumenJuris
+                                </span>
+                                <span className="text-[10px] text-gray-400 leading-none">
+                                    Conformité RH
+                                </span>
+                            </div>
+                        </Link>
+                    </div>
+
+                    <nav className="flex-1 overflow-auto px-2 pt-4">
+                        <ul className="flex flex-col gap-1">
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
+
+                                return (
+                                    <li key={tab.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => onTabChange(tab.id)}
+                                            className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${isActive
+                                                ? "bg-white/10 text-white font-medium"
+                                                : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                                }`}
+                                        >
+                                            <Icon className="h-4 w-4 shrink-0" />
+                                            <span>{tab.label}</span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                            <li className="mt-4 border-t border-white/10 pt-4">
+                                <Link
+                                    to="/dashboard"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-200">
-                                            {c}
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="font-semibold text-gray-800">{
-                                                c === "CDI" ? "Contrat à Durée Indéterminée" :
-                                                    c === "CDD" ? "Contrat à Durée Déterminée" :
-                                                        "Accord de Confidentialité"
-                                            }</p>
-                                            <p className="text-xs text-gray-400">{
-                                                c === "CDI" ? "Embauche permanente" :
-                                                    c === "CDD" ? "Mission temporaire" :
-                                                        "Non-Disclosure Agreement"
-                                            }</p>
-                                        </div>
+                                    <ArrowLeft className="h-4 w-4 shrink-0" />
+                                    <span>Retour</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    <div className="p-4">
+                        <div className="flex items-center justify-center gap-1.5 py-2">
+                            <Lock className="h-3 w-3 text-gray-500" />
+                            <span className="text-[10px] text-gray-500">
+                                Données sécurisées – Hébergement UE
+                            </span>
+                        </div>
+                    </div>
+                </aside>
+
+                <div className="min-h-[calc(vh-64px)] px-4 py-6 lg:px-6 md:ml-64">
+                    <div className="mx-auto max-w-6xl">
+                        <div className="mb-16">
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                                Génération de contrat !
+                            </h1>
+                        </div>
+
+                        <div className="relative">
+                            <aside className="mb-6 flex flex-col gap-2 md:hidden">
+                                {CONTRACT_GENERATING_TABS.map((tab) => {
+                                    const Icon = tab.icon;
+                                    const isActive = activeTab === tab.id;
+
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => onTabChange(tab.id)}
+                                            className={`flex items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors ${isActive
+                                                ? "border-lumenjuris bg-lumenjuris text-white"
+                                                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                                                }`}
+                                        >
+                                            <Icon className="h-4 w-4 shrink-0" />
+                                            <div>
+                                                <div className="text-sm font-semibold">{tab.label}</div>
+                                                {tab.description ? (
+                                                    <div
+                                                        className={`mt-1 text-xs ${isActive ? "text-white/75" : "text-gray-400"
+                                                            }`}
+                                                    >
+                                                        {tab.description}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                                <Link
+                                    to="/dashboard"
+                                    className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-left text-gray-700 transition-colors hover:bg-gray-50"
+                                >
+                                    <ArrowLeft className="h-4 w-4 shrink-0" />
+                                    <div className="text-sm font-semibold">Retour</div>
+                                </Link>
+                            </aside>
+
+
+                            <div className="min-h-full min-w-full bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-6">
+                                <div className="w-full max-w-md">
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Générer un contrat</h1>
+                                    <p className="text-gray-500 mb-8 text-sm">Choisissez le type de contrat à créer.</p>
+                                    <div className="flex flex-col gap-3">
+                                        {contractAvailible.map((c) => (
+                                            <button
+                                                key={c}
+                                                onClick={() => { setForm(true); setContractType(c); setCurrentStep(1); }}
+                                                className="group flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm transition-all duration-200 hover:border-indigo-400 hover:shadow-md active:scale-[0.99]"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-200">
+                                                        {c}
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="font-semibold text-gray-800">{
+                                                            c === "CDI" ? "Contrat à Durée Indéterminée" :
+                                                                c === "CDD" ? "Contrat à Durée Déterminée" :
+                                                                    "Accord de Confidentialité"
+                                                        }</p>
+                                                        <p className="text-xs text-gray-400">{
+                                                            c === "CDI" ? "Embauche permanente" :
+                                                                c === "CDD" ? "Mission temporaire" :
+                                                                    "Non-Disclosure Agreement"
+                                                        }</p>
+                                                    </div>
+                                                </div>
+                                                <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </button>
+                                        ))}
                                     </div>
-                                    <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            ))}
+                                </div>
+                            </div>
+
+
+                            {/* Zone input file*/}
+
+                            <TextInputZone
+                                onFileUpload={(e) => {
+                                    setIsProcessing(true)
+                                    handleFileUpload(e)
+                                }
+                                }
+                                onTextSubmit={(e) => console.log(e)}
+                                isProcessing={false}
+                                analyseCredit={1000/* currentCredit */}
+                            />
+
                         </div>
                     </div>
                 </div>
             </>
-        );
+        )
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
     // --- NDA multi-step form ---
     return (
@@ -191,7 +407,7 @@ export function GenerationContract() {
                     {/* Header */}
                     <div className="mb-6">
                         <button
-                            onClick={handleBack}
+                            onClick={handleReturnContractChoice}
                             className="flex items-center gap-1 text-sm text-gray-400 hover:text-indigo-600 transition-colors mb-4"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,6 +415,8 @@ export function GenerationContract() {
                             </svg>
                             Retour
                         </button>
+
+
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">{contractType}</span>
                         </div>
@@ -225,7 +443,7 @@ export function GenerationContract() {
                                 <FormField label="SIREN" name="partie_1_siren" value={enterpriseStored?.siren ?? ""} placeholder="" />
                                 <FormField label="Représentant" name="partie_1_representant" value={formData.partie_1_representant} onChange={handleChangeInputValue} placeholder="Prénom Nom" />
                                 <FormField label="Qualité" name="partie_1_qualite" value={formData.partie_1_qualite} onChange={handleChangeInputValue} placeholder="Gérant, PDG…" />
-                                <FormField label="Désignation" name="partie_1_designation" value="Partie divulgatrice" placeholder=""/>
+                                <FormField label="Désignation" name="partie_1_designation" value="Partie divulgatrice" placeholder="" />
                             </div>
                         )}
 
