@@ -1,7 +1,19 @@
 # Module Signature électronique
 
-Wizard de signature électronique d'un contrat PDF, inspiré des standards
-DocuSign / Adobe Sign / Yousign.
+Module complet de signature électronique : tableau de bord + wizard de
+création d'enveloppes (PDF + zones de signature + signataires). Inspiré des
+standards DocuSign / Adobe Sign / Yousign.
+
+## Vues
+
+### `SignatureDashboard` — vue par défaut (`/signature`)
+
+- 4 KPIs : Total / En attente / Signés / Brouillons
+- Filtre par statut (Tous, Envoyés, Partiellement signés, Signés, Brouillons)
+- Liste des enveloppes (nom, cocontractant, date, statut, suppression)
+- Bouton **"Nouveau contrat"** → ouvre le wizard
+
+### `SignatureWizard` — création d'une enveloppe
 
 L'utilisateur charge un PDF, place des zones de signature/paraphe pour les
 deux parties (lui + cocontractant), signe ses propres zones et envoie le
@@ -51,7 +63,7 @@ oblige à un geste explicite pour ajouter un autre champ.
 **Champs déposés** : draggables (mousedown + mousemove global), supprimables
 via une corbeille au survol.
 
-### 3. Signer (`SignStep` + `SignatureModal`)
+### 3. Signer + Envoyer (`SignStep` + `SignatureModal`)
 
 - Le viewer passe en mode `sign` : seuls les champs "self" sont cliquables
 - Au clic sur un champ vide, la modale `SignatureModal` s'ouvre :
@@ -64,8 +76,19 @@ via une corbeille au survol.
     et du même type (gain de temps quand on a plusieurs paraphes)
 - Une date de signature (`signedAt`, ISO) est attachée à chaque champ
   signé et affichée en petit sous l'image de signature ("Signé le JJ/MM/AAAA")
-- Bouton **"Envoyer au cocontractant"** activé quand tous les champs "self"
-  sont remplis → écran de confirmation factice (pas d'envoi réel)
+- Une fois que tous les champs "self" sont signés, un mini-formulaire
+  **Destinataires** apparaît : nom + email pour soi-même et pour le
+  cocontractant (validation regex permissive `\S+@\S+\.\S+`)
+- Bouton **"Envoyer au cocontractant"** actif uniquement quand :
+  - tous les champs self sont signés
+  - les 4 champs nom/email sont valides
+- À l'envoi : POST `/api/signature-envelope` qui :
+  - sauvegarde le PDF dans `backNode/signatureenvelopes/{hex}.pdf`
+  - chiffre la liste des champs (positions + signatures dataUrl) en
+    AES-256-GCM dans `encryptedFields`
+  - crée la ligne Prisma `SignatureEnvelope` avec statut `SENT`
+- Écran de confirmation après succès — l'envoi email réel n'est pas
+  branché côté serveur (sera connecté à une API e-signature plus tard)
 
 ---
 
@@ -73,24 +96,47 @@ via une corbeille au survol.
 
 ```
 signature/
-├── README.md              ← ce fichier
-├── types.ts               ← types partagés + helpers (formatSignedDate)
+├── README.md                  ← ce fichier
+├── types.ts                   ← types partagés + helpers (formatSignedDate)
 │
-├── Stepper.tsx            ← indicateur 3 étapes
-├── PrepareStep.tsx        ← étape 1
-├── PlaceStep.tsx          ← étape 2 (orchestrateur)
-├── PlaceToolbar.tsx       ← sidebar de l'étape 2
-├── SignStep.tsx           ← étape 3 (signature + envoi)
-├── SignProgress.tsx       ← barre de progression "X/Y signés"
+├── SignatureDashboard.tsx     ← vue tableau de bord (KPIs + liste)
+├── SignatureWizard.tsx        ← wizard 3 étapes (état + appels API)
 │
-├── PdfViewer.tsx          ← viewer react-pdf + click-to-place
-├── FieldOverlay.tsx       ← rendu d'un champ (drag, supprimer, signer)
-└── SignatureModal.tsx     ← modale de capture (dessiner / saisir)
+├── Stepper.tsx                ← indicateur 3 étapes
+├── PrepareStep.tsx            ← étape 1
+├── PlaceStep.tsx              ← étape 2 (orchestrateur)
+├── PlaceToolbar.tsx           ← sidebar de l'étape 2
+├── SignStep.tsx               ← étape 3 (sign + form emails + send)
+├── SignProgress.tsx           ← barre de progression "X/Y signés"
+│
+├── PdfViewer.tsx              ← viewer react-pdf + click-to-place
+├── FieldOverlay.tsx           ← rendu d'un champ (drag, supprimer, signer)
+└── SignatureModal.tsx         ← modale de capture (dessiner / saisir)
 ```
 
 Le point d'entrée est `Signature.tsx` (au niveau parent
-`DashboardComponents/`), qui orchestre toutes les étapes et garde l'état
-du wizard.
+`DashboardComponents/`), qui commute entre Dashboard et Wizard et
+rafraîchit le dashboard quand une nouvelle enveloppe est créée.
+
+## Backend
+
+Le wizard appelle l'API LumenJuris pour persister les enveloppes :
+
+| Endpoint                                    | Méthode | Rôle                                      |
+| ------------------------------------------- | ------- | ----------------------------------------- |
+| `/api/signature-envelope/stats`             | GET     | KPIs du dashboard + 5 enveloppes récentes |
+| `/api/signature-envelope?status=XXX`        | GET     | Liste filtrée par statut                  |
+| `/api/signature-envelope`                   | POST    | Création (PDF + champs + signataires)     |
+| `/api/signature-envelope/:id`               | DELETE  | Suppression définitive                    |
+
+Côté backend :
+- Modèle Prisma `SignatureEnvelope` (statut, signataires, dates,
+  `documentFilePath`, `encryptedFields`)
+- Service `classSignatureEnvelope.ts` (CRUD + stats agrégées)
+- Route Express `apiSignature.ts`
+- PDF stockés dans `backNode/signatureenvelopes/{hex}.pdf` (ignoré par git)
+- Champs chiffrés AES-256-GCM avec la même clé `CONTRACT_ENCRYPTION_KEY`
+  que les modèles de contrat
 
 ---
 

@@ -594,6 +594,26 @@ function handleTemplatePlaybook(req: Request, res: Response): void {
   relayToNode(req, res, `/template/${id}/playbook`);
 }
 
+// ─── Signature electronique ───────────────────────────────────────────────────
+
+function handleSignatureStats(req: Request, res: Response): void {
+  relayToNode(req, res, "/signature-envelope/stats");
+}
+
+function handleSignatureList(req: Request, res: Response): void {
+  const qs = req.query["status"] ? `?status=${encodeURIComponent(req.query["status"] as string)}` : "";
+  relayToNode(req, res, `/signature-envelope${qs}`);
+}
+
+function handleSignatureCreate(req: Request, res: Response): void {
+  relayToNode(req, res, "/signature-envelope");
+}
+
+function handleSignatureDelete(req: Request, res: Response): void {
+  const id = encodeURIComponent(req.params.externalId as string);
+  relayToNode(req, res, `/signature-envelope/${id}`);
+}
+
 // ─── Génération d'un contrat à partir d'un modèle ──────────────────────────────
 
 const GENERATE_PROMPT_BASE = `Tu es un juriste expert en droit français. À partir du modèle de contrat ci-dessous (dont les variables ont déjà été remplacées par les valeurs fournies par le juriste), produis le contrat final en :
@@ -956,6 +976,12 @@ app.delete("/api/template/:externalId", auth, handleTemplateDelete);
 app.get("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.put("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.post("/api/template/:externalId/generate", auth, handleTemplateGenerate);
+
+// Signature électronique
+app.get("/api/signature-envelope/stats", auth, handleSignatureStats);
+app.get("/api/signature-envelope", auth, handleSignatureList);
+app.post("/api/signature-envelope", auth, handleSignatureCreate);
+app.delete("/api/signature-envelope/:externalId", auth, handleSignatureDelete);
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

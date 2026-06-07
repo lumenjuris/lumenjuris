@@ -31,6 +31,7 @@ backNode/dist/
 gpt5_tokens_log.json
 backNode/userassets/
 backNode/templatesources/
+backNode/signatureenvelopes/
 backNode/feedback-logs.json
 
 #proxy
