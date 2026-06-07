@@ -245,13 +245,10 @@ function SentConfirmation({
       <div className="space-y-2">
         <h3 className="text-lg font-bold text-gray-800">Enveloppe créée et envoyée</h3>
         <p className="text-sm text-gray-500 leading-relaxed">
-          Le contrat a été enregistré et sera transmis à{" "}
+          Le contrat a été enregistré et un email d'invitation à signer a été
+          envoyé à{" "}
           <span className="font-semibold text-gray-700">{counterpartyName}</span>
-          {" "}({counterpartyEmail}) pour signature.
-        </p>
-        <p className="text-[11px] text-gray-400 italic mt-3">
-          (L'envoi effectif par email sera activé prochainement — l'enveloppe
-          est déjà sauvegardée dans votre tableau de bord.)
+          {" "}({counterpartyEmail}).
         </p>
       </div>
       <button

@@ -3,12 +3,66 @@ import type { Request, Response, Router } from "express"
 import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
+import nodemailer from "nodemailer"
 import { authMiddleware } from "../middleware/authMiddleware"
 import { SignatureEnvelopeService } from "../services/classSignatureEnvelope"
 import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope"
 
 const router: Router = express.Router()
 const svc = new SignatureEnvelopeService()
+
+/**
+ * Transporteur Gmail réutilisable. Utilise les credentials MAILER_USER /
+ * MAILER_PASS (App Password Gmail) définis dans le .env.
+ */
+const mailer = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env["MAILER_USER"],
+        pass: process.env["MAILER_PASS"],
+    },
+})
+
+/**
+ * Envoie l'email d'invitation à signer au cocontractant.
+ * Fire-and-forget : les erreurs sont loguées mais ne bloquent pas la réponse HTTP.
+ */
+function sendSignatureInvite(opts: {
+    selfName: string
+    selfEmail: string
+    counterpartyName: string
+    counterpartyEmail: string
+    documentName: string
+}) {
+    const subject = `${opts.selfName} vous invite à signer un document — ${opts.documentName}`
+    const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:32px 24px;border:1px solid #e5e7eb;border-radius:12px">
+      <div style="margin-bottom:24px">
+        <span style="font-size:22px;font-weight:700;color:#354F99">LumenJuris</span>
+        <span style="font-size:13px;color:#6b7280;margin-left:8px">· Signature électronique</span>
+      </div>
+      <p style="font-size:15px;color:#111827">Bonjour <strong>${opts.counterpartyName}</strong>,</p>
+      <p style="font-size:14px;color:#374151;line-height:1.6">
+        <strong>${opts.selfName}</strong> (<a href="mailto:${opts.selfEmail}" style="color:#354F99">${opts.selfEmail}</a>)
+        vous a envoyé le document <strong>«&nbsp;${opts.documentName}&nbsp;»</strong> pour signature.
+      </p>
+      <p style="font-size:13px;color:#6b7280;margin-top:24px;border-top:1px solid #f3f4f6;padding-top:16px">
+        Vous recevrez sous peu un lien sécurisé pour consulter et signer ce document.<br>
+        Si vous n'attendiez pas ce message, vous pouvez l'ignorer.
+      </p>
+    </div>`
+
+    mailer.sendMail({
+        from: `"LumenJuris" <${process.env["MAILER_USER"]}>`,
+        to: opts.counterpartyEmail,
+        subject,
+        html,
+    }).then(() => {
+        console.log(`[signature] email envoyé à ${opts.counterpartyEmail}`)
+    }).catch((err: unknown) => {
+        console.error("[signature] échec envoi email:", err)
+    })
+}
 
 const ENVELOPES_DIR = path.join(process.cwd(), "signatureenvelopes")
 
@@ -85,6 +139,15 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
             counterpartyEmail: body.counterpartyEmail.trim(),
             selfSigned: !!body.selfSigned,
         })
+        // Envoi email fire-and-forget (ne bloque pas la réponse)
+        sendSignatureInvite({
+            selfName: body.selfName.trim(),
+            selfEmail: body.selfEmail.trim(),
+            counterpartyName: body.counterpartyName.trim(),
+            counterpartyEmail: body.counterpartyEmail.trim(),
+            documentName: body.documentName,
+        })
+
         return res.status(201).json({ success: true, data: dto })
     } catch (err) {
         console.error("[signature] create error:", err)

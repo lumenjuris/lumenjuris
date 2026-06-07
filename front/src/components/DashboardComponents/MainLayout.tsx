@@ -6,7 +6,6 @@ import {
   PenTool,
   ShieldCheck,
   MessageSquare,
-  Calculator,
   Newspaper,
   Lock,
   Scale,
@@ -52,8 +51,7 @@ const navItems: NavItem[] = [
   },
   { icon: PenTool, label: "Signature", path: "/signature" },
   { icon: ShieldCheck, label: "Analyse de conformité", path: "/conformite" },
-  { icon: MessageSquare, label: "Chat juridique RH", path: "/chatjuridique" },
-  { icon: Calculator, label: "Calculateur juridique", path: "/calculateur" },
+  { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
   { icon: Newspaper, label: "Veille information", path: "/veille" },
 ];
 
@@ -163,9 +161,6 @@ export function MainLayout() {
             <div className="flex flex-col">
               <span className="text-sm font-bold text-white tracking-tight">
                 LumenJuris
-              </span>
-              <span className="text-[10px] text-gray-400 leading-none">
-                Conformité RH
               </span>
             </div>
           </Link>
