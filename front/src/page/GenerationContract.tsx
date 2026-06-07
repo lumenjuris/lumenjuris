@@ -294,9 +294,7 @@ export function GenerationContract() {
 
                         </div>
                     </>
-                )
-
-                }
+                )}
             </div>
         )
     }

@@ -8,7 +8,7 @@ back/services/__pycache__
 back/.env
 back/services/gen-lang-client-0501326750-4f358317bac6.json
 back/.htaccess
-
+back/passenger_wsgi.py
 
 #front
 front/node_modules/
@@ -17,12 +17,9 @@ front/.env.development
 front/.env.production
 front/dist/
 
-<<<<<<< HEAD
 #front proxy
 /front/server/.env
 /front/.env.development
-=======
->>>>>>> main
 
 #backend nodeJS
 backNode/.env
