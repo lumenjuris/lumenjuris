@@ -54,7 +54,12 @@ export function PlaceStep(props: Props) {
         />
       </div>
 
-      <div className="lg:col-span-3 bg-gray-50 rounded-xl p-4">
+      <div className="lg:col-span-3 space-y-3">
+        <p className="text-xs text-gray-500 flex items-center gap-1.5 px-1">
+          <AlertCircle className="w-3.5 h-3.5 text-[#354F99] shrink-0" />
+          Cliquez sur le contrat pour ajouter une zone de signature.
+        </p>
+        <div className="bg-gray-50 rounded-xl p-4">
         <PdfViewer
           file={file}
           fields={fields}
@@ -68,6 +73,7 @@ export function PlaceStep(props: Props) {
           onFieldRemove={onFieldRemove}
           onLoaded={onNumPagesLoaded}
         />
+        </div>
       </div>
 
       {/* Avertissement si aucun champ cocontractant */}
@@ -75,9 +81,8 @@ export function PlaceStep(props: Props) {
         <div className="lg:col-span-4 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
           <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span>
-            Aucun champ pour le <strong>Cocontractant</strong>. Une zone de signature sera ajoutée
-            automatiquement en bas du document. Vous pouvez en placer une manuellement en
-            sélectionnant "Cocontractant" dans la barre latérale.
+            Ajoutez une zone pour le <strong>cocontractant</strong> en sélectionnant "Cocontractant"
+            dans la barre latérale, puis cliquez sur le contrat.
           </span>
         </div>
       )}
