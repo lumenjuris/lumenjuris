@@ -130,14 +130,13 @@ function ProgressCard({
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Votre progression</p>
-      <SignProgress title="Vos champs" done={selfSigned} total={selfTotal} color={selfColor} />
+      <SignProgress title="Vous" done={selfSigned} total={selfTotal} color={selfColor} />
       <SignProgress
         title="Cocontractant"
         done={0}
         total={counterTotal}
         color={counterColor}
         muted
-        hint="À signer après envoi"
       />
     </div>
   );

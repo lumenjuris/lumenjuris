@@ -48,7 +48,8 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
 
   // Toolbar étape 2 : signataire actif + type de champ armé (null = pas de placement)
   const [activeSignerRole, setActiveSignerRole] = useState<SignerRole>("self");
-  const [armedFieldType, setArmedFieldType] = useState<FieldType | null>(null);
+  // Toujours armé sur "signature" — le placement est actif dès l'étape 2
+  const [armedFieldType, setArmedFieldType] = useState<FieldType | null>("signature");
   const [replicateAllPages, setReplicateAllPages] = useState(false);
 
   // Étape 3 : signatures capturées + modale en cours
@@ -66,11 +67,12 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
 
   // ─── Helpers de mutation ─────────────────────────────────────────────────
 
-  /** Ajoute un champ et désarme automatiquement la toolbar (anti-multi-place). */
+  /** Ajoute un champ — reste armé sur "signature" pour permettre de placer plusieurs champs. */
   function addField(f: Omit<Field, "id">) {
     const id = "f_" + Math.random().toString(36).slice(2, 10);
     setFields((prev) => [...prev, { ...f, id }]);
-    setArmedFieldType(null);
+    // On reste armé : l'utilisateur peut placer autant de champs qu'il veut
+    setArmedFieldType("signature");
   }
 
   function moveField(id: string, xPct: number, yPct: number) {
@@ -130,7 +132,7 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
     setFields([]);
     setNumPages(0);
     setCapturedSigs({ self: null, counterparty: null });
-    setArmedFieldType(null);
+    setArmedFieldType("signature");
     setReplicateAllPages(false);
   }
 
