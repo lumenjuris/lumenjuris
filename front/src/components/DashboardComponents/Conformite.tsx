@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  UploadCloud,
+  Plus,
   Search,
   ChevronDown,
   BarChart3,
@@ -10,9 +10,7 @@ import {
   FileText,
   MoreVertical,
   Trash2,
-  Lock,
 } from "lucide-react";
-import InputFile from "../common/InputFile";
 import {
   loadContractHistoryIndex,
   deleteContractHistoryEntry,
@@ -57,7 +55,6 @@ function avgScore(items: ContractHistoryItem[]): number {
 
 export function Conformite() {
   const navigate = useNavigate();
-  const [isDragging, setIsDragging] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("Tous");
   const [history, setHistory] = useState<ContractHistoryItem[]>([]);
@@ -66,13 +63,6 @@ export function Conformite() {
   useEffect(() => {
     loadContractHistoryIndex().then(setHistory).catch(() => {});
   }, []);
-
-  const onDrop = useCallback(
-    (files: File[]) => {
-      if (files[0]) navigate("/analyzer", { state: { file: files[0] } });
-    },
-    [navigate],
-  );
 
   const handleOpen = (id: string) => {
     navigate("/analyzer", { state: { historyId: id } });
@@ -99,67 +89,22 @@ export function Conformite() {
 
   return (
     <div className="space-y-8 max-w-5xl">
-      {/* Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          Analyse de conformité
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Vérifiez la conformité juridique de vos documents RH
-        </p>
-      </div>
-
-      {/* Upload zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}
-        className={`relative border border-dashed rounded-xl p-8 transition-all duration-300 text-center cursor-pointer ${
-          isDragging
-            ? "border-lumenjuris bg-lumenjuris/5 scale-[1.01]"
-            : "border-gray-200 bg-gray-50/30 hover:border-lumenjuris/40 hover:bg-gray-50"
-        }`}
-      >
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-          <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-lumenjuris shadow-sm border border-gray-100">
-            <UploadCloud className="w-7 h-7 stroke-[1.5]" />
-          </div>
-          <div className="text-left">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Analyser un document
-            </h2>
-            <p className="text-gray-400 text-sm mt-1">
-              Glissez-déposez votre contrat ici pour un diagnostic.
-            </p>
-            <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-1.5">
-              <Lock className="h-3 w-3" />
-              Document traité de manière confidentielle
-            </div>
-          </div>
-          <InputFile
-            onDrop={onDrop}
-            accepted={{
-              "application/pdf": [".pdf"],
-              "application/msword": [".doc"],
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-            }}
-            multiple={false}
-            fieldTitle=""
-            fieldDescription=""
-            supportedFileType=""
-            fieldClassName="hidden"
-            iconClassName="hidden"
-            fieldTitleClassName="hidden"
-            fieldDescriptionClassName="hidden"
-            fileTypeClassName="hidden"
-          />
-          <button
-            onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
-            className="bg-lumenjuris text-white px-8 py-2.5 rounded-lg font-medium hover:opacity-90 transition-all shadow-md active:scale-95 text-sm shrink-0"
-          >
-            Parcourir
-          </button>
+      {/* Title + CTA */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Analyse de conformité
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Vérifiez la conformité juridique de vos documents
+          </p>
         </div>
+        <button
+          onClick={() => navigate("/analyzer")}
+          className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4" /> Nouvelle analyse
+        </button>
       </div>
 
       {/* Stats */}

@@ -153,6 +153,28 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
     setSendError("");
     try {
       const fileBase64 = await fileToBase64(file);
+
+      // Si aucun champ cocontractant n'a été placé, on en ajoute un automatiquement
+      // en bas de la dernière page (position standard pour une signature de fin).
+      let fieldsToSend = fields;
+      const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
+      if (!hasCounterpartyField) {
+        const lastPage = Math.max(0, numPages - 1);
+        fieldsToSend = [
+          ...fields,
+          {
+            id: "auto_counter_sig",
+            type: "signature" as const,
+            signer: "counterparty" as const,
+            page: lastPage,
+            xPct: 0.55,
+            yPct: 0.82,
+            widthPct: 0.35,
+            heightPct: 0.07,
+          },
+        ];
+      }
+
       const res = await fetchProxy("/api/signature-envelope", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,7 +183,7 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
           documentName: file.name,
           fileBase64,
           numPages,
-          fields: { fields },
+          fields: { fields: fieldsToSend },
           counterpartyName: counterpartyName.trim(),
           counterpartyEmail: counterpartyEmail.trim(),
           selfSigned: true,

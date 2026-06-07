@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
@@ -24,7 +24,7 @@ interface Props {
 }
 
 /**
- * Étape 2 du wizard : placer les zones de signature et de paraphe sur le PDF.
+ * Étape 2 du wizard : placer les zones de signature sur le PDF.
  *
  * Layout : toolbar à gauche + viewer à droite. Le mode placement est "armé"
  * par la toolbar et désactivé après chaque dépôt (le composant parent doit
@@ -37,6 +37,8 @@ export function PlaceStep(props: Props) {
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onBack, onNext, canGoNext,
   } = props;
+
+  const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -67,6 +69,18 @@ export function PlaceStep(props: Props) {
           onLoaded={onNumPagesLoaded}
         />
       </div>
+
+      {/* Avertissement si aucun champ cocontractant */}
+      {!hasCounterpartyField && fields.length > 0 && (
+        <div className="lg:col-span-4 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>
+            Aucun champ pour le <strong>Cocontractant</strong>. Une zone de signature sera ajoutée
+            automatiquement en bas du document. Vous pouvez en placer une manuellement en
+            sélectionnant "Cocontractant" dans la barre latérale.
+          </span>
+        </div>
+      )}
 
       <div className="lg:col-span-4 flex justify-between items-center pt-2">
         <button
