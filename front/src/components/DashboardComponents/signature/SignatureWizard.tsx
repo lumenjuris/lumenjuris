@@ -58,9 +58,7 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
   const [modalOpenFor, setModalOpenFor] = useState<{ field: Field; signer: Signer } | null>(null);
   const [sent, setSent] = useState(false);
 
-  // Coordonnées des signataires (saisies à la fin avant envoi)
-  const [selfName, setSelfName] = useState("");
-  const [selfEmail, setSelfEmail] = useState("");
+  // Coordonnées du cocontractant (l'émetteur reçoit le contrat en CC via son compte)
   const [counterpartyName, setCounterpartyName] = useState("");
   const [counterpartyEmail, setCounterpartyEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -141,8 +139,7 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
   const selfFields = fields.filter((f) => f.signer === "self");
   const canGoToSign = selfFields.length > 0;
   const allSelfSigned = selfFields.length > 0 && selfFields.every((f) => !!f.value);
-  const recipientFormValid = isValidEmail(selfEmail) && isValidEmail(counterpartyEmail)
-    && !!selfName.trim() && !!counterpartyName.trim();
+  const recipientFormValid = isValidEmail(counterpartyEmail) && !!counterpartyName.trim();
   const canSend = allSelfSigned && recipientFormValid;
 
   /**
@@ -165,8 +162,6 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
           fileBase64,
           numPages,
           fields: { fields },
-          selfName: selfName.trim(),
-          selfEmail: selfEmail.trim(),
           counterpartyName: counterpartyName.trim(),
           counterpartyEmail: counterpartyEmail.trim(),
           selfSigned: true,
@@ -241,12 +236,8 @@ export function SignatureWizard({ onSent, onExit }: Props = {}) {
           canSend={canSend}
           sending={sending}
           sendError={sendError}
-          selfName={selfName}
-          selfEmail={selfEmail}
           counterpartyName={counterpartyName}
           counterpartyEmail={counterpartyEmail}
-          onSelfNameChange={setSelfName}
-          onSelfEmailChange={setSelfEmail}
           onCounterpartyNameChange={setCounterpartyName}
           onCounterpartyEmailChange={setCounterpartyEmail}
           onFieldClick={handleFieldClick}

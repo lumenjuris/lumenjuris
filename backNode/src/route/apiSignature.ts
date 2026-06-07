@@ -25,16 +25,16 @@ const mailer = nodemailer.createTransport({
 
 /**
  * Envoie l'email d'invitation à signer au cocontractant.
+ * L'émetteur (senderEmail) reçoit une copie (CC) du même email.
  * Fire-and-forget : les erreurs sont loguées mais ne bloquent pas la réponse HTTP.
  */
 function sendSignatureInvite(opts: {
-    selfName: string
-    selfEmail: string
+    senderEmail: string
     counterpartyName: string
     counterpartyEmail: string
     documentName: string
 }) {
-    const subject = `${opts.selfName} vous invite à signer un document — ${opts.documentName}`
+    const subject = `Document à signer — ${opts.documentName}`
     const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:32px 24px;border:1px solid #e5e7eb;border-radius:12px">
       <div style="margin-bottom:24px">
@@ -43,8 +43,8 @@ function sendSignatureInvite(opts: {
       </div>
       <p style="font-size:15px;color:#111827">Bonjour <strong>${opts.counterpartyName}</strong>,</p>
       <p style="font-size:14px;color:#374151;line-height:1.6">
-        <strong>${opts.selfName}</strong> (<a href="mailto:${opts.selfEmail}" style="color:#354F99">${opts.selfEmail}</a>)
-        vous a envoyé le document <strong>«&nbsp;${opts.documentName}&nbsp;»</strong> pour signature.
+        Vous avez reçu le document <strong>«&nbsp;${opts.documentName}&nbsp;»</strong> pour signature
+        via la plateforme LumenJuris.
       </p>
       <p style="font-size:13px;color:#6b7280;margin-top:24px;border-top:1px solid #f3f4f6;padding-top:16px">
         Vous recevrez sous peu un lien sécurisé pour consulter et signer ce document.<br>
@@ -55,10 +55,11 @@ function sendSignatureInvite(opts: {
     mailer.sendMail({
         from: `"LumenJuris" <${process.env["MAILER_USER"]}>`,
         to: opts.counterpartyEmail,
+        cc: opts.senderEmail,          // l'émetteur reçoit une copie
         subject,
         html,
     }).then(() => {
-        console.log(`[signature] email envoyé à ${opts.counterpartyEmail}`)
+        console.log(`[signature] email envoyé à ${opts.counterpartyEmail} (CC: ${opts.senderEmail})`)
     }).catch((err: unknown) => {
         console.error("[signature] échec envoi email:", err)
     })
@@ -108,8 +109,6 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
             fileBase64?: string
             numPages?: number
             fields?: EnvelopeFieldsPayload
-            selfName?: string
-            selfEmail?: string
             counterpartyName?: string
             counterpartyEmail?: string
             selfSigned?: boolean
@@ -118,8 +117,8 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         if (!body.documentName || !body.fileBase64 || !body.fields) {
             return res.status(400).json({ success: false, message: "documentName, fileBase64 et fields requis." })
         }
-        if (!body.selfName || !body.selfEmail || !body.counterpartyName || !body.counterpartyEmail) {
-            return res.status(400).json({ success: false, message: "Tous les champs des signataires sont requis." })
+        if (!body.counterpartyName || !body.counterpartyEmail) {
+            return res.status(400).json({ success: false, message: "Nom et email du cocontractant requis." })
         }
 
         // Sauvegarde le PDF sur le filesystem (pas en DB pour ne pas alourdir)
@@ -128,21 +127,23 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         const filePath = path.join(ENVELOPES_DIR, storedName)
         await fs.writeFile(filePath, Buffer.from(body.fileBase64, "base64"))
 
+        // Récupère l'email de l'utilisateur connecté pour le mettre en CC
+        const userEmail = (req as Request & { email?: string }).email ?? process.env["MAILER_USER"] ?? ""
+
         const dto = await svc.create(userId, {
             documentName: body.documentName,
             documentFilePath: filePath,
             numPages: body.numPages ?? 1,
             fields: body.fields,
-            selfName: body.selfName.trim(),
-            selfEmail: body.selfEmail.trim(),
+            selfName: "",
+            selfEmail: userEmail,
             counterpartyName: body.counterpartyName.trim(),
             counterpartyEmail: body.counterpartyEmail.trim(),
             selfSigned: !!body.selfSigned,
         })
         // Envoi email fire-and-forget (ne bloque pas la réponse)
         sendSignatureInvite({
-            selfName: body.selfName.trim(),
-            selfEmail: body.selfEmail.trim(),
+            senderEmail: userEmail,
             counterpartyName: body.counterpartyName.trim(),
             counterpartyEmail: body.counterpartyEmail.trim(),
             documentName: body.documentName,

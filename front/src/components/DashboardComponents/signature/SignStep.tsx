@@ -1,4 +1,4 @@
-import { AlertCircle, ChevronLeft, Send, MailPlus, Loader2 } from "lucide-react";
+import { ChevronLeft, Send, MailPlus, Loader2 } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { SignProgress } from "./SignProgress";
 import type { Field, Signer } from "./types";
@@ -20,13 +20,9 @@ interface Props {
   /** Message d'erreur de l'API (vide si pas d'erreur). */
   sendError: string;
 
-  // Coordonnées signataires
-  selfName: string;
-  selfEmail: string;
+  // Coordonnées signataires (uniquement cocontractant — l'émetteur reçoit en CC)
   counterpartyName: string;
   counterpartyEmail: string;
-  onSelfNameChange: (v: string) => void;
-  onSelfEmailChange: (v: string) => void;
   onCounterpartyNameChange: (v: string) => void;
   onCounterpartyEmailChange: (v: string) => void;
 
@@ -69,17 +65,11 @@ export function SignStep(props: Props) {
           counterColor={counterColor}
         />
 
-        <HintBox />
-
         {/* Formulaire coordonnées : visible uniquement quand l'émetteur a signé */}
         {allSelfSigned && (
           <RecipientForm
-            selfName={props.selfName}
-            selfEmail={props.selfEmail}
             counterpartyName={props.counterpartyName}
             counterpartyEmail={props.counterpartyEmail}
-            onSelfNameChange={props.onSelfNameChange}
-            onSelfEmailChange={props.onSelfEmailChange}
             onCounterpartyNameChange={props.onCounterpartyNameChange}
             onCounterpartyEmailChange={props.onCounterpartyEmailChange}
             isValid={recipientFormValid}
@@ -153,32 +143,14 @@ function ProgressCard({
   );
 }
 
-/** Hint guidé : explique le geste à faire à l'utilisateur. */
-function HintBox() {
-  return (
-    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex gap-2">
-      <AlertCircle className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
-      <p className="text-[11px] text-indigo-700 leading-relaxed">
-        Cliquez sur vos champs colorés pour les signer. La date sera ajoutée
-        automatiquement. Renseignez ensuite les coordonnées des signataires
-        pour pouvoir envoyer.
-      </p>
-    </div>
-  );
-}
-
-/** Mini-formulaire des coordonnées de l'émetteur + du cocontractant. */
+/** Mini-formulaire — uniquement les coordonnées du cocontractant. */
 function RecipientForm({
-  selfName, selfEmail, counterpartyName, counterpartyEmail,
-  onSelfNameChange, onSelfEmailChange, onCounterpartyNameChange, onCounterpartyEmailChange,
+  counterpartyName, counterpartyEmail,
+  onCounterpartyNameChange, onCounterpartyEmailChange,
   isValid,
 }: {
-  selfName: string;
-  selfEmail: string;
   counterpartyName: string;
   counterpartyEmail: string;
-  onSelfNameChange: (v: string) => void;
-  onSelfEmailChange: (v: string) => void;
   onCounterpartyNameChange: (v: string) => void;
   onCounterpartyEmailChange: (v: string) => void;
   isValid: boolean;
@@ -187,40 +159,21 @@ function RecipientForm({
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-          Destinataires
+          Envoyer à
         </p>
         {isValid && <span className="text-[10px] text-emerald-600 font-semibold">✓ prêt</span>}
       </div>
-
-      <div className="space-y-1">
-        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Vous</p>
-        <input
-          value={selfName}
-          onChange={(e) => onSelfNameChange(e.target.value)}
-          placeholder="Votre nom"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-        <input
-          value={selfEmail}
-          onChange={(e) => onSelfEmailChange(e.target.value)}
-          placeholder="votre@email.com"
-          type="email"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-      </div>
-
-      <div className="space-y-1 pt-1 border-t border-gray-100">
-        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Cocontractant</p>
+      <div className="space-y-1.5">
         <input
           value={counterpartyName}
           onChange={(e) => onCounterpartyNameChange(e.target.value)}
-          placeholder="Son nom"
+          placeholder="Nom du cocontractant"
           className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
         />
         <input
           value={counterpartyEmail}
           onChange={(e) => onCounterpartyEmailChange(e.target.value)}
-          placeholder="son@email.com"
+          placeholder="email@cocontractant.com"
           type="email"
           className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
         />
