@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { SignatureDashboard } from "./signature/SignatureDashboard";
 import { SignatureWizard } from "./signature/SignatureWizard";
@@ -6,30 +6,51 @@ import { SignatureWizard } from "./signature/SignatureWizard";
 /**
  * Point d'entrée du module Signature (route `/signature`).
  *
- * Le tableau de bord est toujours visible. Cliquer "Nouveau contrat" ouvre
- * le wizard dans un panneau modal qui se superpose au dashboard sans
- * navigation — pas de "nouvelle page", pas de bouton retour superflu.
+ * "Nouveau contrat" ouvre directement le sélecteur de fichier OS.
+ * Dès qu'un PDF est choisi, le wizard s'ouvre en overlay à l'étape 2
+ * (placement des champs) — sans vue intermédiaire.
  */
 export function Signature() {
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  function openWizard() { setWizardOpen(true); }
-  function closeWizard() { setRefreshKey((k) => k + 1); setWizardOpen(false); }
+  function handleNewContract() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    if (f) setSelectedFile(f);
+    // Reset l'input pour permettre de choisir le même fichier une 2e fois
+    e.target.value = "";
+  }
+
+  function closeWizard() {
+    setRefreshKey((k) => k + 1);
+    setSelectedFile(null);
+  }
 
   return (
     <>
-      {/* Dashboard toujours rendu en arrière-plan */}
-      <SignatureDashboard
-        refreshKey={refreshKey}
-        onNewContract={openWizard}
+      {/* Input fichier caché — déclenché par le bouton "Nouveau contrat" */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={handleFileChosen}
       />
 
-      {/* Overlay wizard — s'ouvre par-dessus le dashboard */}
-      {wizardOpen && (
+      <SignatureDashboard
+        refreshKey={refreshKey}
+        onNewContract={handleNewContract}
+      />
+
+      {/* Wizard en overlay — apparaît uniquement quand un fichier est choisi */}
+      {selectedFile && (
         <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 backdrop-blur-[2px] overflow-y-auto py-6 px-4">
           <div className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
-            {/* Bouton fermer */}
             <button
               onClick={closeWizard}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -39,6 +60,7 @@ export function Signature() {
             </button>
 
             <SignatureWizard
+              initialFile={selectedFile}
               onSent={closeWizard}
               onExit={closeWizard}
             />

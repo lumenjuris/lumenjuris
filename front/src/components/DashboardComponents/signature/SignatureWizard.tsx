@@ -11,6 +11,8 @@ import type {
 import { SIGNERS_DEFAULT } from "./types";
 
 interface Props {
+  /** Fichier PDF déjà sélectionné (vient du file picker du dashboard). */
+  initialFile?: File;
   /** Callback appelé après l'envoi réussi de l'enveloppe au backend. */
   onSent?: () => void;
   /** Callback "Annuler / Retour" pour fermer le wizard. */
@@ -38,10 +40,11 @@ async function fileToBase64(file: File): Promise<string> {
  *
  * Voir signature/README.md pour le détail du workflow.
  */
-export function SignatureWizard({ onSent, onExit }: Props = {}) {
+export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── État du wizard ──────────────────────────────────────────────────────
-  const [step, setStep] = useState<WizardStep>("prepare");
-  const [file, setFile] = useState<File | null>(null);
+  // Si un fichier est déjà fourni (vient du file picker), on saute l'étape 1
+  const [step, setStep] = useState<WizardStep>(initialFile ? "place" : "prepare");
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [numPages, setNumPages] = useState(0);
   const [signers] = useState<Signer[]>(SIGNERS_DEFAULT);
   const [fields, setFields] = useState<Field[]>([]);
