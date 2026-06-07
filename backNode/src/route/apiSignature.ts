@@ -33,6 +33,7 @@ function sendSignatureInvite(opts: {
     counterpartyName: string
     counterpartyEmail: string
     documentName: string
+    signingLink: string
 }) {
     const subject = `Document à signer — ${opts.documentName}`
     const html = `
@@ -46,8 +47,17 @@ function sendSignatureInvite(opts: {
         Vous avez reçu le document <strong>«&nbsp;${opts.documentName}&nbsp;»</strong> pour signature
         via la plateforme LumenJuris.
       </p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="${opts.signingLink}"
+           style="display:inline-block;background:#354F99;color:#fff;font-size:15px;font-weight:700;
+                  padding:14px 32px;border-radius:10px;text-decoration:none;letter-spacing:0.01em">
+          ✍️ Signer le document
+        </a>
+      </div>
+      <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:8px;word-break:break-all">
+        Lien : <a href="${opts.signingLink}" style="color:#354F99">${opts.signingLink}</a>
+      </p>
       <p style="font-size:13px;color:#6b7280;margin-top:24px;border-top:1px solid #f3f4f6;padding-top:16px">
-        Vous recevrez sous peu un lien sécurisé pour consulter et signer ce document.<br>
         Si vous n'attendiez pas ce message, vous pouvez l'ignorer.
       </p>
     </div>`
@@ -141,12 +151,17 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
             counterpartyEmail: body.counterpartyEmail.trim(),
             selfSigned: !!body.selfSigned,
         })
+        // Construire le lien de signature public
+        const frontUrl = process.env["HOST_FRONT"] ?? "http://localhost:5173"
+        const signingLink = `${frontUrl}/signer/${dto.signingToken}`
+
         // Envoi email fire-and-forget (ne bloque pas la réponse)
         sendSignatureInvite({
             senderEmail: userEmail,
             counterpartyName: body.counterpartyName.trim(),
             counterpartyEmail: body.counterpartyEmail.trim(),
             documentName: body.documentName,
+            signingLink,
         })
 
         return res.status(201).json({ success: true, data: dto })
@@ -173,5 +188,52 @@ function isValidStatus(s: string | undefined): boolean {
     return s === "DRAFT" || s === "SENT" || s === "PARTIALLY_SIGNED"
         || s === "SIGNED" || s === "DECLINED" || s === "EXPIRED"
 }
+
+// ─── Routes PUBLIQUES (sans auth) pour la page de signature cocontractant ──────
+
+/**
+ * GET /public/sign/:token
+ * Retourne les métadonnées de l'enveloppe + les champs (déchiffrés) + le PDF
+ * en base64. Accessible sans cookie d'auth — le token est le secret.
+ */
+router.get("/public/:token", async (req: Request, res: Response) => {
+    try {
+        const token = req.params["token"] as string
+        const result = await svc.getByToken(token)
+        if (!result) return res.status(404).json({ success: false, message: "Lien invalide ou expiré." })
+
+        // Charge le PDF en base64 si le fichier existe
+        let fileBase64: string | null = null
+        if (result.documentFilePath) {
+            try {
+                const buf = await fs.readFile(result.documentFilePath)
+                fileBase64 = buf.toString("base64")
+            } catch { /* fichier absent → null */ }
+        }
+
+        return res.json({ success: true, data: { meta: result.meta, fields: result.fields, fileBase64 } })
+    } catch (err) {
+        console.error("[signature/public] get error:", err)
+        return res.status(500).json({ success: false, message: "Erreur serveur." })
+    }
+})
+
+/**
+ * POST /public/sign/:token
+ * Le cocontractant soumet ses signatures. Passe l'enveloppe en statut SIGNED.
+ */
+router.post("/public/:token", async (req: Request, res: Response) => {
+    try {
+        const token = req.params["token"] as string
+        const { fields } = req.body as { fields?: EnvelopeFieldsPayload }
+        if (!fields) return res.status(400).json({ success: false, message: "fields requis." })
+        const dto = await svc.signByToken(token, fields)
+        if (!dto) return res.status(404).json({ success: false, message: "Lien invalide ou expiré." })
+        return res.json({ success: true, data: dto })
+    } catch (err) {
+        console.error("[signature/public] sign error:", err)
+        return res.status(500).json({ success: false, message: "Erreur serveur." })
+    }
+})
 
 export default router

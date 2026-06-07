@@ -977,11 +977,19 @@ app.get("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.put("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.post("/api/template/:externalId/generate", auth, handleTemplateGenerate);
 
-// Signature électronique
+// Signature électronique (routes authentifiées)
 app.get("/api/signature-envelope/stats", auth, handleSignatureStats);
 app.get("/api/signature-envelope", auth, handleSignatureList);
 app.post("/api/signature-envelope", auth, handleSignatureCreate);
 app.delete("/api/signature-envelope/:externalId", auth, handleSignatureDelete);
+
+// Signature électronique (routes PUBLIQUES — pas d'auth, token dans l'URL)
+app.get("/api/signature-envelope/public/:token", (req: Request, res: Response) => {
+  relayToNode(req, res, `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}`);
+});
+app.post("/api/signature-envelope/public/:token", (req: Request, res: Response) => {
+  relayToNode(req, res, `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}`);
+});
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

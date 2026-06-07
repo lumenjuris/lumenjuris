@@ -1,4 +1,4 @@
-import { Pencil, Layers, AlertCircle } from "lucide-react";
+import { Pencil, AlertCircle } from "lucide-react";
 import type { Signer, SignerRole, FieldType } from "./types";
 
 interface Props {
@@ -104,12 +104,6 @@ function FieldTypePicker({
           label="Signature"
           selected={armed === "signature"}
           onClick={() => onArm("signature")}
-        />
-        <FieldTypeButton
-          icon={Layers}
-          label="Paraphe"
-          selected={armed === "initial"}
-          onClick={() => onArm("initial")}
         />
       </div>
 

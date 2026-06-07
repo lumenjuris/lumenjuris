@@ -24,13 +24,11 @@ export interface Signer {
 
 /**
  * Type de champ déposable sur le document.
- * - `signature` : zone large pour la signature graphique
- * - `initial`   : zone réduite pour le paraphe
+ * - `signature` : zone de signature graphique
  *
- * La date est gérée automatiquement (ajoutée au moment de la signature, voir
- * `Field.signedAt`) — elle n'est pas un type de champ à part.
+ * La date est gérée automatiquement (`Field.signedAt`).
  */
-export type FieldType = "signature" | "initial";
+export type FieldType = "signature";
 
 /**
  * Une zone (signature ou paraphe) déposée sur le PDF.

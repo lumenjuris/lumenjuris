@@ -345,7 +345,9 @@ model SignatureEnvelope {
   documentName         String
   documentFilePath     String?
   numPages             Int            @default(1)
-  // Champs (zones de signature/paraphe + signatures capturées) chiffrés AES-256-GCM
+  // Token public unique pour la page de signature du cocontractant
+  signingToken         String         @unique
+  // Champs (zones de signature + signatures capturées) chiffrés AES-256-GCM
   encryptedFields      String         @db.LongText
   status               EnvelopeStatus @default(DRAFT)
 

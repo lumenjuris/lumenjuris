@@ -26,6 +26,7 @@ export interface EnvelopeFieldsPayload {
 /** DTO exposé à l'API (sans la charge chiffrée des champs). */
 export interface SignatureEnvelopeDTO {
     id: string
+    signingToken: string
     documentName: string
     numPages: number
     status: EnvelopeStatusValue
@@ -57,6 +58,7 @@ export interface SignatureDashboardStats {
  */
 function toDTO(row: {
     externalId: string
+    signingToken: string
     documentName: string
     numPages: number
     status: EnvelopeStatusValue
@@ -73,6 +75,7 @@ function toDTO(row: {
 }): SignatureEnvelopeDTO {
     return {
         id: row.externalId,
+        signingToken: row.signingToken,
         documentName: row.documentName,
         numPages: row.numPages,
         status: row.status,
@@ -150,6 +153,7 @@ export class SignatureEnvelopeService {
         const row = await prisma.signatureEnvelope.create({
             data: {
                 externalId: crypto.randomUUID(),
+                signingToken: crypto.randomBytes(32).toString("hex"),
                 documentName: data.documentName,
                 documentFilePath: data.documentFilePath ?? null,
                 numPages: data.numPages,
@@ -165,6 +169,40 @@ export class SignatureEnvelopeService {
             },
         })
         return toDTO(row)
+    }
+
+    /**
+     * Récupère une enveloppe par son token public (sans authentification).
+     * Utilisé par la page de signature du cocontractant.
+     */
+    async getByToken(signingToken: string): Promise<{
+        meta: SignatureEnvelopeDTO
+        fields: EnvelopeFieldsPayload
+        documentFilePath: string | null
+    } | null> {
+        const row = await prisma.signatureEnvelope.findUnique({ where: { signingToken } })
+        if (!row) return null
+        const fields = decryptJson<EnvelopeFieldsPayload>(row.encryptedFields)
+        return { meta: toDTO(row), fields, documentFilePath: row.documentFilePath }
+    }
+
+    /**
+     * Enregistre les signatures du cocontractant et passe le statut à SIGNED.
+     */
+    async signByToken(signingToken: string, signedFields: EnvelopeFieldsPayload): Promise<SignatureEnvelopeDTO | null> {
+        const row = await prisma.signatureEnvelope.findUnique({ where: { signingToken } })
+        if (!row) return null
+        const now = new Date()
+        const updated = await prisma.signatureEnvelope.update({
+            where: { signingToken },
+            data: {
+                encryptedFields: encryptJson(signedFields),
+                status: "SIGNED",
+                counterpartySignedAt: now,
+                completedAt: now,
+            },
+        })
+        return toDTO(updated)
     }
 
     /** Supprime définitivement une enveloppe. */
