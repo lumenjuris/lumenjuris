@@ -594,6 +594,26 @@ function handleTemplatePlaybook(req: Request, res: Response): void {
   relayToNode(req, res, `/template/${id}/playbook`);
 }
 
+// ─── Signature electronique ───────────────────────────────────────────────────
+
+function handleSignatureStats(req: Request, res: Response): void {
+  relayToNode(req, res, "/signature-envelope/stats");
+}
+
+function handleSignatureList(req: Request, res: Response): void {
+  const qs = req.query["status"] ? `?status=${encodeURIComponent(req.query["status"] as string)}` : "";
+  relayToNode(req, res, `/signature-envelope${qs}`);
+}
+
+function handleSignatureCreate(req: Request, res: Response): void {
+  relayToNode(req, res, "/signature-envelope");
+}
+
+function handleSignatureDelete(req: Request, res: Response): void {
+  const id = encodeURIComponent(req.params.externalId as string);
+  relayToNode(req, res, `/signature-envelope/${id}`);
+}
+
 // ─── Génération d'un contrat à partir d'un modèle ──────────────────────────────
 
 const GENERATE_PROMPT_BASE = `Tu es un juriste expert en droit français. À partir du modèle de contrat ci-dessous (dont les variables ont déjà été remplacées par les valeurs fournies par le juriste), produis le contrat final en :
@@ -732,9 +752,11 @@ Structure-le en JSON strict avec ce format exact (rien d'autre) :
 RÈGLES IMPORTANTES :
 - CONSERVE INTÉGRALEMENT le texte original (mots, ponctuation, valeurs, noms, adresses, dates, montants).
 - Identifie les valeurs à transformer en variables : noms d'entreprises, noms de personnes, dates, durées, montants, adresses, numéros (SIREN, RCS), intitulés de postes, villes.
-- Pour CHAQUE valeur identifiée, entoure-la d'un marqueur <<NOM_VARIABLE|valeur originale>> SANS rien retirer du texte.
+- Pour CHAQUE valeur identifiée, entoure-la d'un marqueur <<NOM_VARIABLE|VALEUR_ORIGINALE_EXACTE>> SANS rien retirer du texte.
+- **INTERDIT** : ne JAMAIS produire <<NOM_VARIABLE|>>, <<NOM_VARIABLE| >> ni <<NOM_VARIABLE>> sans la valeur originale. La partie après le \`|\` doit contenir le texte exact du document source. Si tu n'as pas de valeur précise, n'ajoute PAS de marqueur.
 - NOM_VARIABLE en MAJUSCULES_AVEC_UNDERSCORES descriptif (ex: NOM_SOCIETE, NOM_SOCIETE_1, ADRESSE_SIEGE, DATE_DEBUT, MONTANT_INDEMNITE).
-- EXEMPLE : "La société <<NOM_SOCIETE|Alpha>> dont le siège est situé au <<ADRESSE_SIEGE|10 rue des Lilas, 75010 Paris>> et immatriculée au RCS de <<VILLE_RCS|Paris>> sous le n° <<NUMERO_RCS|123 456 789>>."
+- EXEMPLE CORRECT : "La société <<NOM_SOCIETE|Alpha>> dont le siège est situé au <<ADRESSE_SIEGE|10 rue des Lilas, 75010 Paris>> et immatriculée au RCS de <<VILLE_RCS|Paris>> sous le n° <<NUMERO_RCS|123 456 789>>."
+- EXEMPLE INTERDIT : "La société <<NOM_SOCIETE|>> ..." (valeur vide) — NE FAIS PAS ÇA.
 - Si une même entité revient plusieurs fois (ex. nom de société), utilise le MÊME nom de variable à chaque occurrence.
 - Identifie toutes les sections du contrat (préambule, objet, durée, rémunération, clauses spécifiques, signatures…).
 - Conserve le langage juridique exact du texte source.
@@ -954,6 +976,20 @@ app.delete("/api/template/:externalId", auth, handleTemplateDelete);
 app.get("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.put("/api/template/:externalId/playbook", auth, handleTemplatePlaybook);
 app.post("/api/template/:externalId/generate", auth, handleTemplateGenerate);
+
+// Signature électronique (routes authentifiées)
+app.get("/api/signature-envelope/stats", auth, handleSignatureStats);
+app.get("/api/signature-envelope", auth, handleSignatureList);
+app.post("/api/signature-envelope", auth, handleSignatureCreate);
+app.delete("/api/signature-envelope/:externalId", auth, handleSignatureDelete);
+
+// Signature électronique (routes PUBLIQUES — pas d'auth, token dans l'URL)
+app.get("/api/signature-envelope/public/:token", (req: Request, res: Response) => {
+  relayToNode(req, res, `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}`);
+});
+app.post("/api/signature-envelope/public/:token", (req: Request, res: Response) => {
+  relayToNode(req, res, `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}`);
+});
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

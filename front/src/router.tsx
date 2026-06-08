@@ -25,6 +25,7 @@ import { RequireAuth } from "./components/auth/RequireAuth";
 import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
 import { GenerationContract } from "./page/GenerationContract";
+import { SignerPage } from "./page/SignerPage";
 
 export function App() {
   const authStatus = useUserStore((state) => state.authStatus);
@@ -89,6 +90,9 @@ export function App() {
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/souscription" element={<Subscription />} />
+
+        {/* Page publique de signature pour le cocontractant — sans auth */}
+        <Route path="/signer/:token" element={<SignerPage />} />
       </Routes>
     </>
   );

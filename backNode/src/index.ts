@@ -16,6 +16,7 @@ import routerVeille from "./route/apiVeille";
 import routerUserUploads from "./route/apiUserUploads";
 import routerFeedback from "./route/apiFeedback";
 import routerTemplate from "./route/apiTemplate";
+import routerSignature from "./route/apiSignature";
 import cors from "cors";
 import { seedBootstrapUsers } from "./services/bootstrapUsers";
 import { seedPlans } from "./services/planSeeder";
@@ -59,6 +60,7 @@ app.use("/veille", routerVeille);
 app.use("/user-uploads", routerUserUploads);
 app.use("/feedback", routerFeedback);
 app.use("/template", routerTemplate);
+app.use("/signature-envelope", routerSignature);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

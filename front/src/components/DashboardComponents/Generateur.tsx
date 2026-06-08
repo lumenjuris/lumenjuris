@@ -708,17 +708,23 @@ type ContentToken =
  *  - Legacy  : {{NOM_VARIABLE}} (texte original perdu, on retombe sur le nom humanisé)
  */
 function tokenizeContent(content: string): ContentToken[] {
-  const re = /<<([A-Z0-9_]+)\|([\s\S]*?)>>|\{\{([A-Z0-9_]+)\}\}/g;
+  // <<NAME|original>> — texte original conservé
+  // <<NAME>>          — variante sans pipe (IA paresseuse) → fallback humanisé
+  // {{NAME}}          — legacy → fallback humanisé
+  const re = /<<([A-Z0-9_]+)\|([\s\S]*?)>>|<<([A-Z0-9_]+)>>|\{\{([A-Z0-9_]+)\}\}/g;
   const tokens: ContentToken[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     if (m.index > last) tokens.push({ type: "text", value: content.slice(last, m.index) });
     if (m[1] !== undefined && m[2] !== undefined) {
-      tokens.push({ type: "var", name: m[1], text: m[2] });
+      // Si le texte d'origine est vide ou whitespace, fallback sur le nom humanisé
+      const text = m[2].trim() ? m[2] : humanizeVar(m[1]);
+      tokens.push({ type: "var", name: m[1], text });
     } else if (m[3] !== undefined) {
-      // Legacy : on n'a pas le texte original, on affiche le nom humanisé
       tokens.push({ type: "var", name: m[3], text: humanizeVar(m[3]) });
+    } else if (m[4] !== undefined) {
+      tokens.push({ type: "var", name: m[4], text: humanizeVar(m[4]) });
     }
     last = m.index + m[0].length;
   }

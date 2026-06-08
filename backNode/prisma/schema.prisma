@@ -35,6 +35,15 @@ enum TokenState {
   USED
 }
 
+enum EnvelopeStatus {
+  DRAFT
+  SENT
+  PARTIALLY_SIGNED
+  SIGNED
+  DECLINED
+  EXPIRED
+}
+
 //==== CREATION DES MODELS ====
 
 // --- UTILISATEUR ---
@@ -66,6 +75,7 @@ model User {
   userLlmUsage      UserLlmUsage[]
   userUpload        UserUpload?
   contractTemplates ContractTemplate[]
+  signatureEnvelopes SignatureEnvelope[]
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -325,6 +335,41 @@ model GenerationLog {
   template   ContractTemplate @relation(fields: [templateId], references: [idTemplate], onDelete: Cascade)
 
   @@index([templateId])
+}
+
+// --- E-SIGNATURE : enveloppes de contrats à signer ---
+
+model SignatureEnvelope {
+  idEnvelope           Int            @id @default(autoincrement())
+  externalId           String         @unique
+  documentName         String
+  documentFilePath     String?
+  numPages             Int            @default(1)
+  // Token public unique pour la page de signature du cocontractant
+  signingToken         String         @unique
+  // Champs (zones de signature + signatures capturées) chiffrés AES-256-GCM
+  encryptedFields      String         @db.LongText
+  status               EnvelopeStatus @default(DRAFT)
+
+  // Métadonnées signataires (clair pour permettre les filtres/recherche)
+  selfName             String
+  selfEmail            String
+  counterpartyName     String
+  counterpartyEmail    String
+
+  // Suivi du cycle de vie
+  sentAt               DateTime?
+  selfSignedAt         DateTime?
+  counterpartySignedAt DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  userId               Int
+  user                 User           @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
 
 // --- ASSETS UTILISATEUR (filigranes) ---

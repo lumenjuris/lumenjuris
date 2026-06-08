@@ -65,9 +65,6 @@ export function ParamLayout({
                 <span className="text-sm font-bold text-white tracking-tight">
                   LumenJuris
                 </span>
-                <span className="text-[10px] text-gray-400 leading-none">
-                  Conformité RH
-                </span>
               </div>
             </Link>
           </div>

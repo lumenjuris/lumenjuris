@@ -32,9 +32,6 @@ const MainHeader = ({ onNavClick }: MainHeaderProps) => {
                 <span className="text-sm font-bold text-lumenjuris tracking-tight">
                   LumenJuris
                 </span>
-                <span className="text-[10px] text-gray-400 leading-none">
-                  Conformité RH
-                </span>
               </div>
             </button>
           </Link>
