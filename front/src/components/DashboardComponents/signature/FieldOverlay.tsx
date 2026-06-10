@@ -39,18 +39,18 @@ export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }:
       ref={elRef}
       onMouseDown={dragState.onMouseDown}
       onClick={(e) => {
-        // En mode "place" on drag, donc on ne déclenche pas le onClick
-        if (mode === "place") return;
         e.stopPropagation();
+        if (mode === "place") return;
+        console.log("FieldOverlay clicked", field.id); // ← ajouter
+
         onClick?.();
       }}
-      className={`absolute group select-none transition-shadow ${
-        mode === "place" ? "cursor-move" : mode === "sign" ? "cursor-pointer hover:shadow-lg" : ""
-      } ${dragState.dragging ? "shadow-2xl ring-2" : ""}`}
+      className={`absolute group select-none transition-shadow ${mode === "place" ? "cursor-move" : mode === "sign" ? "cursor-pointer hover:shadow-lg" : ""
+        } ${dragState.dragging ? "shadow-2xl ring-2" : ""}`}
       style={{
-        left:   `${field.xPct * 100}%`,
-        top:    `${field.yPct * 100}%`,
-        width:  `${field.widthPct * 100}%`,
+        left: `${field.xPct * 100}%`,
+        top: `${field.yPct * 100}%`,
+        width: `${field.widthPct * 100}%`,
         height: `${field.heightPct * 100}%`,
         backgroundColor: filled ? "#ffffff" : colorBg,
         border: `1.5px ${filled ? "solid" : "dashed"} ${colorBorder}`,
@@ -149,6 +149,7 @@ function useDragHandlers(
     if (mode !== "place") return;
     if (!elRef.current) return;
     e.stopPropagation();
+    setDragging(true);
     setDragging(true);
     startRef.current = {
       mouseX: e.clientX,

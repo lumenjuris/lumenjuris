@@ -24,7 +24,6 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
-import { GenerationContract } from "./page/GenerationContract";
 import { SignerPage } from "./page/SignerPage";
 
 export function App() {

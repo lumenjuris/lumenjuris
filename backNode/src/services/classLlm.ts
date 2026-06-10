@@ -16,8 +16,8 @@ type DayEntry = {
 const LLM_MODELS = [
   {
     name: "gpt-4o",
-    pricePerMillionTokenInput: 5 * 100,
-    pricePerMillionTokenOutput: 15 * 100,
+    pricePerMillionTokenInput: 2.5 * 100,
+    pricePerMillionTokenOutput: 10 * 100,
   },
   {
     name: "gpt-4o-mini",

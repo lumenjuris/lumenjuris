@@ -98,9 +98,10 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     const existing = capturedSigs.self;
     if (existing) {
       applyCapturedSignature(field, existing);
-    } else {
-      setModalOpenFor({ field, signer });
     }
+     else {
+      setModalOpenFor({ field, signer });
+    } 
   }
 
   /**

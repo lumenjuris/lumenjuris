@@ -1,4 +1,4 @@
-import { ChevronLeft, Send, MailPlus, Loader2 } from "lucide-react";
+import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { SignProgress } from "./SignProgress";
 import type { Field, Signer } from "./types";
