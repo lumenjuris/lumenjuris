@@ -9,6 +9,11 @@ import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
 import { Calculateur } from "./components/DashboardComponents/Calculateur";
 import { Veille } from "./components/DashboardComponents/Veille";
 import { Conformite } from "./components/DashboardComponents/Conformite";
+import { Contratheque } from "./components/DashboardComponents/Contratheque";
+import { ClausesLibrary } from "./components/DashboardComponents/clauses/ClausesLibrary";
+import { UserManagement } from "./components/DashboardComponents/admin/UserManagement";
+import { NegotiationWorkspace } from "./components/DashboardComponents/negotiation/NegotiationWorkspace";
+import { NegotiationGuest } from "./page/NegotiationGuest";
 import { MesFiligranes } from "./components/DashboardComponents/MesFiligranes";
 
 import { Dashboard } from "./page/Dashboard";
@@ -66,26 +71,27 @@ export function App() {
           <Route path="/contrat-from-model" element={<Generateur />} />
           <Route path="/contrat-enhanced" element={<Generateur />} />
           <Route path="/signature" element={<Signature />} />
+          <Route path="/contratheque" element={<Contratheque />} />
+          <Route path="/contratheque/:externalId" element={<Contratheque />} />
+          <Route path="/clauses" element={<ClausesLibrary />} />
+          <Route path="/utilisateurs" element={<UserManagement />} />
+          <Route path="/negociation/:negotiationId" element={<NegotiationWorkspace />} />
           <Route path="/chatjuridique" element={<ChatJuridique />} />
           <Route path="/calculateur" element={<Calculateur />} />
           <Route path="/veille" element={<Veille />} />
           <Route path="/conformite" element={<Conformite />} />
+          <Route path="/mon-compte" element={<ParamCompte />} />
+          <Route path="/analyzer" element={<ContractAnalysis />} />
         </Route>
 
         {/* Entrée principale de l'application sur le dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-
-
-        <Route path="/analyzer" element={<RequireAuth> <ContractAnalysis /> </RequireAuth>} />
-
         <Route path="/sandbox" element={<RequireAuth> <Sandbox /> </RequireAuth>} />
 
         <Route path="/inscription" element={<Inscription />} />
 
-        <Route path="/mon-compte" element={<RequireAuth> <ParamCompte /> </RequireAuth>} />
-
-        <Route path="/monitoring" element={<RequireAuth>  <Monitoring /> </RequireAuth>} />
+<Route path="/monitoring" element={<RequireAuth>  <Monitoring /> </RequireAuth>} />
 
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -93,6 +99,9 @@ export function App() {
 
         {/* Page publique de signature pour le cocontractant — sans auth */}
         <Route path="/signer/:token" element={<SignerPage />} />
+
+        {/* Page publique de négociation pour un invité externe — sans auth */}
+        <Route path="/negociation-invite/:token" element={<NegotiationGuest />} />
       </Routes>
     </>
   );

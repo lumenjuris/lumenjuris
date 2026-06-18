@@ -7,8 +7,6 @@ import {
   DocumentViewerRef,
 } from "../components/ContractAnalysis/DocumentViewer";
 
-import MainHeader from "../components/MainHeader/MainHeader";
-
 // ===> ACTION 3 : CORRIGER L'IMPORT ICI
 import { EnhancedClauseDetail } from "../components/ContractAnalysis/EnhancedClauseDetail/EnhancedClauseDetail";
 import { clearEnhancedClauseCaches } from "../components/ContractAnalysis/EnhancedClauseDetail/enhancedClauseCaches";
@@ -889,16 +887,6 @@ export default function ContractAnalysis() {
     }
   };
 
-  const handleNavClick = (event?: React.MouseEvent<HTMLElement>) => {
-    if (!confirmLeavingUnfinishedAnalysis()) {
-      event?.preventDefault();
-      event?.stopPropagation();
-      return false;
-    }
-    resetPageState();
-    return true;
-  };
-
   const handleOpenHistoryItem = async (historyId: string) => {
     if (historyId === currentHistoryId) return;
 
@@ -1046,10 +1034,8 @@ export default function ContractAnalysis() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <MainHeader onNavClick={handleNavClick} />
-
-      <main className="px-4 py-8 overflow-x-hidden">
+    <>
+      <div className="-m-5 lg:-m-7 px-4 py-8 overflow-x-hidden">
         <div className="min-w-0 w-full">
           {!contract && (
             <div className="max-w-5xl mx-auto space-y-8">
@@ -1191,7 +1177,7 @@ export default function ContractAnalysis() {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Détails de la clause sélectionnée */}
       {selectedClause && clauseData && (
@@ -1240,6 +1226,6 @@ export default function ContractAnalysis() {
       )}
 
       <Toaster position="top-right" />
-    </div>
+    </>
   );
 }

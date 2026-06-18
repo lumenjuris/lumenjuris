@@ -75,6 +75,100 @@ function sendSignatureInvite(opts: {
     })
 }
 
+/**
+ * Envoie un email de confirmation aux DEUX parties une fois le document
+ * entièrement signé. Le PDF original est joint en pièce jointe.
+ * Fire-and-forget : les erreurs sont loguées mais ne bloquent pas la réponse HTTP.
+ */
+async function sendSignatureCompletion(opts: {
+    documentName: string
+    selfName: string
+    selfEmail: string
+    counterpartyName: string
+    counterpartyEmail: string
+    documentFilePath: string | null
+}) {
+    // Charge le PDF pour la pièce jointe (optionnel — on envoie sans si absent)
+    let pdfBuffer: Buffer | undefined
+    if (opts.documentFilePath) {
+        try {
+            pdfBuffer = await fs.readFile(opts.documentFilePath)
+        } catch {
+            console.warn("[signature] PDF introuvable pour la pièce jointe:", opts.documentFilePath)
+        }
+    }
+
+    const attachment = pdfBuffer
+        ? [{ filename: `${opts.documentName}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+        : []
+
+    const dateStr = new Date().toLocaleDateString("fr-FR", {
+        day: "numeric", month: "long", year: "numeric",
+    })
+
+    const subject = `Document signé — ${opts.documentName}`
+
+    const buildHtml = (recipientName: string) => `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:32px 24px;
+                border:1px solid #e5e7eb;border-radius:12px">
+      <div style="margin-bottom:24px">
+        <span style="font-size:22px;font-weight:700;color:#354F99">LumenJuris</span>
+        <span style="font-size:13px;color:#6b7280;margin-left:8px">· Signature électronique</span>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;
+                  padding:16px 20px;margin-bottom:24px">
+        <p style="margin:0;font-size:15px;font-weight:700;color:#166534">
+          Document signé par les deux parties
+        </p>
+      </div>
+      <p style="font-size:15px;color:#111827">Bonjour <strong>${recipientName}</strong>,</p>
+      <p style="font-size:14px;color:#374151;line-height:1.6">
+        Le document <strong>«&nbsp;${opts.documentName}&nbsp;»</strong> a été signé
+        par les deux parties le <strong>${dateStr}</strong>.
+      </p>
+      <p style="font-size:14px;color:#374151;line-height:1.6;margin-top:8px">
+        Signataires :
+        <br>• <strong>${opts.selfName || opts.selfEmail}</strong> (émetteur)
+        <br>• <strong>${opts.counterpartyName}</strong> (cocontractant)
+      </p>
+      ${pdfBuffer
+        ? `<p style="font-size:13px;color:#6b7280;margin-top:16px">
+             Le document signé est joint en pièce jointe à cet email (PDF).
+           </p>`
+        : ""}
+      <p style="font-size:13px;color:#9ca3af;margin-top:24px;border-top:1px solid #f3f4f6;
+                padding-top:16px">
+        Cet email est envoyé automatiquement par la plateforme LumenJuris. Conservez-le
+        comme preuve de signature.
+      </p>
+    </div>`
+
+    const sends = [
+        mailer.sendMail({
+            from: `"LumenJuris" <${process.env["MAILER_USER"]}>`,
+            to: opts.selfEmail,
+            subject,
+            html: buildHtml(opts.selfName || opts.selfEmail),
+            attachments: attachment,
+        }),
+        mailer.sendMail({
+            from: `"LumenJuris" <${process.env["MAILER_USER"]}>`,
+            to: opts.counterpartyEmail,
+            subject,
+            html: buildHtml(opts.counterpartyName),
+            attachments: attachment,
+        }),
+    ]
+
+    Promise.all(sends)
+        .then(() => {
+            console.log(`[signature] emails de complétion envoyés → ${opts.selfEmail}, ${opts.counterpartyEmail}`)
+        })
+        .catch((err: unknown) => {
+            console.error("[signature] échec envoi emails de complétion:", err)
+        })
+}
+
 const ENVELOPES_DIR = path.join(process.cwd(), "signatureenvelopes")
 
 /** GET /signature-envelope/stats — agrégats pour le dashboard. */
@@ -221,6 +315,7 @@ router.get("/public/:token", async (req: Request, res: Response) => {
 /**
  * POST /public/sign/:token
  * Le cocontractant soumet ses signatures. Passe l'enveloppe en statut SIGNED.
+ * Déclenche ensuite un email aux deux parties avec le PDF signé en pièce jointe.
  */
 router.post("/public/:token", async (req: Request, res: Response) => {
     try {
@@ -229,6 +324,21 @@ router.post("/public/:token", async (req: Request, res: Response) => {
         if (!fields) return res.status(400).json({ success: false, message: "fields requis." })
         const dto = await svc.signByToken(token, fields)
         if (!dto) return res.status(404).json({ success: false, message: "Lien invalide ou expiré." })
+
+        // Récupère le chemin du PDF pour la pièce jointe (fire-and-forget)
+        svc.getByToken(token).then((fullData) => {
+            sendSignatureCompletion({
+                documentName: dto.documentName,
+                selfName: dto.selfName,
+                selfEmail: dto.selfEmail,
+                counterpartyName: dto.counterpartyName,
+                counterpartyEmail: dto.counterpartyEmail,
+                documentFilePath: fullData?.documentFilePath ?? null,
+            })
+        }).catch((err: unknown) => {
+            console.error("[signature] impossible de charger les données pour l'email de complétion:", err)
+        })
+
         return res.json({ success: true, data: dto })
     } catch (err) {
         console.error("[signature/public] sign error:", err)

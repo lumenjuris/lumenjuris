@@ -6,10 +6,14 @@ import {
   Briefcase, ClipboardList, FileText, Shield,
   UploadCloud, Lock, CheckCircle2,
   Loader2, AlertCircle, Trash2, X,
+  ScrollText, Plus, ShieldCheck,
 } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
+import { clauseApi } from "./clauses/api";
+import { CATEGORY_LABEL, POSITION_LABEL } from "./clauses/types";
+import type { Clause } from "./clauses/types";
 
 // ─── Types modèles importés ───────────────────────────────────────────────────
 
@@ -836,7 +840,7 @@ function VariableSelector({
 
 type ImportStep = "form" | "processing" | "review";
 
-function ImportSection({ onSaved }: { onSaved?: () => void } = {}) {
+function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue: boolean) => void } = {}) {
   const [file, setFile]         = useState<File | null>(null);
   const [name, setName]         = useState("");
   const [contractType, setContractType] = useState("");
@@ -911,7 +915,7 @@ function ImportSection({ onSaved }: { onSaved?: () => void } = {}) {
     }
   }
 
-  async function handleSaveStructure() {
+  async function handleSaveStructure(andContinue: boolean) {
     if (!savedMeta || !structure) return;
     setSaving(true);
     try {
@@ -938,7 +942,7 @@ function ImportSection({ onSaved }: { onSaved?: () => void } = {}) {
         body: JSON.stringify({ structure: filteredStructure }),
       });
       setSaved(true);
-      onSaved?.();
+      onSaved?.(savedMeta.id, andContinue);
     } catch { /* silent */ }
     finally { setSaving(false); }
   }
@@ -1029,14 +1033,27 @@ function ImportSection({ onSaved }: { onSaved?: () => void } = {}) {
           >
             Annuler
           </button>
-          <button
-            onClick={handleSaveStructure}
-            disabled={saving || essentialCount === 0}
-            className="shrink-0 flex items-center gap-2 px-6 py-3 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {saving ? "Sauvegarde…" : "Sauvegarder dans la bibliothèque"}
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Secondaire : enregistrer seulement */}
+            <button
+              onClick={() => void handleSaveStructure(false)}
+              disabled={saving || essentialCount === 0}
+              className="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-[#354F99] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Enregistrer le modèle
+            </button>
+            {/* Primaire : enregistrer + poursuivre le tunnel de génération */}
+            <button
+              onClick={() => void handleSaveStructure(true)}
+              disabled={saving || essentialCount === 0}
+              className="flex items-center gap-2 px-6 py-3 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Enregistrer et générer un contrat
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1176,6 +1193,11 @@ function UseCustomTemplateFlow({
   const [playbookText, setPlaybookText] = useState("");
   const [savingPlaybook, setSavingPlaybook] = useState(false);
   const [playbookSaved, setPlaybookSaved] = useState(false);
+  // Sélecteur de clauses depuis la bibliothèque (chantier 1 → alimente la génération)
+  const [showClausePicker, setShowClausePicker] = useState(false);
+  const [libraryClauses, setLibraryClauses] = useState<Clause[]>([]);
+  const [loadingClauses, setLoadingClauses] = useState(false);
+  const [clauseSearch, setClauseSearch] = useState("");
   const [generated, setGenerated] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -1226,6 +1248,26 @@ function UseCustomTemplateFlow({
     return () => { cancelled = true; };
   }, [templateId]);
 
+  async function openClausePicker() {
+    setShowClausePicker(true);
+    if (libraryClauses.length === 0) {
+      setLoadingClauses(true);
+      try {
+        const list = await clauseApi.list({ onlyApproved: false });
+        setLibraryClauses(list);
+      } catch { /* silent */ }
+      finally { setLoadingClauses(false); }
+    }
+  }
+
+  /** Insère une clause de la bibliothèque dans les consignes. */
+  function insertClause(c: Clause) {
+    const header = `\n\n— Clause « ${c.title} » (${CATEGORY_LABEL[c.category]}, ${POSITION_LABEL[c.position]}) à intégrer :\n`;
+    setPlaybookText((prev) => (prev.trimEnd() + header + c.body).trim());
+    setShowClausePicker(false);
+    setClauseSearch("");
+  }
+
   async function handleSavePlaybook() {
     setSavingPlaybook(true);
     setPlaybookSaved(false);
@@ -1247,12 +1289,22 @@ function UseCustomTemplateFlow({
     setError("");
     // Mémorise les valeurs saisies pour pré-remplir les prochaines générations
     saveKnownVars(varValues);
+    // Auto-sauvegarde des consignes (persistance) — non bloquant si échec.
+    try {
+      await fetchProxy(`/api/template/${templateId}/playbook`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rulesText: playbookText }),
+      });
+    } catch { /* non bloquant : les consignes sont aussi envoyées dans le payload ci-dessous */ }
     try {
       const res = await fetchProxy(`/api/template/${templateId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ variables: varValues }),
+        // On envoie les consignes en direct → prise en compte immédiate, même non sauvegardées.
+        body: JSON.stringify({ variables: varValues, playbook: playbookText }),
       });
       const data = await res.json() as { success: boolean; content?: string; message?: string };
       if (data.success && data.content) {
@@ -1448,15 +1500,77 @@ function UseCustomTemplateFlow({
                 Ce texte est <strong>conservé</strong> et réutilisé à chaque nouvelle génération de ce modèle.
               </p>
             </div>
-            <button
-              onClick={handleSavePlaybook}
-              disabled={savingPlaybook}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#354F99] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              {savingPlaybook ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : playbookSaved ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : null}
-              {playbookSaved ? "Enregistré" : "Enregistrer les consignes"}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={openClausePicker}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#354F99] bg-[#354F99]/5 border border-[#354F99]/20 rounded-lg hover:bg-[#354F99]/10 transition-colors"
+              >
+                <ScrollText className="w-3.5 h-3.5" /> Insérer une clause
+              </button>
+              <button
+                onClick={handleSavePlaybook}
+                disabled={savingPlaybook}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#354F99] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {savingPlaybook ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : playbookSaved ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : null}
+                {playbookSaved ? "Enregistré" : "Enregistrer les consignes"}
+              </button>
+            </div>
           </div>
+
+          {/* Sélecteur de clauses de la bibliothèque */}
+          {showClausePicker && (
+            <div className="mb-4 rounded-xl border border-[#354F99]/20 bg-[#354F99]/[0.03] p-3">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
+                  <ScrollText className="w-3.5 h-3.5 text-[#354F99]" />
+                  <span className="text-xs font-bold text-gray-700">Bibliothèque de clauses</span>
+                </div>
+                <button onClick={() => setShowClausePicker(false)} className="p-1 rounded-md text-gray-400 hover:bg-gray-100">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <input
+                value={clauseSearch}
+                onChange={(e) => setClauseSearch(e.target.value)}
+                placeholder="Filtrer par intitulé, catégorie, tag…"
+                className="w-full mb-2.5 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#354F99]/40"
+              />
+              {loadingClauses ? (
+                <div className="flex items-center justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /></div>
+              ) : libraryClauses.length === 0 ? (
+                <p className="text-xs text-gray-400 italic py-4 text-center">
+                  Aucune clause dans la bibliothèque. Créez-en depuis le menu « Bibliothèque de clauses ».
+                </p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto space-y-1.5">
+                  {libraryClauses
+                    .filter((c) => {
+                      const q = clauseSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return c.title.toLowerCase().includes(q)
+                        || CATEGORY_LABEL[c.category].toLowerCase().includes(q)
+                        || c.tags.some((t) => t.toLowerCase().includes(q));
+                    })
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => insertClause(c)}
+                        className="w-full text-left rounded-lg border border-gray-200 bg-white p-2.5 hover:border-[#354F99]/40 hover:bg-[#354F99]/[0.02] transition-all group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-800 group-hover:text-[#354F99]">{c.title}</span>
+                          {c.isApproved && <ShieldCheck className="w-3 h-3 text-emerald-500" />}
+                          <Plus className="w-3 h-3 text-gray-300 ml-auto group-hover:text-[#354F99]" />
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{CATEGORY_LABEL[c.category]} · {POSITION_LABEL[c.position]}</p>
+                        <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{c.body}</p>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <textarea
             value={playbookText}
@@ -1466,7 +1580,7 @@ function UseCustomTemplateFlow({
             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#354F99]/50 focus:bg-white focus:ring-2 focus:ring-[#354F99]/10 transition resize-none leading-relaxed font-mono"
           />
           <p className="text-[11px] text-gray-400 mt-1.5">
-            Ces consignes seront injectées à l'IA pour orienter chaque génération de ce modèle.
+            Ces consignes et clauses spécifiques sont <strong>prioritaires</strong> : l'IA les intègre intégralement, même si elles ne figurent pas dans le modèle. Prises en compte immédiatement, même sans cliquer « Enregistrer ».
           </p>
 
           <div className="flex justify-between mt-6 pt-5 border-t border-gray-100">
@@ -1577,11 +1691,19 @@ export function Generateur() {
     setSection("useCustom");
   }
 
-  function handleTemplateSaved() {
+  function handleTemplateSaved(templateId: string, andContinue: boolean) {
     setLibraryRefreshKey((k) => k + 1);
+    // Animation "+1" sur Bibliothèque de modèles dans les deux cas (le modèle est bien enregistré).
     notifyAdded();
-    // Redirige vers la bibliothèque "Bibliothèque de modèles" pour voir le modèle ajouté
-    setSearchParams({ section: "library" });
+    if (andContinue) {
+      // Tunnel continu : on enchaîne directement sur la génération du contrat,
+      // sans repasser par la bibliothèque.
+      setUseTemplateId(templateId);
+      setSection("useCustom");
+    } else {
+      // Enregistrer seulement : on montre le modèle ajouté dans la bibliothèque.
+      setSearchParams({ section: "library" });
+    }
   }
 
   const LABELS: Record<Exclude<Section, null>, string> = {

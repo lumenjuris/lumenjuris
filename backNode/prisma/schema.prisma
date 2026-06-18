@@ -16,6 +16,8 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  JURISTE // éditeur : import, validation IA, édition métadonnées
+  LECTEUR // lecture seule
 }
 
 enum AuthProvider {
@@ -42,6 +44,79 @@ enum EnvelopeStatus {
   SIGNED
   DECLINED
   EXPIRED
+}
+
+// ─── CONTRATHÈQUE ───
+
+enum ContractStatus {
+  DRAFT // brouillon
+  IN_NEGOTIATION // en négociation
+  ACTIVE // signé / actif
+  TACIT_RENEWAL // en tacite reconduction
+  EXPIRED // échu
+  TERMINATED // résilié
+}
+
+enum RenewalType {
+  NONE
+  TACIT // tacite reconduction
+  EXPRESS // reconduction expresse
+}
+
+// État de validation "trust but verify" d'un champ extrait par IA.
+enum FieldValidationStatus {
+  AI_SUGGESTED // suggéré par l'IA, non encore validé
+  HUMAN_VALIDATED // validé tel quel par un humain
+  HUMAN_CORRECTED // corrigé par un humain
+}
+
+// Actions tracées dans le journal d'audit (RGPD : journalisation des accès).
+enum AuditAction {
+  IMPORT
+  AI_EXTRACTION
+  FIELD_VALIDATION
+  METADATA_UPDATE
+  AMENDMENT_ADDED
+  VERSION_ADDED
+  DOCUMENT_ACCESS
+  EXPORT
+  ARCHIVE
+  DELETE
+}
+
+// ─── BIBLIOTHÈQUE DE CLAUSES ───
+
+// Catégorie juridique d'une clause (regroupement dans la bibliothèque).
+enum ClauseCategory {
+  CONFIDENTIALITE
+  RESPONSABILITE
+  RESILIATION
+  PROPRIETE_INTELLECTUELLE
+  DONNEES_PERSONNELLES
+  PAIEMENT
+  DUREE_RENOUVELLEMENT
+  FORCE_MAJEURE
+  LITIGES
+  GARANTIES
+  NON_CONCURRENCE
+  AUTRE
+}
+
+// Position de négociation d'une clause (logique de repli).
+enum ClausePosition {
+  IDEALE // position idéale (notre préférence)
+  ACCEPTABLE // repli acceptable
+  LIGNE_ROUGE // minimum non négociable
+}
+
+// ─── NÉGOCIATION ───
+
+// Statut du workflow d'approbation d'un contrat.
+enum ApprovalStatus {
+  DRAFT // brouillon, pas encore soumis
+  PENDING // soumis, en attente de décision
+  APPROVED // approuvé
+  REJECTED // rejeté
 }
 
 //==== CREATION DES MODELS ====
@@ -76,6 +151,14 @@ model User {
   userUpload        UserUpload?
   contractTemplates ContractTemplate[]
   signatureEnvelopes SignatureEnvelope[]
+
+  // Contrathèque
+  contracts         Contract[]
+  contractFolders   Folder[]
+  contractTags      Tag[]
+  auditLogs         AuditLog[]
+  clauses           Clause[]
+  contractComments  ContractComment[]
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -414,4 +497,430 @@ model UserLlmUsage {
 
   @@unique([llmId, startAt, userId])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRATHÈQUE — repository central des contrats (liste + fiche + import IA)
+//
+// Principe directeur : "l'IA suggère, le système garde-fou, l'humain décide".
+// Stockage hybride : métadonnées en colonnes claires (filtres/tri/KPI), PDF
+// sur le filesystem chiffré, accès tracés dans AuditLog (RGPD by design).
+//
+// Anticipe les briques V2 (négociation collaborative, suivi d'échéances) via
+// des champs nullable, SANS les implémenter.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Contract {
+  idContract       Int            @id @default(autoincrement())
+  externalId       String         @unique
+  title            String
+  contractType     String?
+  counterpartyName String? // cocontractant
+  responsibleName  String? // responsable interne
+  status           ContractStatus @default(DRAFT)
+
+  // Dates clés
+  signatureDate DateTime?
+  effectiveDate DateTime? // date d'effet
+  endDate       DateTime? // date d'échéance (null = sans date de fin)
+  durationMonths Int?
+
+  // Renouvellement — pilote la logique d'alerte (Chatel B2C vs art. 1215 B2B)
+  renewalType      RenewalType @default(NONE)
+  noticePeriodDays Int? // préavis en jours
+  isB2C            Boolean     @default(false)
+
+  // Financier
+  amount   Decimal? @db.Decimal(18, 2)
+  currency String?  @default("EUR")
+
+  governingLaw String? // droit applicable
+
+  // Document source (PDF chiffré sur filesystem — jamais le binaire en base)
+  documentFilePath String?
+  documentMimeType String?
+  ocrText          String? @db.LongText // texte OCR (recherche full-text V1)
+
+  // Workflow d'approbation (négociation)
+  approvalStatus ApprovalStatus @default(DRAFT)
+  approvalNote   String?        @db.Text // motif de la décision
+  approvedById   Int? // utilisateur ayant approuvé/rejeté
+  approvedAt     DateTime?
+
+  // Archivage / RGPD
+  isArchived     Boolean   @default(false)
+  retentionUntil DateTime? // durée de conservation paramétrable
+
+  // Liens (anticipation) vers briques existantes — nullable, non câblés en V1
+  signatureEnvelopeExternalId String?
+  templateExternalId          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   Int
+  user     User    @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+  folderId Int?
+  folder   Folder? @relation(fields: [folderId], references: [idFolder], onDelete: SetNull)
+
+  metadataFields ContractMetadataField[]
+  amendments     Amendment[]
+  versions       ContractVersion[]
+  tags           ContractTag[]
+  auditLogs      AuditLog[]
+  comments       ContractComment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+  @@index([folderId])
+}
+
+// Un champ de métadonnée extrait par IA + son état de validation humaine.
+// Matérialise le "trust but verify" : confidence_score + validation_status.
+model ContractMetadataField {
+  idField          Int                   @id @default(autoincrement())
+  fieldKey         String // ex: "amount", "governing_law", "notice_period_days"
+  value            String?               @db.Text
+  confidenceScore  Float? // score IA 0..1
+  validationStatus FieldValidationStatus @default(AI_SUGGESTED)
+  validatedById    Int? // user ayant validé/corrigé
+  validatedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contractId Int
+  contract   Contract @relation(fields: [contractId], references: [idContract], onDelete: Cascade)
+
+  @@unique([contractId, fieldKey])
+  @@index([contractId])
+}
+
+// Avenant lié à un contrat parent.
+model Amendment {
+  idAmendment      Int       @id @default(autoincrement())
+  externalId       String    @unique
+  title            String
+  documentFilePath String?
+  signatureDate    DateTime?
+  effectiveDate    DateTime?
+  summary          String?   @db.Text
+  createdAt        DateTime  @default(now())
+
+  parentContractId Int
+  parentContract   Contract @relation(fields: [parentContractId], references: [idContract], onDelete: Cascade)
+
+  @@index([parentContractId])
+}
+
+// Version successive d'un contrat (historique documentaire).
+model ContractVersion {
+  idVersion        Int      @id @default(autoincrement())
+  versionNumber    Int      @default(1)
+  documentFilePath String?
+  contentText      String?  @db.LongText // instantané du texte du contrat (pour comparaison)
+  note             String?  @db.Text
+  createdById      Int?
+  createdAt        DateTime @default(now())
+
+  contractId Int
+  contract   Contract @relation(fields: [contractId], references: [idContract], onDelete: Cascade)
+
+  @@unique([contractId, versionNumber])
+  @@index([contractId])
+}
+
+// Label coloré transverse (organisation hybride dossiers + tags).
+model Tag {
+  idTag      Int      @id @default(autoincrement())
+  externalId String   @unique
+  label      String
+  color      String   @default("#354F99")
+  createdAt  DateTime @default(now())
+
+  userId    Int
+  user      User          @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+  contracts ContractTag[]
+
+  @@unique([userId, label])
+  @@index([userId])
+}
+
+// Table de jonction many-to-many Contract <-> Tag.
+model ContractTag {
+  contractId Int
+  tagId      Int
+
+  contract Contract @relation(fields: [contractId], references: [idContract], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [idTag], onDelete: Cascade)
+
+  @@id([contractId, tagId])
+  @@index([tagId])
+}
+
+// Arborescence de dossiers (self-relation parent/enfant).
+model Folder {
+  idFolder   Int      @id @default(autoincrement())
+  externalId String   @unique
+  name       String
+  createdAt  DateTime @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  parentId Int?
+  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [idFolder], onDelete: NoAction, onUpdate: NoAction)
+  children Folder[] @relation("FolderTree")
+
+  contracts Contract[]
+
+  @@index([userId])
+  @@index([parentId])
+}
+
+// Journal d'audit horodaté (import, validation IA, modif, accès document…).
+model AuditLog {
+  idAudit       Int         @id @default(autoincrement())
+  action        AuditAction
+  entityType    String // "Contract", "Amendment", "ContractMetadataField"…
+  entityId      String // externalId de l'entité concernée
+  payloadBefore Json? // état avant
+  payloadAfter  Json? // état après
+  createdAt     DateTime    @default(now())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  contractId Int?
+  contract   Contract? @relation(fields: [contractId], references: [idContract], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([contractId])
+  @@index([entityType, entityId])
+}
+
+// Clause réutilisable de la bibliothèque (référentiel de clauses approuvées).
+// Pilier de la génération et de la négociation : positions idéale / repli / ligne rouge.
+model Clause {
+  idClause   Int            @id @default(autoincrement())
+  externalId String         @unique
+  title      String
+  category   ClauseCategory @default(AUTRE)
+  position   ClausePosition @default(IDEALE)
+  body       String         @db.LongText // texte de la clause
+  notes      String?        @db.Text // conseils d'usage / commentaire juridique
+  language   String         @default("fr")
+  tags       String? // tags libres séparés par virgule
+  isApproved Boolean        @default(false) // validée par un juriste
+  usageCount Int            @default(0) // nombre d'insertions (popularité)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+}
+
+// Commentaire collaboratif rattaché à un contrat (fil de négociation).
+model ContractComment {
+  idComment  Int      @id @default(autoincrement())
+  externalId String   @unique
+  body       String   @db.Text
+  resolved   Boolean  @default(false) // marqué comme traité
+  createdAt  DateTime @default(now())
+
+  contractId Int
+  contract   Contract @relation(fields: [contractId], references: [idContract], onDelete: Cascade)
+  userId     Int
+  user       User     @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([userId])
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODULE NÉGOCIATION (isolé — couplé au Contrat par ID, sans relation Prisma)
+// Tous les liens vers User/Contract sont des scalaires (ownerUserId, createdById,
+// contractExternalId) : aucun modèle existant n'est modifié.
+// ════════════════════════════════════════════════════════════════════════════
+
+enum NegotiationStatus {
+  DRAFT // brouillon
+  IN_NEGOTIATION // en négociation active
+  VALIDATED // version finale validée (prête pour signature)
+  BLOCKED // bloquée
+  CLOSED // close / abandonnée
+}
+
+enum ParticipantSide {
+  INTERNAL // partie interne (nous)
+  EXTERNAL // contrepartie
+}
+
+enum ParticipantRole {
+  READER // lecture seule
+  COMMENTER // peut commenter
+  PROPOSER // peut proposer des redlines
+  VALIDATOR // peut valider la version finale
+}
+
+enum ProposalStatus {
+  PROPOSED // proposée
+  ACCEPTED // acceptée
+  REJECTED // rejetée
+  COUNTERED // contre-proposée
+}
+
+enum CommentVisibility {
+  INTERNAL // visible côté interne uniquement
+  EXTERNAL // visible par la contrepartie
+}
+
+enum NegotiationAuditAction {
+  SESSION_CREATED
+  STATUS_CHANGED
+  VERSION_CREATED
+  PROPOSAL_CREATED
+  PROPOSAL_STATUS_CHANGED
+  COMMENT_ADDED
+  PARTICIPANT_ADDED
+  PARTICIPANT_REMOVED
+  GUEST_INVITED
+  GUEST_REVOKED
+  VALIDATED
+  ABORTED
+}
+
+model NegotiationSession {
+  idNegotiation      Int               @id @default(autoincrement())
+  externalId         String            @unique
+  contractExternalId String // couplage par ID (isolation, pas de FK)
+  title              String
+  status             NegotiationStatus @default(DRAFT)
+  ownerUserId        Int // créateur interne (scalaire, pas de FK)
+  finalVersionId     Int? // version validée → consommée par la signature
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  versions      NegotiationVersion[]
+  proposals     ClauseProposal[]
+  comments      NegotiationComment[]
+  participants  NegotiationParticipant[]
+  guestAccesses GuestAccess[]
+  auditLogs     NegotiationAudit[]
+
+  @@index([contractExternalId])
+  @@index([ownerUserId])
+}
+
+model NegotiationVersion {
+  idVersion      Int      @id @default(autoincrement())
+  externalId     String   @unique
+  versionNumber  Int      @default(1)
+  label          String?
+  contentText    String   @db.LongText // texte de la version (immuable)
+  structuredJson Json? // structure clause-par-clause (optionnel)
+  createdById    Int
+  createdAt      DateTime @default(now())
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@unique([negotiationId, versionNumber])
+  @@index([negotiationId])
+}
+
+model ClauseProposal {
+  idProposal          Int            @id @default(autoincrement())
+  externalId          String         @unique
+  clauseRef           String // identifiant de clause (ex. "art-3" ou titre)
+  originalText        String?        @db.Text
+  proposedText        String         @db.Text
+  type                String         @default("PROPOSED") // PROPOSED | COUNTER
+  status              ProposalStatus @default(PROPOSED)
+  authorParticipantId Int?
+  createdById         Int?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@index([negotiationId])
+  @@index([clauseRef])
+}
+
+model NegotiationComment {
+  idComment           Int               @id @default(autoincrement())
+  externalId          String            @unique
+  clauseRef           String? // ancrage clause (null = commentaire général)
+  body                String            @db.Text
+  visibility          CommentVisibility @default(INTERNAL)
+  parentCommentId     Int? // fil de discussion
+  authorParticipantId Int?
+  createdById         Int?
+  // Ancrage de l'annotation sur le texte du contrat (surlignement)
+  anchorStart         Int? // offset caractère de début dans contentText
+  anchorEnd           Int? // offset caractère de fin
+  quote               String?           @db.Text // texte surligné (affichage/repérage)
+  proposedText        String?           @db.Text // reformulation proposée (optionnel)
+  resolved            Boolean           @default(false)
+  createdAt           DateTime          @default(now())
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@index([negotiationId])
+  @@index([clauseRef])
+}
+
+model NegotiationParticipant {
+  idParticipant Int             @id @default(autoincrement())
+  externalId    String          @unique
+  side          ParticipantSide @default(INTERNAL)
+  role          ParticipantRole @default(COMMENTER)
+  userId        Int? // interne (scalaire, pas de FK)
+  name          String?
+  email         String?
+  createdAt     DateTime        @default(now())
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@index([negotiationId])
+}
+
+model GuestAccess {
+  idGuest       Int       @id @default(autoincrement())
+  externalId    String    @unique
+  token         String    @unique // secret du lien invité
+  participantId Int?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@index([negotiationId])
+  @@index([token])
+}
+
+model NegotiationAudit {
+  idAudit       Int                    @id @default(autoincrement())
+  action        NegotiationAuditAction
+  actorUserId   Int?
+  actorLabel    String? // nom affiché (interne ou invité)
+  versionId     Int?
+  payload       Json?
+  createdAt     DateTime               @default(now())
+
+  negotiationId Int
+  negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
+
+  @@index([negotiationId])
 }

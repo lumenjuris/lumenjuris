@@ -38,3 +38,6 @@ backNode/feedback-logs.json
 proxy/.env
 proxy/node_modules
 proxy/dist
+
+# Contrats chiffrés uploadés (données runtime, ne pas versionner)
+backNode/contracts/

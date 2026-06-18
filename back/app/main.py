@@ -168,6 +168,126 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTRATHÈQUE — extraction des métadonnées d'un contrat (IA, "trust but verify")
+#
+# Renvoie pour chaque champ une valeur + un score de confiance auto-déclaré par
+# le modèle (0..1). ATTENTION : ces scores ne sont PAS calibrés statistiquement,
+# ils servent uniquement à orienter la revue humaine OBLIGATOIRE côté front.
+# Aucune écriture en base ici — extraction pure.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Champs extraits (clés alignées sur le modèle Prisma Contract / ContractMetadataField)
+CONTRACT_METADATA_KEYS = [
+    "contract_type",       # type de contrat
+    "counterparty_name",   # cocontractant
+    "signature_date",      # AAAA-MM-JJ
+    "effective_date",      # date d'effet AAAA-MM-JJ
+    "end_date",            # date d'échéance AAAA-MM-JJ
+    "duration_months",     # durée en mois (entier)
+    "renewal_type",        # "none" | "tacit" | "express"
+    "notice_period_days",  # préavis en jours (entier)
+    "amount",              # montant (nombre)
+    "currency",            # devise ISO (EUR, USD…)
+    "governing_law",       # droit applicable
+    "is_b2c",              # true si une des parties est un consommateur (loi Chatel)
+    "sensitive_clauses",   # liste de clauses sensibles détectées
+]
+
+
+@app.post("/extract-contract-metadata")
+async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = Form(False)):
+    """Extrait les métadonnées structurées d'un contrat avec un score de confiance par champ."""
+    if file.filename == "" or not allowed_file(file.filename):
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé (PDF ou WORD requis)")
+
+    content = await file.read()
+
+    if is_word_file(file.filename):
+        try:
+            texte_brut, _ = extract_text_from_word(content)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        extraction_method = "word"
+    else:
+        try:
+            texte_brut = _extract_text_from_pdf_content(content, scan)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        extraction_method = "server"
+
+    texte = corriger_espaces(texte_brut)
+
+    if not _openai_client:
+        raise HTTPException(status_code=503, detail="Service d'extraction IA non disponible")
+
+    keys_desc = "\n".join(f"- {k}" for k in CONTRACT_METADATA_KEYS)
+    prompt = (
+        "Tu es un juriste expert en droit français des contrats. Analyse le contrat ci-dessous "
+        "et extrais ses métadonnées. Pour CHAQUE champ, fournis la valeur trouvée et un score de "
+        "confiance entre 0 et 1 (1 = certitude, 0 = absent/illisible). Si un champ est absent, "
+        "mets value=null et confidence=0.\n\n"
+        "Champs à extraire :\n" + keys_desc + "\n\n"
+        "Règles :\n"
+        "- Dates au format AAAA-MM-JJ.\n"
+        "- renewal_type : 'tacit' (tacite reconduction), 'express' (reconduction expresse) ou 'none'.\n"
+        "- is_b2c : true UNIQUEMENT si une partie est un particulier/consommateur (déclenche la loi Chatel).\n"
+        "- duration_months et notice_period_days : entiers.\n"
+        "- amount : nombre sans symbole ; currency séparément.\n"
+        "- sensitive_clauses : liste courte (exclusivité, non-concurrence, pénalités, résiliation unilatérale, "
+        "limitation de responsabilité, cession, confidentialité…).\n\n"
+        "Réponds UNIQUEMENT en JSON strict de la forme :\n"
+        '{ "fields": { "<clé>": { "value": <valeur ou null>, "confidence": <0..1> }, ... } }\n\n'
+        f"Contrat :\n{texte[:12000]}"
+    )
+
+    def _call():
+        return _openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=1200,
+            response_format={"type": "json_object"},
+        )
+
+    try:
+        resp = await run_in_threadpool(_call)
+        raw = resp.choices[0].message.content or "{}"
+        import json as _json
+        parsed = _json.loads(raw)
+    except Exception as e:
+        logger.error(f"[extract-contract-metadata] Erreur OpenAI/JSON: {e}")
+        raise HTTPException(status_code=500, detail="Échec de l'extraction des métadonnées.")
+
+    raw_fields = parsed.get("fields", {}) if isinstance(parsed, dict) else {}
+    fields = []
+    for key in CONTRACT_METADATA_KEYS:
+        entry = raw_fields.get(key) or {}
+        value = entry.get("value") if isinstance(entry, dict) else entry
+        confidence = entry.get("confidence") if isinstance(entry, dict) else None
+        # sensitive_clauses peut être une liste → on la sérialise pour stockage homogène
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value) if value else None
+        try:
+            confidence = float(confidence) if confidence is not None else 0.0
+        except (TypeError, ValueError):
+            confidence = 0.0
+        fields.append({
+            "field_key": key,
+            "value": None if value in ("", None) else str(value),
+            "confidence_score": max(0.0, min(1.0, confidence)),
+        })
+
+    return {
+        "success": True,
+        "fields": fields,
+        "ocr_text": texte,
+        "filename": file.filename,
+        "extraction_method": extraction_method,
+        "openai_tokens": extract_token_usage(resp, "gpt-4o"),
+    }
+
+
 @app.post("/legifrance-search")
 async def legifrance_search(req: SearchRequest):
     query = _sanitize_query_text((req.query or "").strip())
@@ -523,3 +643,99 @@ async def root():
     logger.warning("warning test")
     logger.error("error test")
     return {"status": "ok"}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# MODULE NÉGOCIATION — diff structuré clause par clause (déterministe, sans IA)
+# Appelé par le proxy via /api/negotiation-diff. Additif, isolé.
+# ════════════════════════════════════════════════════════════════════════════
+
+class NegotiationDiffRequest(BaseModel):
+    leftText: str
+    rightText: str
+
+
+def _segment_clauses(text: str) -> List[Dict[str, str]]:
+    """Découpe un contrat en clauses par en-têtes 'Article N' (fallback : paragraphes)."""
+    import re
+    lines = (text or "").split("\n")
+    clauses: List[Dict[str, str]] = []
+    current = {"ref": "preambule", "title": "Préambule", "body": []}
+    header_re = re.compile(r"^\s*(article\s+\d+|art\.?\s*\d+)\b.*", re.IGNORECASE)
+    for ln in lines:
+        if header_re.match(ln):
+            if current["body"] or current["ref"] != "preambule":
+                current["body"] = "\n".join(current["body"]).strip()
+                clauses.append(current)
+            ref = ln.strip()
+            current = {"ref": ref.lower()[:60], "title": ref.strip(), "body": []}
+        else:
+            current["body"].append(ln)
+    current["body"] = "\n".join(current["body"]).strip()
+    clauses.append(current)
+    return [c for c in clauses if c["body"] or c["ref"] != "preambule"]
+
+
+def _line_diff(a: str, b: str) -> List[Dict[str, Any]]:
+    """Diff ligne à ligne via difflib (added / removed / equal)."""
+    import difflib
+    al, bl = a.split("\n"), b.split("\n")
+    sm = difflib.SequenceMatcher(a=al, b=bl, autojunk=False)
+    out: List[Dict[str, Any]] = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            for line in al[i1:i2]:
+                out.append({"type": "equal", "text": line})
+        elif tag == "delete":
+            for line in al[i1:i2]:
+                out.append({"type": "removed", "text": line})
+        elif tag == "insert":
+            for line in bl[j1:j2]:
+                out.append({"type": "added", "text": line})
+        elif tag == "replace":
+            for line in al[i1:i2]:
+                out.append({"type": "removed", "text": line})
+            for line in bl[j1:j2]:
+                out.append({"type": "added", "text": line})
+    return out
+
+
+@app.post("/negotiation-diff")
+async def negotiation_diff(req: NegotiationDiffRequest):
+    """Diff structuré clause par clause entre deux versions d'un contrat."""
+    left = _segment_clauses(req.leftText)
+    right = _segment_clauses(req.rightText)
+
+    # Alignement des clauses par titre normalisé.
+    def norm(t: str) -> str:
+        return " ".join(t.lower().split())[:60]
+
+    right_by_key = {norm(c["title"]): c for c in right}
+    left_keys = set()
+    clauses_out: List[Dict[str, Any]] = []
+    added = removed = modified = unchanged = 0
+
+    for lc in left:
+        key = norm(lc["title"])
+        left_keys.add(key)
+        rc = right_by_key.get(key)
+        if rc is None:
+            removed += 1
+            clauses_out.append({"ref": lc["ref"], "title": lc["title"], "status": "removed", "lines": _line_diff(lc["body"], "")})
+        elif rc["body"].strip() == lc["body"].strip():
+            unchanged += 1
+            clauses_out.append({"ref": lc["ref"], "title": lc["title"], "status": "unchanged", "lines": []})
+        else:
+            modified += 1
+            clauses_out.append({"ref": lc["ref"], "title": lc["title"], "status": "modified", "lines": _line_diff(lc["body"], rc["body"])})
+
+    for rc in right:
+        if norm(rc["title"]) not in left_keys:
+            added += 1
+            clauses_out.append({"ref": rc["ref"], "title": rc["title"], "status": "added", "lines": _line_diff("", rc["body"])})
+
+    return {
+        "success": True,
+        "clauses": clauses_out,
+        "stats": {"added": added, "removed": removed, "modified": modified, "unchanged": unchanged},
+    }

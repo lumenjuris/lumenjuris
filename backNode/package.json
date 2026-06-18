@@ -10,7 +10,10 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:sync": "prisma migrate dev && prisma generate"
+    "db:sync": "prisma migrate dev && prisma generate",
+    "seed:contratheque": "tsx prisma/seedContratheque.ts",
+    "test:contract": "tsx tests/contract.integration.ts",
+    "test:negotiation": "tsx tests/negotiation.stateMachine.test.ts && tsx tests/negotiation.integration.ts"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

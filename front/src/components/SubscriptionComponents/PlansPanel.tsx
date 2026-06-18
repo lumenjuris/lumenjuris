@@ -17,57 +17,76 @@ type Plan = {
   badge?: string;
   features: string[];
   cta: string;
+  /** Offre gratuite : inscription directe, sans paiement. */
+  free?: boolean;
+  /** Offre sur devis : déclenche un contact au lieu d'un paiement. */
   contactOnly?: boolean;
 };
 
 const PLANS: Plan[] = [
   {
+    name: "Free",
+    tagline: "Indépendants & TPE",
+    monthly: 0,
+    yearly: 0,
+    free: true,
+    cta: "Commencer gratuitement",
+    features: [
+      "1 utilisateur",
+      "5 contrats actifs maximum",
+      "Contrathèque statique (recherche basique)",
+      "3 templates standards",
+      "Signature électronique : 3 enveloppes / mois",
+    ],
+  },
+  {
     name: "Starter",
-    tagline: "Pour les petites équipes RH qui démarrent",
-    monthly: 29,
-    yearly: 24,
+    tagline: "PME sans direction juridique",
+    monthly: 49,
+    yearly: 39,
     cta: "Choisir Starter",
     features: [
-      "Jusqu'à 10 contrats actifs",
-      "Générateur CDI & CDD",
-      "Analyse de conformité : jusqu'à 5/mois",
-      "Chat juridique RH (50 questions)",
-      "Support par email",
+      "Tout le Free, plus :",
+      "Contrats illimités",
+      "Contrathèque dynamique (champs personnalisés & filtres)",
+      "Templates illimités",
+      "Signature électronique : 25 enveloppes / mois",
+      "Suivi des échéances & rappels automatisés",
+      "Tableau de bord des renouvellements",
     ],
   },
   {
     name: "Pro",
-    tagline: "L'essentiel pour piloter votre conformité",
-    monthly: 79,
-    yearly: 65,
+    tagline: "PME structurée & ETI",
+    monthly: 119,
+    yearly: 99,
     highlight: true,
     badge: "Le plus populaire",
     cta: "Choisir Pro",
     features: [
-      "Contrats illimités",
-      "Tous les modèles juridiques",
-      "Analyse de conformité : jusqu'à 20/mois",
-      "Chat juridique RH illimité",
-      "Calculateur juridique",
-      "Veille information temps réel",
-      "Support prioritaire",
+      "Tout le Starter, plus :",
+      "Négociation collaborative (redlining & suivi des modifications)",
+      "Workflows d'approbation",
+      "Analyse des risques par IA (scoring & clauses sensibles)",
+      "Signature électronique illimitée",
+      "Intégrations standards",
     ],
   },
   {
     name: "Enterprise",
-    tagline: "Pour les organisations exigeantes",
-    monthly: 199,
-    yearly: 169,
-    cta: "Contacter l'équipe",
+    tagline: "ETI de plus de 250 salariés",
+    monthly: 0,
+    yearly: 0,
+    cta: "Nous contacter",
     contactOnly: true,
     features: [
-      "Tout ce qui est inclus dans Pro",
-      "Multi-utilisateurs & rôles",
-      "API & intégrations SIRH",
-      "Signature électronique avancée",
-      "Audit de conformité dédié",
-      "Account manager dédié",
-      "SLA 99,9 %",
+      "Tout le Pro, plus :",
+      "RBAC avancé & espaces de travail multiples",
+      "Intégrations métier sur mesure & API",
+      "Module d'audit & conformité RGPD renforcé",
+      "SSO (authentification unique)",
+      "SLA & support dédié",
+      "Accompagnement à l'implémentation",
     ],
   },
 ];
@@ -180,7 +199,7 @@ export function PlansPanel() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl rounded-md bg-white px-4 py-6">
+    <div className="mx-auto max-w-7xl rounded-md bg-white px-4 py-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -228,7 +247,7 @@ export function PlansPanel() {
       </div>
 
       {/* Plans */}
-      <div className="mt-8 grid gap-6 md:grid-cols-3">
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           return (
@@ -237,7 +256,7 @@ export function PlansPanel() {
               className={cn(
                 "relative flex flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow",
                 plan.highlight
-                  ? "border-primary shadow-lg ring-1 ring-primary/20"
+                  ? "border-primary shadow-lg ring-2 ring-primary/30 lg:-translate-y-2 lg:scale-[1.02]"
                   : "border-border hover:shadow-md",
               )}
             >
@@ -253,42 +272,78 @@ export function PlansPanel() {
                   {plan.tagline}
                 </p>
               </div>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight">
-                  {price} €
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  / utilisateur / mois
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {yearly ? "Facturé annuellement" : "Facturé mensuellement"}
-              </p>
+
+              {plan.contactOnly ? (
+                <div className="mt-6">
+                  <span className="text-3xl font-bold tracking-tight">
+                    Sur devis
+                  </span>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Tarification adaptée à votre organisation
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-6 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold tracking-tight">
+                      {price} €
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      HT / utilisateur / mois
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {plan.free
+                      ? "Gratuit, sans engagement"
+                      : yearly
+                        ? "Facturé annuellement"
+                        : "Facturé mensuellement"}
+                  </p>
+                </>
+              )}
 
               <Button
                 variant={plan.highlight ? "default" : "outline"}
                 className={`mt-6 w-full ${plan.highlight ? "" : "border-lumenjuris/50 hover:bg-gray-100"}`}
-                onClick={() =>
-                  plan.contactOnly
-                    ? (window.location.href = "mailto:contact@lumenjuris.com")
-                    : handlePlanSelect(plan)
-                }
+                onClick={() => {
+                  if (plan.contactOnly) {
+                    window.location.href = "mailto:contact@lumenjuris.com";
+                  } else if (plan.free) {
+                    navigate("/inscription");
+                  } else {
+                    handlePlanSelect(plan);
+                  }
+                }}
               >
                 {plan.cta}
               </Button>
 
               <ul className="mt-6 space-y-3 text-sm">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <Check
-                      className={cn(
-                        "mt-0.5 h-4 w-4 shrink-0",
-                        plan.highlight ? "text-primary" : "text-emerald-600",
-                      )}
-                    />
-                    <span className="text-foreground/80">{f}</span>
-                  </li>
-                ))}
+                {plan.features.map((f, i) => {
+                  // La première ligne ("Tout le X, plus :") sert d'intertitre.
+                  const isHeading = f.endsWith("plus :");
+                  if (isHeading) {
+                    return (
+                      <li
+                        key={f}
+                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {f}
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={`${plan.name}-${i}`} className="flex items-start gap-2">
+                      <Check
+                        className={cn(
+                          "mt-0.5 h-4 w-4 shrink-0",
+                          plan.highlight ? "text-primary" : "text-emerald-600",
+                        )}
+                      />
+                      <span className="text-foreground/80">{f}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );

@@ -33,7 +33,7 @@ export interface UserData {
     email: string;
     nom: string;
     prenom?: string;
-    role: "USER" | "ADMIN";
+    role: "USER" | "ADMIN" | "JURISTE" | "LECTEUR";
     isVerified: boolean;
     twoFactorEnabled?: boolean;
   };
