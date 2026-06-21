@@ -887,10 +887,7 @@ app.post(["/analyze-clause", "/api/analyze-clause"], handleAnalyzeClause);
 app.post(["/api/chat", "/chat"], handleChat);
 app.post(["/api/openai-chat", "/openai-chat"], handleOpenAiChat);
 app.post(["/api/openai-chat-5", "/openai-chat-5"], handleOpenAiChat5);
-app.post(
-  ["/api/huggingface-generate", "/huggingface-generate"],
-  handleHuggingFaceGenerate,
-);
+app.post(  ["/api/huggingface-generate", "/huggingface-generate"],  handleHuggingFaceGenerate,);
 
 // Node - Requêtes Backend
 const auth = proxyAuthMiddleware;
@@ -932,21 +929,9 @@ app.get("/api/enterprise", auth, handleNodeEnterpriseGet);
 app.put("/api/enterprise", auth, handleNodeEnterpriseUpdate);
 app.get("/api/contract-history", auth, handleNodeContractHistory);
 app.post("/api/contract-history", auth, handleNodeContractHistory);
-app.get(
-  "/api/contract-history/:externalId",
-  auth,
-  handleNodeContractHistoryItem,
-);
-app.delete(
-  "/api/contract-history/:externalId",
-  auth,
-  handleNodeContractHistoryItem,
-);
-app.patch(
-  "/api/contract-history/:externalId/touch",
-  auth,
-  handleNodeContractHistoryTouch,
-);
+app.get(  "/api/contract-history/:externalId",  auth,  handleNodeContractHistoryItem,);
+app.delete(  "/api/contract-history/:externalId",  auth,  handleNodeContractHistoryItem,);
+app.patch(  "/api/contract-history/:externalId/touch",  auth,  handleNodeContractHistoryTouch,);
 app.get("/api/chat-history", auth, handleNodeChatHistory);
 app.put("/api/chat-history", auth, handleNodeChatHistory);
 app.post("/api/billing/customer", auth, handleBillingCustomer);
@@ -996,8 +981,8 @@ app.get("/health", (req: Request, res: Response) => {
   return res.send({
     status: "OK",
     port: PORT,
-    urlBackendPython: BACKEND_URL,
-    urlBackendNodejs: BACKNODE_URL,
+    //urlBackendPython: BACKEND_URL,
+    //urlBackendNodejs: BACKNODE_URL,
   });
 });
 

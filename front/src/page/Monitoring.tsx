@@ -15,6 +15,7 @@ import { Navigate } from "react-router-dom";
 import { fetchProxy } from "../utils/fetchProxy";
 import { KpiCard } from "../components/ui/kpiCard";
 
+
 type LlmUsage = {
   model: string;
   tokenInput: number;
@@ -36,6 +37,16 @@ type DayEntry = {
     { tokenInput: number; tokenOutput: number; totalCostUsd: number }
   >;
 };
+
+type DataFeedback = {
+  comment: string;
+  context: string;
+  date: string;
+  id: string;
+  page: string;
+  userId: string;
+
+}
 
 const TIME_RANGES = [
   { label: "Aujourd'hui", days: 1 },
@@ -86,10 +97,10 @@ const formating = {
 
 export const Monitoring = () => {
   const { userData } = useUserStore();
-/*   const [llmUsage, setLlmUsage] = useState<LlmUsage[]>([]);
-  const [llmUsageLoading, setLlmUsageLoading] = useState(false);
-  const [llmUsageError, setLlmUsageError] = useState("");
-  const [llmUsageUpdatedAt, setLlmUsageUpdatedAt] = useState<Date | null>(null); */
+  /*   const [llmUsage, setLlmUsage] = useState<LlmUsage[]>([]);
+    const [llmUsageLoading, setLlmUsageLoading] = useState(false);
+    const [llmUsageError, setLlmUsageError] = useState("");
+    const [llmUsageUpdatedAt, setLlmUsageUpdatedAt] = useState<Date | null>(null); */
 
   // Plage temporelle sélectionnée par l'utilisateur
   const [selectedDays, setSelectedDays] = useState<Days>(7);
@@ -104,6 +115,9 @@ export const Monitoring = () => {
   const [history, setHistory] = useState<DayEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+
+  //Feedback
+  const [feedback, setFeedback] = useState<DataFeedback[]>([])
 
   // Fetch snapshot live
   const fetchToday = useCallback(async () => {
@@ -124,6 +138,26 @@ export const Monitoring = () => {
       setTodayLoading(false);
     }
   }, []);
+
+  //Fetch FeedBack
+  useEffect(() => {
+    const feedback = async () => {
+      try {
+        const response = await fetchProxy(`/api/feedback`, {
+          methods: "GET",
+          credentials: "include",
+        });
+        const data = await response.json()
+        console.log(data)
+        setFeedback(data.data)
+        return data
+      } catch (err) {
+        setHistoryError(err instanceof Error ? err.message : String(err));
+      }
+    }
+    feedback()
+  }, [])
+
 
   // Fetch historique
   const fetchHistory = useCallback(async (days: number) => {
@@ -215,6 +249,7 @@ export const Monitoring = () => {
   const periodLabel =
     selectedDays === 1 ? "Aujourd'hui" : `${selectedDays} derniers jours`;
 
+
   return (
     <>
       <MainHeader />
@@ -236,11 +271,10 @@ export const Monitoring = () => {
             <button
               key={days}
               onClick={() => setSelectedDays(days)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                selectedDays === days
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedDays === days
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
             >
               {label}
             </button>
@@ -454,6 +488,51 @@ export const Monitoring = () => {
             )}
           </div>
         </section>
+
+
+        {/* Section des feedback */}
+        <section className="max-w-4xl mx-auto p-6">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">
+            Retour des utilisateurs
+          </h2>
+
+          <div className="space-y-4">
+            {feedback.map((f) => (
+              <div
+                key={f.id}
+                className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition"
+              >
+                {/* Header */}
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm text-gray-500">
+                    Page : <span className="font-medium text-gray-700">{f.page}</span>
+                  </span>
+
+                  <span className="text-xs text-gray-400">
+                    {new Date(f.date).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+
+                {/* Comment */}
+                <p className="text-gray-800 text-base leading-relaxed mb-3">
+                  {f.comment}
+                </p>
+
+                {/* Footer meta */}
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Contexte : {f.context}</span>
+                  <span>User : {f.userId}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+
       </div>
     </>
   );
