@@ -105,9 +105,9 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
       "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
       ...(res.locals.userId !== undefined
         ? {
-            "x-user-id": String(res.locals.userId),
-            "x-user-role": String(res.locals.role ?? "USER"),
-          }
+          "x-user-id": String(res.locals.userId),
+          "x-user-role": String(res.locals.role ?? "USER"),
+        }
         : {}),
     },
     body: req.method === "GET" ? undefined : JSON.stringify(req.body),
@@ -152,6 +152,49 @@ function relayToNode(req: Request, res: Response, targetPath: string): void {
       if (!res.headersSent)
         res.status(502).json({ error: "backnode_unreachable" });
     });
+}
+
+/**
+ * Relais vers backNode en passthrough binaire : préserve le content-type et
+ * le content-disposition de la réponse (PDF déchiffré, CSV d'export…). À utiliser
+ * pour les endpoints qui ne renvoient PAS du JSON.
+ */
+function relayToNodeRaw(req: Request, res: Response, targetPath: string): void {
+  fetch(`${BACKNODE_URL}${targetPath}`, {
+    method: req.method,
+    headers: {
+      cookie: req.headers.cookie || "",
+      "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+      ...(res.locals.userId !== undefined
+        ? { "x-user-id": String(res.locals.userId), "x-user-role": String(res.locals.role ?? "USER") }
+        : {}),
+    },
+  })
+    .then(async (r) => {
+      const ct = r.headers.get("content-type") || "application/octet-stream";
+      const cd = r.headers.get("content-disposition");
+      const buf = Buffer.from(await r.arrayBuffer());
+      res.status(r.status);
+      res.setHeader("content-type", ct);
+      if (cd) res.setHeader("content-disposition", cd);
+      res.send(buf);
+    })
+    .catch((e: any) => {
+      console.error("relay Node raw error:", e.message);
+      if (!res.headersSent) res.status(502).json({ error: "backnode_unreachable" });
+    });
+}
+
+/** Construit un chemin backNode en propageant la query string entrante. */
+function withQuery(base: string, req: Request): string {
+  const i = req.originalUrl.indexOf("?");
+  return i >= 0 ? `${base}${req.originalUrl.slice(i)}` : base;
+}
+
+// ─── Contrathèque ───
+function handleContractExtract(req: Request, res: Response): void {
+  // Multipart (fichier) → backend Python d'extraction de métadonnées
+  relayStreamToPython(req, res, "/extract-contract-metadata");
 }
 
 // Comptage consommation token
@@ -616,12 +659,14 @@ function handleSignatureDelete(req: Request, res: Response): void {
 
 // ─── Génération d'un contrat à partir d'un modèle ──────────────────────────────
 
-const GENERATE_PROMPT_BASE = `Tu es un juriste expert en droit français. À partir du modèle de contrat ci-dessous (dont les variables ont déjà été remplacées par les valeurs fournies par le juriste), produis le contrat final en :
-- Conservant le langage juridique formel et les références légales du texte source.
-- Appliquant les règles, ajouts et précisions des CONSIGNES COMPLÉMENTAIRES.
-- Adaptant les accords grammaticaux (genre, nombre, conjugaisons) si nécessaire.
-- Ne PAS inventer de nouvelles clauses hors consignes.
-- Répondre UNIQUEMENT avec le texte final du contrat en français, sans markdown, sans préambule explicatif.`;
+const GENERATE_PROMPT_BASE = `Tu es un juriste expert en droit français. À partir du modèle de contrat ci-dessous (dont les variables ont déjà été remplacées par les valeurs fournies par le juriste), produis le contrat final en respectant SCRUPULEUSEMENT ces règles :
+- PRIORITÉ ABSOLUE aux CONSIGNES & CLAUSES SPÉCIFIQUES : intègre-les IMPÉRATIVEMENT et INTÉGRALEMENT dans le contrat, même si elles ne figurent pas dans le modèle. Si une consigne fournit le texte d'une clause, insère ce texte fidèlement (en l'adaptant uniquement pour la cohérence rédactionnelle et les accords).
+- En cas de CONFLIT entre le modèle et une consigne, la CONSIGNE PRÉVAUT sur le modèle.
+- Place chaque clause spécifique à l'endroit juridiquement pertinent du contrat (bon article/section), en renumérotant si besoin.
+- Conserve le langage juridique formel et les références légales du texte source.
+- Adapte les accords grammaticaux (genre, nombre, conjugaisons) pour un rendu cohérent.
+- N'invente AUCUNE clause qui ne soit ni dans le modèle ni dans les consignes.
+- Réponds UNIQUEMENT avec le texte final du contrat en français, sans markdown, sans préambule explicatif.`;
 
 /**
  * Substitue les marqueurs <<NAME|original>> et {{NAME}} (legacy)
@@ -644,7 +689,7 @@ function substituteMarkers(content: string, variables: Record<string, string>): 
 
 async function handleTemplateGenerate(req: Request, res: Response): Promise<void> {
   const externalId = req.params.externalId as string;
-  const { variables } = req.body as { variables?: Record<string, string> };
+  const { variables, playbook } = req.body as { variables?: Record<string, string>; playbook?: string };
 
   if (!externalId || !variables || typeof variables !== "object") {
     res.status(400).json({ success: false, message: "externalId et variables requis." });
@@ -670,12 +715,16 @@ async function handleTemplateGenerate(req: Request, res: Response): Promise<void
       return;
     }
 
-    // 2. Récupère le playbook (peut être null)
-    const pbRes = await fetch(`${BACKNODE_URL}/template/${encodeURIComponent(externalId)}/playbook`, {
-      headers: internalHeaders,
-    });
-    const pbData = await pbRes.json() as { success: boolean; data?: { rulesText: string } | null };
-    const playbookText = pbData.data?.rulesText?.trim() ?? "";
+    // 2. Consignes : on privilégie celles envoyées dans la requête (édition en cours,
+    //    prise en compte immédiate). À défaut seulement, on lit le playbook enregistré.
+    let playbookText = typeof playbook === "string" ? playbook.trim() : "";
+    if (!playbookText) {
+      const pbRes = await fetch(`${BACKNODE_URL}/template/${encodeURIComponent(externalId)}/playbook`, {
+        headers: internalHeaders,
+      });
+      const pbData = await pbRes.json() as { success: boolean; data?: { rulesText: string } | null };
+      playbookText = pbData.data?.rulesText?.trim() ?? "";
+    }
 
     // 3. Pré-substitution des marqueurs avec les valeurs utilisateur
     const substitutedSections = tplData.data.structure.sections.map((sec: any) => ({
@@ -688,8 +737,8 @@ async function handleTemplateGenerate(req: Request, res: Response): Promise<void
 
     // 4. Construit le prompt avec contenu déjà substitué + consignes
     const consignesBlock = playbookText
-      ? `\n\nCONSIGNES COMPLÉMENTAIRES :\n${playbookText}\n`
-      : "\n\nCONSIGNES COMPLÉMENTAIRES : (aucune règle particulière)\n";
+      ? `\n\nCONSIGNES & CLAUSES SPÉCIFIQUES (PRIORITAIRES — à intégrer impérativement et intégralement) :\n${playbookText}\n`
+      : "\n\nCONSIGNES & CLAUSES SPÉCIFIQUES : (aucune règle particulière)\n";
     const docBlock = substitutedSections.map((sec: any) =>
       `## ${sec.title}\n\n` + sec.clauses.map((cl: any) =>
         cl.title ? `### ${cl.title}\n${cl.content}` : cl.content
@@ -871,23 +920,17 @@ async function handleUserUploadsAsset(req: Request, res: Response): Promise<void
 }
 
 // Multipart (upload PDF) — stream direct, body non consommé par express.json
-app.post(
-  ["/extract-document-text", "/api/extract-document-text"],
-  handleExtractDocumentText,
-);
+app.post(["/extract-document-text", "/api/extract-document-text"], handleExtractDocumentText);
 
 // JSON routes — body déjà parsé par express.json
-app.post(
-  ["/legifrance-search", "/api/legifrance-search"],
-  handleLegifranceSearch,
-);
+app.post(["/legifrance-search", "/api/legifrance-search"], handleLegifranceSearch);
 app.post(["/jurisprudence", "/api/jurisprudence"], handleJurisprudence);
 app.post(["/classify-veille", "/api/classify-veille"], handleClassifyVeille);
 app.post(["/analyze-clause", "/api/analyze-clause"], handleAnalyzeClause);
 app.post(["/api/chat", "/chat"], handleChat);
 app.post(["/api/openai-chat", "/openai-chat"], handleOpenAiChat);
 app.post(["/api/openai-chat-5", "/openai-chat-5"], handleOpenAiChat5);
-app.post(  ["/api/huggingface-generate", "/huggingface-generate"],  handleHuggingFaceGenerate,);
+app.post(["/api/huggingface-generate", "/huggingface-generate"], handleHuggingFaceGenerate,);
 
 // Node - Requêtes Backend
 const auth = proxyAuthMiddleware;
@@ -929,9 +972,9 @@ app.get("/api/enterprise", auth, handleNodeEnterpriseGet);
 app.put("/api/enterprise", auth, handleNodeEnterpriseUpdate);
 app.get("/api/contract-history", auth, handleNodeContractHistory);
 app.post("/api/contract-history", auth, handleNodeContractHistory);
-app.get(  "/api/contract-history/:externalId",  auth,  handleNodeContractHistoryItem,);
-app.delete(  "/api/contract-history/:externalId",  auth,  handleNodeContractHistoryItem,);
-app.patch(  "/api/contract-history/:externalId/touch",  auth,  handleNodeContractHistoryTouch,);
+app.get("/api/contract-history/:externalId", auth, handleNodeContractHistoryItem,);
+app.delete("/api/contract-history/:externalId", auth, handleNodeContractHistoryItem,);
+app.patch("/api/contract-history/:externalId/touch", auth, handleNodeContractHistoryTouch,);
 app.get("/api/chat-history", auth, handleNodeChatHistory);
 app.put("/api/chat-history", auth, handleNodeChatHistory);
 app.post("/api/billing/customer", auth, handleBillingCustomer);
@@ -975,6 +1018,79 @@ app.get("/api/signature-envelope/public/:token", (req: Request, res: Response) =
 app.post("/api/signature-envelope/public/:token", (req: Request, res: Response) => {
   relayToNode(req, res, `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}`);
 });
+
+// ─── Contrathèque ───
+// Extraction IA des métadonnées (multipart → Python). Aucune écriture base.
+app.post("/api/contract/extract", auth, handleContractExtract);
+
+// Routes statiques AVANT les routes paramétrées /:externalId
+app.get("/api/contract/stats", auth, (req, res) => relayToNode(req, res, "/contract/stats"));
+app.get("/api/contract/deadlines", auth, (req, res) => relayToNode(req, res, withQuery("/contract/deadlines", req)));
+app.get("/api/contract/export.csv", auth, (req, res) => relayToNodeRaw(req, res, withQuery("/contract/export.csv", req)));
+app.get("/api/contract/tags", auth, (req, res) => relayToNode(req, res, "/contract/tags"));
+app.post("/api/contract/tags", auth, (req, res) => relayToNode(req, res, "/contract/tags"));
+app.delete("/api/contract/tags/:externalId", auth, (req, res) => relayToNode(req, res, `/contract/tags/${encodeURIComponent(req.params.externalId as string)}`));
+app.get("/api/contract/folders", auth, (req, res) => relayToNode(req, res, "/contract/folders"));
+app.post("/api/contract/folders", auth, (req, res) => relayToNode(req, res, "/contract/folders"));
+app.delete("/api/contract/folders/:externalId", auth, (req, res) => relayToNode(req, res, `/contract/folders/${encodeURIComponent(req.params.externalId as string)}`));
+
+// Liste + création
+app.get("/api/contract", auth, (req, res) => relayToNode(req, res, withQuery("/contract", req)));
+app.post("/api/contract", auth, (req, res) => relayToNode(req, res, "/contract"));
+
+// Sous-ressources d'un contrat
+app.get("/api/contract/:externalId/document", auth, (req, res) => relayToNodeRaw(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/document`));
+app.get("/api/contract/:externalId/audit", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/audit`));
+app.post("/api/contract/:externalId/validate-field", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/validate-field`));
+app.post("/api/contract/:externalId/amendment", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/amendment`));
+app.post("/api/contract/:externalId/version", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/version`));
+app.post("/api/contract/:externalId/snapshot", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/snapshot`));
+app.post("/api/contract/:externalId/archive", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/archive`));
+// Négociation — commentaires + approbation (/comments/ avant /:externalId)
+app.post("/api/contract/:externalId/comments", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/comments`));
+app.post("/api/contract/:externalId/approval", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}/approval`));
+app.delete("/api/contract/comments/:commentId", auth, (req, res) => relayToNode(req, res, `/contract/comments/${encodeURIComponent(req.params.commentId as string)}`));
+app.patch("/api/contract/comments/:commentId/resolve", auth, (req, res) => relayToNode(req, res, `/contract/comments/${encodeURIComponent(req.params.commentId as string)}/resolve`));
+app.get("/api/contract/:externalId", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}`));
+app.patch("/api/contract/:externalId", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}`));
+app.delete("/api/contract/:externalId", auth, (req, res) => relayToNode(req, res, `/contract/${encodeURIComponent(req.params.externalId as string)}`));
+
+// ─── Bibliothèque de clauses ───
+app.get("/api/clause/stats", auth, (req, res) => relayToNode(req, res, "/clause/stats"));
+app.get("/api/clause", auth, (req, res) => relayToNode(req, res, withQuery("/clause", req)));
+app.post("/api/clause", auth, (req, res) => relayToNode(req, res, "/clause"));
+app.post("/api/clause/:externalId/use", auth, (req, res) => relayToNode(req, res, `/clause/${encodeURIComponent(req.params.externalId as string)}/use`));
+app.get("/api/clause/:externalId", auth, (req, res) => relayToNode(req, res, `/clause/${encodeURIComponent(req.params.externalId as string)}`));
+app.patch("/api/clause/:externalId", auth, (req, res) => relayToNode(req, res, `/clause/${encodeURIComponent(req.params.externalId as string)}`));
+app.delete("/api/clause/:externalId", auth, (req, res) => relayToNode(req, res, `/clause/${encodeURIComponent(req.params.externalId as string)}`));
+
+// ─── Administration (gestion des utilisateurs & rôles) ───
+app.get("/api/admin/users", auth, (req, res) => relayToNode(req, res, "/admin/users"));
+app.patch("/api/admin/users/:idUser/role", auth, (req, res) => relayToNode(req, res, `/admin/users/${encodeURIComponent(req.params.idUser as string)}/role`));
+
+// ─── Négociation (module isolé) ───
+// Publiques invité (sans auth — token = secret) ; placées AVANT /:externalId.
+app.get("/api/negotiation/public/:token", (req, res) => relayToNode(req, res, `/negotiation/public/${encodeURIComponent(req.params.token as string)}`));
+app.post("/api/negotiation/public/:token/comments", (req, res) => relayToNode(req, res, `/negotiation/public/${encodeURIComponent(req.params.token as string)}/comments`));
+// Entrée & liste
+app.post("/api/negotiation/enter", auth, (req, res) => relayToNode(req, res, "/negotiation/enter"));
+app.get("/api/negotiation/contract/:contractExternalId", auth, (req, res) => relayToNode(req, res, `/negotiation/contract/${encodeURIComponent(req.params.contractExternalId as string)}`));
+// Sous-ressources (avant /:externalId nu)
+app.post("/api/negotiation/:externalId/abort", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/abort`));
+app.post("/api/negotiation/:externalId/exit", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/exit`));
+app.post("/api/negotiation/:externalId/versions/:versionExternalId/validate", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/versions/${encodeURIComponent(req.params.versionExternalId as string)}/validate`));
+app.post("/api/negotiation/:externalId/versions", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/versions`));
+app.post("/api/negotiation/:externalId/proposals", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/proposals`));
+app.patch("/api/negotiation/:externalId/proposals/:proposalExternalId", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/proposals/${encodeURIComponent(req.params.proposalExternalId as string)}`));
+app.patch("/api/negotiation/:externalId/comments/:commentId/resolve", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/comments/${encodeURIComponent(req.params.commentId as string)}/resolve`));
+app.post("/api/negotiation/:externalId/comments", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/comments`));
+app.post("/api/negotiation/:externalId/participants", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/participants`));
+app.delete("/api/negotiation/:externalId/participants/:participantExternalId", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/participants/${encodeURIComponent(req.params.participantExternalId as string)}`));
+app.post("/api/negotiation/:externalId/guests/:guestExternalId/revoke", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/guests/${encodeURIComponent(req.params.guestExternalId as string)}/revoke`));
+app.post("/api/negotiation/:externalId/guests", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}/guests`));
+app.get("/api/negotiation/:externalId", auth, (req, res) => relayToNode(req, res, `/negotiation/${encodeURIComponent(req.params.externalId as string)}`));
+// Diff structuré délégué au microservice Python.
+app.post("/api/negotiation-diff", auth, (req, res) => relayJsonToPython(req, res, "/negotiation-diff"));
 
 // Health pour tester le serveur
 app.get("/health", (req: Request, res: Response) => {

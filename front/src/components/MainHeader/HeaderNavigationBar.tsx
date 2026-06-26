@@ -1,14 +1,9 @@
 // UI //
 import {
   LogInIcon,
-  FileCheckIcon,
   User,
-  ScatterChartIcon,
   Bell,
-  ChevronDown,
-  LayoutDashboard,
   LogOutIcon,
-  MonitorCheck,
   AlertCircleIcon,
   HandCoinsIcon,
 } from "lucide-react";
@@ -163,224 +158,8 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
 
   return (
     <div className="flex items-center gap-1 lg:pr-2">
-      {/* AFFICHAGE MENU TABLETTES OU MOBILE */}
-      <nav className="flex items-center gap-1  pr-1 lg:hidden">
-        {isConnected && (
-          <Link to="/dashboard">
-            <Button
-              variant="ghost"
-              size="icon"
-              data-slot="icon"
-              onClick={onNavClick}
-              className={
-                pathname === "/dashboard" ||
-                  pathname === "/generateur" ||
-                  pathname === "/signature" ||
-                  pathname === "/chatjuridique" ||
-                  pathname === "/calculateur" ||
-                  pathname === "/veille" ||
-                  pathname === "/conformite"
-                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-            >
-              <LayoutDashboard
-                className={
-                  pathname === "/dashboard" ||
-                    pathname === "/generateur" ||
-                    pathname === "/signature" ||
-                    pathname === "/chatjuridique" ||
-                    pathname === "/calculateur" ||
-                    pathname === "/veille" ||
-                    pathname === "/conformite"
-                    ? "size-6"
-                    : "size-5"
-                }
-              />
-            </Button>
-          </Link>
-        )}
-        {isConnected && (
-          <Link to="/analyzer">
-            <Button
-              variant="ghost"
-              size="icon"
-              data-slot="icon"
-              className={
-                pathname === "/analyzer"
-                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-            >
-              <FileCheckIcon
-                className={pathname === "/analyzer" ? "size-6" : "size-5"}
-              />
-            </Button>
-          </Link>
-        )}
-        {isConnected && userData?.profile.role === "ADMIN" && (
-          <Link to="/sandbox">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={
-                pathname === "/sandbox"
-                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-              onClick={onNavClick}
-            >
-              <ScatterChartIcon
-                className={pathname === "/sandbox" ? "size-6" : "size-5"}
-              />
-            </Button>
-          </Link>
-        )}
-        {isConnected && userData?.profile.role === "ADMIN" && (
-          <Link to="/monitoring">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={
-                pathname === "/monitoring"
-                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-              onClick={onNavClick}
-            >
-              <MonitorCheck
-                className={pathname === "/monitoring" ? "size-6" : "size-5"}
-              />
-            </Button>
-          </Link>
-        )}
-      </nav>
-
-      {/* AFFICHAGE MENU ECRANS LARGE */}
-      <nav className="hidden lg:flex items-center 2xl:gap-1">
-        {isConnected && (
-          <Link to="/dashboard">
-            <Button
-              variant="ghost"
-              size="lg"
-              data-slot="icon"
-              onClick={onNavClick}
-              className={
-                pathname === "/dashboard" ||
-                  pathname === "/generateur" ||
-                  pathname === "/signature" ||
-                  pathname === "/chatjuridique" ||
-                  pathname === "/calculateur" ||
-                  pathname === "/veille" ||
-                  pathname === "/conformite"
-                  ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-            >
-              <LayoutDashboard
-                className={
-                  pathname === "/dashboard" ||
-                    pathname === "/generateur" ||
-                    pathname === "/signature" ||
-                    pathname === "/chatjuridique" ||
-                    pathname === "/calculateur" ||
-                    pathname === "/veille" ||
-                    pathname === "/conformite"
-                    ? "size-5"
-                    : ""
-                }
-              />
-              Dashboard
-            </Button>
-          </Link>
-        )}
-        {isConnected && (
-          <Link to="/analyzer">
-            <Button
-              variant="ghost"
-              size="lg"
-              data-slot="icon"
-              className={
-                pathname === "/analyzer"
-                  ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-            >
-              <FileCheckIcon
-                className={pathname === "/analyzer" ? "size-5" : ""}
-              />
-              Analyse
-            </Button>
-          </Link>
-        )}
-
-
-
-        {isConnected && userData?.profile.role === "ADMIN" && (
-          <Link to="/sandbox">
-            <Button
-              variant="ghost"
-              size="lg"
-              data-slot="icon"
-              className={
-                pathname === "/sandbox"
-                  ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-              onClick={onNavClick}
-            >
-              <ScatterChartIcon
-                className={pathname === "/sandbox" ? "size-5" : ""}
-              />
-              Sandbox
-            </Button>
-          </Link>
-        )}
-        {isConnected && userData?.profile.role === "ADMIN" && (
-          <Link to="/monitoring">
-            <Button
-              variant="ghost"
-              size="lg"
-              className={
-                pathname === "/monitoring"
-                  ? " text-gray-500 xl:tracking-wide font-semibold xl:text-[16px] hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-              onClick={onNavClick}
-            >
-              <MonitorCheck
-                className={pathname === "/monitoring" ? "size-5" : ""}
-              />
-              Monitoring
-            </Button>
-          </Link>
-        )}
-
-
-        {isConnected && (
-          <Link to="/contrat-generation">
-            <Button
-              variant="ghost"
-              size="lg"
-              className={
-                pathname === "/contrat-generation"
-                  ? " text-gray-800 xl:tracking-wide font-semibold hover:cursor-default"
-                  : "text-gray-400 hover:bg-lumenjuris-background transition-all delay-100"
-              }
-            >
-              <FileCheckIcon
-                className={pathname === "/contrat-generation" ? "size-6" : "size-5"}
-              />
-              Generation Contrat
-            </Button>
-          </Link>
-        )}
-
-      </nav>
-
-
-
-
+      {/* Menu du haut volontairement minimal : la navigation vit dans la sidebar.
+          On ne garde ici que les notifications + le menu utilisateur. */}
 
 
 
@@ -441,43 +220,24 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-            {userAvatarUrl ? (
-              <img
-                src={userAvatarUrl}
-                className="hidden md:block h-8 w-8 rounded-full object-cover border border-lumenjuris/60"
-              ></img>
-            ) : (
-              <div className="hidden md:flex h-8 w-8 rounded-full bg-lumenjuris items-center justify-center text-white text-xs font-medium">
-                {userData?.profile.prenom
-                  ? `${userData.profile.prenom.slice(0, 1)}${userData.profile.nom.slice(0, 1)}`
-                  : `${userData?.profile.nom.slice(0, 1)}`}
-              </div>
-            )}
-
+          <div className="flex items-center pl-1">
             <DropdownMenu>
-              {isMobile ? (
-                <DropdownMenuTrigger
-                  render={
-                    <button className="flex md:hidden h-8 w-8 rounded-full bg-lumenjuris justify-center items-center cursor-pointer text-xs font-medium text-white">
-                      {userData?.profile.prenom
-                        ? `${userData.profile.prenom.slice(0, 1)}${userData.profile.nom.slice(0, 1)}`
-                        : `${userData?.profile.nom.slice(0, 1)}`}
+              <DropdownMenuTrigger
+                render={
+                  userAvatarUrl ? (
+                    <button className="h-9 w-9 rounded-full overflow-hidden border border-line hover:border-brand/40 transition-all cursor-pointer">
+                      <img src={userAvatarUrl} className="h-full w-full object-cover" alt="" />
                     </button>
-                  }
-                />
-              ) : (
-                <DropdownMenuTrigger
-                  render={
-                    <button className="hidden md:flex items-center gap-1 cursor-pointer text-sm font-medium text-gray-800 line-clamp-1">
-                      {userData?.profile.prenom
-                        ? `${userData.profile.prenom.slice(0, 6)} ${userData.profile.nom.slice(0, 1)}.`
-                        : `${userData?.profile.nom.slice(0, 12)}.`}
-                      <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                  ) : (
+                    <button
+                      className="h-9 w-9 rounded-full border border-line bg-white flex items-center justify-center text-ink-secondary hover:border-brand/40 hover:text-brand transition-all cursor-pointer"
+                      title="Mon compte"
+                    >
+                      <User className="h-4 w-4" strokeWidth={1.75} />
                     </button>
-                  }
-                />
-              )}
+                  )
+                }
+              />
 
               <DropdownMenuContent
                 sideOffset={14}
