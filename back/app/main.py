@@ -13,20 +13,38 @@ from starlette.concurrency import run_in_threadpool
 semaphore = asyncio.Semaphore(5)
 
 
-from back.services.pdf_processing import (
-    allowed_file,
-    is_word_file,
-    extract_text_from_word,
-    corriger_espaces,
-    extract_clauses_ia_robuste,
-    _extract_text_from_pdf_content,
-    _extract_html_from_pdf_dict,
-    _extract_keywords_basic,
-    _sanitize_query_text,
-    _legifrance_search,
-    _judilibre_search,
-    _openai_client,
-)
+IS_PROD = os.environ.get("IS_PROD", "false").lower() == "true"
+
+if IS_PROD:
+    from services.pdf_processing import (
+        allowed_file,
+        is_word_file,
+        extract_text_from_word,
+        corriger_espaces,
+        extract_clauses_ia_robuste,
+        _extract_text_from_pdf_content,
+        _extract_html_from_pdf_dict,
+        _extract_keywords_basic,
+        _sanitize_query_text,
+        _legifrance_search,
+        _judilibre_search,
+        _openai_client,
+    )
+else:
+    from back.services.pdf_processing import (
+        allowed_file,
+        is_word_file,
+        extract_text_from_word,
+        corriger_espaces,
+        extract_clauses_ia_robuste,
+        _extract_text_from_pdf_content,
+        _extract_html_from_pdf_dict,
+        _extract_keywords_basic,
+        _sanitize_query_text,
+        _legifrance_search,
+        _judilibre_search,
+        _openai_client,
+    )
 
 from .logging_setup import setup_logging
 import logging

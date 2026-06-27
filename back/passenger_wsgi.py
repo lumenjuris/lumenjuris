@@ -1,13 +1,18 @@
 import sys
 import os
 import traceback
+from datetime import datetime
 
 # Fichier de log personnalisé dans le serveur de production (O2Switch)
 LOG_FILE = '/home/dxin1098/lumenjurisBackend.dxin1098.odns.fr/passenger_debug.log'
 
-def log_error(message):
-    with open(LOG_FILE, 'a') as f:
-        f.write(f"{message}\n")
+def log_error(message, level="INFO"):
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(LOG_FILE, 'a') as f:
+            f.write(f"[{timestamp}] [{level}] {message}\n")
+    except Exception:
+        pass
 
 try:
     log_error("=== DEBUT CHARGEMENT ===")
@@ -42,11 +47,11 @@ try:
     from a2wsgi import ASGIMiddleware
     log_error("Création de l'application WSGI...")
     application = ASGIMiddleware(fastapi_app)
-    log_error("=== APPLICATION CHARGEE AVEC SUCCES ===")
+    log_error("=== APPLICATION CHARGEE AVEC SUCCES ===", "SUCCES")
 
 except Exception as e:
-    log_error(f"ERREUR: {str(e)}")
-    log_error(f"TRACEBACK:\n{traceback.format_exc()}")
+    log_error(f"ERREUR: {e}", "ERROR")
+    log_error(f"TRACEBACK:\n{traceback.format_exc()}", "ERROR")
     
     # Créer une application de fallback pour afficher l'erreur
     def application(environ, start_response):
