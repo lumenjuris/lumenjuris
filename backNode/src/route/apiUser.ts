@@ -1,17 +1,16 @@
 import express from "express";
 import type { Request, Response, Router } from "express";
-import { User } from "../services/classUser";
-import { Token } from "../services/classToken";
-import { Mailer } from "../infrastructure/mailer/classMailer";
-import { createCookieAuth } from "../securite/cookieAuth";
-import { prisma } from "../../prisma/singletonPrisma";
-import { authMiddleware } from "../middleware/authMiddleware";
-import { Google } from "../services/classGoogle";
-import { Enterprise } from "../services/classEnterprise";
-import { Subscription } from "../services/classSubscription";
-import { normalizeAccountParameters } from "../utils/normalizeAccountParameters";
-import { normalizePreferenceUI } from "../utils/normalizePreferenceUI";
-//import { TokenState } from "../../prisma/generated/enums"
+import { User } from "../services/classUser.js";
+import { Token } from "../services/classToken.js";
+import { Mailer } from "../infrastructure/mailer/classMailer.js";
+import { createCookieAuth } from "../securite/cookieAuth.js";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { Google } from "../services/classGoogle.js";
+import { Enterprise } from "../services/classEnterprise.js";
+import { Subscription } from "../services/classSubscription.js";
+import { normalizeAccountParameters } from "../utils/normalizeAccountParameters.js";
+import { normalizePreferenceUI } from "../utils/normalizePreferenceUI.js";
 
 const routerUser: Router = express.Router();
 

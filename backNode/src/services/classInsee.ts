@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getStatusJuridiqueLabelFromCode } from "./nafResolver";
+import { getStatusJuridiqueLabelFromCode } from "./nafResolver.js";
 
 // Forme minimale des données INSEE attendues par le service métier Enterprise.
 export type InseeEnterpriseData = {

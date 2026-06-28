@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response, Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
-import { Enterprise } from "../services/classEnterprise";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { Enterprise } from "../services/classEnterprise.js";
 
 const routerEnterprise: Router = express.Router();
 

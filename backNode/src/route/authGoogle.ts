@@ -3,11 +3,11 @@ import type { Request, Response, Router } from "express";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { createCookieAuth } from "../securite/cookieAuth";
-import { User } from "../services/classUser";
-import { Google } from "../services/classGoogle";
-import { prisma } from "../../prisma/singletonPrisma";
-import { Subscription } from "../services/classSubscription";
+import { createCookieAuth } from "../securite/cookieAuth.js";
+import { User } from "../services/classUser.js";
+import { Google } from "../services/classGoogle.js";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { Subscription } from "../services/classSubscription.js";
 
 const routerAuthGoogle: Router = express.Router();
 

@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { prisma } from "../../prisma/singletonPrisma"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 /**
  * Service métier de la Contrathèque.
@@ -284,7 +284,7 @@ export class ContractService {
             prisma.contract.count({ where }),
         ])
 
-        const items: ContractListItemDTO[] = rows.map((c) => ({
+        const items: ContractListItemDTO[] = rows.map((c:any) => ({
             id: c.externalId,
             title: c.title,
             contractType: c.contractType,
@@ -298,7 +298,7 @@ export class ContractService {
             amount: c.amount ? c.amount.toString() : null,
             currency: c.currency,
             folderExternalId: c.folder?.externalId ?? null,
-            tags: c.tags.map((t) => ({ externalId: t.tag.externalId, label: t.tag.label, color: t.tag.color })),
+            tags: c.tags.map((t:any) => ({ externalId: t.tag.externalId, label: t.tag.label, color: t.tag.color })),
             createdAt: c.createdAt.toISOString(),
             updatedAt: c.updatedAt.toISOString(),
         }))
@@ -353,8 +353,8 @@ export class ContractService {
             isArchived: c.isArchived,
             retentionUntil: iso(c.retentionUntil),
             folderExternalId: c.folder?.externalId ?? null,
-            tags: c.tags.map((t) => ({ externalId: t.tag.externalId, label: t.tag.label, color: t.tag.color })),
-            metadataFields: c.metadataFields.map((m) => ({
+            tags: c.tags.map((t:any) => ({ externalId: t.tag.externalId, label: t.tag.label, color: t.tag.color })),
+            metadataFields: c.metadataFields.map((m:any) => ({
                 fieldKey: m.fieldKey,
                 value: m.value,
                 confidenceScore: m.confidenceScore,
@@ -362,22 +362,22 @@ export class ContractService {
                 validatedById: m.validatedById,
                 validatedAt: iso(m.validatedAt),
             })),
-            amendments: c.amendments.map((a) => ({
+            amendments: c.amendments.map((a:any) => ({
                 id: a.externalId, title: a.title, summary: a.summary,
                 signatureDate: iso(a.signatureDate), effectiveDate: iso(a.effectiveDate),
                 hasDocument: !!a.documentFilePath, createdAt: a.createdAt.toISOString(),
             })),
-            versions: c.versions.map((v) => ({
+            versions: c.versions.map((v:any) => ({
                 versionNumber: v.versionNumber, note: v.note,
                 hasDocument: !!v.documentFilePath, createdAt: v.createdAt.toISOString(),
                 contentText: v.contentText ?? null,
             })),
-            auditLogs: c.auditLogs.map((l) => ({
+            auditLogs: c.auditLogs.map((l:any) => ({
                 action: l.action, entityType: l.entityType, entityId: l.entityId,
                 createdAt: l.createdAt.toISOString(), userId: l.userId,
                 userName: [l.user?.prenom, l.user?.nom].filter(Boolean).join(" ") || l.user?.email || null,
             })),
-            comments: c.comments.map((cm) => ({
+            comments: c.comments.map((cm:any) => ({
                 id: cm.externalId,
                 body: cm.body,
                 resolved: cm.resolved,
@@ -534,7 +534,7 @@ export class ContractService {
     async addVersion(userId: number, externalId: string, data: { note?: string; documentFilePath?: string | null }): Promise<boolean> {
         const contract = await prisma.contract.findFirst({ where: { userId, externalId }, include: { versions: true } })
         if (!contract) return false
-        const nextNumber = (contract.versions.reduce((max, v) => Math.max(max, v.versionNumber), 0)) + 1
+        const nextNumber = (contract.versions.reduce((max:any, v:any) => Math.max(max, v.versionNumber), 0)) + 1
         await prisma.contractVersion.create({
             data: { versionNumber: nextNumber, note: data.note ?? null, documentFilePath: data.documentFilePath ?? null, createdById: userId, contractId: contract.idContract },
         })
@@ -552,7 +552,7 @@ export class ContractService {
         const contract = await prisma.contract.findFirst({ where: { userId, externalId }, include: { versions: true } })
         if (!contract) return false
         const text = (contentText ?? contract.ocrText) ?? ""
-        const nextNumber = (contract.versions.reduce((max, v) => Math.max(max, v.versionNumber), 0)) + 1
+        const nextNumber = (contract.versions.reduce((max:any, v:any) => Math.max(max, v.versionNumber), 0)) + 1
         await prisma.contractVersion.create({
             data: { versionNumber: nextNumber, note: note ?? null, contentText: text, createdById: userId, contractId: contract.idContract },
         })
@@ -581,7 +581,7 @@ export class ContractService {
     // ─── Tags ────────────────────────────────────────────────────────────────
     async listTags(userId: number) {
         const tags = await prisma.tag.findMany({ where: { userId }, orderBy: { label: "asc" } })
-        return tags.map((t) => ({ id: t.externalId, label: t.label, color: t.color }))
+        return tags.map((t:any) => ({ id: t.externalId, label: t.label, color: t.color }))
     }
 
     async createTag(userId: number, label: string, color: string): Promise<{ id: string }> {
@@ -602,7 +602,7 @@ export class ContractService {
         const tags = await prisma.tag.findMany({ where: { userId, externalId: { in: tagExternalIds } } })
         await prisma.contractTag.deleteMany({ where: { contractId: contract.idContract } })
         if (tags.length) {
-            await prisma.contractTag.createMany({ data: tags.map((t) => ({ contractId: contract.idContract, tagId: t.idTag })) })
+            await prisma.contractTag.createMany({ data: tags.map((t:any) => ({ contractId: contract.idContract, tagId: t.idTag })) })
         }
         return true
     }
@@ -610,10 +610,10 @@ export class ContractService {
     // ─── Dossiers (arborescence) ─────────────────────────────────────────────
     async listFolders(userId: number) {
         const folders = await prisma.folder.findMany({ where: { userId }, orderBy: { name: "asc" } })
-        return folders.map((f) => ({ id: f.externalId, name: f.name, parentId: null as string | null, _parentDbId: f.parentId, _dbId: f.idFolder }))
-            .map((f, _i, all) => ({
+        return folders.map((f:any) => ({ id: f.externalId, name: f.name, parentId: null as string | null, _parentDbId: f.parentId, _dbId: f.idFolder }))
+            .map((f:any, _i:any, all:any) => ({
                 id: f.id, name: f.name,
-                parentExternalId: f._parentDbId ? (all.find((x) => x._dbId === f._parentDbId)?.id ?? null) : null,
+                parentExternalId: f._parentDbId ? (all.find((x:any) => x._dbId === f._parentDbId)?.id ?? null) : null,
             }))
     }
 
@@ -710,7 +710,7 @@ export class ContractService {
         const contract = await prisma.contract.findFirst({ where: { userId, externalId }, select: { idContract: true } })
         if (!contract) return []
         const logs = await prisma.auditLog.findMany({ where: { contractId: contract.idContract }, orderBy: { createdAt: "desc" }, take: 200 })
-        return logs.map((l) => ({ action: l.action, entityType: l.entityType, entityId: l.entityId, userId: l.userId, createdAt: l.createdAt.toISOString() }))
+        return logs.map((l:any) => ({ action: l.action, entityType: l.entityType, entityId: l.entityId, userId: l.userId, createdAt: l.createdAt.toISOString() }))
     }
 
     /** Insère une entrée d'audit (best-effort, ne casse pas l'opération métier). */

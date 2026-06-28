@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma/singletonPrisma";
+import { prisma } from "../../prisma/singletonPrisma.js";
 
 type PlanSeed = {
   name: string;

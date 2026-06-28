@@ -1,10 +1,10 @@
 import express from "express";
 import type { Request, Response, Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
-import { StripeLumenJuris } from "../../billing/stripe.service";
-import { prisma } from "../../prisma/singletonPrisma";
-import { Subscription } from "../services/classSubscription";
-import { Credit } from "../services/classCredit";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { StripeLumenJuris } from "../../billing/stripe.service.js";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { Subscription } from "../services/classSubscription.js";
+import { Credit } from "../services/classCredit.js";
 
 const routerBilling: Router = express.Router();
 

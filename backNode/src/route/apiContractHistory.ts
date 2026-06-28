@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response, Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
-import { ContractHistory } from "../services/classContractHistory";
+import { authMiddleware } from "../middleware/authMiddleware.js";
+import { ContractHistory } from "../services/classContractHistory.js";
 
 const routerContractHistory: Router = express.Router();
 

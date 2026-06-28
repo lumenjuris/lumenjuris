@@ -1,7 +1,7 @@
 import crypto from "crypto"
-import { prisma } from "../../../prisma/singletonPrisma"
-import { recordAudit } from "./audit"
-import { safeEmit } from "./events"
+import { prisma } from "../../../prisma/singletonPrisma.js"
+import { recordAudit } from "./audit.js"
+import { safeEmit } from "./events.js"
 
 export type NegotiationStatusValue =
   | "DRAFT" | "IN_NEGOTIATION" | "VALIDATED" | "BLOCKED" | "CLOSED"

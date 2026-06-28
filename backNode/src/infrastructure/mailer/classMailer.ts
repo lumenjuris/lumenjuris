@@ -1,10 +1,10 @@
 import nodemailer from "nodemailer";
-import { templateVerifyAccount } from "./template/verifyAccount";
-import { templateResetPassword } from "./template/resetPassword";
-import { templateTwoFactor } from "./template/twoFactor";
-import { templateInvoiceEmail } from "./template/invoiceEmail";
-import { templateWelcomeFreemium } from "./template/welcomeFreemium";
-import { generateInvoicePDF, type InvoiceData } from "../pdf/invoicePDF";
+import { templateVerifyAccount } from "./template/verifyAccount.js";
+import { templateResetPassword } from "./template/resetPassword.js";
+import { templateTwoFactor } from "./template/twoFactor.js";
+import { templateInvoiceEmail } from "./template/invoiceEmail.js";
+import { templateWelcomeFreemium } from "./template/welcomeFreemium.js";
+import { generateInvoicePDF, type InvoiceData } from "../pdf/invoicePDF.js";
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,

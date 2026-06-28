@@ -4,9 +4,9 @@ import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
 import nodemailer from "nodemailer"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { SignatureEnvelopeService } from "../services/classSignatureEnvelope"
-import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { SignatureEnvelopeService } from "../services/classSignatureEnvelope.js"
+import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope.js"
 
 const router: Router = express.Router()
 const svc = new SignatureEnvelopeService()

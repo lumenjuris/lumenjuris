@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt"
-import { prisma } from "../../prisma/singletonPrisma"
-import { Role } from "../../prisma/generated/enums"
+import { prisma } from "../../prisma/singletonPrisma.js"
+import {Role} from "@prisma/client"
 
 type BootstrapUser = {
     email: string

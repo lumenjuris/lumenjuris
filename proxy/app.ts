@@ -1,4 +1,5 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
 
 // Charge ton app ES module de façon asynchrone
 import("./index.js").catch((err) => {

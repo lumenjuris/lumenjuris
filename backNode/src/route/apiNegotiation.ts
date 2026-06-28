@@ -1,11 +1,11 @@
 import express from "express"
 import type { Request, Response, Router, NextFunction } from "express"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { NegotiationService } from "../services/negotiation/classNegotiation"
-import { enterNegotiation, abortNegotiation, exitToSignature } from "../services/negotiation/stateMachine"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { NegotiationService } from "../services/negotiation/classNegotiation.js"
+import { enterNegotiation, abortNegotiation, exitToSignature } from "../services/negotiation/stateMachine.js"
 import type {
   ProposalStatusValue, CommentVisibilityValue, ParticipantSideValue, ParticipantRoleValue,
-} from "../services/negotiation/classNegotiation"
+} from "../services/negotiation/classNegotiation.js"
 
 const router: Router = express.Router()
 const svc = new NegotiationService()

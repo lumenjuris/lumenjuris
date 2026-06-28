@@ -1,5 +1,5 @@
-import { prisma } from "../../prisma/singletonPrisma";
-import { SubscriptionStatus } from "../../prisma/generated/enums";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { SubscriptionStatus } from "@prisma/client";
 
 type ReturnData<T = any> = {
   success: boolean;

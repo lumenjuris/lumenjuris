@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma/singletonPrisma";
+import { prisma } from "../../prisma/singletonPrisma.js";
 
 // Structure d'un jour dans l'historique, renvoyée par getUsageHistory
 type DayEntry = {
@@ -90,7 +90,7 @@ export class Llm {
         },
       });
 
-      const usage = models.map((model) => {
+      const usage = models.map((model:any) => {
         const currentUsage = model.llmUsage[0];
 
         return {
@@ -121,7 +121,7 @@ export class Llm {
   }
 
 
-  
+
   /**
    * Incrementation des tokens utilisés lors du fonctionement de l'application
    * @param {string} model
@@ -231,7 +231,7 @@ export class Llm {
         include: { llm: { select: { name: true } } },
       });
 
-      const usage = records.map((r) => ({
+      const usage = records.map((r:any) => ({
         model: r.llm.name,
         tokenInput: r.tokenInput,
         tokenOutput: r.tokenOutput,
@@ -273,7 +273,7 @@ export class Llm {
         orderBy: { totalCostUsd: "desc" },
       });
 
-      const usage = records.map((r) => ({
+      const usage = records.map((r:any) => ({
         userId: r.userId,
         email: r.user.email,
         nom: r.user.nom,

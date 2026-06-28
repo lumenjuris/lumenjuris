@@ -3,10 +3,10 @@ import type { Request, Response, Router } from "express"
 import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { ContractTemplateService } from "../services/classContractTemplate"
-import type { TemplateStructure } from "../services/classContractTemplate"
-import { TemplatePlaybookService } from "../services/classTemplatePlaybook"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { ContractTemplateService } from "../services/classContractTemplate.js"
+import type { TemplateStructure } from "../services/classContractTemplate.js"
+import { TemplatePlaybookService } from "../services/classTemplatePlaybook.js"
 
 const router: Router = express.Router()
 const svc = new ContractTemplateService()

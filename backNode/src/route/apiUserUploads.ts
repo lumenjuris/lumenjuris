@@ -4,8 +4,8 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
-import { prisma } from "../../prisma/singletonPrisma";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const routerUserUploads: Router = express.Router();
 

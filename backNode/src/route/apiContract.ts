@@ -3,10 +3,10 @@ import type { Request, Response, Router, NextFunction } from "express"
 import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { ContractService } from "../services/classContract"
-import type { ContractListFilters } from "../services/classContract"
-import { encryptBuffer, decryptBuffer } from "../services/cryptoFile"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { ContractService } from "../services/classContract.js"
+import type { ContractListFilters } from "../services/classContract.js"
+import { encryptBuffer, decryptBuffer } from "../services/cryptoFile.js"
 
 const router: Router = express.Router()
 const svc = new ContractService()

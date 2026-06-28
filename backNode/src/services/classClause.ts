@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { prisma } from "../../prisma/singletonPrisma"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 export type ClauseCategoryValue =
     | "CONFIDENTIALITE" | "RESPONSABILITE" | "RESILIATION" | "PROPRIETE_INTELLECTUELLE"

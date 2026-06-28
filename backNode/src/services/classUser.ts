@@ -1,6 +1,6 @@
-import { prisma } from "../../prisma/singletonPrisma";
+import { prisma } from "../../prisma/singletonPrisma.js";
 import bcrypt from "bcrypt";
-import { formatCompanyProfile } from "./classEnterprise";
+import { formatCompanyProfile } from "./classEnterprise.js";
 
 type CreateDataDTO = {
   email: string;

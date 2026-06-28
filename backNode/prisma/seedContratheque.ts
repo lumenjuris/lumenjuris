@@ -9,7 +9,7 @@
  */
 import "dotenv/config";
 import crypto from "crypto";
-import { prisma } from "./singletonPrisma";
+import { prisma } from "./singletonPrisma.js";
 
 const SEED_PREFIX = "seed-";
 const TARGET_USER_ID = Number(process.argv[2] ?? 1);

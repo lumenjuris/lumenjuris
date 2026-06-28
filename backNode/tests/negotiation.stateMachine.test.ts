@@ -3,8 +3,8 @@
  * Lancement : npx tsx tests/negotiation.stateMachine.test.ts  (depuis backNode/)
  */
 import assert from "node:assert/strict"
-import { ALLOWED_TRANSITIONS, canTransition } from "../src/services/negotiation/stateMachine"
-import type { NegotiationStatusValue } from "../src/services/negotiation/stateMachine"
+import { ALLOWED_TRANSITIONS, canTransition } from "../src/services/negotiation/stateMachine.js"
+import type { NegotiationStatusValue } from "../src/services/negotiation/stateMachine.js"
 
 let passed = 0
 function check(name: string, fn: () => void) {

@@ -1,8 +1,8 @@
 import crypto from "crypto"
-import { prisma } from "../../../prisma/singletonPrisma"
-import { recordAudit } from "./audit"
-import { safeEmit } from "./events"
-import { transition, exitToSignature } from "./stateMachine"
+import { prisma } from "../../../prisma/singletonPrisma.js"
+import { recordAudit } from "./audit.js"
+import { safeEmit } from "./events.js"
+import { transition, exitToSignature } from "./stateMachine.js"
 
 export type ProposalStatusValue = "PROPOSED" | "ACCEPTED" | "REJECTED" | "COUNTERED"
 export type CommentVisibilityValue = "INTERNAL" | "EXTERNAL"
@@ -27,7 +27,7 @@ export class NegotiationService {
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { versions: true, proposals: true, comments: true, participants: true } } },
     })
-    return rows.map((s) => ({
+    return rows.map((s:any) => ({
       id: s.externalId,
       contractExternalId: s.contractExternalId,
       title: s.title,
@@ -152,7 +152,7 @@ export class NegotiationService {
       include: { versions: { select: { versionNumber: true } } },
     })
     if (!s) return null
-    const nextNumber = s.versions.reduce((m, v) => Math.max(m, v.versionNumber), 0) + 1
+    const nextNumber = s.versions.reduce((m:any, v:any) => Math.max(m, v.versionNumber), 0) + 1
     const v = await prisma.negotiationVersion.create({
       data: {
         externalId: crypto.randomUUID(),

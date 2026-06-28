@@ -1,8 +1,8 @@
 import express from "express"
 import type { Request, Response, Router, NextFunction } from "express"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { ClauseService } from "../services/classClause"
-import type { ClauseListFilters, ClauseInput } from "../services/classClause"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { ClauseService } from "../services/classClause.js"
+import type { ClauseListFilters, ClauseInput } from "../services/classClause.js"
 
 const router: Router = express.Router()
 const svc = new ClauseService()

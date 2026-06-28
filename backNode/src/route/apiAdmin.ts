@@ -1,7 +1,7 @@
 import express from "express"
 import type { Request, Response, Router, NextFunction } from "express"
-import { prisma } from "../../prisma/singletonPrisma"
-import { authMiddleware } from "../middleware/authMiddleware"
+import { prisma } from "../../prisma/singletonPrisma.js"
+import { authMiddleware } from "../middleware/authMiddleware.js"
 
 const router: Router = express.Router()
 

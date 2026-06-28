@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma/singletonPrisma";
+import { prisma } from "../../prisma/singletonPrisma.js";
 import crypto from "crypto";
 
 type TokenType = "verifyAccount" | "forgotPassword" | "twoFactor";

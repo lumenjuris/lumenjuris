@@ -1,6 +1,6 @@
-import { prisma } from "../../prisma/singletonPrisma";
-import { SubscriptionStatus } from "../../prisma/generated/enums";
-import { Mailer } from "../infrastructure/mailer/classMailer";
+import { prisma } from "../../prisma/singletonPrisma.js";
+import { SubscriptionStatus } from "@prisma/client";
+import { Mailer } from "../infrastructure/mailer/classMailer.js";
 
 type ReturnData<T = any> = {
   success: boolean;

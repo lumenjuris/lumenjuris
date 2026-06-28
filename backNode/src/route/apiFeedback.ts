@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const routerFeedback: Router = express.Router();
 

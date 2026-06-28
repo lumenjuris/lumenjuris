@@ -1,4 +1,4 @@
-import { prisma } from "../../../prisma/singletonPrisma"
+import { prisma } from "../../../prisma/singletonPrisma.js"
 
 export type NegotiationAuditActionValue =
   | "SESSION_CREATED" | "STATUS_CHANGED" | "VERSION_CREATED" | "PROPOSAL_CREATED"

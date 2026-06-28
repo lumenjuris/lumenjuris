@@ -1,7 +1,7 @@
 import type { Request, Response, Router } from "express";
 import express from "express";
-import { Llm } from "./../services/classLlm";
-import { authMiddleware } from "../middleware/authMiddleware";
+import { Llm } from "./../services/classLlm.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const routerLlm: Router = express.Router();
 

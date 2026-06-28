@@ -1,7 +1,7 @@
 import express from "express"
 import type { Request, Response, Router } from "express"
-import { authMiddleware } from "../middleware/authMiddleware"
-import { ChatHistory } from "../services/classChatHistory"
+import { authMiddleware } from "../middleware/authMiddleware.js"
+import { ChatHistory } from "../services/classChatHistory.js"
 
 const routerChatHistory: Router = express.Router()
 

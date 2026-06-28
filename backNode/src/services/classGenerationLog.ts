@@ -1,6 +1,6 @@
 import crypto from "crypto"
-import { prisma } from "../../prisma/singletonPrisma"
-import { encryptJson, decryptJson } from "./classContractTemplate"
+import { prisma } from "../../prisma/singletonPrisma.js"
+import { encryptJson, decryptJson } from "./classContractTemplate.js"
 
 export interface GenerationLogDTO {
     id: string

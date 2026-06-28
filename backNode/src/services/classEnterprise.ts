@@ -1,7 +1,6 @@
-import { prisma } from "../../prisma/singletonPrisma"
-import { Prisma } from "../../prisma/generated/client"
+import { prisma } from "../../prisma/singletonPrisma.js"
 import axios from "axios"
-import { Insee } from "./classInsee"
+import { Insee } from "./classInsee.js"
 import {
     ConventionCollectiveItem,
     getConventionCollectiveContextFromCodeNaf,
@@ -10,7 +9,7 @@ import {
     normalizeConventionCollectiveItem,
     normalizeConventionCollectiveList,
     resolveSelectedIdccKey,
-} from "./nafResolver"
+} from "./nafResolver.js"
 
 export type CompanyProfileInput = {
     siren?: string | null

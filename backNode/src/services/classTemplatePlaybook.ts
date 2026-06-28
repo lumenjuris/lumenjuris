@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma/singletonPrisma"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 export interface PlaybookDTO {
     id: number

@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma/singletonPrisma"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 export class ChatHistory {
     async get(userId: number): Promise<object[]> {

@@ -1,4 +1,4 @@
-import type { InvoiceData } from "../../pdf/invoicePDF";
+import type { InvoiceData } from "../../pdf/invoicePDF.js";
 
 const VAT_RATE = 0.2;
 

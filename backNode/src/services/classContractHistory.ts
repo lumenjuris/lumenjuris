@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { prisma } from "../../prisma/singletonPrisma"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 const ALGO = "aes-256-gcm"
 const MAX_ITEMS = 20
