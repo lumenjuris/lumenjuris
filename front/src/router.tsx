@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ContractAnalysis from "./page/ContractAnalysis";
 
@@ -31,7 +31,18 @@ import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
 import { SignerPage } from "./page/SignerPage";
 
+
+import { usePageLoaded } from "./hooks/usePageLoaded";
+import { Loader } from "./components/common/Loader";
+
+
 export function App() {
+
+  //Hook pour détecter le chargement complet de la page
+  const pageReady = usePageLoaded()
+  const [showLoaderPage, setShowLoaderPage] = useState(true)
+
+
   const authStatus = useUserStore((state) => state.authStatus);
   const fetchUser = useUserStore((state) => state.fetchUser);
   const isDyslexicMode = usePreferencesStore((state) => state.isDyslexicMode);
@@ -56,34 +67,33 @@ export function App() {
     document.body.classList.toggle("dyslexic-font", isDyslexicMode);
   }, [isDyslexicMode]);
 
+  useEffect(()=>{
+    if(pageReady) setTimeout(()=>setShowLoaderPage(false), 400)
+  }, [pageReady])
 
+
+  if (showLoaderPage) return <Loader label="Chargement de l'application en cours ..." />
 
 
   //Point d'entrée de l'application dynamique selon l'auth de l'user depuis le authStatus
-  const HomeRedirect = ()=> {
-    if(authStatus === "idle" || authStatus == "loading"){
-      return <div>
-        Chargement de l'application en cours ...
-        </div>
-    }
-    return authStatus == "authenticated" 
-    ? <Navigate to="/dashboard" replace />
-    : <Navigate to="/inscription" replace />
+  const HomeRedirect = () => {
+    return authStatus === "authenticated"
+      ? <Navigate to="/dashboard" replace />
+      : <Navigate to="/inscription" replace />
 
   }
-
 
   return (
     <>
       <ScrollToTop />
+
+
       <Routes>
-
-
         <Route element={<RequireAuth><MainLayout /></RequireAuth>} >
+
 
           {/* Entrée principale de l'application sur le dashboard avec direction selon state de l'auth User*/}
           <Route path="/" element={<HomeRedirect />} />
-
 
 
           {/* Sous-ensemble (charge panneau latéral et header) */}

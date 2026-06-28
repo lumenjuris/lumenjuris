@@ -32,38 +32,38 @@ const PRESETS: {
   title: string;
   detail?: string;
 }[] = [
-  {
-    label: "Erreur simple",
-    variant: "error",
-    title: "Les mois d'ancienneté doivent être compris entre 0 et 11.",
-    detail: "Vérifiez les champs saisis et relancez le calcul.",
-  },
-  {
-    label: "Erreur multi",
-    variant: "error",
-    title:
-      "Le taux de temps partiel doit être supérieur à 0 et inférieur ou égal à 1.",
-    detail: "+2 autres erreurs — vérifiez les champs saisis.",
-  },
-  {
-    label: "Succès",
-    variant: "success",
-    title: "Document généré avec succès.",
-    detail: "Votre contrat CDI a été créé et est prêt à être téléchargé.",
-  },
-  {
-    label: "Info",
-    variant: "info",
-    title: "Convention collective détectée.",
-    detail:
-      "Une indemnité conventionnelle peut être plus favorable que l'indemnité légale calculée.",
-  },
-  {
-    label: "Sans détail",
-    variant: "error",
-    title: "Une erreur est survenue.",
-  },
-];
+    {
+      label: "Erreur simple",
+      variant: "error",
+      title: "Les mois d'ancienneté doivent être compris entre 0 et 11.",
+      detail: "Vérifiez les champs saisis et relancez le calcul.",
+    },
+    {
+      label: "Erreur multi",
+      variant: "error",
+      title:
+        "Le taux de temps partiel doit être supérieur à 0 et inférieur ou égal à 1.",
+      detail: "+2 autres erreurs — vérifiez les champs saisis.",
+    },
+    {
+      label: "Succès",
+      variant: "success",
+      title: "Document généré avec succès.",
+      detail: "Votre contrat CDI a été créé et est prêt à être téléchargé.",
+    },
+    {
+      label: "Info",
+      variant: "info",
+      title: "Convention collective détectée.",
+      detail:
+        "Une indemnité conventionnelle peut être plus favorable que l'indemnité légale calculée.",
+    },
+    {
+      label: "Sans détail",
+      variant: "error",
+      title: "Une erreur est survenue.",
+    },
+  ];
 
 const inputClass =
   "w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 outline-none focus:border-lumenjuris-dark focus:ring-1 focus:ring-lumenjuris-dark";
@@ -101,7 +101,7 @@ export function Sandbox() {
     Record<string, string | null>
   >({});
 
-  const { isConnected: userConnected, userData } = useUserStore();
+  const { userData } = useUserStore();
 
   const applyAiFilter = async () => {
     const allItems: {
@@ -246,9 +246,9 @@ export function Sandbox() {
           body:
             action === "login"
               ? JSON.stringify({
-                  email: "test@lumenjuris.local",
-                  password: "password123",
-                })
+                email: "test@lumenjuris.local",
+                password: "password123",
+              })
               : undefined,
         },
       );
