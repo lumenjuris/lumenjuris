@@ -41,3 +41,9 @@ proxy/dist
 
 # Contrats chiffrés uploadés (données runtime, ne pas versionner)
 backNode/contracts/
+
+# Environnement Python (genere localement)
+back/venv/
+
+# Build info TypeScript (artefacts)
+*.tsbuildinfo

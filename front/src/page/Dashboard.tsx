@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   Library, FileText, ShieldCheck, ScrollText, PenTool, MessageSquare,
-  ArrowRight, Newspaper, Tag, Handshake,
+  ArrowRight, Handshake,
 } from "lucide-react";
 import { useUserStore } from "../store/userStore";
 
@@ -58,12 +58,6 @@ const TOOLS: Tool[] = [
   },
 ];
 
-const VEILLE = [
-  { tag: "Temps de travail", tagColor: "#059669", title: "Nouvelle obligation d'information des salariés en CDD", date: "28 fév. 2026" },
-  { tag: "Rupture", tagColor: "#d97706", title: "Réforme des indemnités prud'homales : barème actualisé", date: "25 fév. 2026" },
-  { tag: "Discipline", tagColor: "#7c3aed", title: "Procédure disciplinaire : nouveaux délais de prescription", date: "22 fév. 2026" },
-];
-
 export function Dashboard() {
   const userData = useUserStore((s) => s.userData);
   const firstName = userData?.profile?.prenom;
@@ -102,36 +96,6 @@ export function Dashboard() {
                 Découvrir
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Veille juridique */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-ink">Veille juridique</h2>
-          <Link to="/veille" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover transition-colors">
-            Tout voir <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {VEILLE.map((v, i) => (
-            <Link
-              key={i}
-              to="/veille"
-              className="group bg-white rounded-card border border-line shadow-card p-4 hover:border-line-emphasis transition-all"
-            >
-              <span
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-chip"
-                style={{ backgroundColor: v.tagColor + "18", color: v.tagColor }}
-              >
-                <Tag className="w-3 h-3" /> {v.tag}
-              </span>
-              <p className="text-sm font-medium text-ink leading-snug mt-2.5 group-hover:text-brand transition-colors">{v.title}</p>
-              <p className="text-xs text-ink-subtle mt-2 inline-flex items-center gap-1.5">
-                <Newspaper className="w-3 h-3" /> {v.date}
-              </p>
             </Link>
           ))}
         </div>

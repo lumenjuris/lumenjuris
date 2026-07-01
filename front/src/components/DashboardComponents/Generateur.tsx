@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import {
@@ -14,6 +14,10 @@ import { useTemplateNotificationStore } from "../../store/templateNotificationSt
 import { clauseApi } from "./clauses/api";
 import { CATEGORY_LABEL, POSITION_LABEL } from "./clauses/types";
 import type { Clause } from "./clauses/types";
+import { CompanySearchField } from "../common/CompanySearchField";
+import { mapCompanyToContractParty } from "../../utils/companyLookup";
+import type { CompanyResult } from "../../types/companySearch";
+import { SmartCddEditor } from "./cdd/smart/SmartCddEditor";
 
 // ─── Types modèles importés ───────────────────────────────────────────────────
 
@@ -193,6 +197,8 @@ function FormSection({ docId, onBack }: { docId: DocId; onBack: () => void }) {
   const enterprise = userStored.userData?.enterprise;
   const [step, setStep]   = useState(1);
   const [form, setForm]   = useState({
+    partie_1_nom: "", partie_1_forme_juridique: "", partie_1_code_postal: "",
+    partie_1_siren: "",
     partie_1_capital: "", partie_1_ville: "", partie_1_rcs_ville: "",
     partie_1_representant: "", partie_1_qualite: "",
     partie_2_nom: "", partie_2_forme_juridique: "", partie_2_capital: "",
@@ -206,6 +212,47 @@ function FormSection({ docId, onBack }: { docId: DocId; onBack: () => void }) {
 
   const set = (name: string, value: string) => setForm((p) => ({ ...p, [name]: value }));
   const docType = DOC_TYPES.find((d) => d.id === docId)!;
+
+  // Pré-remplit « Votre société » avec l'entreprise enregistrée (une seule fois,
+  // sans écraser une saisie déjà commencée).
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || !enterprise) return;
+    seededRef.current = true;
+    setForm((prev) => ({
+      ...prev,
+      partie_1_nom: prev.partie_1_nom || (enterprise.name ?? ""),
+      partie_1_forme_juridique:
+        prev.partie_1_forme_juridique || (enterprise.statusJuridique ?? ""),
+      partie_1_code_postal:
+        prev.partie_1_code_postal || (enterprise.address?.codePostal ?? ""),
+      partie_1_siren: prev.partie_1_siren || (enterprise.siren ?? ""),
+    }));
+  }, [enterprise]);
+
+  // Applique l'entreprise sélectionnée dans le combobox aux champs d'une partie.
+  const applyParty = (
+    prefix: "partie_1" | "partie_2",
+    result: CompanyResult,
+    siret?: string,
+  ) => {
+    const p = mapCompanyToContractParty(result, siret);
+    const entries: Array<[string, string | null]> = [
+      [`${prefix}_nom`, p.nom],
+      [`${prefix}_forme_juridique`, p.forme_juridique],
+      [`${prefix}_code_postal`, p.code_postal],
+      [`${prefix}_ville`, p.ville],
+      [`${prefix}_rcs_ville`, p.rcs_ville],
+      [`${prefix}_siren`, p.siren],
+      [`${prefix}_representant`, p.representant],
+      [`${prefix}_qualite`, p.qualite],
+    ];
+    setForm((prev) => {
+      const next = { ...prev } as Record<string, string>;
+      for (const [k, v] of entries) if (v) next[k] = v;
+      return next as typeof prev;
+    });
+  };
 
   return (
     <div className="max-w-2xl">
@@ -223,33 +270,47 @@ function FormSection({ docId, onBack }: { docId: DocId; onBack: () => void }) {
 
         {/* Étape 1 — Votre société */}
         {step === 1 && (
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Nom"              name="partie_1_nom"              value={enterprise?.name ?? ""}              placeholder="Raison sociale" />
-            <FormField label="Forme juridique"  name="partie_1_forme_juridique"  value={enterprise?.statusJuridique ?? ""}  placeholder="SAS, SARL…" />
-            <FormField label="Capital (€)"      name="partie_1_capital"          value={form.partie_1_capital}          onChange={set} placeholder="10 000" />
-            <FormField label="Code postal"      name="partie_1_code_postal"      value={enterprise?.address?.codePostal ?? ""} placeholder="75001" />
-            <FormField label="Ville"            name="partie_1_ville"            value={form.partie_1_ville}            onChange={set} placeholder="Paris" />
-            <FormField label="Ville RCS"        name="partie_1_rcs_ville"        value={form.partie_1_rcs_ville}        onChange={set} placeholder="Paris" />
-            <FormField label="SIREN"            name="partie_1_siren"            value={enterprise?.siren ?? ""}        placeholder="" />
-            <FormField label="Représentant"     name="partie_1_representant"     value={form.partie_1_representant}     onChange={set} placeholder="Prénom Nom" />
-            <FormField label="Qualité"          name="partie_1_qualite"          value={form.partie_1_qualite}          onChange={set} placeholder="Gérant, PDG…" />
-            <FormField label="Désignation"      name="partie_1_designation"      value="Partie divulgatrice"            placeholder="" />
+          <div className="flex flex-col gap-5">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4">
+              <CompanySearchField
+                onSelect={(result, siret) => applyParty("partie_1", result, siret)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Nom"              name="partie_1_nom"              value={form.partie_1_nom}              onChange={set} placeholder="Raison sociale" />
+              <FormField label="Forme juridique"  name="partie_1_forme_juridique"  value={form.partie_1_forme_juridique}  onChange={set} placeholder="SAS, SARL…" />
+              <FormField label="Capital (€)"      name="partie_1_capital"          value={form.partie_1_capital}          onChange={set} placeholder="10 000" />
+              <FormField label="Code postal"      name="partie_1_code_postal"      value={form.partie_1_code_postal}      onChange={set} placeholder="75001" />
+              <FormField label="Ville"            name="partie_1_ville"            value={form.partie_1_ville}            onChange={set} placeholder="Paris" />
+              <FormField label="Ville RCS"        name="partie_1_rcs_ville"        value={form.partie_1_rcs_ville}        onChange={set} placeholder="Paris" />
+              <FormField label="SIREN"            name="partie_1_siren"            value={form.partie_1_siren}            onChange={set} placeholder="" />
+              <FormField label="Représentant"     name="partie_1_representant"     value={form.partie_1_representant}     onChange={set} placeholder="Prénom Nom" />
+              <FormField label="Qualité"          name="partie_1_qualite"          value={form.partie_1_qualite}          onChange={set} placeholder="Gérant, PDG…" />
+              <FormField label="Désignation"      name="partie_1_designation"      value="Partie divulgatrice"            placeholder="" />
+            </div>
           </div>
         )}
 
         {/* Étape 2 — Partie adverse */}
         {step === 2 && (
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Nom"             name="partie_2_nom"             value={form.partie_2_nom}             onChange={set} />
-            <FormField label="Forme juridique" name="partie_2_forme_juridique" value={form.partie_2_forme_juridique} onChange={set} placeholder="SAS, SARL…" />
-            <FormField label="Capital (€)"     name="partie_2_capital"         value={form.partie_2_capital}         onChange={set} />
-            <FormField label="Code postal"     name="partie_2_code_postal"     value={form.partie_2_code_postal}     onChange={set} />
-            <FormField label="Ville"           name="partie_2_ville"           value={form.partie_2_ville}           onChange={set} />
-            <FormField label="Ville RCS"       name="partie_2_rcs_ville"       value={form.partie_2_rcs_ville}       onChange={set} />
-            <FormField label="SIREN"           name="partie_2_siren"           value={form.partie_2_siren}           onChange={set} />
-            <FormField label="Représentant"    name="partie_2_representant"    value={form.partie_2_representant}    onChange={set} />
-            <FormField label="Qualité"         name="partie_2_qualite"         value={form.partie_2_qualite}         onChange={set} />
-            <FormField label="Désignation"     name="partie_2_designation"     value="Partie réceptrice"             placeholder="" />
+          <div className="flex flex-col gap-5">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4">
+              <CompanySearchField
+                onSelect={(result, siret) => applyParty("partie_2", result, siret)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Nom"             name="partie_2_nom"             value={form.partie_2_nom}             onChange={set} />
+              <FormField label="Forme juridique" name="partie_2_forme_juridique" value={form.partie_2_forme_juridique} onChange={set} placeholder="SAS, SARL…" />
+              <FormField label="Capital (€)"     name="partie_2_capital"         value={form.partie_2_capital}         onChange={set} />
+              <FormField label="Code postal"     name="partie_2_code_postal"     value={form.partie_2_code_postal}     onChange={set} />
+              <FormField label="Ville"           name="partie_2_ville"           value={form.partie_2_ville}           onChange={set} />
+              <FormField label="Ville RCS"       name="partie_2_rcs_ville"       value={form.partie_2_rcs_ville}       onChange={set} />
+              <FormField label="SIREN"           name="partie_2_siren"           value={form.partie_2_siren}           onChange={set} />
+              <FormField label="Représentant"    name="partie_2_representant"    value={form.partie_2_representant}    onChange={set} />
+              <FormField label="Qualité"         name="partie_2_qualite"         value={form.partie_2_qualite}         onChange={set} />
+              <FormField label="Désignation"     name="partie_2_designation"     value="Partie réceptrice"             placeholder="" />
+            </div>
           </div>
         )}
 
@@ -1726,29 +1787,31 @@ export function Generateur() {
   }
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-8 max-w-5xl mx-auto">
 
-      {/* En-tête */}
-      <div>
-        {section && (
-          <button
-            onClick={() => {
-              if (section === "form") setSection("library");
-              else goHub();
-            }}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#354F99] transition-colors mb-2 font-medium"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            {section === "form" ? "Bibliothèque de modèles" : "Générateur de modèles"}
-          </button>
-        )}
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          {section ? LABELS[section] : "Générateur de modèles"}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
-        </p>
-      </div>
+      {/* En-tête — masqué pour l'éditeur CDD (qui a son propre retour) */}
+      {!(section === "form" && formDocId === "cdd") && (
+        <div>
+          {section && (
+            <button
+              onClick={() => {
+                if (section === "form") setSection("library");
+                else goHub();
+              }}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#354F99] transition-colors mb-2 font-medium"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              {section === "form" ? "Bibliothèque de modèles" : "Générateur de modèles"}
+            </button>
+          )}
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            {section ? LABELS[section] : "Générateur de modèles"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
+          </p>
+        </div>
+      )}
 
       {/* Hub — 2 cartes */}
       {!section && (
@@ -1794,7 +1857,9 @@ export function Generateur() {
       {/* Sous-sections */}
       {section === "library"   && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} refreshKey={libraryRefreshKey} />}
       {section === "import"    && <ImportSection onSaved={handleTemplateSaved} />}
-      {section === "form"      && <FormSection docId={formDocId} onBack={() => setSection("library")} />}
+      {section === "form"      && (formDocId === "cdd"
+        ? <SmartCddEditor onBack={() => setSection("library")} />
+        : <FormSection docId={formDocId} onBack={() => setSection("library")} />)}
       {section === "useCustom" && useTemplateId && (
         <UseCustomTemplateFlow
           templateId={useTemplateId}

@@ -14,6 +14,7 @@ import {
   Upload,
   ScrollText,
   Users,
+  PanelLeft,
 } from "lucide-react";
 
 import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
@@ -94,14 +95,18 @@ function NavItemRow({ item }: { item: NavItem }) {
   const location = useLocation();
   const hasChildren = !!item.children?.length;
   const isParentActive = location.pathname.startsWith(item.path);
-  const [open, setOpen] = useState(isParentActive);
+  const [hovered, setHovered] = useState(false);
+  const open = hovered || isParentActive;
 
   return (
-    <li>
+    <li
+      onMouseEnter={hasChildren ? () => setHovered(true) : undefined}
+      onMouseLeave={hasChildren ? () => setHovered(false) : undefined}
+    >
       {hasChildren ? (
         <>
-          <button
-            onClick={() => setOpen((v) => !v)}
+          <NavLink
+            to={item.path}
             className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
               isParentActive
                 ? "bg-brand-light text-brand font-medium"
@@ -113,7 +118,7 @@ function NavItemRow({ item }: { item: NavItem }) {
             <ChevronDown
               className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             />
-          </button>
+          </NavLink>
           {open && (
             <ul className="mt-0.5 ml-5 border-l border-line pl-3 flex flex-col gap-0.5">
               {item.children!.map((child) => (
@@ -149,11 +154,12 @@ function NavItemRow({ item }: { item: NavItem }) {
 export function MainLayout() {
   const userData = useUserStore((s) => s.userData);
   const isAdmin = userData?.profile?.role === "ADMIN";
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div className="flex min-h-screen w-full bg-white">
       {/* ── Sidebar (fond blanc — seul le bloc nav porte le fond teinté arrondi) ── */}
-      <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-white z-20">
+      <aside className={`${collapsed ? "hidden" : "hidden md:flex"} flex-col fixed inset-y-0 left-0 w-64 bg-white z-20`}>
         {/* Logo — séparé du menu par une ligne fine (alignée avec le header) */}
         <div className="h-16 px-4 flex items-center border-b border-line">
           <Link to="/dashboard" className="flex items-center">
@@ -175,9 +181,17 @@ export function MainLayout() {
       </aside>
 
       {/* ── Zone principale ───────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
+      <div className={`flex-1 flex flex-col min-w-0 ${collapsed ? "" : "md:ml-64"}`}>
         {/* Header — ligne fine en bas pour séparer du contenu, alignée avec la sidebar */}
-        <header className="h-16 bg-white flex items-center justify-end px-4 lg:px-6 sticky top-0 z-10 border-b border-line">
+        <header className="h-16 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 border-b border-line">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? "Afficher le menu" : "Masquer le menu"}
+            aria-label={collapsed ? "Afficher le menu" : "Masquer le menu"}
+            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-surface-muted hover:text-ink"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
           <HeaderNavigationBar />
         </header>
 
