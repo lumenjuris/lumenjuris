@@ -1,0 +1,34 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Vite/React)",
+      "cwd": "lumenjuris/front",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "autoPort": false
+    },
+    {
+      "name": "Proxy (Express)",
+      "cwd": "lumenjuris/proxy",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "BackNode (Express/API)",
+      "cwd": "lumenjuris/backNode",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3020
+    },
+    {
+      "name": "Back Python (FastAPI)",
+      "cwd": "lumenjuris",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "uvicorn", "back.app.main:app", "--reload", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}
