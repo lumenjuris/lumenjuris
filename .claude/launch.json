@@ -24,6 +24,13 @@
       "port": 3020
     },
     {
+      "name": "Word Add-in (statique dist)",
+      "cwd": "lumenjuris/word-addin",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "http-server", "dist", "-p", "8099", "-c-1"],
+      "port": 8099
+    },
+    {
       "name": "Back Python (FastAPI)",
       "cwd": "lumenjuris",
       "runtimeExecutable": "python",
