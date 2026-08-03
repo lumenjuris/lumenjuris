@@ -1,2 +1,10 @@
 # Identifiants locaux (base de données) — ne jamais publier
 .dbinfo.tmp
+
+# Identifiants du site et mot de passe d'application WordPress
+config.txt
+
+# Fichiers d'environnement (mots de passe, cles d'API)
+.env
+.env.*
+!.env.example
