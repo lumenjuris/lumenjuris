@@ -87,28 +87,6 @@ async function createPaymentIntent(amount: number): Promise<string | null> {
 
 
 
-/* ─── OBSOLÈTE, A RETIRER QUAND TOUT SERA FINIT AUDIT VALIDE───────────────────────────────────────────────────────────────
- * Enregistrait l'abonnement en BDD après un paiement carte (mode "plan").
- * Les abonnements passent désormais par Stripe Checkout (voir PlansPanel) et
- * sont activés côté webhook. BillingForm n'est plus utilisé qu'en mode "credits".
- * Conservé commenté le temps de la refonte crédits, à supprimer ensuite.
- *
-async function saveSubscription(
-  planName: string,
-  interval: string,
-  amount: number,
-  stripePaymentIntentId: string,
-): Promise<void> {
-  await fetch(`${PROXY_URL}/api/billing/subscription`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ planName, interval, amount, stripePaymentIntentId }),
-  }).catch((err) =>
-    console.error("Erreur lors de l'enregistrement de l'abonnement:", err),
-  );
-}
- * ─────────────────────────────────────────────────────────────────────────── */
 
 /**
  * Signale au backend une tentative de paiement échouée (suivi admin).

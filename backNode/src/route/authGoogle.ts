@@ -67,10 +67,8 @@ routerAuthGoogle.get(
       },
     );
 
-    console.log(userInfo);
 
     const { sub, email, name, picture } = userInfo.data;
-    console.log(userInfo.data);
 
     // Recherche dans la BDD d'un utilisateur inscrit avec un compte Google
     const findUser = await prisma.user.findUnique({
@@ -92,8 +90,6 @@ routerAuthGoogle.get(
       cgu: true,
       isVerified: true,
     });
-
-    console.log(newUser);
 
     if (!("data" in newUser)) {
       return res.redirect(
