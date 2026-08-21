@@ -30,6 +30,7 @@ import { negotiationApi } from "../../negotiation/api";
 import { ShareContractPanel, guessSide, SIDE_CYCLE, type ShareMode } from "../../negotiation/ShareContractPanel";
 import { PipelineStepBar } from "../../negotiation/PipelineStepBar";
 import type { FieldSide } from "../../negotiation/types";
+import { fetchProxy } from "../../../../utils/fetchProxy";
 
 const isEmptyClause = (c: string) => c.trim() === "Sans objet.";
 
@@ -370,6 +371,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   const [shareSides, setShareSides] = useState<Record<string, FieldSide>>({});
   const [sharedNego, setSharedNego] = useState<{ id: string; mode: "NEGOTIATION" | "COMPLETION" } | null>(null);
 
+
   /** Ouvre le panneau de partage en (ré)initialisant l'assignation heuristique
    *  d'après les valeurs actuellement saisies dans le document. */
   const openShare = () => {
@@ -494,10 +496,32 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   };
 
   /** Construit le PDF du contrat (réutilisé pour l'export et la signature). */
+    const [isFreemium, setIsFreemium] = useState<boolean | null>(null);
+    useEffect(() => {
+      let isCurrent = true;
+
+      fetchProxy("/api/billing/subscription", {credentials : "include"}).then((res) => res.ok ? res.json() : null).then((data) => {
+        if (!isCurrent) return;
+
+        const hasActivePaidPlan = data !== null && data?.status === "ACTIVE" && data?.planName !== "Freemium";
+        if (hasActivePaidPlan) {
+          setIsFreemium(false);
+        } else {
+          setIsFreemium(true);
+        }
+      }).catch(() => {
+        if (isCurrent) setIsFreemium(true);
+      });
+      return () => {
+        isCurrent = false;
+      };
+    }, []);
+
   const buildPdfDoc = () => {
     const json = editor!.getJSON() as JNode;
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 56, maxW = pdf.internal.pageSize.getWidth() - margin * 2, pageH = pdf.internal.pageSize.getHeight();
+    const pageWidth = pdf.internal.pageSize.getWidth();
     let y = margin;
     const block = (txt: string, bold: boolean, size: number, gap = 8) => {
       pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
@@ -512,8 +536,49 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       if (n.type === "heading") block(txt, true, n.attrs?.level === 2 ? 15 : 11.5, 4);
       else if (txt.trim()) block(txt, false, 10.5, 8);
     }
+    if (isFreemium) {
+      addFiligraneToPdf(pdf, pageWidth, margin, pageH);
+    }
     return pdf;
   };
+
+  const addFiligraneToPdf = (pdf: jsPDF, pageWidth: number, margin: number, pageH: number) => {
+    const totalPages = pdf.getNumberOfPages();
+    const rightX = pageWidth - margin;
+    const center = pageWidth / 2;
+    const paddingX = 8;
+    const paddingY = 4;
+    const fontSize = 10;
+    const borderRadius = 4;
+    const text = "Généré par Lumen Juris";
+
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.setTextColor("#213957");
+      pdf.setDrawColor("#213957");
+      pdf.setLineWidth(1);
+
+      const textWidth = pdf.getTextWidth(text);
+      const boxW = textWidth + paddingX * 2;
+      const boxH = fontSize + 2 * paddingY;
+      
+      if (i === 1) {
+        const centerY = 32;
+        const boxX = rightX - boxW;
+        const boxY = centerY - fontSize;
+        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S")
+        pdf.text(text, rightX - paddingX, centerY, {align: "right", baseline: "middle"});
+      } else {
+        const centerY = pageH - 32;
+        const boxX = center - boxW / 2;
+        const boxY = centerY - fontSize;
+        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S");
+        pdf.text(text, center, centerY, {align: "center", baseline:"middle"});
+      }
+    }
+  }
 
   const exportPdf = () => {
     if (!editor) return;
@@ -591,7 +656,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     const json = editor.getJSON() as JNode;
     const docx = await import("docx");
     const { saveAs } = await import("file-saver");
-    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer } = docx;
     const children = (json.content ?? []).map((n) => {
       const txt = inlineText(n.content);
       if (n.type === "heading") {
@@ -604,9 +669,19 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       }
       return new Paragraph({ children: [new TextRun(txt)] });
     });
+    
+    const waterMark = new TextRun({
+      text: "Généré par Lumen Juris", bold: true, size: 18, color: "213957"
+    })
+    const firstPageHeader = new Header({
+      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
+    })
+    const footer = new Footer({
+      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
+    })
     const wordDoc = new Document({
       styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
-      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } } }, children }],
+      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: !!isFreemium, },headers: isFreemium ? {first: firstPageHeader} : undefined, footers: isFreemium ? {default: footer} : undefined, children }],
     });
     const blob = await docx.Packer.toBlob(wordDoc);
     saveAs(blob, `${fileBase}.docx`);
@@ -620,7 +695,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "brand";
   }) => (
     <button
-      onClick={() => { setGenOpen(false); onClick(); }}
+      onClick={() => {  setGenOpen(false); onClick(); }}
       className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-subtle ${
         tone === "brand" ? "font-medium text-brand" : "text-ink-secondary"
       }`}
@@ -768,7 +843,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                         )}
                         <div className="my-1 border-t border-line-subtle" />
                         <MenuItem icon={Download} label="Télécharger en PDF" onClick={exportPdf} />
-                        <MenuItem icon={FileText} label="Télécharger en Word" onClick={() => void exportDocx()} />
+                        {!isFreemium &&(
+                          <MenuItem icon={FileText} label="Télécharger en Word"  onClick={() => void exportDocx()} />
+                        )}
                       </div>
                     </>
                   )}

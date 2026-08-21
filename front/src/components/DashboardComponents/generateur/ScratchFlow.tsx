@@ -62,19 +62,19 @@ interface Attachment {
 const ACCEPTED = ".pdf,.docx";
 const MAX_ATTACHMENTS = 3;
 
-export function ScratchWizard({ title, onReady, onBack }: {
+export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   title: string;
+  initialBrief?: string;
   onReady: (r: { model: ContractModel; fileBase: string }) => void;
   onBack: () => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [step, setStep] = useState<Step>("mode");
   const [questions, setQuestions] = useState<WizardQuestion[]>([]);
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   // Mode « Décrire le besoin »
-  const [brief, setBrief] = useState("");
+  const [brief, setBrief] = useState(initialBrief ?? "");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   // Parties au contrat, renseignées par recherche d'entreprise (nom ou SIREN).
   // Optionnel : sans elles le contrat sort avec des variables à compléter, avec
@@ -90,8 +90,9 @@ export function ScratchWizard({ title, onReady, onBack }: {
   // Dernière URL écrite par le wizard : la synchro ignore nos propres écritures
   // et ne réagit qu'aux navigations du navigateur (Précédent / Suivant).
   const lastUrl = useRef("");
+  const initialStep = (searchParams.get("step") as Step) || "mode";
+  const [step, setStep] = useState<Step>(initialStep);
 
-  useEffect(() => () => { opId.current += 1; }, []);
 
   /** Écrit l'étape courante dans l'URL (une entrée d'historique par étape). */
   const writeUrl = (patch: { step?: string | null; q?: number | null }) => {
@@ -110,31 +111,54 @@ export function ScratchWizard({ title, onReady, onBack }: {
 
   // Le navigateur pilote : Précédent / Suivant reviennent à l'étape (ou la
   // question) précédente au lieu de sortir du questionnaire.
-  useEffect(() => {
-    const cur = searchParams.toString();
-    if (cur === lastUrl.current) return; // notre propre écriture — rien à faire
-    lastUrl.current = cur;
-    opId.current += 1; // toute navigation annule les appels IA en vol
-    const s = searchParams.get("step");
-    if (s === "brief") { setStep("brief"); setError(""); return; }
-    if (s === "asking") {
-      if (questions.length) {
-        const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
-        setIdx(Math.min(qn - 1, questions.length - 1));
-        setStep("asking"); setError("");
-      } else {
-        // Questions perdues (rechargement) : on repart proprement du choix du mode.
-        const next = new URLSearchParams(searchParams);
-        next.delete("step"); next.delete("q");
-        lastUrl.current = next.toString();
-        setSearchParams(next, { replace: true });
-        setStep("mode");
-      }
-      return;
+// Repart de l'étape demandée ou du choix de mode si le titre change
+   // Effect unique : Gère à la fois la réinitialisation par titre et la synchronisation URL (Précédent / Suivant)
+// Effet UNIQUE : Gère le reset sur changement de titre ET la synchronisation URL (Précédent / Suivant)
+useEffect(() => {
+  const currentUrl = searchParams.toString();
+
+  if (currentUrl === lastUrl.current) return;
+  lastUrl.current = currentUrl;
+
+  opId.current += 1;
+
+  const s = searchParams.get("step") as Step | null;
+
+  if (s === "brief") {
+    setStep("brief");
+    setError("");
+    return;
+  }
+
+  if (s === "asking") {
+    if (questions.length > 0) {
+      const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
+      setIdx(Math.min(qn - 1, questions.length - 1));
+      setStep("asking");
+      setError("");
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.delete("step");
+      next.delete("q");
+      lastUrl.current = next.toString();
+      setSearchParams(next, { replace: true });
+      setStep("mode");
     }
-    setStep("mode"); setError("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, questions]);
+    return;
+  }
+
+  setStep("mode");
+  setError("");
+
+  setBrief(initialBrief ?? "");
+  setAttachments([]);
+  setQuestions([]);
+  setIdx(0);
+  setAnswers({});
+  setParties([]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [title, searchParams, questions]);
 
   // Le questionnaire n'est préparé que si l'utilisateur choisit le mode guidé.
   const startGuided = async () => {
@@ -153,13 +177,6 @@ export function ScratchWizard({ title, onReady, onBack }: {
       setStep("error");
     }
   };
-
-  // Repart proprement du choix de mode si le titre change (nouveau contrat).
-  useEffect(() => {
-    opId.current += 1;
-    setStep("mode"); setError(""); setBrief(""); setAttachments([]);
-    setQuestions([]); setIdx(0); setAnswers({}); setParties([]);
-  }, [title]);
 
   /** Enregistre l'entreprise choisie pour le rôle donné (remplace la précédente). */
   const applyParty = (role: string, result: CompanyResult, siret?: string) => {
@@ -278,7 +295,7 @@ export function ScratchWizard({ title, onReady, onBack }: {
   };
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="w-full max-w-2xl mx-auto space-y-4">
       <button onClick={step === "mode" ? onBack : backTarget} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-brand">
         <ArrowLeft className="h-4 w-4" /> Retour
       </button>

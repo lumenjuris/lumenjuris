@@ -167,16 +167,16 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
 /** Titre de la page + bouton "Nouveau contrat". */
 function Header({ onNewContract }: { onNewContract: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-4 bg-blue-primary px-4 py-8 rounded-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-ink tracking-tight">Signature électronique</h1>
-        <p className="text-sm text-ink-muted mt-1">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Signature électronique</h1>
+        <p className="text-sm text-gray-primary mt-1">
           Suivez l'avancement de vos contrats à signer.
         </p>
       </div>
       <button
         onClick={onNewContract}
-        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover transition-all shadow-card"
+        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-gray-300 transition-all shadow-card"
       >
         <Plus className="w-4 h-4" /> Nouveau contrat
       </button>

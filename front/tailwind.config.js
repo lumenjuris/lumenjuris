@@ -4,6 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        'blue-primary' : "#213957",
+        'red-primary' : "#E1000F",
+        'red-card-primary' : "#FF5E5E",
+        'yellow-card-primary' : "#ffedd5",
+        'yellow-card-text' : "#583600",
+        'blue-card-sub' : "#ACD1FF",
+        'blue-title-card-sub' : "#3970B4",
+        'green-card-primary' : "#609C58",
+        'gray-primary' : "#CACACA",
+        'gray-card' : "#F9F9F9",
         // ── Marque ──────────────────────────────────────
         brand: {
           DEFAULT: "#2C3A5E",

@@ -5,7 +5,6 @@ import { useEnterpriseSettings } from "../hooks/useEnterpriseSettings";
 import { AccountSettingsPanel } from "../components/ParamComponents/AccountSettingsPanel";
 import { EnterpriseSettingsPanel } from "../components/ParamComponents/EnterpriseSettingsPanel";
 import { ParamLayout } from "../components/ParamComponents/ParamLayout";
-import { PreferenceSettingsPanel } from "../components/ParamComponents/PreferenceSettingsPanel";
 import { SubscriptionSettingsPanel } from "../components/ParamComponents/SubscriptionSettingsPanel";
 import { ConfirmationModal } from "../components/ui/ConfirmationModal";
 import { TwoFactorCodeModal } from "../components/ui/TwoFactorCodeModal";
@@ -190,6 +189,10 @@ export function ParamCompte() {
     });
   };
 
+  const handleDyslexicModeCheckedChange = (checked: boolean) => {
+  void setDyslexicMode(checked);
+};
+
   const persistAccountSettings = async ({
     includePassword = false,
   }: {
@@ -322,7 +325,7 @@ export function ParamCompte() {
       enterprise.isEditingEnterprise
     ) {
       enterprise.handleCancelEnterpriseEdit();
-    }
+    };
 
     setActiveConfirmationModal(null);
     setActiveTab(nextTab);
@@ -449,6 +452,10 @@ export function ParamCompte() {
       setConfirmPassword={setConfirmPassword}
       provider={accountProvider}
       isTwoFactorEnabled={isTwoFactorEnabled}
+      isDyslexicModeEnabled={isDyslexicModeEnabled}
+      onDyslexicModeCheckedChange={handleDyslexicModeCheckedChange}
+      isEmailNotificationsEnabled={isEmailNotificationsEnabled}
+      onEmailNotificationsCheckedChange={handleEmailNotificationsCheckedChange}
       onProfileFieldChange={handleProfileFieldChange}
       onCancelProfileEdit={handleCancelProfileEdit}
       onUpdateProfileClick={() => setActiveConfirmationModal("profile_update")}
@@ -503,14 +510,6 @@ export function ParamCompte() {
     />
   );
 
-  const preferencePanel = (
-    <PreferenceSettingsPanel
-      isDyslexicModeEnabled={isDyslexicModeEnabled}
-      onDyslexicModeCheckedChange={handlePreferenceCheckedChange}
-      isEmailNotificationsEnabled={isEmailNotificationsEnabled}
-      onEmailNotificationsCheckedChange={handleEmailNotificationsCheckedChange}
-    />
-  );
 
   const subscriptionPanel = <SubscriptionSettingsPanel />;
 
@@ -524,20 +523,16 @@ export function ParamCompte() {
         panelMinHeight={panelMinHeight}
         accountMeasureRef={accountMeasureRef}
         enterpriseMeasureRef={enterpriseMeasureRef}
-        preferenceMeasureRef={preferenceMeasureRef}
         subscriptionMeasureRef={subscriptionMeasureRef}
         accountMeasurePanel={accountPanel}
         enterpriseMeasurePanel={enterprisePanel}
-        preferenceMeasurePanel={preferencePanel}
         preferenceSubscriptionPanel={subscriptionPanel}
       >
         {activeTab === "account"
           ? accountPanel
           : activeTab === "enterprise"
             ? enterprisePanel
-            : activeTab === "preferences"
-              ? preferencePanel
-              : subscriptionPanel}
+            : subscriptionPanel}
       </ParamLayout>
 
       {confirmationModalContent ? (

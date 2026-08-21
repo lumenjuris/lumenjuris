@@ -17,7 +17,6 @@ import {
   X,
   Sparkles,
   ShieldHalf,
-  //User,
   MessagesSquare
 } from "lucide-react";
 
@@ -41,36 +40,51 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
+  notificationKey?: string;
   children?: NavSubItem[];
-  /** Pastille : nombre d'alertes de veille juridique non lues. */
-  notificationKey?: "legalWatchUnread";
-  isAdmin?:boolean
 }
 
-const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Accueil", path: "/dashboard" },
-  { icon: Library, label: "Contrathèque", path: "/contratheque" },
+interface NavSection {
+  category?: string; // Ex: "CONTRATS", "PILOTAGE" (facultatif pour la section Accueil)
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
   {
-    icon: FileText,
-    label: "Générateur de contrat",
-    path: "/generateur",
-    children: [
-      { icon: Sparkles, label: "Créer de zéro", path: "/contrat-generation?section=scratch" },
-      { icon: Upload, label: "Importer un modèle", path: "/contrat-generation?section=import" },
-      { icon: BookOpen, label: "Bibliothèque de modèles", path: "/contrat-generation?section=library", notificationKey: "templateAdded" },
-      { icon: Droplets, label: "Mes images", path: "/generateur/filigranes" },
+    // Pas de catégorie pour l'accueil
+    items: [
+      { icon: LayoutDashboard, label: "Accueil", path: "/dashboard" }
     ],
   },
-  { icon: MessagesSquare, label: "Négociation", path: "/negociations" },
-  { icon: PenTool, label: "Signature", path: "/signature" },
-  { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
-  { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
-  { icon: ShieldCheck, label: "Comprendre ses contrats", path: "/comprendre-contrat"},
-  { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
-  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" },
-  
-  //{ icon: User, label: "Votre cluster", path:"/cluster" } EN COURS DE DEV 
-
+  {
+    category: "CONTRATS",
+    items: [
+      { icon: Library, label: "Contrathèque", path: "/contratheque" },
+      {
+        icon: FileText,
+        label: "Générateur de contrat",
+        path: "/generateur",
+        children: [
+          { icon: Sparkles, label: "Créer de zéro", path: "/contrat-generation?section=scratch" },
+          { icon: Upload, label: "Importer un modèle", path: "/contrat-generation?section=import" },
+          { icon: BookOpen, label: "Bibliothèque de modèles", path: "/contrat-generation?section=library", notificationKey: "templateAdded" },
+          { icon: Droplets, label: "Mes images", path: "/generateur/filigranes" },
+        ],
+      },
+      { icon: MessagesSquare, label: "Négociation", path: "/negociations" },
+      { icon: PenTool, label: "Signature", path: "/signature" },
+    ],
+  },
+  {
+    category: "PILOTAGE",
+    items: [
+      { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
+      { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
+      { icon: ShieldCheck, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+      { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
+      { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" },
+    ],
+  },
 ];
 
 // Breakpoint Tailwind `md` = 768px. On garde la même valeur en JS pour rester cohérent.
@@ -90,10 +104,11 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
       <NavLink
         to={child.path}
         onClick={onNavigate}
-        className={`relative flex w-full items-center gap-2 rounded-md px-2 py-2 sm:py-1.5 text-sm transition-colors ${isActive
-            ? "text-brand font-medium"
-            : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
-          }`}
+        className={`relative flex w-full items-center gap-2 rounded-md px-2 py-2 sm:py-1.5 text-sm transition-colors ${
+          isActive
+            ? "bg-white/15 text-white font-medium"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+        }`}
       >
         <child.icon className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1">{child.label}</span>
@@ -129,19 +144,20 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
           <NavLink
             to={item.path}
             onClick={onNavigate}
-            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isParentActive
-                ? "bg-brand-light text-brand font-medium"
-                : "text-ink-secondary hover:bg-surface-muted"
-              }`}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${
+              isParentActive
+                ? "bg-white/15 text-white font-medium"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            }`}
           >
-            <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isParentActive ? "text-brand" : "text-ink-subtle"}`} />
+            <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isParentActive ? "text-white" : "text-white/70"}`} />
             <span className="flex-1 text-left">{item.label}</span>
             <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              className={`h-3.5 w-3.5 text-white/70 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             />
           </NavLink>
           {open && (
-            <ul className="mt-0.5 ml-5 border-l border-line pl-3 flex flex-col gap-0.5">
+            <ul className="mt-0.5 ml-5 border-l border-white/20 pl-3 flex flex-col gap-0.5">
               {item.children!.map((child) => (
                 <NavChildLink key={child.path} child={child} onNavigate={onNavigate} />
               ))}
@@ -154,18 +170,19 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
           end={item.path === "/dashboard"}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isActive
-              ? "bg-brand-light text-brand font-medium"
-              : "text-ink-secondary hover:bg-surface-muted"
+            `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${
+              isActive
+                ? "bg-white/15 text-white font-medium"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
             }`
           }
         >
           {({ isActive }) => (
             <>
-              <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-brand" : "text-ink-subtle"}`} />
+              <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-white" : "text-white/70"}`} />
               <span className="flex-1">{item.label}</span>
               {badgeCount > 0 && (
-                <span className="text-[10px] font-bold text-white bg-brand px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-white bg-blue-500 px-1.5 py-0.5 rounded-full">
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>
               )}
@@ -241,38 +258,54 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside
         className={`
-              fixed inset-y-0 left-0 w-72 sm:w-64 bg-white z-30 flex flex-col
-              transition-transform duration-300 ease-in-out
-              ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-            `}
+          fixed inset-y-0 left-0 w-72 sm:w-64 bg-blue-primary z-30 flex flex-col
+          transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
       >
         {/* Logo + bouton fermeture (mobile only) */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-line">
+        <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
-            <LumenJurisLogo variant="light" height={30} />
+            <LumenJurisLogo variant="dark" height={30} />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             aria-label="Fermer le menu"
-            className="md:hidden rounded-lg p-2 text-gray-500 hover:bg-surface-muted hover:text-ink"
+            className="md:hidden rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="flex flex-col gap-0.5">
-            {navItems.map((item) => (
-               <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
+        <nav className="flex-1 overflow-y-auto px-3 py-4 bg-blue-primary">
+          <div className="flex flex-col gap-6">
+            {navSections.map((section, sectionIdx) => (
+              <div key={sectionIdx} className="flex flex-col gap-1">
+                {/* Titre de catégorie (ex: CONTRATS, PILOTAGE) */}
+                {section.category && (
+                  <h3 className="px-3 text-[11px] font-semibold tracking-wider text-sky-300 uppercase mb-1">
+                    {section.category}
+                  </h3>
+                )}
+
+                {/* Liste d'éléments */}
+                <ul className="flex flex-col gap-0.5">
+                  {section.items.map((item) => (
+                    <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
+                  ))}
+
+                  {/* Menu Admin dans Pilotage si administrateur */}
+                  {section.category === "PILOTAGE" && isAdmin && (
+                    <NavItemRow
+                      item={{ icon: ShieldHalf, label: "Monitoring", path: "/monitoring" }}
+                      onNavigate={handleNavigate}
+                    />
+                  )}
+                </ul>
+              </div>
             ))}
-            {isAdmin && (
-              <NavItemRow
-                item={{ icon: ShieldHalf, label: "Monitoring", path: "/monitoring" }}
-                onNavigate={handleNavigate}
-              />
-            )}
-          </ul>
+          </div>
         </nav>
       </aside>
 
@@ -291,9 +324,6 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
           <HeaderNavigationBar />
         </header>
 
-        {/* Pas d'overflow-auto ici : la page défile via la fenêtre (min-h-screen),
-            et un overflow non défilant ferait de <main> le conteneur de calcul des
-            position:sticky enfants (sommaire, barres d'outils/IA), les rendant inertes. */}
         <main className="flex-1 p-4 sm:p-5 lg:p-7">
           <ErrorBoundary key={location.pathname}>
             {children ?? <Outlet />}

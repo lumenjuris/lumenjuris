@@ -11,7 +11,7 @@ import { TwoFactorCodeModal } from "../ui/TwoFactorCodeModal";
 import { useUserStore } from "../../store/userStore";
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 
 import { fetchProxy } from "../../utils/fetchProxy";
 
@@ -84,6 +84,8 @@ const LoginForm = ({
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [showRateLimitLogin, setShowRateLimitLogin] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const navigate = useNavigate();
   const { fetchUser } = useUserStore();
   const location = useLocation();
@@ -92,7 +94,23 @@ const LoginForm = ({
   useEffect(() => {
     setForgotPassword(false);
     setEmailSent(false);
-  }, []);
+
+    const errorParam = searchParams.get("error");
+    const reasonParam = searchParams.get("reason");
+
+    const isBannedFromUrl = errorParam === "banned" || reasonParam === "banned";
+
+    if ( isBannedFromUrl) {
+      setIsBanned(true);
+
+      if (isBannedFromUrl){
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("error");
+        newParams.delete("reason");
+        setSearchParams(newParams, {replace: true});
+      }
+    }
+  }, [searchParams]);
 
   //Handle de la connexion d'un user
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -317,9 +335,9 @@ const LoginForm = ({
         variant="error"
         detail="Votre compte a été bloqué par les services de modération, si vous ne comprenez pas les raisons vous pouvez nous contacter par email à l'adresse contact@lumenjuris.com"
         duration={15000}
-        onClose={()=>
-          setIsBanned(false)
-        }
+        onClose={()=> {
+          setIsBanned(false);
+        }}
         />
       )
 

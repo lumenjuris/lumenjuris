@@ -8,11 +8,18 @@ import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 const formatParty = (partie: any) => {
+ if (!partie) return "Partie non identifiée";
   if (typeof partie === "string") return partie;
-  if (typeof partie === "object" && partie !== null) {
-    const name = partie.nom || partie.nom_prenom || partie.denomination || partie.raison_sociale;
-    const role = partie.qualite || partie.role || partie.type;
-    if (name) return role ? `${name} (${role})` : name;
+  
+  if (typeof partie === "object") {
+    const rawName = partie.nom || partie.nom_prenom || partie.denomination || partie.raison_sociale;
+    const name = (rawName && rawName !== "null") ? String(rawName).trim() : null;
+    
+    const rawRole = partie.qualite || partie.role || partie.type;
+    const role = (rawRole && rawRole !== "null") ? String(rawRole).trim() : null;
+
+    if (name && role) return `${name} (${role})`;
+    if (name) return name;
     if (role) return role;
   }
   return "Partie non identifiée";
@@ -170,25 +177,55 @@ export function ComprendreContrat() {
 
   return (
 
-    
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
-      <div className="flex flex-col items-center justify-center p-6 text-center border-b border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Analyse et compréhension de contrat
-        </h2>
-        <p className="text-sm text-gray-600 mb-6 max-w-md">
-          Importez votre document ou collez du texte pour obtenir un résumé automatique.
-        </p>
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="lg:col-span-1 space-y-4">
+          {contractsList?.map((contract: any) => (
+            <div
+              key={contract.idSummary}
+              onClick={() => handleSelectContract(contract.idSummary)}
+              className={`cursor-pointer p-3 rounded-lg border transition-all ${
+                selectedContract?.idSummary === contract.idSummary
+                  ? "border-blue-500 bg-blue-50/40 shadow-sm"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <p className="font-medium text-sm text-gray-800 truncate">{contract.fileName}</p>
+                  <Button className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white
+                  transition-colors hover:bg-red-700 hover:text-white"
+                  onClick={(e) => openDeleteModal(contract.idSummary, e)}>
+                    Supprimer
+                  </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(contract.createdAt).toLocaleDateString()}
+              </p>
+              
+            </div>
+            
+          ))}
+        </div>
+    <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-blue-primary p-8 rounded-2xl">
+        <div className="space-y-4 max-w-lg">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
+            Analyse et compréhension de contrat
+          </h2>
+          <p className="text-sm text-gray-primary leading-relaxed">
+            Référentiel de clauses approuvées, réutilisables pour la génération et la négociation.
+          </p>
+        </div>
+
+        {/* Bouton blanc à droite */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
         >
-          Analysez un nouveau contrat
+          <span className="text-base font-normal">+</span> Analysez un contrat
         </button>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700">Vos contrats enregistrés :</h3>
 
         {isDeleteError && (
         <AlertBanner
@@ -222,33 +259,7 @@ export function ComprendreContrat() {
         
         {isLoading && <p className="text-xs text-gray-500">Chargement de la liste...</p>}
 
-        <div className="grid md:grid-cols-2 gap-4">
-          {contractsList?.map((contract: any) => (
-            <div
-              key={contract.idSummary}
-              onClick={() => handleSelectContract(contract.idSummary)}
-              className={`cursor-pointer p-3 rounded-lg border transition-all ${
-                selectedContract?.idSummary === contract.idSummary
-                  ? "border-blue-500 bg-blue-50/40 shadow-sm"
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <p className="font-medium text-sm text-gray-800 truncate">{contract.fileName}</p>
-                  <Button className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white
-                  transition-colors hover:bg-red-700 hover:text-white"
-                  onClick={(e) => openDeleteModal(contract.idSummary, e)}>
-                    Supprimer
-                  </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {new Date(contract.createdAt).toLocaleDateString()}
-              </p>
-              
-            </div>
-            
-          ))}
-        </div>
+        
       </div>
 
       {activeSummary ? (
@@ -278,41 +289,66 @@ export function ComprendreContrat() {
             </p>
           )}
 
+          {Array.isArray(activeSummary.annexes) && activeSummary.annexes.length > 0 && (
+            <div className="text-xs pt-2">
+              <span className="font-medium text-blue-primary"> Annexes mentionnées : </span>
+              {activeSummary.annexes
+                .map((annexe) => {
+                  if (typeof annexe === "string") return annexe;
+
+                  if (typeof annexe === "object" && annexe !== null) {
+                    const entries = Object.entries(annexe);
+                    const textVal = entries.find(
+                      ([_, val]) => typeof val === "string" && val.trim() !== ""
+                    )?.[1];
+
+                    return textVal || "Annexe sans nom";
+                  }
+
+                  return String(annexe);
+                })
+                .filter(Boolean)
+                .join(", ")}
+            </div>
+          )}
+
           {activeSummary.resume_executif && (
-            <div className="rounded-lg bg-blue-50/50 p-4 border border-blue-100">
-              <h4 className="font-semibold text-blue-900 mb-1">📝 Résumé exécutif</h4>
-              <p className="text-sm text-blue-950 leading-relaxed">{activeSummary.resume_executif}</p>
+            <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+              <h4 className="font-semibold text-blue-primary mb-1">Résumé exécutif</h4>
+              <p className="text-sm leading-relaxed">{activeSummary.resume_executif}</p>
             </div>
           )}
 
-          {activeSummary.objet && (
-            <div>
-              <h4 className="font-semibold text-gray-700">📌 Objet du contrat</h4>
-              <p className="text-sm text-gray-600 mt-1">{activeSummary.objet}</p>
-            </div>
-          )}
-
-          {Array.isArray(activeSummary.parties) && activeSummary.parties.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-2">👥 Parties au contrat</h4>
-              <div className="flex flex-wrap gap-2">
-                {activeSummary.parties.map((partie, index) => (
-                  <span
-                    key={index}
-                    className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200 capitalize"
-                  >
-                    {formatParty(partie)}
-                  </span>
-                ))}
+          <div className="grid grid-cols-2 gap-4">
+            {activeSummary.objet && (
+              <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                <h4 className="font-semibold text-blue-primary">Objet du contrat</h4>
+                <p className="text-sm text-gray-600 mt-1">{activeSummary.objet}</p>
               </div>
-            </div>
-          )}
+            )}
+
+            {Array.isArray(activeSummary.parties) && activeSummary.parties.length > 0 && (
+              <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                <h4 className="font-semibold text-blue-primary mb-2">Parties au contrat</h4>
+                <div className="flex flex-wrap gap-2">
+                  {activeSummary.parties.map((partie, index) => (
+                    <span
+                      key={index}
+                      className="rounded-md bg-blue-primary px-3 py-1.5 text-xs font-medium text-white border border-gray-200 capitalize"
+                    >
+                      {formatParty(partie)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {Array.isArray(activeSummary.points_attention) && activeSummary.points_attention.length > 0 && (
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <h4 className="font-semibold text-amber-800 mb-2">⚠️ Points d'attention</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-amber-900">
+            <div className="">
+              <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                <h4 className="font-semibold text-blue-primary mb-2">Points d'attention</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
                   {activeSummary.points_attention.map((point, index) => (
                     <li key={index}>{typeof point === "string" ? point : JSON.stringify(point)}</li>
                   ))}
@@ -322,14 +358,14 @@ export function ComprendreContrat() {
           )}
 
           {activeSummary.obligations && Object.keys(activeSummary.obligations).length > 0 && (
-            <div className="border border-color-grey p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-700 mb-2">📋 Obligations principales</h4>
+            <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+              <h4 className="font-semibold text-blue-primary mb-2"> Obligations principales</h4>
 
               {/* GRILLE DÉDIÉE UNIQUEMENT AUX OBLIGATIONS (Preneur, Bailleur, etc.) */}
               {typeof activeSummary.obligations === "object" && !Array.isArray(activeSummary.obligations) ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch text-sm text-gray-600">
                   {Object.entries(activeSummary.obligations).map(([key, val], index) => (
-                    <div key={index} className="rounded-md bg-gray-50 p-3 border border-color-grey flex flex-col justify-between">
+                    <div key={index} className="rounded-md bg-white p-3 border border-color-grey flex flex-col justify-between">
                       <div>
                         <span className="block font-medium text-gray-800 capitalize whitespace-pre-line mb-1">
                           {key.replace(/_/g, " ")} :
@@ -376,9 +412,9 @@ export function ComprendreContrat() {
 
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
                 {Array.isArray(activeSummary.delais_importants) && activeSummary.delais_importants.length > 0 && (
-                  <div className="rounded-lg border border-gray-200 p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">⏳ Délais importants</h4>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                    <h4 className="font-semibold text-blue-primary mb-2">Délais importants</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
                       {activeSummary.delais_importants.map((delai, index) => (
                         <li key={index}>{typeof delai === "string" ? delai : JSON.stringify(delai)}</li>
                       ))}
@@ -387,28 +423,46 @@ export function ComprendreContrat() {
                 )}
 
                 {Array.isArray(activeSummary.clauses_particulieres) && activeSummary.clauses_particulieres.length > 0 && (
-                  <div className="rounded-lg border border-gray-200 p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">⚖️ Clauses particulières</h4>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                      {activeSummary.clauses_particulieres.map((clauseItem: ClauseItem | string, index: number) => {
-                        if (typeof clauseItem === "string") {
-                          return <li key={index}>{clauseItem}</li>;
-                        }
-                        if (typeof clauseItem === "object" && clauseItem !== null) {
+                  <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                    <h4 className="font-semibold text-blue-primary mb-2">Clauses particulières</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      {activeSummary.clauses_particulieres
+                        .filter((clauseItem: ClauseItem | string) => {
+                          // Si c'est une simple chaîne, on la garde seulement si elle n'est pas vide
+                          if (typeof clauseItem === "string") return clauseItem.trim().length > 0;
+
+                          if (typeof clauseItem === "object" && clauseItem !== null) {
+                            // 1. Si elle possède un résumé explicite non vide, elle est valide
+                            if (clauseItem.resume && String(clauseItem.resume).trim() !== "") return true;
+
+                            // 2. Si un des booléens est explicitement `true`
+                            const hasTrueFlag = Object.entries(clauseItem).some(
+                              ([key, val]) => key !== "resume" && val === true
+                            );
+                            return hasTrueFlag;
+                          }
+                          return false;
+                        })
+                        .map((clauseItem: ClauseItem | string, index: number) => {
+                          if (typeof clauseItem === "string") {
+                            return <li key={index}>{clauseItem}</li>;
+                          }
+
                           const entries = Object.entries(clauseItem);
                           const clauseEntry = entries.find(([key, val]) => key !== "resume" && val === true);
-                          const clauseName = clauseItem.type || (clauseEntry ? clauseEntry[0] : "Clause");
+                          
+                          // Récupération propre du nom de la clause
+                          const rawName = clauseItem.type || (clauseEntry ? clauseEntry[0] : null);
+                          const clauseName = rawName ? rawName.replace(/_/g, " ") : "Clause";
                           const resumeText = clauseItem.resume;
 
                           return (
                             <li key={index}>
-                              <strong className="capitalize">{clauseName.replace(/_/g, " ")}</strong>
+                              <strong className="capitalize">{clauseName}</strong>
                               {resumeText ? ` : ${resumeText}` : ""}
                             </li>
                           );
-                        }
-                        return null;
-                      })}
+                        })}
                     </ul>
                   </div>
                 )}
@@ -416,16 +470,23 @@ export function ComprendreContrat() {
 
           {(hasValidContent(activeSummary.conditions_financieres) || hasValidContent(activeSummary.resiliation)) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+
               {hasValidContent(activeSummary.conditions_financieres) && (
-                <div>
-                  <h4 className="font-semibold text-gray-700 mb-1">💳 Conditions financières</h4>
-                  <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg space-y-1">
+                <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                  <h4 className="font-semibold text-blue-primary mb-1">Conditions financières</h4>
+                  <div className="text-xs p-3 rounded-lg space-y-1">
                     {typeof activeSummary.conditions_financieres === "object"
                       ? Object.entries(activeSummary.conditions_financieres)
-                          .filter(([_, val]) => val !== null && val !== undefined)
+                          .filter(([_, val]) => {
+                            if (val === null || val === undefined) return false;
+                            const str = String(val).trim().toLowerCase();
+                            return str !== "" && str !== "null" && str !== "undefined";
+                          })
                           .map(([k, val], i) => (
                             <div key={i}>
-                              <span className="font-medium text-gray-700 capitalize">{k.replace(/_/g, " ")} : </span>
+                              <span className="font-medium text-gray-700 capitalize">
+                                {k.replace(/_/g, " ")} :{" "}
+                              </span>
                               <span>{String(val)}</span>
                             </div>
                           ))
@@ -435,15 +496,21 @@ export function ComprendreContrat() {
               )}
 
               {hasValidContent(activeSummary.resiliation) && (
-                <div>
-                  <h4 className="font-semibold text-gray-700 mb-1">🚪 Modalités de résiliation</h4>
-                  <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg space-y-1">
+                <div className="rounded-lg bg-gray-card p-4 border border-gray-300">
+                  <h4 className="font-semibold text-blue-primary mb-1">Modalités de résiliation</h4>
+                  <div className="text-xs p-3 rounded-lg space-y-1">
                     {typeof activeSummary.resiliation === "object"
                       ? Object.entries(activeSummary.resiliation)
-                          .filter(([_, val]) => val !== null && val !== undefined)
+                          .filter(([_, val]) => {
+                            if (val === null || val === undefined) return false;
+                            const str = String(val).trim().toLowerCase();
+                            return str !== "" && str !== "null" && str !== "undefined";
+                          })
                           .map(([k, val], i) => (
                             <div key={i}>
-                              <span className="font-medium text-gray-700 capitalize">{k.replace(/_/g, " ")} : </span>
+                              <span className="font-medium text-gray-700 capitalize">
+                                {k.replace(/_/g, " ")} :{" "}
+                              </span>
                               <span>{String(val)}</span>
                             </div>
                           ))
@@ -451,29 +518,7 @@ export function ComprendreContrat() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {Array.isArray(activeSummary.annexes) && activeSummary.annexes.length > 0 && (
-            <div className="text-xs text-gray-500 pt-2">
-              <span className="font-medium text-gray-700">📎 Annexes mentionnées : </span>
-              {activeSummary.annexes
-                .map((annexe) => {
-                  if (typeof annexe === "string") return annexe;
-
-                  if (typeof annexe === "object" && annexe !== null) {
-                    const entries = Object.entries(annexe);
-                    const textVal = entries.find(
-                      ([_, val]) => typeof val === "string" && val.trim() !== ""
-                    )?.[1];
-
-                    return textVal || "Annexe sans nom";
-                  }
-
-                  return String(annexe);
-                })
-                .filter(Boolean)
-                .join(", ")}
             </div>
           )}
         </div>
@@ -526,6 +571,7 @@ export function ComprendreContrat() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

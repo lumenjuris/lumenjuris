@@ -113,18 +113,15 @@ const fmt = {
   ratio: (a: number, b: number) =>
     b === 0 ? "—" : `${(a / b).toFixed(2)}:1`,
 
-  // Étiquette d'axe X adaptée à la granularité
   tickLabel: (key: string, granularity: Granularity): string => {
     if (granularity === "month") {
       const [y, m] = key.split("-").map(Number);
       return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
     }
-    // day ou week : affiche la date (début de semaine pour week)
     const [y, m, d] = key.split("-").map(Number);
     return new Date(y, m - 1, d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
   },
 
-  // Tooltip header
   tooltipLabel: (key: string, granularity: Granularity): string => {
     if (granularity === "week") {
       const [y, m, d] = key.split("-").map(Number);
@@ -185,13 +182,12 @@ function PctBar({ pct, color }: { pct: number; color: string }) {
 // ── Composant principal ───────────────────────────────────────────────────────
 export function LlmUsageSection() {
   const [selectedDays, setSelectedDays] = useState<Days>(7);
-  const [topN, setTopN]                 = useState<number>(5); // 0 = tous
+  const [topN, setTopN]                 = useState<number>(5);
 
-  const [history, setHistory]           = useState<DayEntry[]>([]);
+  const [history, setHistory]               = useState<DayEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState("");
+  const [historyError, setHistoryError]     = useState("");
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchHistory = useCallback(async (days: number) => {
     setHistoryLoading(true);
     setHistoryError("");
@@ -209,7 +205,6 @@ export function LlmUsageSection() {
 
   useEffect(() => { void fetchHistory(selectedDays); }, [selectedDays, fetchHistory]);
 
-  // ── Données dérivées ───────────────────────────────────────────────────────
   const granularity = granularityFor(selectedDays);
 
   const models = useMemo(() => {
@@ -218,7 +213,6 @@ export function LlmUsageSection() {
     return Array.from(seen).sort();
   }, [history]);
 
-  // Données groupées pour le graphe
   const grouped = useMemo(() => groupHistory(history, granularity), [history, granularity]);
 
   const chartData = useMemo(
@@ -230,7 +224,6 @@ export function LlmUsageSection() {
     [grouped, models],
   );
 
-  // Totaux période (sur les données brutes journalières)
   const periodTotals = useMemo(
     () => history.reduce(
       (acc, d) => ({
@@ -244,7 +237,6 @@ export function LlmUsageSection() {
     [history],
   );
 
-  // Agrégat par modèle (données brutes)
   const modelStats = useMemo(() => {
     const acc: Record<string, { tokenInput: number; tokenOutput: number; totalCostUsd: number }> = {};
     history.forEach((day) => {
@@ -280,29 +272,25 @@ export function LlmUsageSection() {
     return "flat";
   }, [history]);
 
-  // Top jours triés par coût décroissant
   const sortedDays = useMemo(
     () => [...history].sort((a, b) => b.totalCostUsd - a.totalCostUsd),
     [history],
   );
   const topDays = topN === 0 ? sortedDays : sortedDays.slice(0, topN);
 
-  // Intervalle axe X : viser ~8 labels
   const xAxisInterval = Math.max(0, Math.floor(chartData.length / 8) - 1);
 
-  // Label période court
   const periodLabel = useMemo(() => {
     const r = TIME_RANGES.find((t) => t.days === selectedDays);
     return r?.label ?? `${selectedDays} j`;
   }, [selectedDays]);
 
-  // Granularity label pour sous-titres
   const granLabel = granularity === "week" ? "par semaine" : granularity === "month" ? "par mois" : "par jour";
 
   return (
     <div className="space-y-8">
 
-      {/* ── Sélecteur plage ─────────────────────────────────────────────────── */}
+      {/* ── Sélecteur plage ── */}
       <div className="flex flex-wrap gap-2">
         {TIME_RANGES.map(({ label, days }) => (
           <button
@@ -319,7 +307,7 @@ export function LlmUsageSection() {
         ))}
       </div>
 
-      {/* ── KPIs ────────────────────────────────────────────────────────────── */}
+      {/* ── KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Coût total"    value={fmt.usd(periodTotals.cost, 2)}        sub={periodLabel} />
         <KpiCard label="Tokens total"  value={fmt.number(periodTotals.tokens)}       sub="input + output" />
@@ -327,7 +315,7 @@ export function LlmUsageSection() {
         <KpiCard label="Tokens output" value={fmt.number(periodTotals.tokenOutput)}  sub="générés" />
       </div>
 
-      {/* ── Graphe ──────────────────────────────────────────────────────────── */}
+      {/* ── Graphe ── */}
       <section className="space-y-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-base font-semibold text-gray-800">Coût LLM</h2>
@@ -378,9 +366,7 @@ export function LlmUsageSection() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          SECTION DÉTAIL ANALYTIQUE
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── SECTION DÉTAIL ANALYTIQUE ── */}
       <section className="space-y-5">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-gray-800">Détail analytique</h2>
@@ -389,13 +375,13 @@ export function LlmUsageSection() {
 
         {historyLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
-            {[1,2,3,4].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
+            {[1, 2, 3, 4].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
           </div>
         ) : history.length === 0 ? (
           <p className="text-sm text-gray-400">Aucune donnée pour cette période.</p>
         ) : (
           <>
-            {/* ── Stat tiles ── */}
+            {/* Stat tiles */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatTile
                 label="Coût moyen / jour actif"
@@ -424,50 +410,85 @@ export function LlmUsageSection() {
               />
             </div>
 
-            {/* ── Tableau par modèle ── */}
+            {/* Tableau par modèle */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <span className="text-sm font-semibold text-gray-700">Consommation par modèle</span>
                 <span className="text-xs text-gray-400">{periodLabel}</span>
               </div>
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+
+              {/* Header Desktop */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 <span className="col-span-3">Modèle</span>
                 <span className="col-span-2 text-right">Input tk</span>
                 <span className="col-span-2 text-right">Output tk</span>
                 <span className="col-span-2 text-right">Coût USD</span>
                 <span className="col-span-3 text-right">Part du total</span>
               </div>
-              {models.map((model, idx) => {
-                const s = modelStats[model] ?? { tokenInput: 0, tokenOutput: 0, totalCostUsd: 0 };
-                const pct = periodTotals.cost > 0 ? (s.totalCostUsd / periodTotals.cost) * 100 : 0;
-                const color = colorOf(model, idx);
-                return (
-                  <div key={model} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 last:border-b-0 items-center hover:bg-gray-50/50 transition-colors">
-                    <div className="col-span-3 flex items-center gap-2">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-sm font-medium text-gray-900 truncate">{model}</span>
+
+              {/* Liste des modèles */}
+              <div className="divide-y divide-gray-100">
+                {models.map((model, idx) => {
+                  const s = modelStats[model] ?? { tokenInput: 0, tokenOutput: 0, totalCostUsd: 0 };
+                  const pct = periodTotals.cost > 0 ? (s.totalCostUsd / periodTotals.cost) * 100 : 0;
+                  const color = colorOf(model, idx);
+                  
+                  return (
+                    <div key={model} className="p-4 sm:px-4 sm:py-3 hover:bg-gray-50/50 transition-colors">
+                      {/* Mobile */}
+                      <div className="sm:hidden space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                            <span className="text-sm font-semibold text-gray-900 truncate">{model}</span>
+                          </div>
+                          <span className="text-sm font-bold text-gray-900">{fmt.usd(s.totalCostUsd)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+                          <span>Tokens: <strong className="text-gray-700">{fmt.number(s.tokenInput + s.tokenOutput)}</strong></span>
+                          <span className="text-[11px] text-gray-400">(In: {fmt.number(s.tokenInput)} / Out: {fmt.number(s.tokenOutput)})</span>
+                        </div>
+                        <div className="pt-1">
+                          <PctBar pct={pct} color={color} />
+                        </div>
+                      </div>
+
+                      {/* Desktop */}
+                      <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-3 flex items-center gap-2">
+                          <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-sm font-medium text-gray-900 truncate">{model}</span>
+                        </div>
+                        <span className="col-span-2 text-right text-sm tabular-nums text-gray-600">{fmt.number(s.tokenInput)}</span>
+                        <span className="col-span-2 text-right text-sm tabular-nums text-gray-600">{fmt.number(s.tokenOutput)}</span>
+                        <span className="col-span-2 text-right text-sm tabular-nums font-medium text-gray-800">{fmt.usd(s.totalCostUsd)}</span>
+                        <div className="col-span-3"><PctBar pct={pct} color={color} /></div>
+                      </div>
                     </div>
-                    <span className="col-span-2 text-right text-sm tabular-nums text-gray-600">{fmt.number(s.tokenInput)}</span>
-                    <span className="col-span-2 text-right text-sm tabular-nums text-gray-600">{fmt.number(s.tokenOutput)}</span>
-                    <span className="col-span-2 text-right text-sm tabular-nums font-medium text-gray-800">{fmt.usd(s.totalCostUsd)}</span>
-                    <div className="col-span-3"><PctBar pct={pct} color={color} /></div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* Totaux */}
               {models.length > 1 && (
-                <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-200 text-xs font-semibold text-gray-700">
-                  <span className="col-span-3">Total</span>
-                  <span className="col-span-2 text-right tabular-nums">{fmt.number(periodTotals.tokenInput)}</span>
-                  <span className="col-span-2 text-right tabular-nums">{fmt.number(periodTotals.tokenOutput)}</span>
-                  <span className="col-span-2 text-right tabular-nums">{fmt.usd(periodTotals.cost, 4)}</span>
-                  <span className="col-span-3 text-right text-gray-400">100 %</span>
+                <div className="p-4 sm:px-4 sm:py-2.5 bg-gray-50 border-t border-gray-200 text-xs font-semibold text-gray-700">
+                  <div className="flex justify-between items-center sm:hidden">
+                    <span>Total ({fmt.number(periodTotals.tokenInput + periodTotals.tokenOutput)} tk)</span>
+                    <span className="text-sm font-bold text-gray-900">{fmt.usd(periodTotals.cost, 4)}</span>
+                  </div>
+                  <div className="hidden sm:grid grid-cols-12 gap-2">
+                    <span className="col-span-3">Total</span>
+                    <span className="col-span-2 text-right tabular-nums">{fmt.number(periodTotals.tokenInput)}</span>
+                    <span className="col-span-2 text-right tabular-nums">{fmt.number(periodTotals.tokenOutput)}</span>
+                    <span className="col-span-2 text-right tabular-nums">{fmt.usd(periodTotals.cost, 4)}</span>
+                    <span className="col-span-3 text-right text-gray-400">100 %</span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* ── Top jours ── */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              {/* Header avec sélecteur */}
+            {/* Top jours */}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
                 <span className="text-sm font-semibold text-gray-700">
                   Jours les plus coûteux
@@ -496,39 +517,66 @@ export function LlmUsageSection() {
                 <div className="px-4 py-8 text-sm text-gray-400 text-center">Aucune donnée.</div>
               ) : (
                 <>
-                  <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                     <span className="col-span-1 text-center">#</span>
                     <span className="col-span-4">Date</span>
                     <span className="col-span-2 text-right">Tokens</span>
                     <span className="col-span-3 text-right">Coût</span>
                     <span className="col-span-2">Modèle dominant</span>
                   </div>
-                  <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
+                  <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                     {topDays.map((day, rank) => {
                       const dominantModel = Object.entries(day.byModel)
                         .sort((a, b) => b[1].totalCostUsd - a[1].totalCostUsd)[0];
                       const modelIdx = models.indexOf(dominantModel?.[0] ?? "");
                       const isTop = rank === 0;
+
                       return (
                         <div
                           key={day.date}
-                          className={`grid grid-cols-12 gap-2 px-4 py-3 items-center text-sm hover:bg-gray-50/50 transition-colors ${isTop ? "bg-amber-50/40" : ""}`}
+                          className={`p-3 sm:px-4 sm:py-3 transition-colors ${isTop ? "bg-amber-50/40" : "hover:bg-gray-50/50"}`}
                         >
-                          <span className={`col-span-1 text-center font-bold tabular-nums text-xs ${isTop ? "text-amber-500" : "text-gray-300"}`}>
-                            {rank + 1}
-                          </span>
-                          <span className="col-span-4 text-gray-700 text-xs">{fmt.dateFull(day.date)}</span>
-                          <span className="col-span-2 text-right tabular-nums text-gray-500 text-xs">{fmt.number(day.totalTokens)}</span>
-                          <span className={`col-span-3 text-right tabular-nums font-semibold ${isTop ? "text-amber-700" : "text-gray-800"}`}>
-                            {fmt.usd(day.totalCostUsd)}
-                          </span>
-                          {dominantModel ? (
-                            <div className="col-span-2 flex items-center gap-1.5 min-w-0">
-                              <span className="inline-block w-2 h-2 rounded-full shrink-0"
-                                style={{ backgroundColor: colorOf(dominantModel[0], modelIdx) }} />
-                              <span className="text-xs text-gray-500 truncate">{dominantModel[0]}</span>
+                          {/* Mobile */}
+                          <div className="flex items-center justify-between sm:hidden">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold text-xs ${isTop ? "text-amber-500" : "text-gray-400"}`}>
+                                #{rank + 1}
+                              </span>
+                              <div>
+                                <div className="text-xs font-medium text-gray-800">{fmt.dateFull(day.date)}</div>
+                                {dominantModel && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colorOf(dominantModel[0], modelIdx) }} />
+                                    <span className="text-[10px] text-gray-400">{dominantModel[0]}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          ) : <span className="col-span-2" />}
+                            <div className="text-right">
+                              <div className={`text-xs font-bold ${isTop ? "text-amber-700" : "text-gray-900"}`}>
+                                {fmt.usd(day.totalCostUsd)}
+                              </div>
+                              <div className="text-[10px] text-gray-400">{fmt.number(day.totalTokens)} tk</div>
+                            </div>
+                          </div>
+
+                          {/* Desktop */}
+                          <div className="hidden sm:grid grid-cols-12 gap-2 items-center text-sm">
+                            <span className={`col-span-1 text-center font-bold tabular-nums text-xs ${isTop ? "text-amber-500" : "text-gray-300"}`}>
+                              {rank + 1}
+                            </span>
+                            <span className="col-span-4 text-gray-700 text-xs">{fmt.dateFull(day.date)}</span>
+                            <span className="col-span-2 text-right tabular-nums text-gray-500 text-xs">{fmt.number(day.totalTokens)}</span>
+                            <span className={`col-span-3 text-right tabular-nums font-semibold ${isTop ? "text-amber-700" : "text-gray-800"}`}>
+                              {fmt.usd(day.totalCostUsd)}
+                            </span>
+                            {dominantModel ? (
+                              <div className="col-span-2 flex items-center gap-1.5 min-w-0">
+                                <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorOf(dominantModel[0], modelIdx) }} />
+                                <span className="text-xs text-gray-500 truncate">{dominantModel[0]}</span>
+                              </div>
+                            ) : <span className="col-span-2" />}
+                          </div>
                         </div>
                       );
                     })}

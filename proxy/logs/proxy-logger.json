@@ -1,5 +1,341 @@
 [
   {
+    "id": "b5889b94-c784-42be-8a36-c6b46f8e82a9",
+    "date": "2026-08-19T09:26:20.278Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "322ca493-ef5d-43be-b6e8-183543b77c82",
+    "date": "2026-08-18T12:09:59.683Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/portal",
+    "page": "/api/billing/portal"
+  },
+  {
+    "id": "3c24dcc6-dc7c-4d0c-8607-13369810e039",
+    "date": "2026-08-18T12:08:51.803Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/portal",
+    "page": "/api/billing/portal"
+  },
+  {
+    "id": "c4301efd-a062-4fa5-8977-613263c0a2c2",
+    "date": "2026-08-18T12:03:52.327Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 0ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/portal",
+    "page": "/api/billing/portal"
+  },
+  {
+    "id": "eb818f18-7909-467f-b1b0-c95b6e156bd7",
+    "date": "2026-08-18T11:53:40.780Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/portal",
+    "page": "/api/billing/portal"
+  },
+  {
+    "id": "6e3d6f1c-cf48-401b-bcc2-ad322305c2e6",
+    "date": "2026-08-18T11:53:28.128Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/portal",
+    "page": "/api/billing/portal"
+  },
+  {
+    "id": "a17a05d9-06cd-47c9-afd5-5ba83ca870f6",
+    "date": "2026-08-12T13:21:08.371Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "ad151597-dd6e-4ae8-a55c-d01dfaef6661",
+    "date": "2026-08-12T13:21:07.524Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "a93453c4-7d02-4885-9dd3-46309890d6ae",
+    "date": "2026-08-12T13:21:07.011Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 0ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "21b002db-5bda-49fa-a642-19b153d8b7cd",
+    "date": "2026-08-12T13:21:06.380Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "79c6df2f-d2b1-44bd-9cfc-83c0e6d62aac",
+    "date": "2026-08-12T13:21:05.158Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "20e9d25f-8f30-4031-9588-24184643f2bb",
+    "date": "2026-08-12T13:20:01.209Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "876e064c-cb5d-4675-84ce-a7138c015e1c",
+    "date": "2026-08-12T13:19:38.647Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "b097d719-0d23-4ab6-b1c5-64dd6c7e6bec",
+    "date": "2026-08-12T13:18:32.832Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "86d778c7-5d7e-407d-9eae-ec8ece0c48e3",
+    "date": "2026-08-12T09:13:32.549Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 0ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "aa1a0cf0-7455-4905-b3e4-4c67c15c39da",
+    "date": "2026-08-12T09:13:30.952Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 0ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "6616d2b4-7f95-4112-aba6-bb269966700d",
+    "date": "2026-08-12T09:12:52.650Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "1a7508f7-8c7a-43a6-b1c2-0c00a1ca314f",
+    "date": "2026-08-12T09:12:29.014Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "d1a1d9ad-71d3-4ad6-a53a-c781a61e6a61",
+    "date": "2026-08-12T09:12:27.036Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/billing/create-checkout",
+    "page": "/api/billing/create-checkout"
+  },
+  {
+    "id": "fb169be6-2305-41fb-95ae-d386cc22ed4b",
+    "date": "2026-08-10T09:42:41.224Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/signup",
+    "page": "/api/user/signup"
+  },
+  {
+    "id": "7fb1bd23-857e-48bf-a453-114d837a1bfe",
+    "date": "2026-08-10T09:35:07.768Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "ea32adbd-1e5f-4c97-b70c-ec6385ddf2b5",
+    "date": "2026-08-10T09:35:07.762Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "db77a5f4-e237-4b50-b4e3-e947463f00c1",
+    "date": "2026-08-10T09:33:27.613Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/signup",
+    "page": "/api/user/signup"
+  },
+  {
+    "id": "9bee89b8-e935-4bd3-a91d-b58d375241b8",
+    "date": "2026-08-10T09:33:01.382Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "cc2027c7-4f5f-4907-b523-3626cd40aaa2",
+    "date": "2026-08-10T09:33:01.376Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 32ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "992f8cf8-b452-49fe-af7b-2af7e58f3f38",
+    "date": "2026-08-10T09:30:21.482Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 2ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "f7d6e3d4-eb26-4393-b09d-9f4f2cfadf42",
+    "date": "2026-08-10T09:30:18.546Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "46559199-cb0a-410f-a584-c56e0adb5ca9",
+    "date": "2026-08-10T09:30:18.541Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "4b6e7d82-7fcd-4528-880e-e307771042d8",
+    "date": "2026-08-10T09:29:33.981Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/signup",
+    "page": "/api/user/signup"
+  },
+  {
+    "id": "a781c3e6-0fcb-47fe-8b32-9d9e8cac1ea5",
+    "date": "2026-08-10T09:18:05.786Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 1ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "289f79a8-dcf2-433f-a416-2a436cc46152",
+    "date": "2026-08-10T09:17:32.863Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 2ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "92d7b3d9-6770-4d96-abf0-65cf445b3b8c",
+    "date": "2026-08-10T09:08:15.999Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "10154184-6d60-4dec-9602-22509924def8",
+    "date": "2026-08-10T09:08:03.165Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "8cf1fcd2-01ff-43ef-a463-88e1a3e8657f",
+    "date": "2026-08-10T09:07:55.989Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "1fcf20cc-0a3e-49e0-959e-9f3c0a408460",
+    "date": "2026-08-10T09:07:55.984Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "e56c7bb1-88fe-4b4b-b55d-ffd282bf72bb",
+    "date": "2026-08-10T09:07:11.439Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "548c779c-953d-4a2c-b8e7-e63f51d5842e",
+    "date": "2026-08-10T09:07:08.906Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "5fad6670-4d3f-48d1-84a2-cf5877ac3031",
+    "date": "2026-08-10T09:07:08.900Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "17390440-1dfd-436b-b92a-051f3d09f733",
+    "date": "2026-08-10T09:06:22.986Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "953d0eaf-1723-45d5-a540-d495d2b5f8dd",
+    "date": "2026-08-10T09:06:22.979Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "799d34fd-1952-4e15-8d97-ef3f66be0e75",
+    "date": "2026-08-10T09:05:56.432Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 2ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "6f79c9cb-546b-43e5-bd9f-5b2a1b54c5d2",
+    "date": "2026-08-10T09:05:51.492Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "3bb5ab1e-d688-47e9-b185-a5a4053e6397",
+    "date": "2026-08-10T09:05:51.484Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 8ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "e86e994b-07f0-408f-a9d0-fbb805d1f707",
+    "date": "2026-08-10T09:05:35.254Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 31ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "144f5e49-a1da-4748-aa6d-65b5cdb5056a",
+    "date": "2026-08-10T09:05:02.886Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "6e05afe0-89c9-4616-851d-e730e648095b",
+    "date": "2026-08-10T09:04:56.351Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 8ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "6c4b858b-40c8-4546-8d36-b6b8596af60d",
+    "date": "2026-08-10T09:04:56.341Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 10ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "cc536dec-0890-43c6-8827-4b0d1fe5bd55",
+    "date": "2026-08-10T09:04:46.387Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 29ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
     "id": "b07699c8-bf22-401d-bbc0-be1b53a0d3c3",
     "date": "2026-08-07T12:09:52.914Z",
     "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 7ms.\nDétails : backnode_unreachable",

@@ -143,46 +143,83 @@ export function NegotiationWorkspace() {
             />
           )}
 
-        <div className="min-w-0">
+        <div className="w-full">
           <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} className="inline-flex items-center gap-1 text-xs text-ink-subtle hover:text-brand font-medium"><ChevronLeft className="w-3.5 h-3.5" /> Retour au contrat</button>
-          <div className="flex items-center gap-3 mt-2">
-            <h1 className="text-xl font-bold text-ink tracking-tight truncate">{data.title}</h1>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-chip" style={{ backgroundColor: MODE_STYLE[data.mode].bg, color: MODE_STYLE[data.mode].fg }}>{MODE_LABEL[data.mode]}</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-chip" style={{ backgroundColor: st.bg, color: st.fg }}>{data.status === "VALIDATED" ? "Prêt à signer" : STATUS_LABEL[data.status]}</span>
+          <div className="bg-blue-primary rounded-2xl px-8 py-6 shadow-sm w-full max-w-8xl">
+          {/* Titre et statut */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-normal text-white tracking-tight">
+              Négociation - {data.title}
+            </h1>
+            <span
+              className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+              style={{ backgroundColor: st.bg, color: st.fg }}
+            >
+              {data.status === "VALIDATED" ? "Prêt à signer" : STATUS_LABEL[data.status]}
+            </span>
+          </div>
+
+          {/* Barre d'actions sous forme de boutons blancs */}
+          <div className="flex items-center gap-3 mt-5 flex-wrap">
+            {canEdit && data.status !== "CLOSED" && (
+              <>
+                <button
+                  onClick={() => void exitToSignature()}
+                  disabled={!data.finalVersionId}
+                  className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
+                  title={data.finalVersionId ? "Transmettre à la signature" : "Validez d'abord une version"}
+                >
+                  Vers la signature
+                </button>
+
+                <button
+                  onClick={() => void abort()}
+                  className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  Abandonner
+                </button>
+              </>
+            )}
+
+            {canEdit && selectedVersion && !selectedVersion.isFinal && (
+              <button
+                onClick={() => void validateDisplayed()}
+                className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+              >
+                Valider la signature
+              </button>
+            )}
+
+            {canEdit && (
+              <button
+                onClick={() => setNewVersionOpen((v) => !v)}
+                className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+              >
+                {data.versions.length === 0 ? "Ajouter le texte" : "Nouveau round"}
+              </button>
+            )}
+
+            {/* Sélecteur de version si plus d'une version */}
+            {data.versions.length > 1 && (
+              <select
+                value={selectedVersion?.id ?? ""}
+                onChange={(e) => setVersionId(e.target.value)}
+                className="px-3 py-2.5 bg-white text-ink text-xs font-medium rounded-xl outline-none cursor-pointer shadow-sm"
+              >
+                {data.versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    v{v.versionNumber}{v.label ? ` · ${v.label}` : ""}{v.isFinal ? " (finale)" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
-        {canEdit && data.status !== "CLOSED" && (
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => void exitToSignature()} disabled={!data.finalVersionId} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-success-dark bg-success-light border border-success/20 rounded-lg hover:bg-success/20 transition-all disabled:opacity-40" title={data.finalVersionId ? "Transmettre à la signature" : "Validez d'abord une version"}>
-              <PenTool className="w-3.5 h-3.5" /> Vers la signature
-            </button>
-            <button onClick={() => void abort()} className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-danger bg-white border border-line rounded-lg hover:bg-danger-light transition-all"><Ban className="w-3.5 h-3.5" /> Abandonner</button>
-          </div>
-        )}
+        </div>
+        
       </div>
 
-      {/* Barre version — affichée seulement s'il y a plusieurs rounds ou des actions */}
-      {(data.versions.length > 1 || canEdit) && (
-        <div className="flex items-center gap-2 flex-wrap bg-white rounded-card border border-line shadow-card px-4 py-2">
-          {data.versions.length > 1 && (
-            <>
-              <span className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">Version</span>
-              <select value={selectedVersion?.id ?? ""} onChange={(e) => setVersionId(e.target.value)} className="bg-white border border-line px-2.5 py-1 rounded-lg text-xs text-ink-secondary outline-none focus:border-brand/40 cursor-pointer">
-                {data.versions.map((v) => <option key={v.id} value={v.id}>v{v.versionNumber}{v.label ? ` · ${v.label}` : ""}{v.isFinal ? " (finale)" : ""}</option>)}
-              </select>
-            </>
-          )}
-          {canEdit && (
-            <div className="flex items-center gap-2 ml-auto">
-              {selectedVersion && !selectedVersion.isFinal && (
-                <button onClick={() => void validateDisplayed()} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-success-dark hover:bg-success-light rounded-md"><CheckCircle2 className="w-3.5 h-3.5" /> Valider pour signature</button>
-              )}
-              <button onClick={() => setNewVersionOpen((v) => !v)} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-brand bg-brand-light rounded-md hover:bg-brand-muted/40"><FilePlus2 className="w-3.5 h-3.5" /> {data.versions.length === 0 ? "Ajouter le texte" : "Nouveau round"}</button>
-            </div>
-          )}
-        </div>
-      )}
-
+      
       {newVersionOpen && canEdit && <NewVersionForm negotiationId={data.id} nextNumber={data.versions.length + 1} onDone={() => { setNewVersionOpen(false); void load(); }} />}
 
       {/* Complétion guidée : suivi des champs, relances et passage en signature */}

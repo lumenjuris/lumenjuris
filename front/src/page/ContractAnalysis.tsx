@@ -773,7 +773,7 @@ export default function ContractAnalysis() {
 
 
 
-  /*
+/*
     RETOUR DU JSX
   */
   return (
@@ -798,7 +798,7 @@ export default function ContractAnalysis() {
                   onTextSubmit={onTextSubmit}
                   isProcessing={displayedIsProcessing}
                   processingPhase={displayedProcessingPhase}
-                  analyseCredit={9999 /* bypass dev — crédits réels: analyseCredit */}
+                  analyseCredit={9999}
                 />
               </div>
             </div>
@@ -826,69 +826,82 @@ export default function ContractAnalysis() {
           )}
 
           {contract?.processed && !displayedIsProcessing && (
-            <div
-              className={
-                sidebarCollapsed
-                  ? "w-full px-3 flex flex-col md:flex-row gap-6"
-                  : "max-w-7xl mx-auto flex flex-col md:flex-row gap-6"
-              }
-            >
-              <div id="clauses-section" className="mb-6">
-                <div className="bg-white">
-                  {contract.clauses.length === 0 && (
-                    <div className="p-4 bg-blue-50 border-b border-blue-200">
-                      <div className="flex items-center gap-2 text-blue-800">
-                        <span className="text-lg">🚀</span>
-                        <span className="font-medium">
-                          Texte extrait - En attente d'analyse
-                        </span>
-                      </div>
-                      <p className="text-sm text-blue-600 mt-1">
-                        Le surlignage des clauses apparaîtra après l'analyse
-                        contextuelle ou standard
-                      </p>
-                    </div>
-                  )}
+            <div className="max-w-7xl mx-auto space-y-6">
+              
+              <div className="bg-blue-primary text-white rounded-2xl p-6 shadow-sm text-center space-y-4">
+                <div>
+                  <h1 className="text-2xl font-bold">Analyse de conformité</h1>
+                  <p className="text-sm text-slate-300 mt-1">
+                    Vérifiez la conformité juridique de vos documents
+                  </p>
+                </div>
 
-                  <div className="flex justify-center">
-                    <ActionButtons
-                      onShareReport={handleShareReport}
-                      contract={contract}
-                      context={currentAnalysisContext || undefined}
-                      isProcessed={Boolean(contract?.processed)}
-                      originalContent={contract?.content}
-                      htmlContent={htmlContent}
-                      fileName={contract?.fileName || "document"}
-                      onRelaunchAnalysis={handleForceRelaunchAnalysis}
-                      isRelaunchingAnalysis={displayedIsProcessing}
-                      onSuggestedClauses={handleMarketAnalysisClick}
-                      isLoadingSuggested={isMarketAnalysisLoading}
-                    />
-                  </div>
-                  <DocumentViewer
-                    content={contract.content}
-                    clauses={sortedClauses}
-                    onClauseClick={handleClauseClick}
-                    fileName={contract.fileName || "Document"}
-                    contractSummary={currentAnalysisContext ?? undefined}
-                    recommendationIndex={recommendationIndex}
-                    setRecommendationIndex={handleIncrementIndexRecommendation}
-                    activeClauseId={selectedClause}
-                    isFullscreen={sidebarCollapsed}
-                    ref={documentViewerRef}
+                <div className="flex justify-center items-center">
+                  <ActionButtons
+                    onShareReport={handleShareReport}
+                    contract={contract}
+                    context={currentAnalysisContext || undefined}
+                    isProcessed={Boolean(contract?.processed)}
+                    originalContent={contract?.content}
+                    htmlContent={htmlContent}
+                    fileName={contract?.fileName || "document"}
+                    onRelaunchAnalysis={handleForceRelaunchAnalysis}
+                    isRelaunchingAnalysis={displayedIsProcessing}
+                    onSuggestedClauses={handleMarketAnalysisClick}
+                    isLoadingSuggested={isMarketAnalysisLoading}
                   />
                 </div>
               </div>
-              {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
-                <div className="w-full md:w-80 border-gray-200 flex-shrink-0">
-                  <ClausesSidebar
-                    clauses={sortedClauses}
-                    onClauseClick={(clause) => handleClauseClick(clause.id)}
-                    isVisible={true}
-                    recommandationApplied={patches}
-                  />
+
+              {/* 2. Grille principale Document + Sidebar */}
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                
+                {/* Zone Visualiseur de Document */}
+                <div id="clauses-section" className="flex-1 w-full min-w-0">
+                  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    {contract.clauses.length === 0 && (
+                      <div className="p-4 bg-blue-50 border-b border-blue-200">
+                        <div className="flex items-center gap-2 text-blue-800">
+                          <span className="text-lg">🚀</span>
+                          <span className="font-medium">
+                            Texte extrait - En attente d'analyse
+                          </span>
+                        </div>
+                        <p className="text-sm text-blue-600 mt-1">
+                          Le surlignage des clauses apparaîtra après l'analyse
+                          contextuelle ou standard
+                        </p>
+                      </div>
+                    )}
+
+                    <DocumentViewer
+                      content={contract.content}
+                      clauses={sortedClauses}
+                      onClauseClick={handleClauseClick}
+                      fileName={contract.fileName || "Document"}
+                      contractSummary={currentAnalysisContext ?? undefined}
+                      recommendationIndex={recommendationIndex}
+                      setRecommendationIndex={handleIncrementIndexRecommendation}
+                      activeClauseId={selectedClause}
+                      isFullscreen={sidebarCollapsed}
+                      ref={documentViewerRef}
+                    />
+                  </div>
                 </div>
-              )}
+
+                {/* Sidebar des risques à droite */}
+                {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
+                  <div className="w-full md:w-80 border-gray-200 flex-shrink-0">
+                    <ClausesSidebar
+                      clauses={sortedClauses}
+                      onClauseClick={(clause) => handleClauseClick(clause.id)}
+                      isVisible={true}
+                      recommandationApplied={patches}
+                    />
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>
@@ -908,13 +921,13 @@ export default function ContractAnalysis() {
       {showMarketAnalysis && marketAnalysis && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="px-8 py-6 border-b bg-blue-primary flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white">
                 Clauses Suggérées
               </h2>
               <button
                 onClick={() => setShowMarketAnalysis(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
+                className="text-white hover:text-gray-400 text-2xl"
               >
                 X
               </button>

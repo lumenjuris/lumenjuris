@@ -425,56 +425,93 @@ export function ActivitySection() {
           )}
 
           {/* Tableau feature breakdown */}
-          {data.summary.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-                <h3 className="text-sm font-semibold text-gray-700">Répartition par fonctionnalité</h3>
+{data.summary.length > 0 && (
+  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className="px-4 sm:px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+      <ChevronDown className="w-4 h-4 text-gray-400" />
+      <h3 className="text-sm font-semibold text-gray-700">Répartition par fonctionnalité</h3>
+    </div>
+
+    {/* En-tête (Desktop uniquement) */}
+    <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+      <span className="col-span-6">Fonctionnalité</span>
+      <span className="col-span-2 text-right">Appels</span>
+      <span className="col-span-4 text-right pr-2">Part</span>
+    </div>
+
+    {/* Liste des fonctionnalités */}
+    <div className="divide-y divide-gray-100">
+      {data.summary.map((item) => {
+        const pct = totalEvents > 0 ? (item.count / totalEvents) * 100 : 0;
+        const color = featureColor(item.feature);
+
+        return (
+          <div key={item.feature} className="p-3.5 sm:px-5 sm:py-3 hover:bg-gray-50/50 transition-colors">
+            {/* ── Vue Mobile ── */}
+            <div className="sm:hidden space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-sm font-medium text-gray-800 truncate">
+                    {featureLabel(item.feature)}
+                  </span>
+                  <LlmTag llm={featureLlm(item.feature)} />
+                </div>
+                <span className="text-sm font-bold text-gray-900 shrink-0">
+                  {item.count.toLocaleString("fr-FR")}
+                </span>
               </div>
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs text-gray-400 uppercase tracking-wide font-semibold">
-                  <tr>
-                    <th className="px-5 py-2.5 text-left">Fonctionnalité</th>
-                    <th className="px-5 py-2.5 text-right">Appels</th>
-                    <th className="px-5 py-2.5 text-left w-48">Part</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {data.summary.map((item) => {
-                    const pct = totalEvents > 0 ? (item.count / totalEvents) * 100 : 0;
-                    return (
-                      <tr key={item.feature} className="hover:bg-gray-50/50">
-                        <td className="px-5 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: featureColor(item.feature) }}
-                            />
-                            <span className="text-gray-700">{featureLabel(item.feature)}</span>
-                            <LlmTag llm={featureLlm(item.feature)} />
-                          </div>
-                        </td>
-                        <td className="px-5 py-2.5 text-right font-medium text-gray-900">
-                          {item.count.toLocaleString("fr-FR")}
-                        </td>
-                        <td className="px-5 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{ width: `${pct}%`, backgroundColor: featureColor(item.feature) }}
-                              />
-                            </div>
-                            <span className="text-xs text-gray-400 w-10 text-right">{pct.toFixed(1)}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+              {/* Barre de progression pleine largeur sur mobile */}
+              <div className="flex items-center gap-2 pt-0.5">
+                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: color }}
+                  />
+                </div>
+                <span className="text-xs text-gray-400 tabular-nums w-10 text-right">
+                  {pct.toFixed(1)}%
+                </span>
+              </div>
             </div>
-          )}
+
+            {/* ── Vue Desktop ── */}
+            <div className="hidden sm:grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-6 flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-sm text-gray-700 truncate">{featureLabel(item.feature)}</span>
+                <LlmTag llm={featureLlm(item.feature)} />
+              </div>
+
+              <div className="col-span-2 text-right font-medium text-gray-900 text-sm tabular-nums">
+                {item.count.toLocaleString("fr-FR")}
+              </div>
+
+              <div className="col-span-4 flex items-center gap-2 pl-4">
+                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: color }}
+                  />
+                </div>
+                <span className="text-xs text-gray-400 tabular-nums w-10 text-right">
+                  {pct.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
 
           {/* Utilisateurs actifs — clic pour ouvrir le détail */}
           {data.topUsers.length > 0 && (

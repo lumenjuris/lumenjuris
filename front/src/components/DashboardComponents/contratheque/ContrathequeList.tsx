@@ -132,27 +132,27 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Contrathèque</h1>
-          <p className="text-sm text-ink-muted mt-1">Centralisez et suivez le cycle de vie de vos contrats.</p>
-          <div className="mt-3"><ViewTabs tab={tab} onTab={onTab} /></div>
+      <div className="flex flex-col items-center gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
+        <div className="text-center mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Contrathèque</h1>
+          <p className="text-sm text-gray-primary mt-1">Centralisez et suivez le cycle de vie de vos contrats.</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-4 shrink-0">
           <button
             onClick={() => contractApi.exportCsv(filters)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-ink-secondary bg-white border border-line rounded-xl hover:bg-surface-subtle transition-colors shadow-card"
+            className="flex items-center gap-2 px-8 py-2.5 text-sm font-semibold text-ink-secondary bg-white border border-line rounded-xl hover:bg-gray-300 transition-colors shadow-card"
           >
             <Download className="w-4 h-4" /> Exporter
           </button>
           <button
             onClick={onImport}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover transition-all shadow-card"
+            className="flex items-center gap-2 px-8 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-gray-300 transition-all shadow-card"
           >
             <Plus className="w-4 h-4" /> Importer un contrat
           </button>
         </div>
       </div>
+       <div className="mt-3"><ViewTabs tab={tab} onTab={onTab} /></div>
 
       <KpiBar stats={stats} loading={loading && !stats} />
 

@@ -216,7 +216,7 @@ function TableHeader({
   canDelete?: boolean;
 }) {
   return (
-    <thead className="bg-surface-subtle border-b border-line text-ink-subtle text-[10px] uppercase tracking-widest font-semibold">
+    <thead className="bg-blue-primary border-b border-line text-white text-[10px] uppercase tracking-widest font-semibold">
       <tr>
         <Th
           label="Intitulé"
@@ -312,7 +312,7 @@ function Th({
       <button
         onClick={() => onSort(k)}
         className={`inline-flex items-center gap-1 transition-colors uppercase tracking-widest text-[10px] font-semibold ${
-          active ? "text-brand" : "hover:text-ink-secondary"
+          active ? "text-white" : "hover:text-gray-primary"
         }`}
       >
         {label}
@@ -323,7 +323,7 @@ function Th({
             <ArrowDown className="w-3 h-3" />
           )
         ) : (
-          <ArrowUpDown className="w-3 h-3 opacity-40" />
+          <ArrowUpDown className="w-3 h-3 opacity-70" />
         )}
       </button>
     </th>

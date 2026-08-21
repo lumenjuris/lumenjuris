@@ -80,15 +80,17 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
       {/* Document */}
-      <div className="lg:col-span-3 bg-white rounded-card border border-line shadow-card p-5">
-        <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest mb-3">
-          Document {canAnnotate && <span className="text-ink-placeholder normal-case font-normal">· sélectionnez un passage pour l'annoter</span>}
-        </p>
+      <div className="lg:col-span-3 bg-white rounded-card border border-line shadow-card">
+        <div className="bg-blue-primary p-5 rounded-t-2xl ">
+          <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">
+            Document {canAnnotate && <span className="text-ink-placeholder normal-case font-normal">· sélectionnez un passage pour l'annoter</span>}
+          </p>
+        </div>
         {text ? (
           <div
             ref={docRef}
             onMouseUp={onMouseUp}
-            className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans selection:bg-brand/20"
+            className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans selection:bg-brand/20 p-5"
           >
             {segments.map((seg, i) =>
               seg.ann ? (
@@ -142,16 +144,20 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
 
         {/* Liste des annotations */}
         {!pending && !selectedAnn && (
-          <div className="bg-white rounded-card border border-line shadow-card p-4">
-            <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest mb-3">
-              Annotations <span className="text-ink-placeholder">({anchored.length + general.length})</span>
-            </p>
-            {anchored.length + general.length === 0 ? (
-              <p className="text-xs text-ink-muted italic py-3 text-center">
-                Aucune annotation. {canAnnotate ? "Surlignez un passage du contrat pour en créer une." : ""}
+          <div className="bg-white rounded-card border border-line shadow-card">
+            <div className="bg-blue-primary p-4 rounded-t-2xl">
+              <p className="text-[10px] font-bold text-white uppercase tracking-widest mb-3">
+                Annotations <span className="text-white">({anchored.length + general.length})</span>
               </p>
+            </div>
+            {anchored.length + general.length === 0 ? (
+              <div className="bg-blue-primary p-4 rounded-t-2xl">
+                <p className="text-xs text-white italic py-3 text-center">
+                  Aucune annotation. {canAnnotate ? "Surlignez un passage du contrat pour en créer une." : ""}
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 p-3">
                 {[...anchored, ...general].map((a) => (
                   <button
                     key={a.id}

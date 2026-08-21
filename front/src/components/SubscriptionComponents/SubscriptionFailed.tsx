@@ -12,22 +12,24 @@ export function SubscriptionFailed() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4">
-      <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white px-6 py-12 text-center shadow-sm">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-          <XCircle className="h-8 w-8 text-red-600" />
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-5xl rounded-2xl border border-green-200 bg-blue-primary px-6 py-12 text-center shadow-sm">
+        <div className="flex items-center justify-center gap-6">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+          <XCircle className="h-6 w-6 text-red-600" />
         </div>
 
-        <h1 className="text-xl font-bold text-ink">Paiement non abouti</h1>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">
+        <h1 className="text-xl font-bold text-white">Paiement non abouti</h1>
+        </div>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-primary">
           Votre paiement a été annulé ou n'a pas pu aboutir. Aucun montant n'a
           été débité — vous pouvez réessayer à tout moment.
         </p>
 
-        <div className="mt-8 flex flex-col gap-3">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 w-full sm:flex-row sm:gap-4">
           <Button
             type="button"
-            className="w-full bg-lumenjuris text-white hover:bg-lumenjuris/90"
+            className="w-full bg-white text-blue-primary hover:bg-gray-300 sm:w-auto"
             onClick={() => navigate("/souscription")}
           >
             Revenir aux offres
@@ -35,7 +37,7 @@ export function SubscriptionFailed() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full text-blue-primary hover:bg-gray-300 sm:w-auto"
             onClick={() => navigate("/dashboard")}
           >
             Retour au tableau de bord

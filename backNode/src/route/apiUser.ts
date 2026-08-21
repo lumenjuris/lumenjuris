@@ -352,7 +352,6 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
         where: {idUser: logUser.data.idUser},
         select: {isBanned: true},
       })
-    }
 
       if (userStatus?.isBanned) {
         return res.status(403).json({

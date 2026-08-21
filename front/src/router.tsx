@@ -121,6 +121,9 @@ export function App() {
           <Route path="/comprendre-contrat" element={<ComprendreContrat />} />
           <Route path="/mon-compte" element={<ParamCompte />} />
           <Route path="/analyzer" element={<ContractAnalysis />} />
+          {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
+        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+        <Route path="/subscription/failed" element={<SubscriptionFailed />} />
 
 
           {/* Page de gestion d'un cluster pour les multi user
@@ -150,10 +153,6 @@ export function App() {
 
         {/* Route pour les formulaire et l'achat d'un plan */}
         <Route path="/souscription" element={<Subscription />} />
-
-        {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
-        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-        <Route path="/subscription/failed" element={<SubscriptionFailed />} />
 
 
 

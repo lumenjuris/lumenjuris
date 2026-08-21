@@ -17,19 +17,19 @@ export function ClauseRiskCard({
   const [open, setOpen] = useState(false);
 
   const getRiskColor = (riskScore: number) => {
-    if (riskScore === 5) return "bg-red-200 border-red-400 text-red-900"; // Critique
+    if (riskScore === 5) return "bg-red-card-primary border-red-600 text-red-900"; // Critique
     if (riskScore >= 3)
-      return "bg-orange-100 border-orange-400 text-orange-800"; // Moyen
-    return "bg-green-100 border-green-600 text-green-900"; // Modéré
+      return "bg-yellow-card-primary border-black text-orange-800"; // Moyen
+    return "bg-green-card-primary border-green-800 text-green-900"; // Modéré
   };
 
   const getRiskBadge = (riskScore: number) => {
-    if (riskScore === 5) return "text-white bg-red-600 border border-red-700"; // Critique
+    if (riskScore === 5) return "text-red-card-primary bg-white border border-black"; // Critique
     if (riskScore >= 3)
-      return "border-orange-700 bg-orange-500 text-white border"; // Moyen
+      return "border-yellow-card-text bg-white text-yellow-card-text border"; // Moyen
     if (riskScore === -1)
-      return "border-blue-300 bg-blue-500 border text-white"; //modified
-    return "border-green-700 bg-green-500 border text-white"; // Modéré
+      return "border-blue-300 bg-white border text-blue-500"; //modified
+      return "border-green-700 bg-white border text-green-card-primary"; // Modéré
   };
 
   const getRiskLabel = (riskScore: number) => {
@@ -37,6 +37,13 @@ export function ClauseRiskCard({
     if (riskScore >= 3) return "Moyen";
     return "Modéré";
   };
+
+  const getRiskType = (riskScore: number) => {
+    if (riskScore === 5) return "flex font-medium text-red-card-primary bg-white p-2 rounded-lg border border-red-800"
+    if (riskScore >= 3) 
+      return "flex font-medium text-yellow-card-text bg-white p-2 rounded-lg border border-yellow-card-text"
+    return "flex font-medium text-green-card-primary bg-white p-2 rounded-lg border border-green-800"
+  }
 
   const thisClauseIsModified = recommandationApplied?.some(
     (reco) => reco.clauseId == clause.id && reco.active == true,
@@ -95,7 +102,7 @@ export function ClauseRiskCard({
           />
         </div>
 
-        <div className="font-medium text-gray-800 pl-1">
+        <div className={getRiskType(thisClauseIsModified ? -1 : clause.riskScore)}>
           {clause.type || "Clause générale"}
         </div>
       </div>
