@@ -42,6 +42,12 @@ function qs(f: ListFilters): string {
 export const contractApi = {
   stats: () => fetchProxy(`${BASE}/stats`, { credentials: "include" }).then(json<ContractStats>),
 
+  /** Vérifie (sans créer) si l'utilisateur peut encore ajouter un contrat. */
+  capacity: () =>
+    fetchProxy(`${BASE}/capacity`, { credentials: "include" }).then(
+      json<{ allowed: boolean; count?: number; limit?: number; reason?: string }>,
+    ),
+
   list: (f: ListFilters) =>
     fetchProxy(`${BASE}${qs(f)}`, { credentials: "include" }).then(json<{ items: ContractListItem[]; total: number }>),
 

@@ -25,6 +25,8 @@ import {
   type ContractHistoryItem,
 } from "../../utils/contractHistory";
 import { contractApi } from "./contratheque/api";
+import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
+import { QuotaLimitModal } from "../common/QuotaLimitModal";
 
 type RiskLevel = "Élevé" | "Moyen" | "Faible" | "—";
 
@@ -68,6 +70,7 @@ export function Conformite() {
   const [priorityFilter, setPriorityFilter] = useState("Tous");
   const [history, setHistory] = useState<ContractHistoryItem[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
   const [addState, setAddState] = useState<Record<string, "saving" | "done">>({});
 
   useEffect(() => {
@@ -77,6 +80,17 @@ export function Conformite() {
   const handleOpenAnalyzer = (id: string) => {
     console.log("Id du contract à ouvrir :", id)
     navigate(`/analyzer`, { state: { historyId: id } });
+  };
+
+  // Nouvelle analyse : on vérifie le quota AVANT de naviguer vers l'analyzer,
+  // pour bloquer tôt (carte de plafond) plutôt qu'une fois sur la page.
+  // Fail-open : en cas d'erreur, on navigue quand même (le serveur reste garde-fou).
+  const handleNewAnalysis = async () => {
+    if (await isAnalyzerQuotaExhausted()) {
+      setAnalyzerLimitOpen(true);
+      return;
+    }
+    navigate("/analyzer");
   };
 
   //Handle de la fermeture de la modale "Action"
@@ -160,7 +174,7 @@ export function Conformite() {
           </p>
         </div>
         <button
-          onClick={() => navigate("/analyzer")}
+          onClick={handleNewAnalysis}
           className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-end"
         >
           <Plus className="text-base font-normal" /> Nouvelle analyse
@@ -483,6 +497,13 @@ export function Conformite() {
 </div>
     </div>
     <Toaster position="top-right" />
+    {analyzerLimitOpen && (
+      <QuotaLimitModal
+        title="Limite d'analyses atteinte"
+        message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
+        onClose={() => setAnalyzerLimitOpen(false)}
+      />
+    )}
     </>
   );
 }

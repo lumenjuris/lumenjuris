@@ -1,10 +1,1 @@
-[
-  {
-    "id": "f2c9fdc5-ca7b-450f-9fae-d763f1a4a43f",
-    "date": "2026-08-08T11:20:33.047Z",
-    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Vous ne pouvez pas modifier votre propre rôle d'administrateur.",
-    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/3/role",
-    "page": "/admin/users/3/role",
-    "userId": "3"
-  }
-]
+[]

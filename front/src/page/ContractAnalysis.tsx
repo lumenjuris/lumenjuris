@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import { DocumentViewer, DocumentViewerRef } from "../components/ContractAnalysis/DocumentViewer";
 
@@ -39,6 +39,8 @@ import {
 
 
 import { fetchProxy } from "../utils/fetchProxy";
+import { isAnalyzerQuotaExhausted } from "../utils/analyzerQuota";
+import { QuotaLimitModal } from "../components/common/QuotaLimitModal";
 import { LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
 import { ClausesSidebar } from "../components/ContractAnalysis/ClausesSidebar";
 import { isFeatureEnabled } from "../config/features";
@@ -85,6 +87,7 @@ export default function ContractAnalysis() {
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const [reviewedClauses, setReviewedClauses] = useState<Set<string>>(new Set());
   const [showMarketAnalysis, setShowMarketAnalysis] = useState(false);
+  const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
   const currentHistoryIdRef = useRef<string | null>(null);
   const sidebarCollapsed = false;
 
@@ -244,12 +247,9 @@ export default function ContractAnalysis() {
       });
 
       // Quota d'analyses épuisé (renvoyé par le proxy avant de lancer l'IA).
+      // Backstop : si la vérif précoce a été contournée (accès direct, course).
       if (response.status === 402) {
-        const err = await response.json().catch(() => ({}));
-        toast.error(
-          err?.message ||
-            "Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
-        );
+        setAnalyzerLimitOpen(true);
         throw new Error("QUOTA_EXCEEDED");
       }
       if (!response.ok)
@@ -475,7 +475,20 @@ export default function ContractAnalysis() {
 
 
 
+  // Vérifie le quota d'analyses AVANT l'import, pour bloquer tôt (et non après le
+  // formulaire). Ouvre la carte de plafond si épuisé et renvoie `true` (import à
+  // stopper). Fail-open : le serveur /analyze-contract reste le garde-fou (402).
+  const blockedByAnalyzerQuota = async (): Promise<boolean> => {
+    if (await isAnalyzerQuotaExhausted()) {
+      setAnalyzerLimitOpen(true);
+      return true;
+    }
+    return false;
+  };
+
   const onFileUpload = async (file: File) => {
+    if (await blockedByAnalyzerQuota()) return;
+
     const preparationKey = `file:${getFileUploadKey(file)}`;
 
     if (documentPreparationRef.current) {
@@ -549,6 +562,8 @@ export default function ContractAnalysis() {
 
 
   const onTextSubmit = async (text: string, fileName: string) => {
+    if (await blockedByAnalyzerQuota()) return;
+
     const preparationKey = `text:${fileName}:${text.length}`;
 
     if (documentPreparationRef.current) {
@@ -961,6 +976,13 @@ export default function ContractAnalysis() {
       )}
 
       <Toaster position="top-right" />
+      {analyzerLimitOpen && (
+        <QuotaLimitModal
+          title="Limite d'analyses atteinte"
+          message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
+          onClose={() => setAnalyzerLimitOpen(false)}
+        />
+      )}
     </>
   );
 }
