@@ -41,6 +41,7 @@ backNode/facture
 proxy/.env
 proxy/node_modules
 proxy/dist
+proxy/logs/proxy-logger.json
 
 #complement Word (Office Add-in)
 word-addin/node_modules
