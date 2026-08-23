@@ -77,7 +77,12 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
       where: { email: email },
     });
 
+    const FRONT = process.env.HOST_FRONT;
+
     if (findUser) {
+      if (findUser.isBanned) {
+        return res.redirect(`${FRONT}/inscription?error=banned`);
+      }
       return (
         createCookieAuth(findUser.idUser, findUser.role , res),
         res.redirect(`${process.env.HOST_FRONT}/dashboard`)

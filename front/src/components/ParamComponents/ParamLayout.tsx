@@ -10,80 +10,69 @@ type ParamLayoutProps = {
   children: ReactNode;
   accountMeasureRef: RefObject<HTMLElement>;
   enterpriseMeasureRef: RefObject<HTMLElement>;
-  preferenceMeasureRef: RefObject<HTMLElement>;
   subscriptionMeasureRef: RefObject<HTMLElement>;
   accountMeasurePanel: ReactNode;
   enterpriseMeasurePanel: ReactNode;
-  preferenceMeasurePanel: ReactNode;
   preferenceSubscriptionPanel: ReactNode;
 };
 
-/** Panneau de paramètres — s'intègre dans la coquille commune (MainLayout), pas de sidebar/header propre. */
 export function ParamLayout({
-  title = "Mes Paramètres",
+  title = "Mes paramètres",
   tabs,
   activeTab,
   onTabChange,
   children,
   accountMeasureRef,
   enterpriseMeasureRef,
-  preferenceMeasureRef,
   subscriptionMeasureRef,
   accountMeasurePanel,
   enterpriseMeasurePanel,
-  preferenceMeasurePanel,
   preferenceSubscriptionPanel,
 }: ParamLayoutProps) {
   return (
-    <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold tracking-tight text-ink mb-6">{title}</h1>
+    <div className="max-w-5xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="bg-blue-primary p-6">
+        <h1 className="text-xl font-bold tracking-tight text-white mb-4">{title}</h1>
 
-      {/* Onglets */}
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-line pb-3">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onTabChange(tab.id)}
-              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
-                  ? "bg-brand-light text-brand"
-                  : "text-ink-secondary hover:bg-surface-muted"
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                className={`inline-flex items-center rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "bg-white/10 text-white hover:bg-white/20"
                 }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {tab.label}
-            </button>
-          );
-        })}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="relative">
-        <section className="flex flex-col rounded-card border border-line bg-white p-6 shadow-card min-h-[600px]">
+      {/* Contenu principal */}
+      <div className="relative p-6">
+        <section className="flex flex-col space-y-6 min-h-[600px]">
           {children}
         </section>
 
-        {/*
-          Ces panneaux invisibles servent uniquement à stabiliser la hauteur
-          de la carte quand on change d'onglet.
-        */}
         <div
           aria-hidden="true"
           className="pointer-events-none invisible absolute left-0 top-0 hidden w-full h-0 overflow-hidden md:block"
         >
           <div>
-            <section ref={accountMeasureRef} className="flex flex-col rounded-card border border-line bg-white p-6 shadow-card">
+            <section ref={accountMeasureRef} className="flex flex-col p-6">
               {accountMeasurePanel}
             </section>
-            <section ref={enterpriseMeasureRef} className="flex flex-col rounded-card border border-line bg-white p-6 shadow-card">
+            <section ref={enterpriseMeasureRef} className="flex flex-col p-6">
               {enterpriseMeasurePanel}
             </section>
-            <section ref={preferenceMeasureRef} className="flex flex-col rounded-card border border-line bg-white p-6 shadow-card">
-              {preferenceMeasurePanel}
-            </section>
-            <section ref={subscriptionMeasureRef} className="flex flex-col rounded-card border border-line bg-white p-6 shadow-card">
+            <section ref={subscriptionMeasureRef} className="flex flex-col p-6">
               {preferenceSubscriptionPanel}
             </section>
           </div>

@@ -15,6 +15,8 @@ import {
   FolderPlus,
   Check,
   Loader2,
+  Sparkles,
+  PlusCircle,
 } from "lucide-react";
 import {
   loadContractHistoryIndex,
@@ -146,24 +148,53 @@ export function Conformite() {
 
   return (
     <>
-    <div className="space-y-5">
+    <div className="lg:col-span-3 space-y-6">
       {/* Title + CTA */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl">
+        <div className="text-left">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
             Analyse de conformité
-          </h1>
-          <p className="text-sm text-ink-muted mt-1">
+          </h2>
+          <p className="text-sm text-gray-primary leading-relaxed mt-1">
             Vérifiez la conformité juridique de vos documents.
           </p>
         </div>
         <button
           onClick={() => navigate("/analyzer")}
-          className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover transition-all shadow-card"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-end"
         >
-          <Plus className="w-4 h-4" /> Nouvelle analyse
+          <Plus className="text-base font-normal" /> Nouvelle analyse
         </button>
       </div>
+
+<div className="my-4 pl-4 border-l-2 border-blue-primary">
+  <h3 className="text-xs font-bold uppercase tracking-wider text-blue-primary mb-2">
+    Pourquoi utiliser l'Analyzer ?
+  </h3>
+
+  <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Diagnostic & Score de risque :</strong> Chaque clause est analysée et assortie d'un score visuel pour repérer instantanément les points de vigilance.
+      </span>
+    </li>
+
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Modifications concrètes :</strong> L'outil propose des réécritures adaptées et vous explique en détail la justification de chaque changement.
+      </span>
+    </li>
+
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Suggestions de clauses :</strong> Bénéficiez de recommandations de clauses à ajouter pour combler les manques et protéger au mieux vos intérêts.
+      </span>
+    </li>
+  </ul>
+</div>
 
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -205,138 +236,251 @@ export function Conformite() {
       </div>
 
       {/* History table */}
-      <div className="bg-white border border-line rounded-card shadow-card">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-surface-subtle border-b border-line text-ink-subtle text-[10px] uppercase tracking-widest font-semibold">
-            <tr>
-              <th className="px-6 py-4">Document</th>
-              <th className="px-4 py-4 text-center">Clauses</th>
-              <th className="px-4 py-4">Priorité</th>
-              <th className="px-4 py-4 hidden md:table-cell">Date</th>
-              <th className="px-6 py-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line-subtle">
-            {filtered.length > 0 ? (
-              filtered.map((item) => {
-                const level = getRiskLevel(item.overallRiskScore);
-                return (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-surface-subtle/60 transition-all group cursor-pointer"
-                    onClick={() => handleOpenAnalyzer(item.id)}
-                  >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-ink truncate max-w-xs">
-                            {item.fileName}
-                          </p>
-                          <p className="text-xs text-ink-subtle mt-0.5">
-                            {item.status === "analyzed" ? "Analysé" : "En cours"}
-                            {item.activePatchCount > 0
-                              ? ` · ${item.activePatchCount} modif.`
-                              : ""}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-5 text-center">
-                      <span className="text-sm text-ink-muted">
-                        {item.clausesCount ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-5">
-                      {level !== "—" ? (
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-chip border text-[11px] font-semibold tracking-wide ${getRiskStyles(level)}`}
-                        >
-                          {level}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-ink-placeholder">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-5 hidden md:table-cell">
-                      <span className="text-xs text-ink-subtle">
-                        {formatDate(item.createdAt)}
-                      </span>
-                    </td>
+      <div className="bg-white border border-line rounded-card shadow-card overflow-hidden">
+  
+  {/* ── Vue Mobile (Cartes / Liste) ── */}
+  <div className="md:hidden divide-y divide-line-subtle">
+    {filtered.length > 0 ? (
+      filtered.map((item) => {
+        const level = getRiskLevel(item.overallRiskScore);
+        return (
+          <div
+            key={item.id}
+            className="p-4 space-y-3 hover:bg-surface-subtle/60 transition-all cursor-pointer"
+            onClick={() => handleOpenAnalyzer(item.id)}
+          >
+            {/* Entête Carte : Icône + Nom + Status + Actions */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">
+                    {item.fileName}
+                  </p>
+                  <p className="text-xs text-ink-subtle mt-0.5">
+                    {item.status === "analyzed" ? "Analysé" : "En cours"}
+                    {item.activePatchCount > 0 ? ` · ${item.activePatchCount} modif.` : ""}
+                    <span className="ml-1 text-ink-placeholder">• {formatDate(item.createdAt)}</span>
+                  </p>
+                </div>
+              </div>
 
-                    <td className="px-6 py-5 text-right">
-                      <div
-                        className="relative inline-flex items-center gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => handleAddToContratheque(item)}
-                          disabled={addState[item.id] === "saving"}
-                          title={
-                            addState[item.id] === "done"
-                              ? "Ajouté à la contrathèque"
-                              : "Ajouter à la contrathèque"
-                          }
-                          className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
-                        >
-                          {addState[item.id] === "done" ? (
-                            <Check className="w-4 h-4 text-success stroke-[1.5]" />
-                          ) : addState[item.id] === "saving" ? (
-                            <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
-                          ) : (
-                            <FolderPlus className="w-4 h-4 stroke-[1.5]" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() =>{
-                            setOpenMenuId(openMenuId === item.id ? null : item.id)
-                          }
-                          }
-                          className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
-                        >
-                          <MoreVertical className="w-4 h-4 stroke-[1.5]" />
-                        </button>
-                        {openMenuId === item.id && (
-                          <div className="absolute right-0  top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Supprimer
-                            </button>
-
-                            <button
-                              onClick={() => handleOpenAnalyzer(item.id)}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              Ouvrir
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-6 py-16 text-center text-ink-subtle italic text-sm"
+              {/* Actions rapide sur mobile */}
+              <div
+                className="relative flex items-center gap-1 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => handleAddToContratheque(item)}
+                  disabled={addState[item.id] === "saving"}
+                  title={
+                    addState[item.id] === "done"
+                      ? "Ajouté à la contrathèque"
+                      : "Ajouter à la contrathèque"
+                  }
+                  className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
                 >
-                  {history.length === 0
-                    ? "Aucun document analysé pour le moment."
-                    : "Aucun résultat pour cette recherche."}
+                  {addState[item.id] === "done" ? (
+                    <Check className="w-4 h-4 text-success stroke-[1.5]" />
+                  ) : addState[item.id] === "saving" ? (
+                    <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
+                  ) : (
+                    <FolderPlus className="w-4 h-4 stroke-[1.5]" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
+                  className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
+                >
+                  <MoreVertical className="w-4 h-4 stroke-[1.5]" />
+                </button>
+
+                {openMenuId === item.id && (
+                  <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Supprimer
+                    </button>
+                    <button
+                      onClick={() => handleOpenAnalyzer(item.id)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Ouvrir
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Pied Carte : Informations secondaires (Clauses & Priorité) */}
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-line-subtle/50">
+              <div className="flex items-center gap-1.5 text-ink-subtle">
+                <span>Clauses :</span>
+                <span className="font-semibold text-ink">{item.clausesCount ?? "—"}</span>
+              </div>
+              <div>
+                {level !== "—" ? (
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-chip border text-[10px] font-semibold tracking-wide ${getRiskStyles(level)}`}
+                  >
+                    {level}
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-placeholder">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })
+    ) : (
+      <div className="px-6 py-12 text-center text-ink-subtle italic text-sm">
+        {history.length === 0
+          ? "Aucun document analysé pour le moment."
+          : "Aucun résultat pour cette recherche."}
+      </div>
+    )}
+  </div>
+
+  {/* ── Vue Desktop (Tableau classique) ── */}
+  <div className="hidden md:block">
+    <table className="w-full text-left border-collapse">
+      <thead className="bg-blue-primary border-b border-line text-white text-[10px] uppercase tracking-widest font-semibold">
+        <tr>
+          <th className="px-6 py-4">Document</th>
+          <th className="px-4 py-4 text-center">Clauses</th>
+          <th className="px-4 py-4">Priorité</th>
+          <th className="px-4 py-4">Date</th>
+          <th className="px-6 py-4 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-line-subtle">
+        {filtered.length > 0 ? (
+          filtered.map((item) => {
+            const level = getRiskLevel(item.overallRiskScore);
+            return (
+              <tr
+                key={item.id}
+                className="hover:bg-surface-subtle/60 transition-all group cursor-pointer"
+                onClick={() => handleOpenAnalyzer(item.id)}
+              >
+                <td className="px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink truncate max-w-xs">
+                        {item.fileName}
+                      </p>
+                      <p className="text-xs text-ink-subtle mt-0.5">
+                        {item.status === "analyzed" ? "Analysé" : "En cours"}
+                        {item.activePatchCount > 0
+                          ? ` · ${item.activePatchCount} modif.`
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-5 text-center">
+                  <span className="text-sm text-ink-muted">
+                    {item.clausesCount ?? "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-5">
+                  {level !== "—" ? (
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-chip border text-[11px] font-semibold tracking-wide ${getRiskStyles(level)}`}
+                    >
+                      {level}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-placeholder">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-5">
+                  <span className="text-xs text-ink-subtle">
+                    {formatDate(item.createdAt)}
+                  </span>
+                </td>
+
+                <td className="px-6 py-5 text-right">
+                  <div
+                    className="relative inline-flex items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => handleAddToContratheque(item)}
+                      disabled={addState[item.id] === "saving"}
+                      title={
+                        addState[item.id] === "done"
+                          ? "Ajouté à la contrathèque"
+                          : "Ajouter à la contrathèque"
+                      }
+                      className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
+                    >
+                      {addState[item.id] === "done" ? (
+                        <Check className="w-4 h-4 text-success stroke-[1.5]" />
+                      ) : addState[item.id] === "saving" ? (
+                        <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
+                      ) : (
+                        <FolderPlus className="w-4 h-4 stroke-[1.5]" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === item.id ? null : item.id)
+                      }
+                      className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
+                    >
+                      <MoreVertical className="w-4 h-4 stroke-[1.5]" />
+                    </button>
+                    {openMenuId === item.id && (
+                      <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Supprimer
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenAnalyzer(item.id)}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Ouvrir
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            );
+          })
+        ) : (
+          <tr>
+            <td
+              colSpan={5}
+              className="px-6 py-16 text-center text-ink-subtle italic text-sm"
+            >
+              {history.length === 0
+                ? "Aucun document analysé pour le moment."
+                : "Aucun résultat pour cette recherche."}
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
     </div>
     <Toaster position="top-right" />
     </>

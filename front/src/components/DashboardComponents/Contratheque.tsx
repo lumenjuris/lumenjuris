@@ -53,11 +53,11 @@ export function Contratheque() {
   if (tab === "echeances") {
     return (
       <div className="space-y-5">
-        <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Contrathèque</h1>
-          <p className="text-sm text-ink-muted mt-1">Alertes de renouvellement et suivi des échéances.</p>
-          <div className="mt-3"><ViewTabs tab={tab} onTab={setTab} /></div>
+        <div className="flex flex-col items-center gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Contrathèque</h1>
+          <p className="text-sm text-gray-primary mt-1">Alertes de renouvellement et suivi des échéances.</p>
         </div>
+        <div className="mt-3"><ViewTabs tab={tab} onTab={setTab} /></div>
         <DeadlinesView refreshKey={refreshKey} onOpen={(id) => navigate(`/contratheque/${id}`)} />
       </div>
     );

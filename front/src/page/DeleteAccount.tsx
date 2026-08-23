@@ -84,56 +84,60 @@ export function ConfirmDeleteAccountPage() {
     onSendMailDeleteAccountConfirm: () => {},
   });
 
-  return (
-    <div className="max-w-xl mx-auto my-8 p-6 bg-white rounded-xl border border-slate-100 shadow-sm space-y-6">
+return (
+  <div className="max-w-4xl mx-auto my-8 p-8 bg-[#1e3a5f] rounded-2xl text-white shadow-xl space-y-6">
+    
+    {/* Alertes de statut */}
+    {exportDataSuccess && (
+      <AlertBanner
+        title="Export demandé avec succès !"
+        variant="success"
+        detail="Un e-mail contenant toutes les informations liées à votre compte vous a été envoyé."
+        duration={10000}
+        onClose={() => setExportDataSuccess(false)}
+      />
+    )}
+    {exportDataError && (
+      <AlertBanner
+        title="Échec de l'exportation !"
+        variant="error"
+        detail="Une erreur est survenue lors de la récupération de vos données. Veuillez réessayer."
+        duration={10000}
+        onClose={() => setExportDataError(false)}
+      />
+    )}
+    {deleteError && (
+      <AlertBanner
+        title="Erreur de suppression"
+        variant="error"
+        detail={deleteError}
+        duration={10000}
+        onClose={() => setDeleteError("")}
+      />
+    )}
+
+    {/* En-tête centré */}
+    <div className="text-center space-y-2 max-w-xl mx-auto mb-8">
+      <h1 className="text-3xl font-bold">Suppression de votre compte</h1>
+      <p className="text-sm text-slate-300">
+        Nous sommes désolés de vous voir partir. Votre décision est définitive et effacera toutes vos données.
+      </p>
+    </div>
+
+    {/* Section principale en 2 colonnes avec séparateur */}
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-8 items-center">
       
-      {/* Alertes de statut */}
-      {exportDataSuccess && (
-        <AlertBanner
-          title="Export demandé avec succès !"
-          variant="success"
-          detail="Un e-mail contenant toutes les informations liées à votre compte vous a été envoyé."
-          duration={10000}
-          onClose={() => setExportDataSuccess(false)}
-        />
-      )}
-      {exportDataError && (
-        <AlertBanner
-          title="Échec de l'exportation !"
-          variant="error"
-          detail="Une erreur est survenue lors de la récupération de vos données. Veuillez réessayer."
-          duration={10000}
-          onClose={() => setExportDataError(false)}
-        />
-      )}
-      {deleteError && (
-        <AlertBanner
-          title="Erreur de suppression"
-          variant="error"
-          detail={deleteError}
-          duration={10000}
-          onClose={() => setDeleteError("")}
-        />
-      )}
-
-      {/* En-tête */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Suppression de votre compte</h1>
-        <p className="text-sm text-slate-500">
-          Nous sommes désolés de vous voir partir. Votre décision est définitive et effacera toutes vos données.
-        </p>
-      </div>
-
-      {/* Section 1 : Motif de départ */}
-      <div className="space-y-3 pt-2">
-        <label htmlFor="delete-reason" className="block text-sm font-medium text-slate-700">
-          Pourquoi souhaitez-vous nous quitter ? <span className="text-red-500">*</span>
+      {/* Colonne de gauche : Motif + Action de suppression */}
+      <div className="space-y-4 text-center md:text-left">
+        <label htmlFor="delete-reason" className="block text-sm font-medium text-slate-200">
+          Pourquoi souhaitez-vous nous quitter ?
         </label>
+        
         <select
           id="delete-reason"
           value={reasonDeparture}
           onChange={(e) => setReasonDeparture(e.target.value)}
-          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400 transition outline-none cursor-pointer"
+          className="w-full p-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 text-center font-medium transition outline-none cursor-pointer"
         >
           <option value="">Sélectionnez une raison</option>
           <option value="plus_utilise">Je n'utilise plus le service</option>
@@ -149,35 +153,13 @@ export function ConfirmDeleteAccountPage() {
             placeholder="Dites-nous en plus pour nous aider à nous améliorer..."
             value={customReason}
             onChange={(e) => setCustomReason(e.target.value)}
-            className="w-full p-3 border border-slate-200 rounded-lg text-sm h-28 focus:ring-2 focus:ring-slate-200 focus:border-slate-400 transition outline-none resize-none"
+            className="w-full p-3 bg-white text-slate-800 rounded-lg text-sm h-28 outline-none resize-none"
             maxLength={1000}
           />
         )}
-      </div>
 
-      <hr className="border-slate-100" />
-
-      {/* Section 2 : Sauvegarde / Box Export */}
-      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h4 className="text-sm font-semibold text-slate-900">Pensez à sauvegarder vos données</h4>
-          <p className="text-xs text-slate-600 max-w-sm">
-            Souhaitez-vous télécharger une copie de vos informations de compte avant leur suppression irréversible ?
-          </p>
-        </div>
         <Button
-          variant="outline"
-          onClick={() => setActiveConfirmationModal("export_data")}
-          className="bg-white border-slate-200 text-slate-700 hover:bg-slate-100 text-xs py-2 whitespace-nowrap self-start md:self-center"
-        >
-          Récupérer mes données
-        </Button>
-      </div>
-
-      {/* Section 3 : Action finale */}
-      <div className="pt-4 flex flex-col sm:flex-row sm:justify-end gap-3">
-        <Button
-          className="bg-red-600 text-white hover:bg-red-700 px-5 py-2.5 font-medium rounded-lg shadow-sm shadow-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+          className="w-full bg-[#ef4444] text-white hover:bg-red-600 font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           disabled={loading || !reasonDeparture || (reasonDeparture === "autre" && !customReason.trim())}
           onClick={() => setActiveConfirmationModal("delete_account")}
         >
@@ -185,18 +167,39 @@ export function ConfirmDeleteAccountPage() {
         </Button>
       </div>
 
-      {/* Modale de confirmation */}
-      {confirmationModalContent ? (
-        <ConfirmationModal
-          open
-          title={confirmationModalContent.title}
-          description={confirmationModalContent.description}
-          confirmLabel={confirmationModalContent.confirmLabel}
-          confirmClassName={confirmationModalContent.confirmClassName}
-          onCancel={() => setActiveConfirmationModal(null)}
-          onConfirm={confirmationModalContent.onConfirm}
-        />
-      ) : null}
+      {/* Séparateur vertical (desktop) / horizontal (mobile) */}
+      <div className="hidden md:block w-[1px] h-full bg-slate-400/40 justify-self-center" />
+      <div className="block md:hidden h-[1px] w-full bg-slate-400/40" />
+
+      {/* Colonne de droite : Carte de sauvegarde des données */}
+      <div className="bg-white text-slate-900 rounded-xl p-6 text-center space-y-4 shadow-md">
+        <h4 className="text-base font-bold text-slate-900">Pensez à sauvegarder vos données</h4>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Souhaitez-vous télécharger une copie de vos informations de compte avant leur suppression irréversible ?
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => setActiveConfirmationModal("export_data")}
+          className="w-full bg-[#1e3a5f] text-white hover:bg-[#162a45] text-xs py-2.5 font-medium rounded-lg transition"
+        >
+          Récupérer mes données
+        </Button>
+      </div>
+
     </div>
-  );
+
+    {/* Modale de confirmation */}
+    {confirmationModalContent ? (
+      <ConfirmationModal
+        open
+        title={confirmationModalContent.title}
+        description={confirmationModalContent.description}
+        confirmLabel={confirmationModalContent.confirmLabel}
+        confirmClassName={confirmationModalContent.confirmClassName}
+        onCancel={() => setActiveConfirmationModal(null)}
+        onConfirm={confirmationModalContent.onConfirm}
+      />
+    ) : null}
+  </div>
+);
 }

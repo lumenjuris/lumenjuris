@@ -254,7 +254,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                   className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
                 >
                   <LogOutIcon size={16} />
-                  Logout
+                  Déconnexion
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {

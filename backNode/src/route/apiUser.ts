@@ -360,7 +360,6 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
         reason: "banned",
         message: "Cet utilisateur est banni et ne peut donc pas se connecter."
       })
-    }
 
     // Compte non valide : aucune session n'est ouverte. Sans ce controle, le
     // cookie etait pose malgre le refus affiche par le front, et il suffisait

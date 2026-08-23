@@ -304,12 +304,12 @@ export function Logger() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-2 w-full max-w-full min-w-0">
+          <SlidersHorizontal className="w-4 h-4 text-gray-400 shrink-0" />
           <select
             value={filterPage}
             onChange={(e) => setFilterPage(e.target.value)}
-            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-indigo-300 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            className="w-full sm:w-auto min-w-0 truncate text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-indigo-300 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           >
             <option value="all">Toutes les pages</option>
             {pages.map((p) => (
@@ -473,8 +473,10 @@ export function Logger() {
                   </div>
 
                   <div>
-                    <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Comment / Erreur :</span>
-                    <p className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-mono bg-white dark:bg-gray-800 p-2.5 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                      Comment / Erreur :
+                    </span>
+                    <p className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-mono bg-white dark:bg-gray-800 p-2.5 rounded border border-gray-200 dark:border-gray-700 break-all sm:break-words overflow-x-auto max-w-full">
                       {f.comment}
                     </p>
                   </div>

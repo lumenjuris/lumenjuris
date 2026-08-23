@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "id": "63b8e0ee-3120-4bb1-82e5-70da5c2010af",
+    "date": "2026-08-23T11:41:00.992Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 15ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "442caa48-68d1-46cc-8680-4c40b3950f27",
+    "date": "2026-08-23T11:41:00.962Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 17ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  }
+]
+

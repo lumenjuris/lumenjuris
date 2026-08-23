@@ -24,8 +24,8 @@ router.get("/users", authMiddleware, requireAdmin, async (_req: Request, res: Re
         })
         return res.json({ success: true, data: users })
     } catch (err) {
-        console.error("[admin] list users error:", err)
-        return res.status(500).json({ success: false, message: "Erreur serveur." })
+        console.error("[admin] list users error:", err);
+        return res.status(500).json({ success: false, message: "Erreur serveur." });
     }
 })
 

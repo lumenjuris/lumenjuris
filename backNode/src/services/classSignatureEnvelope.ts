@@ -250,6 +250,11 @@ export class SignatureEnvelopeService {
       where: { signingToken },
     });
     if (!row) return null;
+
+    if (row.status === "SIGNED" || row.completedAt !== null) {
+      throw new Error("Enveloppe déjà signée et ne peut plus être modifiée.");
+    }
+
     const now = new Date();
     const updated = await prisma.signatureEnvelope.update({
       where: { signingToken },

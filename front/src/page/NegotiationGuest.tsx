@@ -40,7 +40,7 @@ export function NegotiationGuest() {
 
   return (
     <div className="min-h-screen bg-surface-subtle">
-      <header className="h-14 bg-sidebar flex items-center px-6">
+      <header className="h-14 bg-blue-primary flex items-center px-6">
         <LumenJurisLogo variant="dark" height={36} />
         <span className="ml-3 text-xs text-white/40">
           · {completion ? "Complétion du document — espace invité" : "Négociation — espace invité"}
@@ -63,18 +63,16 @@ export function NegotiationGuest() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div>
-              <h1 className="text-2xl font-bold text-ink tracking-tight">{data.title}</h1>
-              <p className="text-sm text-ink-muted mt-1 inline-flex items-center gap-1.5">
+            <div className="flex flex-col bg-blue-primary p-4 gap-2 rounded-2xl">
+              <h1 className="text-2xl font-bold text-white tracking-tight">{data.title}</h1>
+              <p className="text-sm text-gray-primary mt-1 inline-flex items-center gap-1.5">
                 {completion
                   ? "Complétez les champs surlignés qui vous sont assignés, puis validez : le reste du document est en lecture seule."
                   : data.guest.canComment
                     ? "Surlignez un passage du contrat pour le commenter ou proposer une modification."
                     : <><Eye className="w-3.5 h-3.5" /> Vous consultez ce document en lecture seule.</>}
               </p>
-            </div>
-
-            {/* Réassurance : ce que l'invité peut faire, où sont les données */}
+              {/* Réassurance : ce que l'invité peut faire, où sont les données */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[11px] text-ink-muted">
               <span className="inline-flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-brand" /> Connexion chiffrée, lien personnel et révocable</span>
               <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-brand" /> Document hébergé en France</span>
@@ -84,6 +82,8 @@ export function NegotiationGuest() {
                   ? "Vous ne pouvez modifier que les champs qui vous sont assignés"
                   : "Vos contributions sont visibles de votre interlocuteur et tracées"}
               </span>
+            </div>
+
             </div>
 
             {completion && token ? (

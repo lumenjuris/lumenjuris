@@ -1,50 +1,49 @@
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/Button";
+import { useSubscriptionPortal } from "../../hooks/useSubscription";
 
-/**
- * Page d'atterrissage après un paiement réussi sur Stripe Checkout.
- * l'URL de succès est configurée côté backend dans `createCheckout`.
- *
- * Important ! : c'est le webhook Stripe qui active réellement l'abonnement et
- * réinitialise les quotas — de façon asynchrone. Cette page ne fait donc que
- * confirmer le paiement et inviter l'utilisateur à continuer ; 
- * L'activation peut prendre quelques secondes à se refléter dans son compte.
- */
 export function SubscriptionSuccess() {
   const navigate = useNavigate();
+  const { handleManageBilling, portalLoading, portalError } = useSubscriptionPortal();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4">
-      <div className="w-full max-w-md rounded-2xl border border-green-200 bg-white px-6 py-12 text-center shadow-sm">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-5xl rounded-2xl border border-green-200 bg-blue-primary px-6 py-12 text-center shadow-sm">
+        <div className="flex items-center justify-center gap-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+          </div>
+          <h1 className="text-xl font-bold text-white">Paiement confirmé !</h1>
         </div>
 
-        <h1 className="text-xl font-bold text-ink">Paiement confirmé !</h1>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-primary">
           Merci pour votre confiance. Votre abonnement est en cours d'activation
-          — cela peut prendre quelques secondes. Vous recevrez votre facture par
-          email.
+          — cela peut prendre quelques secondes. Vous recevrez votre facture par email.
         </p>
 
-        <div className="mt-8 flex flex-col gap-3">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 w-full sm:flex-row sm:gap-4">
           <Button
             type="button"
-            className="w-full bg-lumenjuris text-white hover:bg-lumenjuris/90"
+            className="w-full bg-white text-blue-primary hover:bg-gray-300 sm:w-auto"
             onClick={() => navigate("/dashboard")}
           >
             Aller sur mon tableau de bord
           </Button>
+          
           <Button
             type="button"
             variant="outline"
-            className="w-full"
-            onClick={() => navigate("/mon-compte")}
+            disabled={portalLoading}
+            className="w-full text-blue-primary hover:bg-gray-300 sm:w-auto"
+            onClick={handleManageBilling}
           >
-            Voir mon abonnement
+            {portalLoading ? "Chargement..." : "Voir mon abonnement"}
           </Button>
         </div>
+        {portalError && (
+            <p className="w-full text-center text-xs text-red-300 mt-2">{portalError}</p>
+        )}
       </div>
     </div>
   );

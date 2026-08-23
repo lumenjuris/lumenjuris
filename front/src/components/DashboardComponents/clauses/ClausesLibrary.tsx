@@ -74,17 +74,17 @@ export function ClausesLibrary() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Bibliothèque de clauses</h1>
-          <p className="text-sm text-ink-muted mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Bibliothèque de clauses</h1>
+          <p className="text-sm text-gray-primary mt-1">
             Référentiel de clauses approuvées, réutilisables pour la génération et la négociation.
           </p>
         </div>
         {canEdit && (
           <button
             onClick={() => setEditing("new")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover transition-all shadow-card shrink-0"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-blue-primary hover:text-white border border-white transition-all shadow-card shrink-0"
           >
             <Plus className="w-4 h-4" /> Nouvelle clause
           </button>
@@ -178,8 +178,8 @@ export function ClausesLibrary() {
           {grouped.map(([cat, clauses]) => (
             <div key={cat}>
               <div className="flex items-center gap-2 mb-2.5">
-                <h2 className="text-xs font-bold text-ink-subtle uppercase tracking-widest">{CATEGORY_LABEL[cat]}</h2>
-                <span className="text-[10px] font-semibold text-ink-subtle bg-surface-muted px-1.5 py-0.5 rounded-chip">{clauses.length}</span>
+                <h2 className="text-xm font-bold uppercase tracking-widest">{CATEGORY_LABEL[cat]}</h2>
+                <span className="text-[12px] font-semibold text-white bg-blue-primary px-2 py-1 rounded-chip">{clauses.length}</span>
               </div>
               <div className="space-y-2.5">
                 {clauses.map((c) => (
@@ -246,6 +246,9 @@ function ClauseCard({
             >
               {POSITION_LABEL[clause.position]}
             </span>
+            {clause.tags.map((t) => (
+              <span key={t} className="text-[9px] font-semibold text-brand bg-brand-light px-1.5 py-0.5 rounded-chip">{t}</span>
+            ))}
             {clause.isApproved && (
               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-success-dark bg-success-light px-1.5 py-0.5 rounded-chip">
                 <ShieldCheck className="w-2.5 h-2.5" /> Approuvée
@@ -257,9 +260,6 @@ function ClauseCard({
             <p className="text-xs text-ink-muted mt-2 italic">{clause.notes}</p>
           )}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            {clause.tags.map((t) => (
-              <span key={t} className="text-[9px] font-semibold text-brand bg-brand-light px-1.5 py-0.5 rounded-chip">{t}</span>
-            ))}
             {clause.usageCount > 0 && (
               <span className="text-[9px] text-ink-subtle">Utilisée {clause.usageCount}×</span>
             )}

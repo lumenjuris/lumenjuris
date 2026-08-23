@@ -105,30 +105,60 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
 
   return (
     <div className="space-y-4">
+      <BackBtn onBack={onBack} />
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-primary py-6 px-8 rounded-2xl">
+        {/* Titre & Badges */}
         <div className="min-w-0">
-          <BackBtn onBack={onBack} />
-          <div className="flex items-center gap-3 mt-2">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">{data.title}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+              {data.title.replace(/-/g, " ")}
+            </h1>
             <StatusBadge status={data.status} />
-            {data.isB2C && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">B2C · loi Chatel</span>}
-            {data.isArchived && <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Archivé</span>}
+            {data.isB2C && (
+              <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-400/30 px-2 py-0.5 rounded-md">
+                B2C · loi Chatel
+              </span>
+            )}
+            {data.isArchived && (
+              <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded-md">
+                Archivé
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {data.hasDocument && (
-            <a href={contractApi.documentUrl(contractId)} target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+            <a
+              href={contractApi.documentUrl(contractId)}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl transition-all"
+            >
               <Download className="w-3.5 h-3.5" /> Télécharger
             </a>
           )}
-          <button onClick={() => void handleNegotiate()} disabled={openingNego} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#354F99] rounded-lg hover:bg-[#1a2d5a] transition-colors disabled:opacity-50">
-            {openingNego ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Handshake className="w-3.5 h-3.5" />} Négocier
+
+          <button
+            onClick={() => void handleNegotiate()}
+            disabled={openingNego}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-xl shadow-sm transition-all disabled:opacity-50"
+          >
+            {openingNego ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
+            ) : (
+              <Handshake className="w-3.5 h-3.5 text-blue-600" />
+            )}
+            Négocier
           </button>
+
           {canDelete && (
-            <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-500 bg-white border border-gray-200 rounded-lg hover:bg-red-50">
-              <Trash2 className="w-3.5 h-3.5" /> Supprimer
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-red-500 bg-white hover:bg-white/80 border border-red-500 rounded-xl transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-500" /> Supprimer
             </button>
           )}
         </div>
@@ -141,12 +171,12 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
           className={`lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 ${editing ? "" : "overflow-y-auto"}`}
           style={editing ? undefined : { maxHeight: 620 }}
         >
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contenu du contrat</p>
+          <div className="flex items-center justify-between gap-2 mb-3 bg-blue-primary -mx-5 -mt-5 px-6 py-4">
+            <p className="text-[10px] font-bold text-white uppercase tracking-widest">Contenu du contrat</p>
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#354F99] bg-[#354F99]/5 border border-[#354F99]/20 rounded-lg hover:bg-[#354F99]/10"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold  bg-white border border-[#354F99]/20 rounded-lg hover:bg-[#354F99]/10 border border-white hover:text-white"
               >
                 <Pencil className="w-3.5 h-3.5" /> Modifier le contrat
               </button>

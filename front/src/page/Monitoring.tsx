@@ -53,7 +53,7 @@ export const Monitoring = () => {
     <>
 
       <div className="min-h-[calc(100vh-64px)] bg-gray-50/50">
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
           {/* En-tête de page */}
           <div>
@@ -61,20 +61,35 @@ export const Monitoring = () => {
             <p className="mt-1 text-sm text-gray-500">Tableau de bord administrateur</p>
           </div>
 
-          {/* Navigation onglets */}
-          <nav className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
+          {/* Nav mobile */}
+          <div className="sm:hidden w-full">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as Tab)}
+              className="w-full rounded-xl border border-gray-200 bg-white p-3 text-sm font-medium text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {TABS.map(({ id, label }) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Nav ordi & tablette */}
+          <nav className="hidden sm:flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                   activeTab === id
                     ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{label}</span>
               </button>
             ))}
           </nav>

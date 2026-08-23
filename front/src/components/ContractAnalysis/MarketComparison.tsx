@@ -45,102 +45,116 @@ export const MarketComparison: React.FC<MarketComparisonProps> = ({
   };
 
   const getPriorityColor = (priorite: string) => {
-    switch (priorite) {
-      case "critique":
-        return {
-          card: "bg-red-200/70 border-red-300/80",
-          badge: "bg-red-100/80 border-red-500 text-red-700",
-          border: "border-b border-red-300",
-        };
-      case "important":
-        return {
-          card: "bg-orange-200/70 border-orange-300/80",
-          badge: "bg-orange-100/80 border-orange-500 text-orange-700",
-          border: "border-b border-orange-300",
-        };
-      case "mineur":
-        return {
-          card: "bg-green-200/70 border-green-300/80",
-          badge: "bg-green-200/80 border-green-500 text-green-700",
-          border: "border-b border-green-300",
-        };
-      default:
-        return {
-          card: "bg-gray-50 border-gray-200",
-          badge: "bg-gray-100 border-gray-300 text-gray-700",
-          border: "border-b border-gray-300",
-        };
-    }
-  };
+  switch (priorite?.toLowerCase()) {
+    case "critique":
+    case "obligatoire":
+      return {
+        headerBg: "bg-red-card-primary",
+        border: "border-red-500",
+        badgeText: "text-red-500",
+      };
+    case "important":
+      return {
+        headerBg: "bg-yellow-card-primary",
+        border: "border-amber-500",
+        badgeText: "text-yellow-card-text",
+      };
+    case "mineur":
+      return {
+        headerBg: "bg-green-card-primary",
+        border: "border-green-500",
+        badgeText: "text-green-card-primary",
+      };
+    default:
+      return {
+        headerBg: "bg-gray-400",
+        border: "border-gray-400",
+        badgeText: "text-gray-500",
+      };
+  }
+};
 
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="p-6 bg-gray-50">
-        {clausesManquantes.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            Aucune clause manquante critique détectée
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {clausesManquantes
-              .sort((a, b) => {
-                const priorityA = PRIORITY_ORDER[a.priorite];
-                const priorityB = PRIORITY_ORDER[b.priorite];
-                return priorityA - priorityB;
-              })
-              .map((clause, index) => {
-                const colors = getPriorityColor(clause.priorite);
-                return (
+return (
+  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="p-6 bg-gray-50">
+      {clausesManquantes.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          Aucune clause manquante critique détectée
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {clausesManquantes
+            .sort((a, b) => {
+              const priorityA = PRIORITY_ORDER[a.priorite];
+              const priorityB = PRIORITY_ORDER[b.priorite];
+              return priorityA - priorityB;
+            })
+            .map((clause, index) => {
+              const colors = getPriorityColor(clause.priorite);
+              const badgeLabel =
+                clause.importance || clause.priorite || "OBLIGATOIRE";
+
+              return (
+                <div
+                  key={index}
+                  className={`border-2 ${colors.border} rounded-2xl overflow-hidden bg-white shadow-sm`}
+                >
+                  {/* En-tête de la carte */}
                   <div
-                    key={index}
-                    className={`border rounded-lg p-4 transition-colors ${colors.card}`}
+                    className={`${colors.headerBg} px-6 py-3.5 flex items-center justify-between gap-4`}
                   >
-                    <div
-                      className={`flex items-start justify-between mb-2 pb-2 ${colors.border}`}
-                    >
-                      <h4 className="font-semibold text-gray-800">
-                        {clause.nom}
-                      </h4>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full border uppercase ${colors.badge}`}
+                    <h3 className="text-lg font-medium text-gray-900">
+                      {clause.nom}
+                    </h3>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        onClick={() => onAppendClause(clause)}
+                        className="inline-flex items-center gap-1.5 px-5 py-1.5 bg-[#1E293B] hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-full transition-colors shadow-sm"
                       >
-                        {clause.importance?.toUpperCase() ||
-                          clause.priorite?.toUpperCase()}
+                        <span className="text-sm font-normal">+</span> Ajouter
+                      </button>
+
+                      <span
+                        className={`px-4 py-1.5 bg-white ${colors.badgeText} text-xs uppercase tracking-wider rounded-full border border-white shadow-sm`}
+                      >
+                        {badgeLabel}
                       </span>
                     </div>
+                  </div>
 
-                    <p className="text-sm mb-1 mt-3 text-gray-800">
-                      <strong>Problème:</strong> {clause.explicationAbsence}
-                    </p>
+                  {/* Corps de la carte */}
+                  <div className="p-6 space-y-4 text-sm text-gray-900 leading-relaxed">
+                    {clause.explicationAbsence && (
+                      <p>
+                        <strong className="font-bold">Problème :</strong>{" "}
+                        {clause.explicationAbsence}
+                      </p>
+                    )}
 
-                    <div className=" p-3 ">
-                      <p className="text-sm text-gray-800">
-                        <strong>Standard du marché:</strong>{" "}
+                    {clause.standardMarche && (
+                      <p>
+                        <strong className="font-bold">Standard du marché:</strong>{" "}
                         {clause.standardMarche}
                       </p>
-                    </div>
+                    )}
 
-                    <div className="p-3">
-                      <p className="text-sm text-gray-800">
-                        <strong>Suggestion:</strong> {clause.titreSuggestion}
-                      </p>
-                      <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                        {clause.corpsSuggestion}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => onAppendClause(clause)}
-                      className={`mt-4 w-full inline-flex justify-center bg-sky-600 hover:bg-sky-800 text-white items-center px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2`}
-                    >
-                      Ajouter
-                    </button>
+                    {(clause.titreSuggestion || clause.corpsSuggestion) && (
+                      <div>
+                        <p className="font-bold mb-1">
+                          Suggestion: {clause.titreSuggestion}
+                        </p>
+                        <p className="whitespace-pre-line text-gray-800">
+                          {clause.corpsSuggestion}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
-          </div>
-        )}
-      </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
-  );
-};
+  </div>
+)};

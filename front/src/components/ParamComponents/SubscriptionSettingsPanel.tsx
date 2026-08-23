@@ -20,6 +20,7 @@ import type {
   SubscriptionStatus,
 } from "../../types/subscriptionData";
 import type { CreditsData } from "../../types/creditsData";
+import { useSubscriptionPortal } from "../../hooks/useSubscription";
 
 const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   ACTIVE: "Actif",
@@ -49,8 +50,8 @@ export function SubscriptionSettingsPanel() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [portalError, setPortalError] = useState<string | null>(null);
+
+  const { handleManageBilling, portalLoading, portalError } = useSubscriptionPortal();
 
   const fetchSubscription = useCallback(() => {
     fetchProxy("/api/billing/subscription", {
@@ -117,31 +118,31 @@ export function SubscriptionSettingsPanel() {
   };
 
   // Ouvre le Stripe Customer Portal (gestion de l'abonnement en self-service).
-  const handleManageBilling = async () => {
-    setPortalError(null);
-    setPortalLoading(true);
-    try {
-      const res = await fetchProxy("/api/billing/portal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success && data.url) {
-        window.location.href = data.url; // redirection vers le portail Stripe
-        return;
-      }
-      setPortalError(
-        typeof data?.message === "string"
-          ? data.message
-          : "Impossible d'ouvrir le portail. Réessayez.",
-      );
-    } catch (e) {
-      console.error(e);
-      setPortalError("Une erreur est survenue. Réessayez.");
-    }
-    setPortalLoading(false);
-  };
+  // const handleManageBilling = async () => {
+  //   setPortalError(null);
+  //   setPortalLoading(true);
+  //   try {
+  //     const res = await fetchProxy("/api/billing/portal", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       credentials: "include",
+  //     });
+  //     const data = await res.json();
+  //     if (data.success && data.url) {
+  //       window.location.href = data.url; // redirection vers le portail Stripe
+  //       return;
+  //     }
+  //     setPortalError(
+  //       typeof data?.message === "string"
+  //         ? data.message
+  //         : "Impossible d'ouvrir le portail. Réessayez.",
+  //     );
+  //   } catch (e) {
+  //     console.error(e);
+  //     setPortalError("Une erreur est survenue. Réessayez.");
+  //   }
+  //   setPortalLoading(false);
+  // };
 
   const isActive = subscription?.status === "ACTIVE";
   const isAnnual = subscription?.interval === "yearly";

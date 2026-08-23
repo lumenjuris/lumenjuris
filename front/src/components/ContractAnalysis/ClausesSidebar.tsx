@@ -40,14 +40,14 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
   ).length;
 
   return (
-    <div className="w-full md:w-80 bg-white border rounded-lg flex flex-col h-fit m-2 p-2">
+    <div className="w-full md:w-80 bg-white border rounded-lg flex flex-col h-fit">
       {/* Header sticky */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 pt-4 pb-3">
+      <div className="sticky top-0 z-10 bg-blue-primary border-b border-gray-100 px-4 pt-4 pb-3 rounded-t-lg">
         {/* Title + count */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-gray-500 stroke-[1.5]" />
-            <span className="text-sm font-semibold text-gray-800 tracking-tight">
+            <span className="text-sm font-semibold text-white tracking-tight">
               Risques détectés
             </span>
           </div>
@@ -75,8 +75,8 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
         )}
 
         {/* Color legend */}
-        <div className="flex items-center gap-3 text-[11px] text-gray-500 border-t border-gray-50 pt-2.5">
-          <span className="text-gray-400 font-medium uppercase tracking-wider text-[10px]">
+        <div className="flex items-center gap-3 text-[11px] border-t border-white bg-white px-2.5 py-1.5 rounded-xl">
+          <span className="text-blue-primary font-medium uppercase tracking-wider text-[10px]">
             Légende
           </span>
           {LEGEND.map(({ label, dot, text }) => (

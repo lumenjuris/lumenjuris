@@ -6,7 +6,6 @@ import type {
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/InputGroup";
-import { SettingsDisplayField, SettingsField } from "../ui/SettingsField";
 import { SettingsToggleRow } from "../ui/SettingsToggleRow";
 import {
   Dialog,
@@ -20,11 +19,11 @@ import {
 import { Field, FieldLabel, FieldError } from "../ui/Field";
 import { EyeOffIcon, EyeIcon } from "lucide-react";
 import { AlertBanner } from "../common/AlertBanner";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 import { fetchProxy } from "../../utils/fetchProxy";
 
-type PasswordDialogMode = "change" | "add" | null;
+type PasswordDialogMode = "add" | null;
 
 type AccountSettingsPanelProps = {
   profile: AccountProfile;
@@ -32,6 +31,10 @@ type AccountSettingsPanelProps = {
   setPassword: React.Dispatch<React.SetStateAction<string>>;
   provider: AccountProvider;
   isTwoFactorEnabled: boolean;
+  isDyslexicModeEnabled: boolean;
+  onDyslexicModeCheckedChange: (checked: boolean) => void;
+  isEmailNotificationsEnabled: boolean;
+  onEmailNotificationsCheckedChange: (checked: boolean) => void;
   onProfileFieldChange: (
     field: "prenom" | "nom" | "email",
     value: string,
@@ -66,6 +69,10 @@ export function AccountSettingsPanel({
   setPassword,
   provider,
   isTwoFactorEnabled,
+  isDyslexicModeEnabled,
+  onDyslexicModeCheckedChange,
+  isEmailNotificationsEnabled,
+  onEmailNotificationsCheckedChange,
   onProfileFieldChange,
   onUpdateProfileClick,
   profileUpdateSuccess,
@@ -80,7 +87,6 @@ export function AccountSettingsPanel({
   onDeleteMailSuccessClose,
   deleteMailError,
   onDeleteMailErrorClose,
-  onCancelProfileEdit,
   onTwoFactorCheckedChange,
   onPasswordAdded,
   onExportDataClick,
@@ -99,11 +105,6 @@ export function AccountSettingsPanel({
   const [serverErrorMessage, setServerErrorMessage] = useState("");
   const [passwordDialogMode, setPasswordDialogMode] =
     useState<PasswordDialogMode>(null);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-
-  useEffect(() => {
-    if (profileUpdateSuccess) setIsEditingProfile(false);
-  }, [profileUpdateSuccess]);
 
   const googleConnectionPanelMode =
     provider?.provider === "GOOGLE"
@@ -116,23 +117,28 @@ export function AccountSettingsPanel({
     null,
   );
 
-  const resetPasswordDialog = () => {
+  const resetPasswordFields = () => {
     setPassword("");
     setConfirmPassword("");
     setPasswordError("");
     setConfirmPasswordError("");
     setSubmitError(false);
     setSubmitLoading(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const resetPasswordDialog = () => {
+    resetPasswordFields();
     setSubmitSuccess(false);
     setServerError(false);
     setServerErrorMessage("");
-    setShowPassword(false);
-    setShowConfirmPassword(false);
     setPasswordDialogMode(null);
   };
 
-  const handleSubmitNewPassword = async (
+  const handleSubmitPassword = async (
     event: React.FormEvent<HTMLFormElement>,
+    isModal = false,
   ) => {
     event.preventDefault();
     if (confirmPassword !== password) {
@@ -155,12 +161,15 @@ export function AccountSettingsPanel({
       }
       setSubmitSuccess(true);
       setSuccessMessage(
-        passwordDialogMode === "change"
-          ? "Votre mot de passe a bien été modifié."
-          : "Votre mot de passe Lumen Juris a bien été créé.",
+        isModal
+          ? "Votre mot de passe Lumen Juris a bien été créé."
+          : "Votre mot de passe a bien été modifié.",
       );
-      if (passwordDialogMode === "add") {
+      if (isModal) {
         onPasswordAdded();
+        setPasswordDialogMode(null);
+      } else {
+        resetPasswordFields();
       }
     } catch (error) {
       setServerError(true);
@@ -205,363 +214,450 @@ export function AccountSettingsPanel({
     }
   };
 
-  const passwordDialogTitle =
-    passwordDialogMode === "change"
-      ? "Changer mon mot de passe"
-      : "Définir un mot de passe Lumen Juris";
-
-  const passwordDialogDescription =
-    passwordDialogMode === "change"
-      ? "Saisissez votre nouveau mot de passe de connexion à Lumen Juris."
-      : "Créez un mot de passe pour vous connecter à Lumen Juris directement avec votre adresse e-mail Google, sans passer par la connexion Google.";
-
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+    <div className="flex flex-1 flex-col space-y-8">
+      {/* Alertes système */}
+      {profileUpdateSuccess && (
+        <AlertBanner
+          title="Profil mis à jour !"
+          variant="success"
+          detail="Vos informations personnelles ont bien été enregistrées."
+          duration={7000}
+          onClose={onProfileUpdateSuccessClose}
+        />
+      )}
+      {profileUpdateError && (
+        <AlertBanner
+          title="Échec de la mise à jour !"
+          variant="error"
+          detail="Vos informations personnelles n'ont pu être mises à jour. Veuillez réessayer."
+          duration={7000}
+          onClose={onProfileUpdateErrorClose}
+        />
+      )}
+      {exportDataSuccess && (
+        <AlertBanner
+          title="Export demandé avec succès !"
+          variant="success"
+          detail="Un e-mail contenant toutes les informations liées à votre compte vous a été envoyé."
+          duration={7000}
+          onClose={onExportDataSuccessClose}
+        />
+      )}
+      {exportDataError && (
+        <AlertBanner
+          title="Échec de l'exportation !"
+          variant="error"
+          detail="Une erreur est survenue lors de la récupération de vos données. Veuillez réessayer."
+          duration={7000}
+          onClose={onExportDataErrorClose}
+        />
+      )}
+      {deleteMailSuccess && (
+        <AlertBanner
+          title="Suppression de compte demandée avec succès !"
+          variant="success"
+          detail="Un e-mail contenant le lien pour supprimer votre compte vous a été envoyé."
+          duration={7000}
+          onClose={onDeleteMailSuccessClose}
+        />
+      )}
+      {deleteMailError && (
+        <AlertBanner
+          title="Échec de la demande de suppression de compte !"
+          variant="error"
+          detail="Une erreur est survenue lors de l'envoi du lien pour supprimer votre compte. Veuillez réessayer."
+          duration={7000}
+          onClose={onDeleteMailErrorClose}
+        />
+      )}
+      {submitSuccess && (
+        <AlertBanner
+          title="Modification réussie !"
+          variant="success"
+          detail={successMessage}
+          duration={6000}
+          onClose={() => setSubmitSuccess(false)}
+        />
+      )}
+      {serverError && (
+        <AlertBanner
+          title="Erreur serveur"
+          variant="error"
+          detail={serverErrorMessage}
+          onClose={() => setServerError(false)}
+        />
+      )}
+
+      {/* Section 1 : Compte et connexion */}
+      <div className="space-y-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-base font-bold text-gray-900">
             Compte et connexion
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Informations personnelles du compte.
-          </p>
+          <span className="text-xs text-gray-400">
+            Informations personnelles du compte
+          </span>
         </div>
 
-        {profileUpdateSuccess && (
-          <AlertBanner
-            title="Profil mis à jour !"
-            variant="success"
-            detail="Vos informations personnelles ont bien été enregistrées."
-            duration={7000}
-            onClose={onProfileUpdateSuccessClose}
-          />
-        )}
-        {profileUpdateError && (
-          <AlertBanner
-            title="Échec de la mise à jour !"
-            variant="error"
-            detail="Vos informations personnelles n'ont pu être mises à jour. Veuillez réessayer."
-            duration={7000}
-            onClose={onProfileUpdateErrorClose}
-          />
-        )}
-        {exportDataSuccess && (
-          <AlertBanner
-            title="Export demandé avec succès !"
-            variant="success"
-            detail="Un e-mail contenant toutes les informations liées à votre compte vous a été envoyé."
-            duration={7000}
-            onClose={onExportDataSuccessClose}
-          />
-        )}
-        {exportDataError && (
-          <AlertBanner
-            title="Échec de l'exportation !"
-            variant="error"
-            detail="Une erreur est survenue lors de la récupération de vos données. Veuillez réessayer."
-            duration={7000}
-            onClose={onExportDataErrorClose}
-          />
-        )}
-        {deleteMailSuccess && (
-          <AlertBanner
-            title="Suppression de compte demandée avec succès !"
-            variant="success"
-            detail="Un e-mail contenant le lien pour supprimer votre compte vous a été envoyé."
-            duration={7000}
-            onClose={onDeleteMailSuccessClose}
-          />
-        )}
-        {deleteMailError && (
-          <AlertBanner
-            title="Échec de la demande de suppression de compte !"
-            variant="error"
-            detail="Une erreur est survenue lors de l'envoi du lien pour supprimer votre compte. Veuillez réessayer."
-            duration={7000}
-            onClose={onDeleteMailErrorClose}
-          />
-        )}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <Field>
+            <FieldLabel htmlFor="prenom" className="text-xs text-gray-500 font-normal">
+              Prénom
+            </FieldLabel>
+            <Input
+              id="prenom"
+              value={profile.prenom}
+              onChange={(e) => onProfileFieldChange("prenom", e.target.value)}
+              className="bg-gray-50/50 border-gray-200"
+            />
+          </Field>
 
-        {isEditingProfile ? (
-          <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <SettingsField label="Prénom">
-                <Input
-                  value={profile.prenom}
-                  onChange={(event) =>
-                    onProfileFieldChange("prenom", event.target.value)
-                  }
-                />
-              </SettingsField>
-              <SettingsField label="Nom">
-                <Input
-                  value={profile.nom}
-                  onChange={(event) =>
-                    onProfileFieldChange("nom", event.target.value)
-                  }
-                />
-              </SettingsField>
-              <SettingsField label="E-mail">
-                <Input
-                  type="email"
-                  value={profile.email}
-                  onChange={(event) =>
-                    onProfileFieldChange("email", event.target.value)
-                  }
-                />
-              </SettingsField>
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  onCancelProfileEdit();
-                  setIsEditingProfile(false);
-                }}
-              >
-                Annuler
-              </Button>
-              <Button
-                type="button"
-                onClick={onUpdateProfileClick}
-                className="bg-lumenjuris text-white hover:bg-lumenjuris/90"
-              >
-                Enregistrer
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <SettingsDisplayField label="Prénom" value={profile.prenom} />
-              <SettingsDisplayField label="Nom" value={profile.nom} />
-              <SettingsDisplayField label="E-mail" value={profile.email} />
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="hover:bg-gray-100"
-                onClick={() => setPasswordDialogMode("change")}
-              >
-                Changer mon mot de passe
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setIsEditingProfile(true)}
-                className="bg-lumenjuris text-white hover:bg-lumenjuris/90"
-              >
-                Mettre à jour mon profil
-              </Button>
-            </div>
-          </>
-        )}
+          <Field>
+            <FieldLabel htmlFor="nom" className="text-xs text-gray-500 font-normal">
+              Nom
+            </FieldLabel>
+            <Input
+              id="nom"
+              value={profile.nom}
+              onChange={(e) => onProfileFieldChange("nom", e.target.value)}
+              className="bg-gray-50/50 border-gray-200"
+            />
+          </Field>
 
-        {/* Dialog partagé — "Changer" ou "Ajouter" un mot de passe */}
-        <Dialog
-          open={passwordDialogMode !== null}
-          onOpenChange={(open) => {
-            if (!open) resetPasswordDialog();
-          }}
-        >
-          <DialogContent className="sm:max-w-sm bg-white">
-            <form
-              onSubmit={handleSubmitNewPassword}
-              className="flex flex-col gap-4"
+          <Field>
+            <FieldLabel htmlFor="email" className="text-xs text-gray-500 font-normal">
+              E-mail
+            </FieldLabel>
+            <Input
+              id="email"
+              type="email"
+              value={profile.email}
+              onChange={(e) => onProfileFieldChange("email", e.target.value)}
+              className="bg-gray-50/50 border-gray-200"
+            />
+          </Field>
+
+          <div className="pt-2">
+            <Button
+              type="button"
+              onClick={onUpdateProfileClick}
+              className="bg-[#1e3a5f] hover:bg-[#152a45] text-white font-medium px-5 py-2 rounded-lg text-sm"
             >
-              <DialogHeader>
-                <DialogTitle>{passwordDialogTitle}</DialogTitle>
-                <DialogDescription>
-                  {passwordDialogDescription}
-                </DialogDescription>
-                {submitError && (
-                  <AlertBanner
-                    title="Mot de passe invalide !"
-                    variant="error"
-                    detail="Les deux mots de passe doivent être identiques !"
-                    onClose={() => setSubmitError(false)}
-                  />
-                )}
-                {serverError && (
-                  <AlertBanner
-                    title="Erreur serveur"
-                    variant="error"
-                    detail={serverErrorMessage}
-                    onClose={() => setServerError(false)}
-                  />
-                )}
-                {submitSuccess && (
-                  <AlertBanner
-                    title="Modification réussie !"
-                    variant="success"
-                    detail={successMessage}
-                    duration={6000}
-                    onClose={() => setSubmitSuccess(false)}
-                  />
-                )}
-              </DialogHeader>
-              <Field className="max-w-sm">
-                <FieldLabel
-                  htmlFor="password"
-                  className="after:text-red-500 after:content-['*']"
-                >
-                  Nouveau mot de passe
-                </FieldLabel>
-                <InputGroup
-                  className={
-                    passwordError
-                      ? "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
-                      : undefined
-                  }
-                >
-                  <InputGroupInput
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Choisissez un mot de passe"
-                    value={password}
-                    onChange={handleChangePassword}
-                    className={passwordError ? "text-destructive" : undefined}
-                  />
-                  <InputGroupAddon
-                    align="inline-end"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="hover:cursor-pointer"
-                  >
-                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                  </InputGroupAddon>
-                </InputGroup>
-                <FieldError
-                  errors={
-                    passwordError ? [{ message: passwordError }] : undefined
-                  }
-                />
-              </Field>
-              <Field className="max-w-sm">
-                <FieldLabel
-                  htmlFor="confirmpassword"
-                  className="after:text-red-500 after:content-['*']"
-                >
-                  Confirmer le mot de passe
-                </FieldLabel>
-                <InputGroup
-                  className={
-                    confirmPasswordError
-                      ? "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
-                      : undefined
-                  }
-                >
-                  <InputGroupInput
-                    id="confirmpassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirmez votre mot de passe"
-                    value={confirmPassword}
-                    onChange={handleChangeConfirmPassword}
-                    className={
-                      confirmPasswordError ? "text-destructive" : undefined
-                    }
-                  />
-                  <InputGroupAddon
-                    align="inline-end"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="hover:cursor-pointer"
-                  >
-                    {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                  </InputGroupAddon>
-                </InputGroup>
-                <FieldError
-                  errors={
-                    confirmPasswordError
-                      ? [{ message: confirmPasswordError }]
-                      : undefined
-                  }
-                />
-              </Field>
-              <DialogFooter>
-                <DialogClose
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={resetPasswordDialog}
-                    >
-                      Annuler
-                    </Button>
-                  }
-                />
-                <Button
-                  type="submit"
-                  className="text-white"
-                  disabled={
-                    confirmPassword.length < 8 ||
-                    passwordError.length > 0 ||
-                    confirmPasswordError.length > 0 ||
-                    submitLoading
-                  }
-                >
-                  Enregistrer
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+              Mettre à jour mon profil
+            </Button>
+          </div>
+        </div>
+      </div>
 
-        <SettingsToggleRow
-          label="Authentification à deux facteurs"
-          checked={isTwoFactorEnabled}
-          onCheckedChange={onTwoFactorCheckedChange}
-        />
+      {/* Section 2 : Sécurité */}
+      <div className="space-y-3">
+        <h2 className="text-base font-bold text-gray-900">Sécurité</h2>
 
-        {shouldShowGooglePanel && (
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-            <div className="flex items-start gap-3">
-              <FcGoogle className="mt-0.5 h-5 w-5 shrink-0" />
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-semibold text-gray-900">
-                  Connexion Google associée
-                </p>
-                <p className="text-sm text-gray-500">
-                  {hasAddedPassword
-                    ? "Vous pouvez vous connecter à Lumen Juris via Google ou avec votre mot de passe Lumen Juris."
-                    : "Votre compte Lumen Juris est lié à votre compte Google. Vous pouvez également créer un mot de passe propre à Lumen Juris — il ne modifie pas votre mot de passe Google."}
-                </p>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
+          <div className="rounded-lg border border-gray-200 p-4">
+            <SettingsToggleRow
+              label="Authentification à deux facteurs"
+              checked={isTwoFactorEnabled}
+              onCheckedChange={onTwoFactorCheckedChange}
+            />
+          </div>
+
+          {/* Panneau Google */}
+          {shouldShowGooglePanel && (
+            <div className="rounded-lg border border-gray-200 bg-white p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col gap-1 max-w-xl">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Connexion Google associée
+                  </p>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    {hasAddedPassword
+                      ? "Vous pouvez vous connecter à Lumen Juris via Google ou avec votre mot de passe Lumen Juris."
+                      : "Votre compte LumenJuris est lié à votre compte Google. Vous pouvez également créer un mot de passe propre à LumenJuris — Il ne modifie pas votre mot de passe Google."}
+                  </p>
+                </div>
                 {!hasAddedPassword && (
                   <Button
-                    className="max-w-64 text-gray-400 bg-lumenjuris-sidebar mt-2 hover:bg-lumenjuris-sidebar/80 hover:text-white"
+                    type="button"
+                    className="bg-[#1e3a5f] hover:bg-[#152a45] text-white text-xs font-medium px-4 py-2.5 rounded-lg shrink-0"
                     onClick={() => setPasswordDialogMode("add")}
                   >
-                    Créer un mot de passe Lumen Juris
+                    Créer un mot de passe LumenJuris
                   </Button>
-                  // <button
-                  //   type="button"
-                  //   onClick={() => setPasswordDialogMode("add")}
-                  //   className="mt-1 w-fit text-xs font-medium text-lumenjuris underline underline-offset-2 transition-colors hover:text-lumenjuris/80"
-                  // >
-                  //   Créer un mot de passe LumenJuris
-                  // </button>
                 )}
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Formulaire direct de changement de mot de passe */}
+          <form
+            onSubmit={(e) => handleSubmitPassword(e, false)}
+            className="space-y-4 pt-2"
+          >
+            {submitError && (
+              <AlertBanner
+                title="Mot de passe invalide !"
+                variant="error"
+                detail="Les deux mots de passe doivent être identiques !"
+                onClose={() => setSubmitError(false)}
+              />
+            )}
+
+            <Field>
+              <FieldLabel
+                htmlFor="password"
+                className="text-xs text-gray-500 font-normal"
+              >
+                Nouveau mot de passe
+              </FieldLabel>
+              <InputGroup
+                className={
+                  passwordError
+                    ? "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive"
+                    : undefined
+                }
+              >
+                <InputGroupInput
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={handleChangePassword}
+                  className="bg-gray-50/50 border-gray-200"
+                />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </InputGroupAddon>
+              </InputGroup>
+              <FieldError
+                errors={
+                  passwordError ? [{ message: passwordError }] : undefined
+                }
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel
+                htmlFor="confirmpassword"
+                className="text-xs text-gray-500 font-normal"
+              >
+                Confirmer le mot de passe
+              </FieldLabel>
+              <InputGroup
+                className={
+                  confirmPasswordError
+                    ? "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive"
+                    : undefined
+                }
+              >
+                <InputGroupInput
+                  id="confirmpassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={handleChangeConfirmPassword}
+                  className="bg-gray-50/50 border-gray-200"
+                />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </InputGroupAddon>
+              </InputGroup>
+              <FieldError
+                errors={
+                  confirmPasswordError
+                    ? [{ message: confirmPasswordError }]
+                    : undefined
+                }
+              />
+            </Field>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                className="bg-[#1e3a5f] hover:bg-[#152a45] text-white font-medium px-5 py-2 rounded-lg text-sm"
+                disabled={
+                  !password ||
+                  confirmPassword.length < 8 ||
+                  passwordError.length > 0 ||
+                  confirmPasswordError.length > 0 ||
+                  submitLoading
+                }
+              >
+                Enregistrer le mot de passe
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <div className="mt-auto flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="hover:bg-gray-100"
-          onClick={onExportDataClick}
-        >
-          Exporter mes données
-        </Button>
-        <Button
-          type="button"
-          onClick={onDeleteAccountClick}
-          className="bg-red-600 text-white hover:bg-red-700"
-        >
-          Supprimer mon compte
-        </Button>
+      {/* Modal Dialog spécifique à la création de mot de passe Google */}
+      <Dialog
+        open={passwordDialogMode !== null}
+        onOpenChange={(open) => {
+          if (!open) resetPasswordDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-sm bg-white">
+          <form
+            onSubmit={(e) => handleSubmitPassword(e, true)}
+            className="flex flex-col gap-4"
+          >
+            <DialogHeader>
+              <DialogTitle>Définir un mot de passe Lumen Juris</DialogTitle>
+              <DialogDescription>
+                Créez un mot de passe pour vous connecter à Lumen Juris directement avec votre adresse e-mail Google, sans passer par la connexion Google.
+              </DialogDescription>
+            </DialogHeader>
+            <Field className="max-w-sm">
+              <FieldLabel
+                htmlFor="dialog-password"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Nouveau mot de passe
+              </FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="dialog-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Choisissez un mot de passe"
+                  value={password}
+                  onChange={handleChangePassword}
+                />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </InputGroupAddon>
+              </InputGroup>
+              <FieldError
+                errors={
+                  passwordError ? [{ message: passwordError }] : undefined
+                }
+              />
+            </Field>
+            <Field className="max-w-sm">
+              <FieldLabel
+                htmlFor="dialog-confirmpassword"
+                className="after:text-red-500 after:content-['*']"
+              >
+                Confirmer le mot de passe
+              </FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="dialog-confirmpassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirmez votre mot de passe"
+                  value={confirmPassword}
+                  onChange={handleChangeConfirmPassword}
+                />
+                <InputGroupAddon
+                  align="inline-end"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="hover:cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </InputGroupAddon>
+              </InputGroup>
+              <FieldError
+                errors={
+                  confirmPasswordError
+                    ? [{ message: confirmPasswordError }]
+                    : undefined
+                }
+              />
+            </Field>
+            <DialogFooter>
+              <DialogClose
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetPasswordDialog}
+                  >
+                    Annuler
+                  </Button>
+                }
+              />
+              <Button
+                type="submit"
+                className="bg-[#1e3a5f] hover:bg-[#152a45] text-white"
+                disabled={
+                  confirmPassword.length < 8 ||
+                  passwordError.length > 0 ||
+                  confirmPasswordError.length > 0 ||
+                  submitLoading
+                }
+              >
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Section3 : Préférences */}
+      <div className="space-y-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-base font-bold text-gray-900">
+            Préférences
+          </h2>
+          <span className="text-xs text-gray-400">
+            Préférences simples du compte utilisateur
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <div className="rounded-lg border border-gray-200 p-4">
+            <SettingsToggleRow
+              label="Mode dyslexique"
+              checked={isDyslexicModeEnabled}
+              onCheckedChange={onDyslexicModeCheckedChange}
+            />
+          </div>
+
+          <div className="rounded-lg border border-gray-200 p-4">
+            <SettingsToggleRow
+              label="Notifications par e-mail"
+              checked={isEmailNotificationsEnabled}
+              onCheckedChange={onEmailNotificationsCheckedChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* PIED DE PAGE : Actions d'exportation et de suppression */}
+      <div className="space-y-2">
+        <h2 className="text-base font-bold text-gray-900">
+          RGPD
+        </h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <div className="mt-auto flex flex-col gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="bg-blue-primary text-white hover:bg-opacity-80"
+              onClick={onExportDataClick}
+            >
+              Exporter mes données
+            </Button>
+            <Button
+              type="button"
+              onClick={onDeleteAccountClick}
+              className="bg-red-500 text-white hover:bg-red-700"
+            >
+              Supprimer mon compte
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

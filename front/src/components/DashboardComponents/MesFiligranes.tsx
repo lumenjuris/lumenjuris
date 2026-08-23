@@ -155,16 +155,17 @@ export function MesFiligranes() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mes filigranes</h1>
-        <p className="text-sm text-gray-500 mt-1">
+    <div className=" space-y-6 max-w-5xl mx-auto">
+      <div className="border border-gray-300 rounded-2xl">
+      <div className=" bg-blue-primary px-8 py-8 rounded-t-2xl">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Mes filigranes</h1>
+        <p className="text-sm text-gray-primary mt-1">
           Importez vos images pour les utiliser comme filigranes sur vos documents générés.
         </p>
       </div>
 
       {/* Zone d'upload */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 m-6">
         <h2 className="text-base font-semibold text-gray-900">Ajouter une image</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -214,7 +215,7 @@ export function MesFiligranes() {
       </div>
 
       {/* Galerie */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 m-6">
         <h2 className="text-base font-semibold text-gray-900 mb-4">Mes images</h2>
 
         {loading && (
@@ -302,6 +303,7 @@ export function MesFiligranes() {
             ))}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );

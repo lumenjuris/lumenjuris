@@ -170,23 +170,23 @@ export function SignerPage() {
   return (
     <div className="min-h-screen bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Header public */}
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center px-6 gap-3">
+      <header className="h-14 bg-blue-primary border-b border-gray-200 flex items-center px-6 gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#354F99]">
           <Scale className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-bold text-gray-900">Lumen Juris</span>
+        <span className="text-sm font-bold text-white">Lumen Juris</span>
         <span className="text-gray-300 mx-1">·</span>
-        <span className="text-sm text-gray-500 truncate max-w-xs">Signature — {documentName}</span>
+        <span className="text-sm text-gray-primary truncate max-w-xs">Signature — {documentName}</span>
       </header>
 
       <main className="max-w-5xl mx-auto p-4 lg:p-6 space-y-4">
         {/* Barre de progression + bouton envoyer */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-blue-primary rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-0.5">
-            <p className="text-sm font-semibold text-gray-800">
+            <p className="text-sm font-semibold text-white">
               Vos champs à signer
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-primary">
               {counterFields.length - unsignedCounter.length}/{counterFields.length} signés
               {counterFields.length === 0 && " — aucun champ à signer"}
             </p>

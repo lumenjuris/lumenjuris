@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import {
   BookOpen, Upload, Sparkles, ChevronLeft, ChevronRight,
@@ -176,7 +176,7 @@ function LibrarySection({
   }
 
   return (
-    <div className="max-w-xl space-y-3">
+    <div className="w-full max-w-4xl mx-auto space-y-6">
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle" />
         <input
@@ -646,7 +646,7 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 w-full max-w-4xl mx-auto">
       {/* Carte unique : dépôt + détails (homogène avec les autres écrans) */}
       <div className="rounded-card border border-line bg-white shadow-card p-6 space-y-5">
         {/* Zone de dépôt — react-dropzone (clic + drag), compacte */}
@@ -876,37 +876,25 @@ function ScratchEntry({ onStart, onBack }: { onStart: (title: string) => void; o
   const canStart = title.trim().length >= 3;
 
   return (
-    <div className="max-w-2xl">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-xs text-ink-subtle hover:text-brand transition-colors mb-2 font-medium"
-      >
-        <ChevronLeft className="w-3.5 h-3.5" />
-        Générateur de contrat
-      </button>
-      <h1 className="text-2xl font-bold text-ink tracking-tight">Créer de zéro</h1>
-      <p className="text-sm text-ink-muted mt-1 mb-6">
-        Générez un contrat complet sans partir d&apos;un modèle.
-      </p>
-
+    <div className="w-full max-w-4xl">
       <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
         <div>
           <label className="block text-sm font-medium text-ink-secondary mb-2">
             Quel contrat souhaitez-vous créer ?
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && canStart && onStart(title.trim())}
               placeholder="ex : Contrat de prestation de services informatiques"
-              className="flex-1 p-2.5 border border-line rounded-xl text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder"
+              className="w-full sm:flex-1 p-2.5 border border-line rounded-xl text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder min-w-0"
             />
             <button
               onClick={() => onStart(title.trim())}
               disabled={!canStart}
-              className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-card"
+              className="w-full sm:w-auto px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-card shrink-0"
             >
               Commencer
             </button>
@@ -935,6 +923,8 @@ function ScratchEntry({ onStart, onBack }: { onStart: (title: string) => void; o
 
 export function Generateur() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [section, setSection]     = useState<Section>(null);
   const [formDocId, setFormDocId] = useState<DocId>("cdi");
   const [useTemplateId, setUseTemplateId] = useState<string | null>(null);
@@ -946,9 +936,21 @@ export function Generateur() {
   // bouton Précédent du navigateur.
   const wizardTitle = searchParams.get("titre");
 
+  const initialBriefRef = useRef<string | undefined>(
+    (location.state as { brief?: string } | null)?.brief
+  );
+
+  useEffect(() => {
+    if (location.state?.brief) {
+      navigate(location.pathname + location.search, { replace: true, state: null });
+    }
+  }, [location, navigate]);
+
+
   // Synchronise la section avec l'URL. TOUTES les sous-étapes (modèle ouvert,
   // éditeur, questionnaire) vivent dans l'historique : le bouton Précédent du
   // navigateur revient à l'étape précédente au lieu de tout réinitialiser.
+  // 1. On extrait le brief du state React Router
   useEffect(() => {
     const s = searchParams.get("section");
     if (s === "library" || s === "import" || s === "scratch") { setSection(s); return; }
@@ -987,7 +989,11 @@ export function Generateur() {
   // Retour depuis le questionnaire : vers la bibliothèque si on en vient,
   // sinon vers l'écran d'entrée « Créer de zéro ».
   function handleScratchBack() {
-    if (searchParams.get("de") === "library") goLibrary();
+    const de = searchParams.get("de");
+    if (de === "library") goLibrary();
+    else if (de === "dashboard") {
+      navigate("/dashboard")
+    }
     else setSearchParams({ section: "scratch" });
   }
 
@@ -1059,7 +1065,7 @@ export function Generateur() {
     import:    "Importer un modèle",
     form:      "Remplir le contrat",
     useCustom: "Utiliser un modèle personnalisé",
-    scratch:   "Nouveau contrat",
+    scratch:   "Créer de zéro",
     blank:     "Nouveau contrat",
   };
 
@@ -1068,7 +1074,7 @@ export function Generateur() {
     import:    "Importez un contrat existant pour le transformer en modèle réutilisable.",
     form:      "Renseignez les informations pour personnaliser votre contrat.",
     useCustom: "",
-    scratch:   "",
+    scratch:   "Générez un contrat sur-mesure en répondant à quelques questions.",
     blank:     "",
   };
 
@@ -1088,10 +1094,11 @@ export function Generateur() {
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto border border-gray rounded-2xl pb-4 pl-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-t-2xl -ml-4">
 
       {/* En-tête — masqué pour l'éditeur document-first (chaque éditeur a son propre retour) */}
-      {section !== "form" && section !== "blank" && section !== "scratch" && section !== "useCustom" && (
+      {section !== "form" && section !== "blank" && section !== "useCustom" && (
         <div>
           {section && (
             <button
@@ -1102,71 +1109,85 @@ export function Generateur() {
               Générateur de contrat
             </button>
           )}
-          <h1 className="text-2xl font-bold text-ink tracking-tight">
+          <h1 className="text-2xl font-bold text-white tracking-tight">
             {section ? LABELS[section] : "Générateur de contrat"}
           </h1>
           {(section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau.") && (
-            <p className="text-sm text-ink-muted mt-1">
+            <p className="text-sm text-gray-primary mt-1">
               {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
             </p>
           )}
         </div>
       )}
+      </div>
 
       {/* Hub — 3 cartes */}
       {!section && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl">
+        <div className="flex flex-col gap-5 max-w-4xl">
           {/* Créer de zéro */}
           <button
             onClick={() => setSearchParams({ section: "scratch" })}
-            className="group relative flex flex-col gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-violet-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
+            className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-violet-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
           >
             <div className="absolute inset-x-0 top-0 h-0.5 bg-violet-500 rounded-t-2xl" />
-            <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5 text-violet-600 stroke-[1.5]" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-sm font-bold text-gray-900">Créer de zéro</p>
-              <p className="text-xs text-gray-500 leading-relaxed">Décrivez le contrat, répondez à quelques questions : il est rédigé pour vous.</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 mt-auto">
-              Créer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="space-y-1.5">
+                <p className="text-sm font-bold text-gray-900">Créer de zéro</p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Décrivez le contrat, répondez à quelques questions : il est rédigé pour vous.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-violet-600">
+                Créer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </button>
 
-          {/* Bibliothèque de modèles */}
           <button
             onClick={() => setSearchParams({ section: "library" })}
-            className="group relative flex flex-col gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-brand/30 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
+            className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-brand/30 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
           >
             <div className="absolute inset-x-0 top-0 h-0.5 bg-brand rounded-t-2xl" />
-            <div className="w-12 h-12 rounded-xl bg-brand-light flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-brand-light flex items-center justify-center shrink-0">
               <BookOpen className="w-5 h-5 text-brand stroke-[1.5]" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-sm font-bold text-gray-900">Bibliothèque de modèles</p>
-              <p className="text-xs text-gray-500 leading-relaxed">CDI, CDD, avenants, lettres disciplinaires — et vos modèles personnalisés. Prêts à l'emploi.</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-brand mt-auto">
-              Accéder <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="space-y-1.5">
+                <p className="text-sm font-bold text-gray-900">Bibliothèque de modèles</p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  CDI, CDD, avenants, lettres disciplinaires — et vos modèles personnalisés. Prêts à l'emploi.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-brand">
+                Accéder <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </button>
 
-          {/* Importer */}
           <button
             onClick={() => setSearchParams({ section: "import" })}
-            className="group relative flex flex-col gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
+            className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
           >
             <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 rounded-t-2xl" />
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+            
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
               <Upload className="w-5 h-5 text-emerald-600 stroke-[1.5]" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-sm font-bold text-gray-900">Importer un modèle</p>
-              <p className="text-xs text-gray-500 leading-relaxed">Importez un document existant (PDF, Word) pour le modifier, personnaliser et réutiliser.</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mt-auto">
-              Importer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="space-y-1.5">
+                <p className="text-sm font-bold text-gray-900">Importer un modèle</p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Importez un document existant (PDF, Word) pour le modifier, personnaliser et réutiliser.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                Importer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </button>
         </div>
@@ -1174,7 +1195,11 @@ export function Generateur() {
 
       {/* Sous-sections */}
       {section === "library"   && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
-      {section === "import"    && <ImportSection onSaved={handleTemplateSaved} />}
+      {section === "import"    && (
+        <div className="w-full flex justify-center py-4">
+          <ImportSection onSaved={handleTemplateSaved} />
+        </div>
+        )}
       {section === "form"      && (
         <SmartCddEditor
           model={GENERIC_EDITORS[formDocId].model}
@@ -1197,18 +1222,21 @@ export function Generateur() {
       )}
 
       {section === "scratch"   && !wizardTitle && (
+        <div className="flex justify-center w-full py-4">
         <ScratchEntry
           onStart={(title) => setSearchParams({ section: "scratch", titre: title })}
           onBack={goHub}
         />
+        </div>
       )}
 
       {section === "scratch"   && wizardTitle && (
-        <ScratchWizard
-          title={wizardTitle}
-          onReady={handleScratchReady}
-          onBack={handleScratchBack}
-        />
+          <ScratchWizard
+            title={wizardTitle}
+            initialBrief={initialBriefRef.current}
+            onReady={handleScratchReady}
+            onBack={handleScratchBack}
+          />
       )}
     </div>
   );

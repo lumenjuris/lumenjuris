@@ -1,40 +1,40 @@
-import { SettingsToggleRow } from "../ui/SettingsToggleRow";
+// import { SettingsToggleRow } from "../ui/SettingsToggleRow";
 
-type PreferenceSettingsPanelProps = {
-  isDyslexicModeEnabled: boolean;
-  onDyslexicModeCheckedChange: (checked: boolean) => void;
-  isEmailNotificationsEnabled: boolean;
-  onEmailNotificationsCheckedChange: (checked: boolean) => void;
-};
+// type PreferenceSettingsPanelProps = {
+//   isDyslexicModeEnabled: boolean;
+//   onDyslexicModeCheckedChange: (checked: boolean) => void;
+//   isEmailNotificationsEnabled: boolean;
+//   onEmailNotificationsCheckedChange: (checked: boolean) => void;
+// };
 
-export function PreferenceSettingsPanel({
-  isDyslexicModeEnabled,
-  onDyslexicModeCheckedChange,
-  isEmailNotificationsEnabled,
-  onEmailNotificationsCheckedChange,
-}: PreferenceSettingsPanelProps) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">
-          Paramètres de compte
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Préférences simples du compte utilisateur.
-        </p>
-      </div>
+// export function PreferenceSettingsPanel({
+//   isDyslexicModeEnabled,
+//   onDyslexicModeCheckedChange,
+//   isEmailNotificationsEnabled,
+//   onEmailNotificationsCheckedChange,
+// }: PreferenceSettingsPanelProps) {
+//   return (
+//     <div className="space-y-6">
+//       <div>
+//         <h2 className="text-lg font-semibold text-gray-900">
+//           Paramètres de compte
+//         </h2>
+//         <p className="mt-1 text-sm text-gray-500">
+//           Préférences simples du compte utilisateur.
+//         </p>
+//       </div>
 
-      <SettingsToggleRow
-        label="Mode dyslexique"
-        checked={isDyslexicModeEnabled}
-        onCheckedChange={onDyslexicModeCheckedChange}
-      />
+//       <SettingsToggleRow
+//         label="Mode dyslexique"
+//         checked={isDyslexicModeEnabled}
+//         onCheckedChange={onDyslexicModeCheckedChange}
+//       />
 
-      <SettingsToggleRow
-        label="Notifications par e-mail"
-        checked={isEmailNotificationsEnabled}
-        onCheckedChange={onEmailNotificationsCheckedChange}
-      />
-    </div>
-  );
-}
+//       <SettingsToggleRow
+//         label="Notifications par e-mail"
+//         checked={isEmailNotificationsEnabled}
+//         onCheckedChange={onEmailNotificationsCheckedChange}
+//       />
+//     </div>
+//   );
+// }
