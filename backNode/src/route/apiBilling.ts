@@ -476,4 +476,16 @@ routerBilling.get("/credits", authMiddleware, async (req: Request, res: Response
   return res.status(result.success ? 200 : 500).json(result);
 })
 
+
+// Vérifie (sans décrémenter) si l'utilisateur a encore du quota pour une feature.
+// Appelé par le proxy avant de lancer une feature coûteuse (ex: analyzer).
+routerBilling.get("/quota/:feature", authMiddleware, async (req: Request, res: Response) => {
+  const userId = Number(req.idUser);
+  const feature = String(req.params.feature);
+
+  const result = await new Credit().hasFeatureQuota(userId, feature);
+
+  return res.status(result.success ? 200 : 400).json(result);
+})
+
 export default routerBilling;
