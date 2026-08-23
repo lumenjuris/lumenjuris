@@ -130,23 +130,23 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-center gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
-        <div className="text-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
+        <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Contrathèque</h1>
           <p className="text-sm text-gray-primary mt-1">Centralisez et suivez le cycle de vie de vos contrats.</p>
         </div>
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
           <button
             onClick={() => contractApi.exportCsv(filters)}
-            className="flex items-center gap-2 px-8 py-2.5 text-sm font-semibold text-ink-secondary bg-white border border-line rounded-xl hover:bg-gray-300 transition-colors shadow-card"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/15"
           >
             <Download className="w-4 h-4" /> Exporter
           </button>
           <button
             onClick={onImport}
-            className="flex items-center gap-2 px-8 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-gray-300 transition-all shadow-card"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Importer un contrat
           </button>
@@ -168,7 +168,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
           toute la logique associée (création, filtrage) restent en place : il suffit
           de le re-rendre ici pour le rétablir. */}
       <div className="w-full">
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Barre recherche + filtres */}
           <div className="flex flex-col md:flex-row gap-2.5">
             <form

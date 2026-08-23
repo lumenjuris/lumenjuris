@@ -1,5 +1,82 @@
 [
   {
+    "id": "be80b2dd-883d-4d01-ae25-df1d4a4181d9",
+    "date": "2026-08-20T08:47:58.487Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "cdefc484-1bda-4b14-a005-ea4260db7a27",
+    "date": "2026-08-20T08:47:54.927Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "84eb83b8-d636-42da-be2b-21dc3973e1b5",
+    "date": "2026-08-20T08:47:54.920Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 6ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "be1c038a-7ebf-4fc3-90d7-4b1341af2cc4",
+    "date": "2026-08-20T08:47:41.013Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 24ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "89ef8739-4d5e-4d7f-9913-ea64b089c784",
+    "date": "2026-08-20T08:46:34.107Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 3ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "c15df681-ba7e-4edb-8edc-3af56acf2eaa",
+    "date": "2026-08-20T08:46:31.438Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "0ccf2736-37d9-407b-a53e-bb6ab7212979",
+    "date": "2026-08-20T08:46:31.431Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "b0cecb0d-1c0f-4659-be00-269745e03632",
+    "date": "2026-08-20T08:46:11.037Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 10ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/signature-envelope",
+    "page": "/api/signature-envelope"
+  },
+  {
+    "id": "fb90d311-dd3e-4c6c-9800-d0e1f3c1cd1d",
+    "date": "2026-08-20T08:46:03.818Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 9ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/signature-envelope",
+    "page": "/api/signature-envelope"
+  },
+  {
+    "id": "5f18d279-44c6-4928-9637-334fc2a14427",
+    "date": "2026-08-20T08:42:15.334Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 4ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/legal-watch/unread-count",
+    "page": "/api/legal-watch/unread-count"
+  },
+  {
+    "id": "7b094677-8f70-421c-bd11-64cf2845378d",
+    "date": "2026-08-20T08:37:15.336Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 7ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/legal-watch/unread-count",
+    "page": "/api/legal-watch/unread-count"
+  },
+  {
     "id": "b5889b94-c784-42be-8a36-c6b46f8e82a9",
     "date": "2026-08-19T09:26:20.278Z",
     "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",

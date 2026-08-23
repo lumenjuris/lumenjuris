@@ -191,8 +191,8 @@ export function ComprendreContrat() {
             >
               <div className="flex items-center justify-between gap-4">
                 <p className="font-medium text-sm text-gray-800 truncate">{contract.fileName}</p>
-                  <Button className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white
-                  transition-colors hover:bg-red-700 hover:text-white"
+                  <Button className="rounded-lg  px-3 py-1.5 text-xs font-semibold text-red-500 border border-red-500
+                  transition-colors hover:text-red-700 hover:"
                   onClick={(e) => openDeleteModal(contract.idSummary, e)}>
                     Supprimer
                   </Button>
@@ -205,7 +205,7 @@ export function ComprendreContrat() {
             
           ))}
         </div>
-    <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+    <div className="lg:col-span-3 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-blue-primary p-8 rounded-2xl">
         <div className="space-y-4 max-w-lg">
           <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">

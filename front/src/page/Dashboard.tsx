@@ -1,5 +1,5 @@
-//import InputFile from "../components/common/InputFile";
-import { Link, useNavigate} from "react-router-dom";
+import React, { useRef, useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Library, FileText, ShieldCheck, ScrollText, PenTool, 
   ArrowRight, Handshake,
@@ -11,8 +11,8 @@ interface Tool {
   title: string;
   desc: string;
   to: string;
-  accent: string; // couleur d'accent de l'icône
-  img?: string
+  accent: string;
+  img?: string;
 }
 
 const TOOLS: Tool[] = [
@@ -24,7 +24,7 @@ const TOOLS: Tool[] = [
     to: "/contratheque",
     accent: "#354F99",
   },
-    {
+  {
     icon: ShieldCheck,
     name: "Analyser",
     title: "Annotez vos contrats , échangez les redlines et validez la version finale.",
@@ -32,15 +32,14 @@ const TOOLS: Tool[] = [
     to: "/conformite",
     accent: "#d97706",
   },
-    {
+  {
     icon: Handshake,
     name: "Négociation",
-    title:"Annotez vos contrats , échangez les redlines et validez la version finale." ,
+    title: "Annotez vos contrats , échangez les redlines et validez la version finale.",
     desc: "Débloquez vos discussions et défendez efficacement vos intérêts face à vos interlocuteurs. L'outil génère des contre-propositions équilibrées et vous fournit des arguments percutants pour négocier chaque clause stratégique sans fermer le dialogue.",
     to: "/contratheque",
     accent: "#7c3aed",
   },
-
   {
     icon: Library,
     name: "Contratheque",
@@ -49,7 +48,6 @@ const TOOLS: Tool[] = [
     to: "/generateur",
     accent: "#059669",
   },
-
   {
     icon: ScrollText,
     name: "Bibliothèque de clauses",
@@ -58,7 +56,7 @@ const TOOLS: Tool[] = [
     to: "/clauses",
     accent: "#0891b2",
   },
-    {
+  {
     icon: PenTool,
     name: "Signature électronique",
     title: "Faites signer vos contrats en ligne, en toute sécurité.",
@@ -68,29 +66,126 @@ const TOOLS: Tool[] = [
   },
 ];
 
+const PATH_CONFIG = [
+  { ratioX: 0.34, curveShift: 110, tension: 0.85 },
+  { ratioX: 0.82, curveShift: 0, tension: 0.55 },
+  { ratioX: 0.34, curveShift: 110, tension: 0.85 },
+  { ratioX: 0.82, curveShift: 0, tension: 0.55 },
+  { ratioX: 0.34, curveShift: 110,  tension: 0.85 },
+  { ratioX: 0.82, curveShift: -0, tension: 0.55 },
+];
+
 export function Dashboard() {
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
+  const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [svgPath, setSvgPath] = useState("");
+  const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 });
+  const [pathLength, setPathLength] = useState(0);
+
+  const updatePath = () => {
+    if (!containerRef.current) return;
+
+    // Taille du conteneur
+    const containerRect = containerRef.current.getBoundingClientRect();
+    setSvgDimensions({ width: containerRect.width, height: containerRect.height });
+
+    const points: { x: number; y: number }[] = [];
+
+    // Définit un point où se greffera le fil
+    cardRefs.current.forEach((card, index) => {
+      if (card) {
+        const rect = card.getBoundingClientRect();
+        const y = (rect.top - containerRect.top) + rect.height / 2;
+        
+        const config = PATH_CONFIG[index % PATH_CONFIG.length];
+        const x = (rect.left - containerRect.left) + rect.width * config.ratioX;
+
+        points.push({ x, y });
+      }
+    });
+
+    if (points.length < 2) return;
+
+    // Initialise un point de départ
+    let d = `M ${points[0].x} ${points[0].y}`;
+
+    // Boucle sur chaque pair de point
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+
+      // Filet de sécurité si des cartes sont ajoutées
+      const config = PATH_CONFIG[i % PATH_CONFIG.length];
+      const distY = Math.abs(p2.y - p1.y) * config.tension;
+      const shift = config.curveShift;
+
+      // Pousse le fil vers la gauche ou la droite
+      const cp1x = p1.x + shift;
+      // Descend le fil vers le bas
+      const cp1y = p1.y + distY;
+
+      // Adoucit l'angle
+      const cp2x = p2.x - (shift * 0.5);
+      // Freine la descente avant d'atteindre la seconde carte
+      const cp2y = p2.y - (distY * 0.8);
+
+      // Ajout de la courbe de bézier au tracé svg
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+
+    setSvgPath(d);
+  };
+
+  useEffect(() => {
+    updatePath();
+    window.addEventListener("resize", updatePath);
+    return () => window.removeEventListener("resize", updatePath);
+  }, []);
+
+  // Calcule la longueur réelle du chemin SVG pour calibrer l'animation
+  useEffect(() => {
+    if (pathRef.current) {
+      setPathLength(pathRef.current.getTotalLength());
+    }
+  }, [svgPath]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const form = e.currentTarget;
-
     const select = form.elements.namedItem("contractType") as HTMLSelectElement;
     const rawLabel = select.selectedOptions[0]?.text || select.value;
 
     const cleanTitle = rawLabel.includes(" - ") 
-    ? rawLabel.split(" - ")[1] 
-    : rawLabel;
+      ? rawLabel.split(" - ")[1] 
+      : rawLabel;
 
     const formData = new FormData(form);
-    const details = (formData.get("details")as string) || "";
+    const details = (formData.get("details") as string) || "";
 
-    navigate(`/contrat-generation?section=scratch&titre=${encodeURIComponent(cleanTitle)}&step=brief&de=dashboard`, {state: {brief: details}});
-  }
+    navigate(`/contrat-generation?section=scratch&titre=${encodeURIComponent(cleanTitle)}&step=brief&de=dashboard`, { state: { brief: details } });
+  };
 
   return (
     <div>
+      {/* Style pour l'animation de la lumière */}
+      <style>{`
+        @keyframes pulseLight {
+          0% {
+            stroke-dashoffset: ${pathLength || 1000};
+          }
+          100% {
+            stroke-dashoffset: -${pathLength || 1000};
+          }
+        }
+        .path-light-pulse {
+          stroke-dasharray: 160 ${pathLength || 1000};
+          animation: pulseLight 9s cubic-bezier(0.8, 0.5, 0.6, 1) infinite;
+        }
+      `}</style>
+
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-12">
         <div>
           <span className="inline-block rounded-full border border-red-primary px-4 py-1.5 text-xs font-medium uppercase text-red-primary mb-4">
@@ -190,13 +285,45 @@ export function Dashboard() {
         </form>
       </div>
 
-      <section>
-        <div className="max-w-6xl mx-auto flex flex-col gap-6">
-          {TOOLS.map((t) => (
+      <section ref={containerRef} className="relative">
+        <svg
+          className="absolute inset-0 pointer-events-none z-0 hidden sm:block"
+          width={svgDimensions.width}
+          height={svgDimensions.height}
+        >
+
+          {/* Chemin principal */}
+          <path
+            ref={pathRef}
+            d={svgPath}
+            fill="none"
+            className="stroke-blue-primary"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+
+          {/* Lumière animée qui parcourt le chemin */}
+          {pathLength > 0 && (
+            <path
+              d={svgPath}
+              fill="none"
+              stroke="#60A5FA"
+              strokeWidth="5"
+              strokeLinecap="round"
+              className="path-light-pulse filter drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]"
+            />
+          )}
+        </svg>
+
+        <div className="max-w-6xl mx-auto flex flex-col gap-20 relative z-10">
+          {TOOLS.map((t, index) => (
             <Link
               key={t.title}
+              ref={(el) => (cardRefs.current[index] = el)}
               to={t.to}
-              className="group flex flex-col md:flex-row gap-6 bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-all shadow-sm hover:shadow-md"
+              className={`group flex flex-col md:flex-row gap-6 backdrop-blur-2xl rounded-xl border border-gray-200 
+              p-6 hover:border-gray-300 transition-all shadow-sm hover:shadow-md ${index % 2 === 0 ? "bg-gradient-to-r from-slate-100/30 via-slate-100/60 to-sky-200/35 hover:border-blue-200"
+          : "bg-gradient-to-r from-sky-200/35 via-slate-100/60 to-slate-100/40 hover:border-blue-200"}`}
             >
               <div className="flex flex-col gap-4 w-full md:w-44 shrink-0">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-900">

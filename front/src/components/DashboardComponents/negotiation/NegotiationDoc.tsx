@@ -151,8 +151,8 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
               </p>
             </div>
             {anchored.length + general.length === 0 ? (
-              <div className="bg-blue-primary p-4 rounded-t-2xl">
-                <p className="text-xs text-white italic py-3 text-center">
+              <div className=" p-4">
+                <p className="text-xs text-blue-primary italic py-3 text-center">
                   Aucune annotation. {canAnnotate ? "Surlignez un passage du contrat pour en créer une." : ""}
                 </p>
               </div>

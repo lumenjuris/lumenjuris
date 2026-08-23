@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js"
 import { Mailer } from "../infrastructure/mailer/classMailer.js"
 import { SignatureEnvelopeService } from "../services/classSignatureEnvelope.js"
 import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope.js"
+import { prisma } from "../../prisma/singletonPrisma.js"
 
 const router: Router = express.Router()
 const svc = new SignatureEnvelopeService()
@@ -74,15 +75,28 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         await fs.writeFile(filePath, Buffer.from(body.fileBase64, "base64"))
 
         // Récupère l'email de l'utilisateur connecté pour le mettre en CC
-        const userEmail = (req as Request & { email?: string }).email ?? process.env["MAILER_USER"] ?? ""
+        const user = await prisma.user.findUnique({
+            where: {idUser: userId},
+            select: {
+                email: true,
+                prenom: true,
+                nom: true,
+            },
+        });
+
+        if (!user?.email) {
+            throw new Error ("L'e-mail de l'utilisateur est introuvable.");
+        }
+
+        const selfName = [user.prenom, user.nom].filter(Boolean).join(" ").trim();
 
         const dto = await svc.create(userId, {
             documentName: body.documentName,
             documentFilePath: filePath,
             numPages: body.numPages ?? 1,
             fields: body.fields,
-            selfName: "",
-            selfEmail: userEmail,
+            selfName: selfName,
+            selfEmail: user.email,
             counterpartyName: body.counterpartyName.trim(),
             counterpartyEmail: body.counterpartyEmail.trim(),
             selfSigned: !!body.selfSigned,
@@ -98,7 +112,6 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
                 counterpartyName: body.counterpartyName.trim(),
                 documentName: body.documentName,
                 signingLink,
-                cc: userEmail,
             })
             .catch((err: unknown) => console.error("[signature] échec envoi invitation:", err))
 
@@ -271,7 +284,6 @@ router.post("/resend", authMiddleware, async (req: Request, res: Response) => {
                 counterpartyName: meta.counterpartyName,
                 documentName: meta.documentName,
                 signingLink,
-                cc: meta.selfEmail || undefined,
             })
             .catch((err: unknown) => console.error("[signature] échec renvoi invitation:", err))
 

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   FileText,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { fmtDate, daysUntil, RENEWAL_LABEL } from "./types";
@@ -68,135 +69,138 @@ export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen,
 
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-card overflow-hidden">
-      <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left border-collapse">
-        <TableHeader
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onSort={onSort}
-          canDelete={canDelete}
-        />
-        <tbody className="divide-y divide-line-subtle">
-          {items.map((c) => {
-            const d = daysUntil(c.endDate);
-            const urgent = d !== null && d >= 0 && d <= 90;
-            return (
-              <tr
-                key={c.id}
-                onClick={() => onOpen(c.id)}
-                className="hover:bg-surface-subtle/60 transition-colors cursor-pointer group"
-              >
-                {/* Intitulé */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="p-1.5 bg-brand-light rounded-lg text-brand shrink-0">
-                      <FileText className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-medium text-ink truncate max-w-[200px] group-hover:text-brand transition-colors">
+<div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+  <div className="overflow-x-auto">
+    <table className="w-full min-w-[720px] text-left border-collapse">
+      <TableHeader
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onSort={onSort}
+        canDelete={canDelete}
+      />
+      <tbody className="divide-y divide-slate-100 text-sm">
+        {items.map((c) => {
+          const d = daysUntil(c.endDate);
+          const urgent = d !== null && d >= 0 && d <= 90;
+          return (
+            <tr
+              key={c.id}
+              onClick={() => onOpen(c.id)}
+              className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
+            >
+              {/* Intitulé */}
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 bg-blue-50/80 rounded-xl text-blue-700 shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-slate-900 truncate max-w-[220px] group-hover:text-blue-600 transition-colors">
                       {c.title}
                     </span>
                     {c.isB2C && (
                       <span
-                        className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-chip shrink-0"
-                        title="Contrat avec un consommateur (loi Chatel)"
+                        className="text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200/60 px-1.5 py-0.5 rounded-md shrink-0"
+                        title="Contrat avec un consommateur (loi Châtel)"
                       >
                         B2C
                       </span>
                     )}
                   </div>
-                </td>
+                </div>
+              </td>
 
-                {/* Type */}
-                <td className="px-4 py-3 text-xs text-ink-muted">
-                  {c.contractType ?? "—"}
-                </td>
+              {/* Type */}
+              <td className="px-4 py-3.5 text-xs text-slate-500 font-medium">
+                {c.contractType ?? <span className="text-slate-300 font-light">—</span>}
+              </td>
 
-                {/* Cocontractant */}
-                <td className="px-4 py-3 text-xs text-ink-secondary">
-                  {c.counterpartyName ?? "—"}
-                </td>
+              {/* Cocontractant */}
+              <td className="px-4 py-3.5 text-xs text-slate-600">
+                {c.counterpartyName ?? <span className="text-slate-300 font-light">—</span>}
+              </td>
 
-                {/* Signature */}
-                <td className="px-4 py-3 text-xs text-ink-muted whitespace-nowrap">
-                  {fmtDate(c.signatureDate)}
-                </td>
+              {/* Signature */}
+              <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">
+                {fmtDate(c.signatureDate) ?? <span className="text-slate-300 font-light">—</span>}
+              </td>
 
-                {/* Échéance */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-ink-muted">
-                      {fmtDate(c.endDate)}
-                    </span>
-                    {urgent && (
-                      <span
-                        className="inline-flex items-center gap-0.5 text-[9px] font-bold text-warning-dark"
-                        title={`Échéance dans ${d} jours`}
-                      >
-                        <AlertTriangle className="w-3 h-3" /> J‑{d}
-                      </span>
-                    )}
-                  </div>
-                </td>
-
-                {/* Statut */}
-                <td className="px-4 py-3">
-                  <StatusBadge status={c.status} />
-                </td>
-
-                {/* Responsable */}
-                <td className="px-4 py-3 text-xs text-ink-muted">
-                  {c.responsibleName ?? "—"}
-                </td>
-
-                {/* Tags */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1 flex-wrap max-w-[140px]">
-                    {c.tags.slice(0, 3).map((t) => (
-                      <span
-                        key={t.id}
-                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded-chip"
-                        style={{
-                          backgroundColor: t.color + "22",
-                          color: t.color,
-                        }}
-                      >
-                        {t.label}
-                      </span>
-                    ))}
-                    {c.renewalType === "TACIT" && (
-                      <span
-                        className="text-[9px] text-info"
-                        title="Tacite reconduction"
-                      >
-                        ↻ {RENEWAL_LABEL[c.renewalType]}
-                      </span>
-                    )}
-                  </div>
-                </td>
-
-                {/* Suppression */}
-                {canDelete && (
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete?.(c.id, c.title);
-                      }}
-                      className="p-1.5 rounded-lg text-ink-subtle hover:text-danger hover:bg-danger-light transition-all opacity-0 group-hover:opacity-100"
-                      title="Supprimer ce contrat"
+              {/* Échéance */}
+              <td className="px-4 py-3.5 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600">
+                    {fmtDate(c.endDate) ?? <span className="text-slate-300 font-light">—</span>}
+                  </span>
+                  {urgent && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-md"
+                      title={`Échéance dans ${d} jours`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      </div>
-    </div>
+                      <AlertTriangle className="w-3 h-3 text-amber-600" /> J‑{d}
+                    </span>
+                  )}
+                </div>
+              </td>
+
+              {/* Statut */}
+              <td className="px-4 py-3.5">
+                <StatusBadge status={c.status} />
+              </td>
+
+              {/* Responsable */}
+              <td className="px-4 py-3.5 text-xs text-slate-600">
+                {c.responsibleName ?? <span className="text-slate-300 font-light">—</span>}
+              </td>
+
+              {/* Tags & Reconduction */}
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-1.5 flex-wrap max-w-[160px]">
+                  {c.tags.slice(0, 2).map((t) => (
+                    <span
+                      key={t.id}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-md border border-slate-100"
+                      style={{
+                        backgroundColor: t.color + "15",
+                        color: t.color,
+                        borderColor: t.color + "30",
+                      }}
+                    >
+                      {t.label}
+                    </span>
+                  ))}
+                  {c.renewalType === "TACIT" && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md font-medium"
+                      title="Tacite reconduction"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" /> Tacite
+                    </span>
+                  )}
+                </div>
+              </td>
+
+              {/* Suppression */}
+              {canDelete && (
+                <td className="px-4 py-3.5 text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete?.(c.id, c.title);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                    title="Supprimer ce contrat"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </td>
+              )}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
   );
 }
 

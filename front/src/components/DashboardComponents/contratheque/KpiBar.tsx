@@ -13,7 +13,7 @@ export function KpiBar({ stats, loading }: { stats: ContractStats | null; loadin
         loading={loading}
       />
       <Kpi
-        label="Échéance < 90 j"
+        label="Échéances < 90 j"
         value={stats?.expiringIn90Days}
         icon={AlarmClock}
         accent="#d97706"
@@ -69,10 +69,10 @@ function Kpi({
           </>
         ) : (
           <>
-            <p className={`text-2xl font-bold tracking-tight ${alert && value ? "text-warning" : "text-ink"}`}>
+            <p className={`text-2xl font-bold tracking-tight ${alert && value ? "text-amber-600" : "text-ink"}`}>
               {value ?? 0}
             </p>
-            <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-widest leading-tight mt-0.5">
+            <p className="text-xs font-medium text-slate-600 leading-tight mt-0.5 truncate">
               {label}
             </p>
           </>

@@ -159,44 +159,45 @@ export function NegotiationWorkspace() {
             </span>
           </div>
 
-          {/* Barre d'actions sous forme de boutons blancs */}
-          <div className="flex items-center gap-3 mt-5 flex-wrap">
+          {/* Barre d'actions sous forme de boutons harmonisés */}
+          <div className="flex items-center gap-2.5 mt-5 flex-wrap">
             {canEdit && data.status !== "CLOSED" && (
               <>
+                {/* Action Principale : Transmettre à la signature */}
                 <button
                   onClick={() => void exitToSignature()}
                   disabled={!data.finalVersionId}
-                  className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-xl shadow-sm transition-all disabled:opacity-50"
                   title={data.finalVersionId ? "Transmettre à la signature" : "Validez d'abord une version"}
                 >
                   Vers la signature
                 </button>
 
+                {canEdit && selectedVersion && !selectedVersion.isFinal && (
+                  <button
+                    onClick={() => void validateDisplayed()}
+                    className="px-3.5 py-2 text-xs font-medium text-blue-primary bg-white hover:bg-white/90 border border-white/10 rounded-xl backdrop-blur-sm transition-all"
+                  >
+                    Valider la signature
+                  </button>
+                )}
+                
+                {canEdit && (
+                  <button
+                    onClick={() => setNewVersionOpen((v) => !v)}
+                    className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl backdrop-blur-sm transition-all"
+                  >
+                    {data.versions.length === 0 ? "Ajouter le texte" : "Nouveau round"}
+                  </button>
+                )}
+
                 <button
                   onClick={() => void abort()}
-                  className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+                  className="px-3.5 py-2 text-xs font-semibold text-red-500 bg-white hover:text-red-700 border border-red-500 rounded-xl transition-all"
                 >
                   Abandonner
                 </button>
               </>
-            )}
-
-            {canEdit && selectedVersion && !selectedVersion.isFinal && (
-              <button
-                onClick={() => void validateDisplayed()}
-                className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
-              >
-                Valider la signature
-              </button>
-            )}
-
-            {canEdit && (
-              <button
-                onClick={() => setNewVersionOpen((v) => !v)}
-                className="px-4 py-2.5 bg-white text-ink text-xs font-medium rounded-xl hover:bg-gray-50 transition-all shadow-sm"
-              >
-                {data.versions.length === 0 ? "Ajouter le texte" : "Nouveau round"}
-              </button>
             )}
 
             {/* Sélecteur de version si plus d'une version */}

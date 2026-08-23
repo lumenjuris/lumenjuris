@@ -1,10 +1,3 @@
-// Création « de zéro », façon juriste, EN LIGNE (pas de pop-up). Deux chemins :
-//  · « Décrivez votre besoin » — un prompt libre + pièces jointes (PDF/Word),
-//    l'IA prend les arbitrages elle-même : pour le juriste qui n'a pas le temps.
-//  · « Répondez à quelques questions » — une question fermée à la fois, simple
-//    et concrète, aux options toujours conformes au droit français.
-// Dans les deux cas, le contrat est rédigé puis ouvert dans l'éditeur
-// (variables surlignées) et comporte systématiquement un article RGPD.
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -18,17 +11,15 @@ import {
 } from "./contractAi";
 import { contractApi } from "../contratheque/api";
 import { extractDocumentContent } from "../../../utils/documentExtractor";
-import { CompanySearchField } from "../../common/CompanySearchField";
 import { mapCompanyToContractParty } from "../../../utils/companyLookup";
 import type { CompanyResult } from "../../../types/companySearch";
 
 function slug(s: string): string {
-  const o = s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  const o = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   return o || "contrat";
 }
 
-/** Assemble le brouillon IA en modèle éditable, variables comprises. */
 function buildModel(title: string, draft: ContractDraft): ContractModel {
   const variables: VariableDef[] = draft.variables.map((v) => ({ id: v.id, label: v.label, type: "text" }));
   const blocks: BlockDef[] = [
@@ -57,8 +48,6 @@ interface Attachment {
   text: string;
 }
 
-// Le .doc binaire (Word 97-2003) n'est lisible par aucun maillon de la chaîne
-// d'extraction : on ne le promet pas.
 const ACCEPTED = ".pdf,.docx";
 const MAX_ATTACHMENTS = 3;
 
@@ -70,104 +59,97 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [questions, setQuestions] = useState<WizardQuestion[]>([]);
+  const questionsRef = useRef<WizardQuestion[]>([]);
+  questionsRef.current = questions;
+
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  // Mode « Décrire le besoin »
   const [brief, setBrief] = useState(initialBrief ?? "");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  // Parties au contrat, renseignées par recherche d'entreprise (nom ou SIREN).
-  // Optionnel : sans elles le contrat sort avec des variables à compléter, avec
-  // elles il sort déjà nominatif. Commun aux deux modes de rédaction.
   const [parties, setParties] = useState<PartyIdentity[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Garde d'annulation : chaque navigation invalide les appels IA en vol, pour
-  // qu'une réponse tardive ne détourne pas l'écran courant ni n'ouvre l'éditeur
-  // après un abandon. Incrémenté à chaque navigation et au démontage.
+
   const opId = useRef(0);
-  // Étape d'où la rédaction a été lancée (retour pendant « generating »).
   const origin = useRef<"brief" | "asking">("brief");
-  // Dernière URL écrite par le wizard : la synchro ignore nos propres écritures
-  // et ne réagit qu'aux navigations du navigateur (Précédent / Suivant).
   const lastUrl = useRef("");
+  
   const initialStep = (searchParams.get("step") as Step) || "mode";
   const [step, setStep] = useState<Step>(initialStep);
 
+  const writeUrl = (patch: { step?: string | null; q?: number | null }, options?: { replace?: boolean }) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (patch.step === null) next.delete("step");
+      else if (patch.step !== undefined) next.set("step", patch.step);
 
-  /** Écrit l'étape courante dans l'URL (une entrée d'historique par étape). */
-  const writeUrl = (patch: { step?: string | null; q?: number | null }) => {
-    const next = new URLSearchParams(searchParams);
-    if (patch.step === null) next.delete("step");
-    else if (patch.step !== undefined) next.set("step", patch.step);
-    if (patch.q == null) next.delete("q");
-    else next.set("q", String(patch.q));
-    lastUrl.current = next.toString();
-    setSearchParams(next);
+      if (patch.q == null) next.delete("q");
+      else next.set("q", String(patch.q));
+
+      lastUrl.current = next.toString();
+      return next;
+    }, options);
   };
 
   const goMode  = () => { setStep("mode"); setError(""); writeUrl({ step: null, q: null }); };
   const goBrief = () => { setStep("brief"); setError(""); writeUrl({ step: "brief", q: null }); };
   const goAsk   = (n: number) => { setStep("asking"); setIdx(n); setError(""); writeUrl({ step: "asking", q: n + 1 }); };
 
-  // Le navigateur pilote : Précédent / Suivant reviennent à l'étape (ou la
-  // question) précédente au lieu de sortir du questionnaire.
-// Repart de l'étape demandée ou du choix de mode si le titre change
-   // Effect unique : Gère à la fois la réinitialisation par titre et la synchronisation URL (Précédent / Suivant)
-// Effet UNIQUE : Gère le reset sur changement de titre ET la synchronisation URL (Précédent / Suivant)
-useEffect(() => {
-  const currentUrl = searchParams.toString();
-
-  if (currentUrl === lastUrl.current) return;
-  lastUrl.current = currentUrl;
-
-  opId.current += 1;
-
-  const s = searchParams.get("step") as Step | null;
-
-  if (s === "brief") {
-    setStep("brief");
+  useEffect(() => {
+    setStep("mode");
     setError("");
-    return;
-  }
+    setBrief(initialBrief ?? "");
+    setAttachments([]);
+    setQuestions([]);
+    setIdx(0);
+    setAnswers({});
+    setParties([]);
+  }, [title, initialBrief]);
 
-  if (s === "asking") {
-    if (questions.length > 0) {
-      const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
-      setIdx(Math.min(qn - 1, questions.length - 1));
-      setStep("asking");
+  useEffect(() => {
+    const currentUrl = searchParams.toString();
+    if (currentUrl === lastUrl.current) return;
+    lastUrl.current = currentUrl;
+
+    const s = searchParams.get("step") as Step | null;
+
+    if (s === "brief") {
+      setStep("brief");
       setError("");
-    } else {
-      const next = new URLSearchParams(searchParams);
-      next.delete("step");
-      next.delete("q");
-      lastUrl.current = next.toString();
-      setSearchParams(next, { replace: true });
-      setStep("mode");
+      return;
     }
-    return;
-  }
 
-  setStep("mode");
-  setError("");
+    if (s === "asking") {
+      const currentQuestions = questionsRef.current;
+      if (currentQuestions.length > 0) {
+        const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
+        setIdx(Math.min(qn - 1, currentQuestions.length - 1));
+        setStep("asking");
+        setError("");
+      } else {
+        writeUrl({ step: null, q: null }, { replace: true });
+        setStep("mode");
+      }
+      return;
+    }
 
-  setBrief(initialBrief ?? "");
-  setAttachments([]);
-  setQuestions([]);
-  setIdx(0);
-  setAnswers({});
-  setParties([]);
+    if (s === "loading" || s === "generating") {
+      return;
+    }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [title, searchParams, questions]);
+    setStep("mode");
+    setError("");
+  }, [searchParams]);
 
-  // Le questionnaire n'est préparé que si l'utilisateur choisit le mode guidé.
   const startGuided = async () => {
     const id = ++opId.current;
     setStep("loading");
     setError("");
+    writeUrl({ step: "loading", q: null });
+
     try {
       const qs = await generateContractQuestions(title);
-      if (opId.current !== id) return; // l'utilisateur a navigué entre-temps
+      if (opId.current !== id) return;
       setQuestions(qs);
       setAnswers({});
       goAsk(0);
@@ -178,22 +160,16 @@ useEffect(() => {
     }
   };
 
-  /** Enregistre l'entreprise choisie pour le rôle donné (remplace la précédente). */
   const applyParty = (role: string, result: CompanyResult, siret?: string) => {
     const p = mapCompanyToContractParty(result, siret);
     setParties((prev) => [...prev.filter((x) => x.role !== role), { role, ...p }]);
   };
 
-  const partyOf = (role: string) => parties.find((p) => p.role === role);
-
-  /** Fin du questionnaire : on rédige aussitôt. L'identité des parties se
-   *  renseigne ensuite dans l'éditeur, au moment de remplir les champs. */
   function finish(finalAnswers: Record<string, string>) {
     origin.current = "asking";
     void runGuided(finalAnswers);
   }
 
-  /** Fin de la consigne libre : même chose. */
   function finishBrief() {
     if (!brief.trim()) return;
     origin.current = "brief";
@@ -204,6 +180,8 @@ useEffect(() => {
     const id = ++opId.current;
     setStep("generating");
     setError("");
+    writeUrl({ step: "generating", q: null });
+
     try {
       const qa = questions.map((q) => ({ question: q.question, answer: finalAnswers[q.id] ?? "" }));
       const draft = await generateContractDraft(title, qa, parties);
@@ -220,6 +198,8 @@ useEffect(() => {
     const id = ++opId.current;
     setStep("generating");
     setError("");
+    writeUrl({ step: "generating", q: null });
+
     try {
       const docs: BriefAttachment[] = attachments
         .filter((a) => a.status === "ready" && a.text.trim())
@@ -234,14 +214,12 @@ useEffect(() => {
     }
   }
 
-  /** Extraction du texte d'une pièce jointe. PDF : d'abord en local (rapide),
-   *  puis serveur en repli ; Word (.docx) : extraction serveur. */
   async function extractAttachment(file: File): Promise<string> {
     if (/\.pdf$/i.test(file.name)) {
       try {
         const r = await extractDocumentContent(file);
         if (r.text?.trim()) return r.text;
-      } catch { /* repli serveur ci-dessous */ }
+      } catch { /* repli serveur */ }
     }
     const r = await contractApi.extract(file);
     if (r.ocr_text?.trim()) return r.ocr_text;
@@ -280,12 +258,12 @@ useEffect(() => {
   const extracting = attachments.some((a) => a.status === "extracting");
 
   const backTarget = () => {
-    opId.current += 1; // annule tout appel IA en vol
+    opId.current += 1;
     if (step === "generating") {
-      // Revient à l'étape d'origine sans rien perdre (brief, réponses, pièces).
-      setStep(origin.current); setError("");
+      setStep(origin.current);
+      setError("");
+      writeUrl({ step: origin.current, q: origin.current === "asking" ? idx + 1 : null });
     } else if (step === "asking" && idx > 0) {
-      // Question précédente — jamais un saut au tout début.
       goAsk(idx - 1);
     } else if (step === "brief" || step === "asking" || step === "loading" || step === "error") {
       goMode();
@@ -345,7 +323,6 @@ useEffect(() => {
               className="w-full resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition-all focus:border-brand/40 focus:shadow-ring-brand placeholder:text-ink-placeholder"
             />
 
-            {/* Pièces jointes : le contrat s'adapte à leur contenu */}
             <div className="space-y-2">
               {attachments.map((a, i) => (
                 <div key={`${a.file.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-surface-subtle px-3 py-2">
@@ -428,7 +405,6 @@ useEffect(() => {
 
         {step === "asking" && q && (
           <div>
-            {/* Progression : numéro + jauge, rien d'autre */}
             <div className="mb-4">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">
                 Question {idx + 1} / {total}
@@ -452,7 +428,6 @@ useEffect(() => {
                     <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" />
                   </button>
                 ))}
-                {/* Réponse libre possible sur chaque question */}
                 <FreeAnswer key={q.id} onSubmit={answer} />
               </div>
             ) : (
@@ -476,7 +451,6 @@ useEffect(() => {
   );
 }
 
-/** Champ libre proposé sous les choix — même mise en forme que les options. */
 function FreeAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
   const [v, setV] = useState("");
   return (
@@ -500,7 +474,6 @@ function FreeAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
   );
 }
 
-/** Réponse libre (question ouverte) : champ + validation. */
 function TextAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
   const [v, setV] = useState("");
   return (

@@ -1,5 +1,28 @@
 [
   {
+    "id": "56f605b9-a55d-4094-a7d5-31e1e5896cba",
+    "date": "2026-08-21T15:06:15.188Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 17ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "4c575c7f-ce23-46e7-8a8b-f79211d6b0b2",
+    "date": "2026-08-21T15:06:15.176Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c5811962-e7cb-4f40-80d0-ee5f8143d75e",
+    "date": "2026-08-20T09:27:35.247Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 7ms.\nDétails : Erreur serveur.",
+    "context": "[Auto-Log SERVER_ERROR] POST /signature-envelope/public/1a914f022a2af8ef9e189100a2015d1e4351ec9b0faa20063d67ffe63975b5a5",
+    "page": "/signature-envelope/public/1a914f022a2af8ef9e189100a2015d1e4351ec9b0faa20063d67ffe63975b5a5"
+  },
+  {
     "id": "f1b1930e-12db-45b5-acaf-41e2f0a52cc2",
     "date": "2026-08-19T15:12:36.139Z",
     "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",

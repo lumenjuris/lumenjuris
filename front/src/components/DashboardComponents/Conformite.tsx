@@ -15,6 +15,8 @@ import {
   FolderPlus,
   Check,
   Loader2,
+  Sparkles,
+  PlusCircle,
 } from "lucide-react";
 import {
   loadContractHistoryIndex,
@@ -146,7 +148,7 @@ export function Conformite() {
 
   return (
     <>
-    <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+    <div className="lg:col-span-3 space-y-6">
       {/* Title + CTA */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl">
         <div className="text-left">
@@ -164,6 +166,35 @@ export function Conformite() {
           <Plus className="text-base font-normal" /> Nouvelle analyse
         </button>
       </div>
+
+<div className="my-4 pl-4 border-l-2 border-blue-primary">
+  <h3 className="text-xs font-bold uppercase tracking-wider text-blue-primary mb-2">
+    Pourquoi utiliser l'Analyzer ?
+  </h3>
+
+  <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Diagnostic & Score de risque :</strong> Chaque clause est analysée et assortie d'un score visuel pour repérer instantanément les points de vigilance.
+      </span>
+    </li>
+
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Modifications concrètes :</strong> L'outil propose des réécritures adaptées et vous explique en détail la justification de chaque changement.
+      </span>
+    </li>
+
+    <li className="flex items-start gap-2">
+      <span className="text-blue-500 font-bold select-none">•</span>
+      <span>
+        <strong className="font-semibold text-slate-800">Suggestions de clauses :</strong> Bénéficiez de recommandations de clauses à ajouter pour combler les manques et protéger au mieux vos intérêts.
+      </span>
+    </li>
+  </ul>
+</div>
 
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
