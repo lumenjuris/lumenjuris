@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { fetchProxy } from "../../utils/fetchProxy";
+import { relativeTime } from "../../utils/format/relativeTime";
 
 type Message = { role: "user" | "bot" | "error"; text: string };
 type Conversation = {
@@ -19,14 +20,6 @@ type Conversation = {
   messages: Message[];
 };
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const d = Math.floor(diff / 86_400_000);
-  if (d === 0) return "Aujourd'hui";
-  if (d === 1) return "Hier";
-  return `Il y a ${d} j`;
-}
-
 export function ChatJuridique() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -34,6 +27,8 @@ export function ChatJuridique() {
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
+
+
 
   const activeConv = conversations.find((c) => c.id === activeId) ?? null;
 
