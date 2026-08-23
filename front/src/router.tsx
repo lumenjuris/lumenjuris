@@ -121,8 +121,8 @@ export function App() {
           <Route path="/mon-compte" element={<ParamCompte />} />
           <Route path="/analyzer" element={<ContractAnalysis />} />
           {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
-        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-        <Route path="/subscription/failed" element={<SubscriptionFailed />} />
+          <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+          <Route path="/subscription/failed" element={<SubscriptionFailed />} />
 
 
           {/* Page de gestion d'un cluster pour les multi user

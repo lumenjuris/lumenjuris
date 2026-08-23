@@ -21,6 +21,9 @@ contractRouter.post("/extract", auth, (req, res) =>
 );
 
 // Routes statiques AVANT les routes paramétrées /:externalId
+contractRouter.get("/capacity", auth, (req, res) =>
+  relayToNode(req, res, "/contract/capacity"),
+);
 contractRouter.get("/stats", auth, (req, res) =>
   relayToNode(req, res, "/contract/stats"),
 );

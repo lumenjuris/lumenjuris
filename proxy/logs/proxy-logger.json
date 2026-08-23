@@ -1,5 +1,33 @@
 [
   {
+    "id": "c2883cb3-3b46-4794-a192-0e7ca30aa73e",
+    "date": "2026-08-23T13:03:28.075Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 679ms.\nDétails : openai-chat error 500",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/summarize-contract",
+    "page": "/api/summarize-contract"
+  },
+  {
+    "id": "9de3d60c-1d5a-49f1-b6d7-7e0da06bf10b",
+    "date": "2026-08-23T12:27:30.611Z",
+    "comment": "[PROXY] - Erreur HTTP 402 (Payment Required)\nDurée : 11ms.\nDétails : Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/analyzer/analyze-contract",
+    "page": "/api/analyzer/analyze-contract"
+  },
+  {
+    "id": "a2198f5e-44ea-4c6b-9604-a3bb4f39b7e0",
+    "date": "2026-08-23T12:25:19.742Z",
+    "comment": "[PROXY] - Erreur HTTP 402 (Payment Required)\nDurée : 11ms.\nDétails : Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/analyzer/analyze-contract",
+    "page": "/api/analyzer/analyze-contract"
+  },
+  {
+    "id": "e55ec2f6-717c-46ab-b424-2fc1fc86b208",
+    "date": "2026-08-23T12:25:13.738Z",
+    "comment": "[PROXY] - Erreur HTTP 402 (Payment Required)\nDurée : 12ms.\nDétails : Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/analyzer/analyze-contract",
+    "page": "/api/analyzer/analyze-contract"
+  },
+  {
     "id": "e9684ad1-f8ce-4f02-abba-b43df3781000",
     "date": "2026-08-23T11:45:25.797Z",
     "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 18ms.\nDétails : backnode_unreachable",

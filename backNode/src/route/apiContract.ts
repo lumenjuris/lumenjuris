@@ -147,6 +147,13 @@ router.delete("/folders/:externalId", authMiddleware, requireEditor, async (req:
 
 // ─── Création (après revue humaine) ─────────────────────────────────────────────
 
+// Vérifie (sans créer) si l'utilisateur peut encore ajouter un contrat.
+// Appelé par le front AVANT d'ouvrir le wizard d'import (UX : bloquer tôt).
+router.get("/capacity", authMiddleware, requireEditor, async (req: Request, res: Response) => {
+    const result = await new Credit().checkContrathequeCapacity(Number(req.idUser))
+    return res.status(result.success ? 200 : 500).json(result)
+})
+
 router.post("/", authMiddleware, requireEditor, async (req: Request, res: Response) => {
     try {
         const body = req.body as Record<string, unknown> & { fileBase64?: string }

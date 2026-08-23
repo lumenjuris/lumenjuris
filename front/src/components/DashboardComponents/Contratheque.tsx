@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { contractApi } from "./contratheque/api";
+import { QuotaLimitModal } from "../common/QuotaLimitModal";
 import { ContrathequeList } from "./contratheque/ContrathequeList";
 import { ContractDetail } from "./contratheque/ContractDetail";
 import { ImportWizard } from "./contratheque/ImportWizard";
@@ -26,6 +28,28 @@ export function Contratheque() {
   const [importing, setImporting] = useState(false);
   const [tab, setTab] = useState<ContrathequeTab>("contrats");
   const [refreshKey, setRefreshKey] = useState(0);
+  // Message de plafond atteint (null = carte fermée).
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
+
+  // Vérifie le plafond AVANT d'ouvrir le wizard (UX : bloquer tôt, pas au save).
+  // Fail-open : en cas d'erreur, on ouvre quand même — le backend POST /contract
+  // reste le garde-fou (402).
+  const handleImport = async () => {
+    try {
+      const cap = await contractApi.capacity();
+      if (cap && cap.allowed === false) {
+        setLimitMessage(
+          cap.limit != null
+            ? `Votre formule est limitée à ${cap.limit} contrats suivis. Passez à une formule supérieure pour en suivre davantage.`
+            : "Votre formule ne permet pas de suivre davantage de contrats.",
+        );
+        return;
+      }
+    } catch {
+      // fail-open
+    }
+    setImporting(true);
+  };
 
   // Wizard d'import (prioritaire sur les autres vues)
   if (importing) {
@@ -65,13 +89,22 @@ export function Contratheque() {
 
   // Liste des contrats
   return (
-    <ContrathequeList
-      refreshKey={refreshKey}
-      tab={tab}
-      onTab={setTab}
-      canDelete={canDelete}
-      onOpen={(id) => navigate(`/contratheque/${id}`, )}
-      onImport={() => setImporting(true)}
-    />
+    <>
+      <ContrathequeList
+        refreshKey={refreshKey}
+        tab={tab}
+        onTab={setTab}
+        canDelete={canDelete}
+        onOpen={(id) => navigate(`/contratheque/${id}`, )}
+        onImport={handleImport}
+      />
+      {limitMessage && (
+        <QuotaLimitModal
+          title="Limite de la contrathèque atteinte"
+          message={limitMessage}
+          onClose={() => setLimitMessage(null)}
+        />
+      )}
+    </>
   );
 }
