@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import { DocumentViewer, DocumentViewerRef } from "../components/ContractAnalysis/DocumentViewer";
 
@@ -243,6 +243,15 @@ export default function ContractAnalysis() {
         }),
       });
 
+      // Quota d'analyses épuisé (renvoyé par le proxy avant de lancer l'IA).
+      if (response.status === 402) {
+        const err = await response.json().catch(() => ({}));
+        toast.error(
+          err?.message ||
+            "Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+        );
+        throw new Error("QUOTA_EXCEEDED");
+      }
       if (!response.ok)
         throw new Error(`Analyse échouée (${response.status})`);
       const data = (await response.json()) as {

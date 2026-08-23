@@ -36,7 +36,6 @@ import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
 import { SignerPage } from "./page/SignerPage";
 
-import { ClusterUserPage } from "./page/ClusterEnterprise";
 import { usePageLoaded } from "./hooks/usePageLoaded";
 import { Loader } from "./components/common/Loader";
 import { PublicLayout } from "./components/DashboardComponents/PublicLayout";
@@ -132,6 +131,8 @@ export function App() {
 
           <Route path="/monitoring" element={<Monitoring />} />
         </Route>
+
+
 
         <Route
           path="/sandbox" element={<RequireAuth>{" "}<Sandbox />{" "}</RequireAuth>} />

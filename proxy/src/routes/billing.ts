@@ -11,6 +11,11 @@ billingRouter.post("/customer", auth, (req, res) =>
   relayToNode(req, res, "/billing/customer"),
 );
 
+billingRouter.post("/create-checkout", auth, (req,res)=>{
+  relayToNode(req,res, "/billing/create-checkout")
+})
+
+
 billingRouter.post("/payment-intent", auth, (req, res) =>
   relayToNode(req, res, "/billing/payment-intent"),
 );

@@ -32,10 +32,12 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
   res.redirect(url);
 });
 
+
+
+
+
 //Route callback de l'auth google
-routerAuthGoogle.get(
-  "/auth/google/callback",
-  async (req: Request, res: Response) => {
+routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Response) => {
     
     const { code, state } = req.query;
 
@@ -67,10 +69,8 @@ routerAuthGoogle.get(
       },
     );
 
-    console.log(userInfo);
 
     const { sub, email, name, picture } = userInfo.data;
-    console.log(userInfo.data);
 
     // Recherche dans la BDD d'un utilisateur inscrit avec un compte Google
     const findUser = await prisma.user.findUnique({
@@ -84,8 +84,8 @@ routerAuthGoogle.get(
         return res.redirect(`${FRONT}/inscription?error=banned`);
       }
       return (
-        createCookieAuth(findUser.idUser, "USER", res),
-        res.redirect(`${process.env.HOST_FRONT}`)
+        createCookieAuth(findUser.idUser, findUser.role , res),
+        res.redirect(`${process.env.HOST_FRONT}/dashboard`)
       );
     }
 
@@ -97,8 +97,6 @@ routerAuthGoogle.get(
       cgu: true,
       isVerified: true,
     });
-
-    console.log(newUser);
 
     if (!("data" in newUser)) {
       return res.redirect(

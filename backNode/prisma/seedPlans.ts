@@ -59,7 +59,6 @@ const PLANS_SEED = [
             },
             signatureEnhanced: { enabled: false },
             generationContractWithFiligrane: { enabled: true },
-
             contrathequeLimit: {
                 unlimited: false,
                 value: 5

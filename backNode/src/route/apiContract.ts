@@ -5,6 +5,7 @@ import path from "path"
 import crypto from "crypto"
 import { authMiddleware } from "../middleware/authMiddleware.js"
 import { ContractService } from "../services/classContract.js"
+import { Credit } from "../services/classCredit.js"
 import type { ContractListFilters } from "../services/classContract.js"
 import { encryptBuffer, decryptBuffer } from "../services/cryptoFile.js"
 import { ContractSummary } from "@prisma/client"
@@ -150,6 +151,19 @@ router.post("/", authMiddleware, requireEditor, async (req: Request, res: Respon
     try {
         const body = req.body as Record<string, unknown> & { fileBase64?: string }
         if (!body.title) return res.status(400).json({ success: false, message: "title requis." })
+
+        // Plafond contrathèque : on vérifie avant d'ajouter un contrat.
+        // (Cap par comptage, pas un consommable — voir Credit.checkContrathequeCapacity.)
+        const cap = await new Credit().checkContrathequeCapacity(Number(req.idUser))
+        if (cap.success && cap.data?.allowed === false) {
+            return res.status(402).json({
+                success: false,
+                code: "CONTRATHEQUE_LIMIT_REACHED",
+                message: cap.data.limit != null
+                    ? `Votre plan est limité à ${cap.data.limit} contrats suivis. Passez à un plan supérieur pour en ajouter davantage.`
+                    : "Votre plan ne permet pas d'ajouter davantage de contrats.",
+            })
+        }
 
         let documentFilePath: string | null = null
         if (body.fileBase64) documentFilePath = await storeEncryptedPdf(body.fileBase64)

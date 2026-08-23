@@ -38,7 +38,7 @@ async function json<T>(res: Response): Promise<T> {
 /** Gestion des utilisateurs et des rôles (réservé aux administrateurs). */
 export function UserManagement() {
   const role = useUserStore((s) => s.userData?.profile?.role);
-  const myId = useUserStore((s) => s.userData?.profile?.idUser);
+  const myId = useUserStore((s) => s.userData?.profile?.id);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);

@@ -10,12 +10,14 @@ type ReturnData<T = any> = {
 // ─── Modèle des quotas ───────────────────────────────────────────────────────
 // UserCredit.quotas est une copie de Plan.creditsIncluded (structure CreditPlan
 // de seedPlans.ts). Deux natures d'entrées :
-//  - quotas À VALEUR (consommables)  : analyzer, contrathequeLimit ({unlimited,value})
-//                                      et signatureEnhanced ({enabled,limit}) ;
-//  - features BOOLÉENNES (droits d'accès) : le reste ({enabled}) — non consommables.
+//  - quotas À VALEUR (consommables)  : analyzer ({unlimited,value}) et
+//                                      signatureEnhanced ({enabled,limit}) — décrémentés à l'usage ;
+//  - PLAFOND (non consommable) : contrathequeLimit ({unlimited,value}) — vérifié par
+//                                comptage (checkContrathequeCapacity), jamais décrémenté ;
+//  - features BOOLÉENNES (droits d'accès) : le reste ({enabled}).
 
-/** Les 3 seules features consommables (à valeur). Les autres sont des droits d'accès. */
-const CONSUMABLE_FEATURES = ["analyzer", "contrathequeLimit", "signatureEnhanced"] as const;
+/** Features consommables (à valeur, décrémentées). Le reste = plafonds / droits d'accès. */
+const CONSUMABLE_FEATURES = ["analyzer", "signatureEnhanced"] as const;
 type ConsumableFeature = (typeof CONSUMABLE_FEATURES)[number];
 
 /** État d'un quota consommable pour un utilisateur. */
@@ -34,8 +36,8 @@ function readRemaining(quotas: Prisma.JsonValue, feature: ConsumableFeature): Fe
   const q = all?.[feature];
   if (!q) return { kind: "disabled" };
 
-  // analyzer / contrathequeLimit : { unlimited: boolean, value?: number }
-  if (feature === "analyzer" || feature === "contrathequeLimit") {
+  // analyzer : { unlimited: boolean, value?: number }
+  if (feature === "analyzer") {
     if (q.unlimited === true) return { kind: "unlimited" };
     if (q.unlimited === false && typeof q.value === "number") {
       return { kind: "finite", remaining: q.value };
@@ -57,7 +59,7 @@ function writeRemaining(
   remaining: number,
 ): Prisma.InputJsonValue {
   const next = structuredClone(quotas) as Record<string, any>;
-  if (feature === "analyzer" || feature === "contrathequeLimit") {
+  if (feature === "analyzer") {
     next[feature] = { unlimited: false, value: remaining };
   } else {
     next[feature] = { enabled: true, limit: remaining };
@@ -192,6 +194,95 @@ export class Credit {
     } catch (error) {
       console.error("CONSUME QUOTA ERROR:", error);
       return { success: false, message: "Erreur lors de la consommation du quota." };
+    }
+  }
+
+  /**
+   * Vérifie SANS décrémenter si l'utilisateur peut encore utiliser un quota
+   * consommable (à appeler avant de lancer une feature coûteuse). Renvoie
+   * `data.allowed` : true si illimité ou solde > 0, false sinon (+ `reason`).
+   */
+  async hasFeatureQuota(userId: number, feature: string): Promise<ReturnData> {
+    try {
+      if (!isConsumable(feature)) {
+        return { success: false, message: `Feature "${feature}" non consommable.` };
+      }
+
+      const activeSubscription = await prisma.subscription.findUnique({
+        where: { userId },
+        select: { status: true },
+      });
+      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
+        return { success: true, data: { allowed: false, reason: "no_active_subscription" } };
+      }
+
+      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
+      if (!userCredit) {
+        return { success: true, data: { allowed: false, reason: "no_quota" } };
+      }
+
+      const state = readRemaining(userCredit.quotas, feature);
+      if (state.kind === "unlimited") {
+        return { success: true, data: { allowed: true, unlimited: true } };
+      }
+      if (state.kind === "disabled") {
+        return { success: true, data: { allowed: false, reason: "disabled" } };
+      }
+      return {
+        success: true,
+        data: { allowed: state.remaining > 0, remaining: state.remaining },
+      };
+    } catch (error) {
+      console.error("HAS FEATURE QUOTA ERROR:", error);
+      return { success: false, message: "Erreur lors de la vérification du quota." };
+    }
+  }
+
+  /**
+   * Vérifie si l'utilisateur peut encore AJOUTER un contrat à sa contrathèque.
+   * `contrathequeLimit` est un PLAFOND (pas un consommable) : on compare le nombre
+   * de contrats non archivés au plafond du plan. Illimité -> toujours autorisé.
+   * Renvoie `data.allowed` (+ `count`/`limit` pour le message côté appelant).
+   */
+  async checkContrathequeCapacity(userId: number): Promise<ReturnData> {
+    try {
+      const activeSubscription = await prisma.subscription.findUnique({
+        where: { userId },
+        select: { status: true },
+      });
+      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
+        return { success: true, data: { allowed: false, reason: "no_active_subscription" } };
+      }
+
+      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
+      if (!userCredit) {
+        return { success: true, data: { allowed: false, reason: "no_quota" } };
+      }
+
+      const quotas = userCredit.quotas as Record<string, any> | null;
+      const limit = quotas?.contrathequeLimit;
+
+      // Plafond illimité (plans payants) -> toujours autorisé.
+      if (limit?.unlimited === true) {
+        return { success: true, data: { allowed: true, unlimited: true } };
+      }
+
+      // Plafond fini -> comparer au nombre de contrats non archivés.
+      if (limit?.unlimited === false && typeof limit.value === "number") {
+        const count = await prisma.contract.count({
+          where: { userId, isArchived: false },
+        });
+        return {
+          success: true,
+          data: { allowed: count < limit.value, count, limit: limit.value },
+        };
+      }
+
+      // Structure inattendue -> on bloque prudemment.
+      return { success: true, data: { allowed: false, reason: "invalid_quota" } };
+    } catch (error) {
+      console.error("CHECK CONTRATHEQUE CAPACITY ERROR:", error);
+      return { success: false, message: "Erreur lors de la vérification du plafond contrathèque." };
     }
   }
 

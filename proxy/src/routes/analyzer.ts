@@ -12,6 +12,7 @@ import { analyzeContractWithAI } from "../services/aiAnalyser/aiAnalyzer.js";
 import { relayJsonToPython } from "../relay.js";
 import { withTracking } from "../tracking.js";
 import { logOpenAiTokens } from "../tracking.js";
+import { hasQuota, consumeQuota } from "../quota.js";
 
 
 export const analyzerRouter: Router = Router()
@@ -129,17 +130,31 @@ analyzerRouter.post("/analyze-contract", auth, async (req, res) => {
             .json({ success: false, message: "Le champ 'content' est requis." });
         return;
     }
+
+    const userId = res.locals.userId as number | undefined;
+
+    // Quota : on vérifie AVANT de lancer l'IA (analyse = 1 crédit "analyzer").
+    if (userId && !(await hasQuota("analyzer", userId))) {
+        res.status(402).json({
+            success: false,
+            code: "QUOTA_EXCEEDED",
+            message: "Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+        });
+        return;
+    }
+
     try {
         const clauses = await analyzeContractWithAI(
             content,
             context,
-            res.locals.userId as number | undefined,
+            userId,
         );
         const contractStructure = await detectContractWithAI(content);
-        void trackFeature(
-            "analyze_contract",
-            res.locals.userId as number | undefined,
-        );
+
+        // Décrément après succès uniquement.
+        if (userId) await consumeQuota("analyzer", userId, 1);
+
+        void trackFeature("analyze_contract", userId);
         res.json({ success: true, clauses, contractStructure });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Erreur interne";
