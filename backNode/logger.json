@@ -1,32 +1,10 @@
 [
   {
-    "id": "d47ad6d4-1bda-4398-ad4f-bc29369f8038",
-    "date": "2026-08-07T12:07:53.683Z",
-    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 6ms.\nDétails : r is not defined",
-    "context": "[Auto-Log SERVER_ERROR] POST /contract/d280ed3b-28e8-49cf-84c5-b928ae8a31ae/amendment",
-    "page": "/contract/d280ed3b-28e8-49cf-84c5-b928ae8a31ae/amendment",
-    "userId": "2"
-  },
-  {
-    "id": "791e19f4-18b1-431e-a03d-55df123a6f20",
-    "date": "2026-08-07T08:48:59.898Z",
-    "comment": "[ERROR] Test front     at <anonymous>:1:5",
-    "context": "FrontEnd error",
-    "page": "/monitoring"
-  },
-  {
-    "id": "3f075621-abb3-4296-9da6-46cf0f8f9071",
-    "date": "2026-08-06T13:16:18.795Z",
-    "comment": "[PROXY]- Erreur HTTP 404 (Not Found) \nDurée : 2ms.",
-    "context": "[Auto-Log CLIENT_ERROR] POST /api/user/auth/login1",
-    "page": "/api/user/auth/login1"
-  },
-  {
-    "id": "648d254b-a4fa-44fe-8555-536d39a093c2",
-    "date": "2026-08-06T09:45:06.504Z",
-    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 1ms.\nDétails : r is not defined",
-    "context": "[Auto-Log SERVER_ERROR] POST /contract/d280ed3b-28e8-49cf-84c5-b928ae8a31ae/amendment",
-    "page": "/contract/d280ed3b-28e8-49cf-84c5-b928ae8a31ae/amendment",
-    "userId": "2"
+    "id": "f2c9fdc5-ca7b-450f-9fae-d763f1a4a43f",
+    "date": "2026-08-08T11:20:33.047Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Vous ne pouvez pas modifier votre propre rôle d'administrateur.",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/3/role",
+    "page": "/admin/users/3/role",
+    "userId": "3"
   }
 ]

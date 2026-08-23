@@ -32,10 +32,12 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
   res.redirect(url);
 });
 
+
+
+
+
 //Route callback de l'auth google
-routerAuthGoogle.get(
-  "/auth/google/callback",
-  async (req: Request, res: Response) => {
+routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Response) => {
     
     const { code, state } = req.query;
 
@@ -77,8 +79,8 @@ routerAuthGoogle.get(
 
     if (findUser) {
       return (
-        createCookieAuth(findUser.idUser, "USER", res),
-        res.redirect(`${process.env.HOST_FRONT}`)
+        createCookieAuth(findUser.idUser, findUser.role , res),
+        res.redirect(`${process.env.HOST_FRONT}/dashboard`)
       );
     }
 

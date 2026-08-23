@@ -146,6 +146,7 @@ enum ApprovalStatus {
 
 //==== CREATION DES MODELS ====
 
+
 // --- UTILISATEUR ---
 
 /// Compte utilisateur principal : identité, rôle, statut de vérification et bannissement.
@@ -217,6 +218,8 @@ model UserPreference {
   user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
 
+
+
 // --- ENTREPRISE ---
 
 /// Entreprise liée à un utilisateur : infos juridiques (SIREN, NAF, statut) issues de l'API Sirene.
@@ -237,6 +240,8 @@ model Enterprise {
   address Address?
 }
 
+
+
 /// Adresse postale d'une entreprise. Séparée pour normaliser les données géographiques.
 model Address {
   idAddress  Int     @id @default(autoincrement())
@@ -248,6 +253,9 @@ model Address {
   enterpriseId Int        @unique
   enterprise   Enterprise @relation(fields: [enterpriseId], references: [idEnterprise], onDelete: Cascade, onUpdate: Cascade)
 }
+
+
+
 
 // --- SECURITE ---
 
@@ -263,6 +271,8 @@ model Token {
   userId    Int
   user      User       @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
+
+
 
 // --- EVENTS ---
 
@@ -280,6 +290,8 @@ model Event {
   documentCustom DocumentCustom?
 }
 
+
+
 /// Document généré à la demande pour un utilisateur, rattaché à un Event.
 /// Contient le contenu du template rendu (type + HTML/texte).
 model DocumentCustom {
@@ -294,6 +306,8 @@ model DocumentCustom {
   eventId Int?   @unique
   event   Event? @relation(fields: [eventId], references: [idEvent])
 }
+
+
 
 /// Templates de documents globaux partagés (non liés à un utilisateur).
 /// Base de génération commune pour les documents standards de la plateforme.
@@ -434,7 +448,6 @@ model Subscription {
 }
 
 /// Définition d'un plan tarifaire : nom, prix, intervalle de facturation et crédits inclus.
-
 model Plan {
   idPlan Int @id @default(autoincrement())
 
@@ -452,6 +465,7 @@ model Plan {
 
   @@unique([name, interval])
 }
+
 
 /// Facture générée pour un abonnement, associée à une transaction Stripe.
 /// `status` : "PAID" (paiement réussi) ou "FAILED" (tentative échouée, montant non encaissé).

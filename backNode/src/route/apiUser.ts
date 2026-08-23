@@ -332,67 +332,67 @@ routerUser.post(
  * Necessite email et password accessible dans req.body
  */
 routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response) => {
-    try {
-      const { password, email } = req.body;
-      // Meme normalisation qu'a l'inscription : une adresse collee avec une
-      // espace de trop ne doit pas passer pour un identifiant different.
-      const logUser = await new User().authenticate(
-        password,
-        typeof email === "string" ? email.trim() : email,
-      );
+  try {
+    const { password, email } = req.body;
+    // Meme normalisation qu'a l'inscription : une adresse collee avec une
+    // espace de trop ne doit pas passer pour un identifiant different.
+    const logUser = await new User().authenticate(
+      password,
+      typeof email === "string" ? email.trim() : email,
+    );
 
-      if (!logUser.success || !logUser.data) {
-        return res.status(401).json({
-          success: false,
-          message: "Email ou mot de passe invalide",
-        });
-      }
+    if (!logUser.success || !logUser.data) {
+      return res.status(401).json({
+        success: false,
+        message: "Email ou mot de passe invalide",
+      });
+    }
 
-      const userStatus = await prisma.user.findUnique({
-        where: {idUser: logUser.data.idUser},
-        select: {isBanned: true},
+    const userStatus = await prisma.user.findUnique({
+      where: { idUser: logUser.data.idUser },
+      select: { isBanned: true },
+    })
+
+
+    if (userStatus?.isBanned) {
+      return res.status(403).json({
+        success: false,
+        reason: "banned",
+        message: "Cet utilisateur est banni et ne peut donc pas se connecter."
       })
     }
 
-      if (userStatus?.isBanned) {
-        return res.status(403).json({
-          success: false,
-          reason: "banned",
-          message: "Cet utilisateur est banni et ne peut donc pas se connecter."
-        })
-      }
+    // Compte non valide : aucune session n'est ouverte. Sans ce controle, le
+    // cookie etait pose malgre le refus affiche par le front, et il suffisait
+    // d'aller sur /dashboard pour entrer sans avoir valide son adresse.
+    if (!logUser.data.isVerified) {
+      return res.status(403).json({
+        success: false,
+        reason: "unverified",
+        message:
+          "Votre compte n'est pas encore validé. Cliquez sur le lien reçu par email pour l'activer.",
+      });
+    }
 
-      // Compte non valide : aucune session n'est ouverte. Sans ce controle, le
-      // cookie etait pose malgre le refus affiche par le front, et il suffisait
-      // d'aller sur /dashboard pour entrer sans avoir valide son adresse.
-      if (!logUser.data.isVerified) {
-        return res.status(403).json({
-          success: false,
-          reason: "unverified",
-          message:
-            "Votre compte n'est pas encore validé. Cliquez sur le lien reçu par email pour l'activer.",
-        });
-      }
-
-      // Le role vient du compte : le figer a "USER" retirait ses droits a un
-      // administrateur des qu'il se connectait par ce formulaire.
-      createCookieAuth(logUser.data.idUser, logUser.data.role, res);
+    // Le role vient du compte : le figer a "USER" retirait ses droits a un
+    // administrateur des qu'il se connectait par ce formulaire.
+    createCookieAuth(logUser.data.idUser, logUser.data.role, res);
 
 
     if (logUser.data.twoFactorEnabled) {
       const codeResult = await new Token().createTwoFactorCode(
         logUser.data.idUser,
       );
-        if (codeResult.success && codeResult.code) {
-          // Envoi en arriere-plan : la reponse ne depend plus du SMTP. Le
-          // resultat n'etait de toute facon pas exploite, l'attente ne servait
-          // qu'a retarder l'ouverture de la fenetre de saisie du code.
-          void new Mailer(logUser.data.email)
-            .sendTwoFactor(codeResult.code, logUser.data.email)
-            .catch((err) =>
-              console.error("Envoi du code de double authentification échoué:", err),
-            );
-        }
+      if (codeResult.success && codeResult.code) {
+        // Envoi en arriere-plan : la reponse ne depend plus du SMTP. Le
+        // resultat n'etait de toute facon pas exploite, l'attente ne servait
+        // qu'a retarder l'ouverture de la fenetre de saisie du code.
+        void new Mailer(logUser.data.email)
+          .sendTwoFactor(codeResult.code, logUser.data.email)
+          .catch((err) =>
+            console.error("Envoi du code de double authentification échoué:", err),
+          );
+      }
 
       if (codeResult.success && codeResult.code) {
         await new Mailer(logUser.data.email).sendTwoFactor(
