@@ -263,8 +263,8 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        {/* Logo + bouton fermeture (mobile only) */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
+        {/* Logo + bouton fermeture */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
             <LumenJurisLogo variant="dark" height={30} />
           </Link>
@@ -278,24 +278,21 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 bg-blue-primary">
-          <div className="flex flex-col gap-6">
+        <nav className="flex-1 overflow-y-auto min-h-0 px-3 py-3 bg-blue-primary [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-col gap-3 max-h-full">
             {navSections.map((section, sectionIdx) => (
-              <div key={sectionIdx} className="flex flex-col gap-1">
-                {/* Titre de catégorie (ex: CONTRATS, PILOTAGE) */}
+              <div key={sectionIdx} className="flex flex-col gap-0.5">
                 {section.category && (
-                  <h3 className="px-3 text-[11px] font-semibold tracking-wider text-sky-300 uppercase mb-1">
+                  <h3 className="px-3 text-[10px] font-semibold tracking-wider text-sky-300 uppercase mb-0.5">
                     {section.category}
                   </h3>
                 )}
 
-                {/* Liste d'éléments */}
                 <ul className="flex flex-col gap-0.5">
                   {section.items.map((item) => (
                     <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
                   ))}
 
-                  {/* Menu Admin dans Pilotage si administrateur */}
                   {section.category === "PILOTAGE" && isAdmin && (
                     <NavItemRow
                       item={{ icon: ShieldHalf, label: "Monitoring", path: "/monitoring" }}
@@ -308,7 +305,6 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
           </div>
         </nav>
       </aside>
-
       {/* ── Zone principale ── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ${sidebarOpen ? "md:ml-64" : "md:ml-0"}`}>
         <header className="h-16 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 border-b border-line">

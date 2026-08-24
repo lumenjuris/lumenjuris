@@ -315,7 +315,7 @@ export function Dashboard() {
           )}
         </svg>
 
-        <div className="max-w-6xl mx-auto flex flex-col gap-20 relative z-10">
+        <div className="max-w-6xl mx-auto flex flex-col gap-20 relative z-1">
           {TOOLS.map((t, index) => (
             <Link
               key={t.title}
