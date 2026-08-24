@@ -84,7 +84,7 @@ export function ClausesLibrary() {
         {canEdit && (
           <button
             onClick={() => setEditing("new")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-blue-primary hover:text-white border border-white transition-all shadow-card shrink-0"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl border border-white transition-all shadow-card shrink-0 hover:-translate-y-0.5"
           >
             <Plus className="w-4 h-4" /> Nouvelle clause
           </button>

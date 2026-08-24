@@ -203,14 +203,14 @@ export function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
             <Link 
               to="/contrat-generation" 
-              className="flex items-center justify-center text-center bg-blue-primary text-white font-medium py-3 px-4 border border-gray-500 rounded-md hover:bg-gray-100 active:scale-[0.99] hover:text-blue-primary transition-all text-sm shadow-sm"
+              className="flex items-center justify-center text-center bg-blue-primary text-white font-medium py-3 px-4 border border-gray-500 rounded-md active:scale-[0.99] transition-all durantion-200 hover:-translate-y-0.5 will-change-transform text-sm shadow-sm"
             >   
               Générez votre premier contrat
             </Link>
 
             <Link 
               to="/souscription" 
-              className="flex items-center justify-center text-center bg-white text-blue-primary font-medium py-3 px-4 border border-gray-500 rounded-md hover:bg-gray-100 active:scale-[0.99] hover:text-blue-primary transition-all text-sm shadow-sm"
+              className="flex items-center justify-center text-center bg-white text-blue-primary font-medium py-3 px-4 border border-gray-500 rounded-md active:scale-[0.99] transition-all durantion-200 hover:-translate-y-0.5 will-change-transform text-sm shadow-sm"
             >
               Découvrir nos abonnements
             </Link>
@@ -322,7 +322,7 @@ export function Dashboard() {
               ref={(el) => (cardRefs.current[index] = el)}
               to={t.to}
               className={`group flex flex-col md:flex-row gap-6 backdrop-blur-2xl rounded-xl border border-gray-200 
-              p-6 hover:border-gray-300 transition-all shadow-sm hover:shadow-md ${index % 2 === 0 ? "bg-gradient-to-r from-slate-100/30 via-slate-100/60 to-sky-200/35 hover:border-blue-200"
+              p-6 hover:border-gray-300 transition-all hover:-translate-y-1 shadow-sm hover:shadow-md ${index % 2 === 0 ? "bg-gradient-to-r from-slate-100/30 via-slate-100/60 to-sky-200/35 hover:border-blue-200"
           : "bg-gradient-to-r from-sky-200/35 via-slate-100/60 to-slate-100/40 hover:border-blue-200"}`}
             >
               <div className="flex flex-col gap-4 w-full md:w-44 shrink-0">

@@ -175,7 +175,7 @@ export function Conformite() {
         </div>
         <button
           onClick={handleNewAnalysis}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-end"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 will-change-transform backface-invisible shadow-sm shrink-0 self-start sm:self-end"
         >
           <Plus className="text-base font-normal" /> Nouvelle analyse
         </button>
@@ -294,7 +294,7 @@ export function Conformite() {
                       ? "Ajouté à la contrathèque"
                       : "Ajouter à la contrathèque"
                   }
-                  className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
+                  className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
                 >
                   {addState[item.id] === "done" ? (
                     <Check className="w-4 h-4 text-success stroke-[1.5]" />
@@ -437,7 +437,7 @@ export function Conformite() {
                           ? "Ajouté à la contrathèque"
                           : "Ajouter à la contrathèque"
                       }
-                      className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
+                      className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted hover:-translate-y-0.5 disabled:opacity-50"
                     >
                       {addState[item.id] === "done" ? (
                         <Check className="w-4 h-4 text-success stroke-[1.5]" />

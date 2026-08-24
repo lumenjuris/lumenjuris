@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "28dd37af-8ab4-4828-a4a6-9b48519f7a34",
+    "date": "2026-08-24T09:04:28.156Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 29ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/legal-watch/unread-count",
+    "page": "/api/legal-watch/unread-count"
+  }
+]

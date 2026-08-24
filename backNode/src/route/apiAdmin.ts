@@ -10,19 +10,31 @@ import { buildDayWindow, localDayKey } from "../utils/dayWindow.js"
 import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
+import { Plan, PlanName } from "@prisma/client"
 
 const router: Router = express.Router()
 
 const VALID_ROLES = new Set(["ADMIN", "JURISTE", "USER", "LECTEUR"])
+const VALID_PLANS = new Set(["Freemium", "Betatesteur", "Starter_mensuel", "Starter_annuel",  "Pro_mensuel" ,"Pro_annuel"]);
 
 /** GET /admin/users — liste tous les utilisateurs (mono-entreprise). */
 router.get("/users", authMiddleware, requireAdmin, async (_req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
-            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true },
+            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true, subscription: {select: {plan: {select: {name: true}} } } },
             orderBy: { idUser: "asc" },
         })
-        return res.json({ success: true, data: users })
+        const formattedUsers = users.map((u) => ({
+            idUser: u.idUser,
+            email: u.email,
+            nom: u.nom,
+            prenom: u.prenom,
+            role: u.role,
+            isVerified: u.isVerified,
+            isBanned: u.isBanned,
+            plan: (u.subscription?.plan.name ?? "Freemium") as PlanName,
+        }))
+        return res.json({ success: true, data: formattedUsers })
     } catch (err) {
         console.error("[admin] list users error:", err);
         return res.status(500).json({ success: false, message: "Erreur serveur." });
@@ -49,6 +61,87 @@ router.patch("/users/:idUser/role", authMiddleware, requireAdmin, async (req: Re
     } catch (err) {
         console.error("[admin] update role error:", err)
         return res.status(500).json({ success: false, message: "Erreur serveur." })
+    }
+})
+
+router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const targetId = Number(req.params["idUser"]);
+        const {plan: planName} = req.body as {plan?: string}
+
+        if (!planName || !VALID_PLANS.has(planName)) {
+            return res.status(400).json({success: false, message: "Plan invalide"});
+        }
+
+        if (targetId === Number(req.idUser)) {
+            return res.status(400).json({success : false, message: "Vous ne pouvez pas modifier votre propre plan"});
+        }
+
+        const newPlan = await prisma.plan.findFirst({ where: {name: planName as PlanName }});
+
+        if (!newPlan) {
+            return res.status(400).json({success: false, message: "Le plan spécifié n'existe pas."})
+        }
+
+        const targetUser = await prisma.user.findUnique({
+            where: {idUser: targetId},
+            include: { subscription: true},
+        });
+
+        if (!targetUser) {
+            return res.status(400).json({success: false, message: "Utilisateur introuvable."})
+        }
+
+        const now = new Date();
+        let expiresAt= new Date();
+
+        if (planName === "Freemium" || planName === "Betatesteur") {
+            expiresAt = new Date("2099-12-31T23:59:59.999Z");
+        } else if (planName.endsWith("_annuel")) {
+            expiresAt = new Date(now);
+            expiresAt.setDate(expiresAt.getDate() +365);
+        } else if (planName.endsWith("_mensuel")) {
+            expiresAt = new Date(now);
+            expiresAt.setDate(expiresAt.getDate() + 30);
+        }
+
+        await prisma.$transaction([
+            prisma.subscription.upsert({
+                where: {userId: targetId},
+                create: {
+                    userId: targetId,
+                    planId: newPlan.idPlan,
+                    status: "ACTIVE",
+                    startAt: now,
+                    expiresAt,
+                    stripeSubscriptionId: null,
+                    stripePriceId: null,
+                },
+                update: {
+                    planId: newPlan.idPlan,
+                    status: "ACTIVE",
+                    startAt: now,
+                    expiresAt,
+                    stripeSubscriptionId: null,
+                    stripePriceId: null,
+                },
+            }),
+
+            prisma.userCredit.upsert({
+                where: {userId: targetId},
+                create: {
+                    userId: targetId,
+                    quotas: (newPlan.creditsIncluded ?? {}),
+                },
+                update: {
+                    quotas: (newPlan.creditsIncluded ?? {}),
+                },
+            }),        
+        ]);
+        return res.json({success: true, data: {plan: newPlan.name, expiresAt,}});
+    } catch (err) {
+        console.error("[admin] update plan error", err);
+        return res.status(500).json({ success: false, message: "Erreur serveur"})
     }
 })
 

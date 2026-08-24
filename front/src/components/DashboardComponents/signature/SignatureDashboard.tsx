@@ -176,7 +176,7 @@ function Header({ onNewContract }: { onNewContract: () => void }) {
       </div>
       <button
         onClick={onNewContract}
-        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl hover:bg-gray-300 transition-all shadow-card"
+        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-card"
       >
         <Plus className="w-4 h-4" /> Nouveau contrat
       </button>

@@ -266,7 +266,8 @@ export function ComprendreContrat() {
           {/* Bouton blanc à droite */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
+             transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0 self-start sm:self-auto"
           >
             <span className="text-base font-normal">+</span> Analysez un contrat
           </button>

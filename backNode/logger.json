@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "id": "49a16ffa-5b04-4503-a6b0-e5e4483be099",
+    "date": "2026-08-24T12:13:31.902Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c7414b4b-4ce0-48bb-a541-6fa6ab24021c",
+    "date": "2026-08-24T11:53:11.710Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "fd75c98e-2d92-4c8a-accd-57daa1e270be",
+    "date": "2026-08-24T11:39:33.121Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Plan invalide",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/4/plan",
+    "page": "/admin/users/4/plan",
+    "userId": "2"
+  },
+  {
+    "id": "22f33c51-e7e7-4108-8145-182702a04d5b",
+    "date": "2026-08-24T11:39:24.119Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Plan invalide",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/4/plan",
+    "page": "/admin/users/4/plan",
+    "userId": "2"
+  },
+  {
+    "id": "92afa5eb-5b63-466b-b7aa-122cdb6111a9",
+    "date": "2026-08-24T11:38:34.864Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Plan invalide",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/3/plan",
+    "page": "/admin/users/3/plan",
+    "userId": "2"
+  },
+  {
+    "id": "99eb0649-a868-401f-8276-75538c301633",
+    "date": "2026-08-24T11:38:31.012Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Plan invalide",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/3/plan",
+    "page": "/admin/users/3/plan",
+    "userId": "2"
+  },
+  {
+    "id": "333b45e4-91d4-4bc7-9706-1bd5c75e3f7c",
+    "date": "2026-08-24T11:32:01.581Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Plan invalide",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/3/plan",
+    "page": "/admin/users/3/plan",
+    "userId": "2"
+  }
+]
