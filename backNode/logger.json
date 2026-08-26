@@ -1,5 +1,323 @@
 [
   {
+    "id": "dd8d33fd-a74c-480f-b2c6-faa62c84c9c6",
+    "date": "2026-08-26T14:53:09.870Z",
+    "comment": "[BACKNODE] - Erreur HTTP 404 (Not Found) \nDurée : 2ms.\nDétails : Lien invalide ou expiré.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /negotiation/public/23a2f2842e8a45c1d9dafb930d7585a9b67856f32c3a82085e15c7503f6f9989",
+    "page": "/negotiation/public/23a2f2842e8a45c1d9dafb930d7585a9b67856f32c3a82085e15c7503f6f9989"
+  },
+  {
+    "id": "26a75b9d-e16e-49b5-a406-78562c2e1e3c",
+    "date": "2026-08-26T14:53:09.866Z",
+    "comment": "[BACKNODE] - Erreur HTTP 404 (Not Found) \nDurée : 6ms.\nDétails : Lien invalide ou expiré.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /negotiation/public/23a2f2842e8a45c1d9dafb930d7585a9b67856f32c3a82085e15c7503f6f9989",
+    "page": "/negotiation/public/23a2f2842e8a45c1d9dafb930d7585a9b67856f32c3a82085e15c7503f6f9989"
+  },
+  {
+    "id": "8d83c4a8-b4a8-4499-8a8d-31433d15a674",
+    "date": "2026-08-26T14:46:49.994Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "6232bb18-1bcf-49b9-982f-2cf0e68842fa",
+    "date": "2026-08-26T14:45:52.177Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "5f088ec4-70c9-4142-aa1b-c751cf84e6c1",
+    "date": "2026-08-26T14:45:45.694Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 1ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "5"
+  },
+  {
+    "id": "31358a3a-2045-4aa0-9090-cf32f3779ace",
+    "date": "2026-08-26T14:45:21.810Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "34e86465-385c-45ab-87ed-81acc8c76efc",
+    "date": "2026-08-26T14:45:21.809Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c27f1b39-9fca-4f3c-bf38-56242286170c",
+    "date": "2026-08-26T14:43:32.622Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "3eb834b7-4a3b-4770-87fb-0a1520b1bbb8",
+    "date": "2026-08-26T14:41:23.092Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "8fc9801b-4e34-46cd-affe-2941a90bbef9",
+    "date": "2026-08-26T14:41:13.897Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f18aad76-3a7a-4ddd-80a8-da3df9c13902",
+    "date": "2026-08-26T14:41:08.582Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "a6a2506e-3678-41bb-9f8b-f083f8bf4c7f",
+    "date": "2026-08-26T14:41:08.573Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "8bbeb879-ee7a-4875-a3d2-9fe64573a871",
+    "date": "2026-08-26T14:40:51.451Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "308094e4-f91f-4408-9972-77ed33ac26b4",
+    "date": "2026-08-26T14:30:00.630Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "5"
+  },
+  {
+    "id": "56f55b32-e8fa-47d5-badd-71920fdaef34",
+    "date": "2026-08-26T14:28:05.592Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "9ed5ca7b-24af-4373-933f-2ab5e593a9c0",
+    "date": "2026-08-26T14:26:35.506Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 1ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "5"
+  },
+  {
+    "id": "1d224774-9af6-4e00-a2a6-4931c19de6a8",
+    "date": "2026-08-26T14:24:41.327Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "87bbd915-73ee-4fc3-89e2-7d861b65edac",
+    "date": "2026-08-26T14:17:43.745Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 1ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "5"
+  },
+  {
+    "id": "96f11d4d-c958-48b8-8f4f-9d64c25e3c67",
+    "date": "2026-08-26T14:16:33.298Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "2bfdd76a-e432-4b84-a41e-47417eb97383",
+    "date": "2026-08-26T11:53:17.493Z",
+    "comment": "[BACKNODE] - Erreur HTTP 404 (Not Found) \nDurée : 8ms.\nDétails : Contrat introuvable.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /contract/7002ab27-07e0-4da8-848c-b27796c388af",
+    "page": "/contract/7002ab27-07e0-4da8-848c-b27796c388af",
+    "userId": "5"
+  },
+  {
+    "id": "1089114f-9437-4618-a6c8-3fa02066805a",
+    "date": "2026-08-26T11:53:17.473Z",
+    "comment": "[BACKNODE] - Erreur HTTP 404 (Not Found) \nDurée : 19ms.\nDétails : Contrat introuvable.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /contract/7002ab27-07e0-4da8-848c-b27796c388af",
+    "page": "/contract/7002ab27-07e0-4da8-848c-b27796c388af",
+    "userId": "5"
+  },
+  {
+    "id": "bc504227-8aa0-46cc-809e-da9ba63e029a",
+    "date": "2026-08-25T15:48:01.815Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 13ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "c3751a52-e00c-4020-bfbd-b3be965a7c7c",
+    "date": "2026-08-25T15:47:43.659Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 9ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "73128536-fabb-4c63-b54f-73befe542d4a",
+    "date": "2026-08-25T15:45:58.241Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 12ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "98990f99-f925-4a8a-98d1-b629dbc1643f",
+    "date": "2026-08-25T15:45:42.448Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 8ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "a1e12c8a-a650-4a08-8e12-cf2f6abdd3e6",
+    "date": "2026-08-25T15:40:20.685Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 12ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "33b71495-ed20-44bd-8e3e-48c5acd5675c",
+    "date": "2026-08-25T15:40:14.515Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 11ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "e339d569-5748-40b7-b7a8-a4f882dea0fd",
+    "date": "2026-08-25T15:39:24.250Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 10ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "b63b6e08-d7ab-4c62-9c52-824f945508d6",
+    "date": "2026-08-25T15:38:53.256Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 20ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "44bf5b02-48c1-4db8-907a-8fcfd47ca12e",
+    "date": "2026-08-25T14:41:04.645Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 14ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "bee36b50-10b4-44d7-80e5-50fec45d3e02",
+    "date": "2026-08-25T09:04:06.280Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 11ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "08ea81d7-cfd8-4185-97ca-27a8d73bb820",
+    "date": "2026-08-25T09:03:18.843Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 7ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "87e8b646-bf12-41a0-95bb-fe6ee94cbc3d",
+    "date": "2026-08-25T09:03:13.713Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 8ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "3d752366-ba7f-43db-9ed0-556694baa288",
+    "date": "2026-08-25T09:00:13.369Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 8ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "98aa40ba-b385-4a9e-8d8f-5a30938c0a1b",
+    "date": "2026-08-25T08:38:02.866Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 12ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "3"
+  },
+  {
+    "id": "ef49bb9a-b394-4866-8df3-da5698869166",
+    "date": "2026-08-25T08:36:58.609Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "3"
+  },
+  {
+    "id": "9cd1c328-eec9-4810-b0e8-ec4b3fc25101",
+    "date": "2026-08-25T08:35:59.242Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "3"
+  },
+  {
+    "id": "6c2c05db-cd49-4747-be5d-e455d45dae18",
+    "date": "2026-08-25T08:35:59.240Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "3"
+  },
+  {
+    "id": "9181158c-82fc-462b-a526-e9016733dbd7",
+    "date": "2026-08-25T08:34:45.007Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2909b1d0-d569-45df-aa13-2c78cb1ca75e",
+    "date": "2026-08-25T08:34:45.004Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
     "id": "49a16ffa-5b04-4503-a6b0-e5e4483be099",
     "date": "2026-08-24T12:13:31.902Z",
     "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",

@@ -1,5 +1,96 @@
 [
   {
+    "id": "78fc365a-3cb6-4251-8649-f5d4d05618b8",
+    "date": "2026-08-26T14:49:48.943Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 392ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
+    "id": "dcc4b078-3661-4deb-9f3a-ffd75b0ef68c",
+    "date": "2026-08-26T14:49:47.542Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 478ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
+    "id": "8ae12c57-38fd-4c55-bd8c-5f497cd2b761",
+    "date": "2026-08-26T14:42:51.341Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 381ms.\nDétails : Extraction du document échouée.",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/template/import",
+    "page": "/api/template/import"
+  },
+  {
+    "id": "16e035c6-d1c5-427e-8d33-b4aa472e2426",
+    "date": "2026-08-26T14:28:13.395Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 369ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
+    "id": "60bdeb35-f7b3-4a25-8fa4-e788c6875d40",
+    "date": "2026-08-26T14:28:12.022Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 513ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
+    "id": "aa618ed7-19d6-4f65-9506-77a55de245e0",
+    "date": "2026-08-26T11:51:48.898Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 612ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/contract/extract",
+    "page": "/api/contract/extract"
+  },
+  {
+    "id": "408007ef-ae7a-46f1-b825-c588f5690c25",
+    "date": "2026-08-26T11:45:00.294Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /favicon.ico",
+    "page": "/favicon.ico"
+  },
+  {
+    "id": "6cf8c1ec-3978-4d8b-90c7-01afb17b6e2c",
+    "date": "2026-08-26T11:38:50.366Z",
+    "comment": "[PROXY] - Erreur HTTP 422 (Unprocessable Entity)\nDurée : 96911ms.\nDétails : La réponse AI n'est pas un JSON valide.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/template/import",
+    "page": "/api/template/import"
+  },
+  {
+    "id": "247ad207-a350-430c-af7a-277a52be4c33",
+    "date": "2026-08-25T14:29:05.317Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  },
+  {
+    "id": "449626ab-47b4-442d-afa6-1e7ca261baba",
+    "date": "2026-08-25T14:28:59.383Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 5ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "586a5079-a2b3-4c77-bbcf-fa116d7c5d63",
+    "date": "2026-08-25T14:28:59.357Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 42ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/user/get",
+    "page": "/api/user/get"
+  },
+  {
+    "id": "e18bf031-b168-42d9-8c61-72690bd42aaf",
+    "date": "2026-08-25T08:35:13.547Z",
+    "comment": "[PROXY] - Erreur HTTP 402 (Payment Required)\nDurée : 8ms.\nDétails : Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/analyzer/analyze-contract",
+    "page": "/api/analyzer/analyze-contract"
+  },
+  {
+    "id": "8feaab63-2afc-48f7-8d6f-ed158fbc9b3c",
+    "date": "2026-08-25T08:35:02.739Z",
+    "comment": "[PROXY] - Erreur HTTP 402 (Payment Required)\nDurée : 11ms.\nDétails : Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /api/analyzer/analyze-contract",
+    "page": "/api/analyzer/analyze-contract"
+  },
+  {
     "id": "28dd37af-8ab4-4828-a4a6-9b48519f7a34",
     "date": "2026-08-24T09:04:28.156Z",
     "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 29ms.\nDétails : backnode_unreachable",

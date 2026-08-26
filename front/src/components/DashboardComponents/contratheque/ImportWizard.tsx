@@ -56,7 +56,11 @@ export function ImportWizard({ onDone, onCancel }: Props) {
     // Vérifie si le contrat existe déjà avant de lancer l'analyse, demande à l'utilisateur si il souhaite tout de même continuer via une modale
     const existingContracts = await contractApi.list({pageSize: 1000});
 
-      const duplicate = items.find((item) => existingContracts.items.some((c) => c.title.trim().toLowerCase === item.title.trim().toLowerCase));
+      const duplicate = items.find((item) => 
+        existingContracts.items.some(
+          (c) => c.title.trim().toLowerCase() === item.title.trim().toLowerCase()
+        )
+      );
 
       if (duplicate && !duplicateModalOpen) {
         setExistingContractTitle(duplicate.title);

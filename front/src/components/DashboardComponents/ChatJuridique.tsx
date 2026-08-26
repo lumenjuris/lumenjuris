@@ -178,7 +178,7 @@ export function ChatJuridique() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] gap-0 overflow-hidden rounded-card border border-line shadow-card">
+    <div className="flex h-[calc(100vh-9rem)] gap-0 overflow-hidden rounded-card border border-line shadow-card max-w-7xl mx-auto w-full">
       {/* liste des conversations */}
       <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex-col hidden md:flex">
         <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">

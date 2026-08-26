@@ -68,7 +68,9 @@ const navSections: NavSection[] = [
           { icon: Sparkles, label: "Créer de zéro", path: "/contrat-generation?section=scratch" },
           { icon: Upload, label: "Importer un modèle", path: "/contrat-generation?section=import" },
           { icon: BookOpen, label: "Bibliothèque de modèles", path: "/contrat-generation?section=library", notificationKey: "templateAdded" },
-          { icon: Droplets, label: "Mes images", path: "/generateur/filigranes" },
+
+          // A réactiver avec la route "/generateur/filigranes"
+          // { icon: Droplets, label: "Mes images", path: "/generateur/filigranes" },
         ],
       },
       { icon: MessagesSquare, label: "Négociation", path: "/negociations" },
