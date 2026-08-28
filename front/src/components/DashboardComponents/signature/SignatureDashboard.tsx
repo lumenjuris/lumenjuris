@@ -103,7 +103,7 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
   } 
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 mx-auto w-full max-w-7xl">
       <Header onNewContract={onNewContract} />
 
       {error && (

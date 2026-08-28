@@ -130,7 +130,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
+    <div className=" space-y-6 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
         <div>

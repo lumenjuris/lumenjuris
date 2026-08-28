@@ -76,7 +76,7 @@ export function Contratheque() {
   // Vue Échéances
   if (tab === "echeances") {
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 max-w-7xl mx-auto w-full">
         <div className="flex flex-col items-center gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Contrathèque</h1>
           <p className="text-sm text-gray-primary mt-1">Alertes de renouvellement et suivi des échéances.</p>

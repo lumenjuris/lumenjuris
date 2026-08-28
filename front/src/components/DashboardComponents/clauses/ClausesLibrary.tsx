@@ -72,7 +72,7 @@ export function ClausesLibrary() {
   function patch(p: Partial<ClauseFilters>) { setFilters((f) => ({ ...f, ...p })); }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 mx-auto w-full max-w-7xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 bg-blue-primary px-12 py-8 rounded-2xl">
         <div>

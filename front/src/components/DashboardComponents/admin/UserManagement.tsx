@@ -3,6 +3,7 @@ import { Users, AlertCircle, ShieldCheck, Loader2, Check, Search, Ban, ShieldOff
 import { fetchProxy } from "../../../utils/fetchProxy";
 import { useUserStore } from "../../../store/userStore";
 import { PlanName } from "../../../utils/planMapping";
+import { UserActivityPanel } from "../../MonitoringComponents/ActivitySection";
 
 type Role = "ADMIN" | "JURISTE" | "USER" | "LECTEUR";
 
@@ -60,6 +61,7 @@ export function UserManagement() {
   const [savedPlanId, setSavedPlanId] = useState<number | null>(null);
   const [banningId, setBanningId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -220,7 +222,7 @@ export function UserManagement() {
                   "?";
                 const name =
                   [u.prenom, u.nom].filter(Boolean).join(" ") || u.email.split("@")[0];
-                const isSelf = u.idUser === myId;
+                const isSelf = u.idUser === Number(myId);
                 const isSaving = savingId === u.idUser;
                 const isSavingPlan = savingPlanId === u.idUser;
                 const isBanning = banningId === u.idUser;
@@ -228,6 +230,7 @@ export function UserManagement() {
                 return (
                   <tr
                     key={u.idUser}
+                    onClick={() => setSelectedUserId(u.idUser)}
                     className={`transition-colors ${
                       u.isBanned
                         ? "bg-red-50/40 hover:bg-red-50/70"
@@ -272,7 +275,7 @@ export function UserManagement() {
                     </td>
 
                     {/* Modifier le rôle */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <select
                           value={u.role}
@@ -297,7 +300,7 @@ export function UserManagement() {
                     </td>
 
                     {/* Modifier le plan */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <select
                           value={u.plan}
@@ -354,6 +357,14 @@ export function UserManagement() {
           </table>
         )}
       </div>
+
+      {selectedUserId !== null && (
+        <UserActivityPanel 
+          userId={selectedUserId}
+          days={30}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
 
       <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
         <Users className="w-3.5 h-3.5" />

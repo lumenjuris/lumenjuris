@@ -120,7 +120,7 @@ export function NegotiationWorkspace() {
   const st = STATUS_STYLE[data.status];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-7xl w-full mx-auto">
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         {versionSuccess && (
@@ -142,6 +142,7 @@ export function NegotiationWorkspace() {
               onClose={() => setVersionError(false)}
             />
           )}
+          
 
         <div className="w-full">
           <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} className="inline-flex items-center gap-1 text-xs text-ink-subtle hover:text-brand font-medium"><ChevronLeft className="w-3.5 h-3.5" /> Retour au contrat</button>
@@ -217,10 +218,22 @@ export function NegotiationWorkspace() {
           </div>
         </div>
         </div>
-        
       </div>
 
-      
+      <div className="">
+      {/* Section secondaire : participants & partage (repliable) */}
+      <Collapsible icon={Users} title="Participants & partage du lien" open={showParticipants} onToggle={() => setShowParticipants((v) => !v)} badge={data.participants.length}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ParticipantsPanel data={data} canEdit={canEdit} onChanged={load} />
+          <ShareDialog data={data} canEdit={canEdit} onChanged={load} />
+        </div>
+      </Collapsible>
+
+      {/* Section secondaire : versions & comparaison (repliable) */}
+      <Collapsible icon={GitCompare} title="Versions & comparaison" open={showVersions} onToggle={() => setShowVersions((v) => !v)} badge={data.versions.length}>
+        <VersionDiff data={data} canEdit={canEdit} onChanged={load} />
+      </Collapsible>
+      </div>
       {newVersionOpen && canEdit && <NewVersionForm negotiationId={data.id} nextNumber={data.versions.length + 1} onDone={() => { setNewVersionOpen(false); void load(); }} />}
 
       {/* Complétion guidée : suivi des champs, relances et passage en signature */}
@@ -236,19 +249,6 @@ export function NegotiationWorkspace() {
         onAdd={addAnnotation}
         onResolve={resolveAnnotation}
       />
-
-      {/* Section secondaire : participants & partage (repliable) */}
-      <Collapsible icon={Users} title="Participants & partage du lien" open={showParticipants} onToggle={() => setShowParticipants((v) => !v)} badge={data.participants.length}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ParticipantsPanel data={data} canEdit={canEdit} onChanged={load} />
-          <ShareDialog data={data} canEdit={canEdit} onChanged={load} />
-        </div>
-      </Collapsible>
-
-      {/* Section secondaire : versions & comparaison (repliable) */}
-      <Collapsible icon={GitCompare} title="Versions & comparaison" open={showVersions} onToggle={() => setShowVersions((v) => !v)} badge={data.versions.length}>
-        <VersionDiff data={data} canEdit={canEdit} onChanged={load} />
-      </Collapsible>
 
       <ConfirmationModal
         open={abortModalOpen}
