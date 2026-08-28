@@ -1,5 +1,1516 @@
 [
   {
+    "id": "1a448c50-65f1-4931-932a-c853f9ed2884",
+    "date": "2026-08-28T12:59:01.447Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "ecd01a4a-35ef-41e7-b9fe-4f46278b6960",
+    "date": "2026-08-28T12:58:01.111Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "e83bb3d3-48bf-49b7-8d7a-3dc3ffa681ea",
+    "date": "2026-08-28T12:57:29.552Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "d50194a2-8669-4ff9-adeb-deb48cf9199c",
+    "date": "2026-08-28T12:57:03.189Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "69df2148-9150-493f-b8d6-d1ce8d2e3282",
+    "date": "2026-08-28T12:56:12.467Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "1f76393a-ba63-497e-8de6-09644b8d5a8c",
+    "date": "2026-08-28T12:52:07.821Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "e53622f8-b905-41f9-84ec-6b04d313da0f",
+    "date": "2026-08-28T12:50:49.084Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "4734a476-528d-4e8d-b278-9ec798ebc007",
+    "date": "2026-08-28T12:50:47.388Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "48c02c35-f031-4921-9bd6-c99c442316d4",
+    "date": "2026-08-28T12:50:11.880Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2aeaa918-f260-4ba7-84ae-7c89caad64aa",
+    "date": "2026-08-28T12:49:06.373Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "f4522973-41fe-4aad-a62e-a163ada04433",
+    "date": "2026-08-28T12:48:46.857Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "0194c173-2d95-4b8d-822e-97c4c3d6663d",
+    "date": "2026-08-28T12:43:12.780Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "ef03feb3-523a-487e-af59-0f09c5180c70",
+    "date": "2026-08-28T12:42:20.419Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "76518c99-d934-4dd1-ae56-d8b3d8c7823f",
+    "date": "2026-08-28T12:41:58.408Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "44b66115-a690-42e9-9605-428a92cd9b8a",
+    "date": "2026-08-28T12:39:41.524Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "d92f627f-4165-4a58-b325-fbaabd09d496",
+    "date": "2026-08-28T12:39:21.788Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "cbbfcfc5-2d1c-4e2e-82d9-5a3cd3875531",
+    "date": "2026-08-28T12:37:44.154Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "0521ef2a-974a-409d-8332-db3be2039235",
+    "date": "2026-08-28T12:37:09.549Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "6913d679-6bb1-4fc2-ae8d-2baf3923992b",
+    "date": "2026-08-28T12:36:53.086Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "3e433937-7a1e-474c-aabf-d9a2706bad02",
+    "date": "2026-08-28T12:36:27.581Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "1faad57a-3eab-4118-92bb-1b0e0257b201",
+    "date": "2026-08-28T12:36:09.173Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c70351bc-eb7d-4129-bf42-2262e7675386",
+    "date": "2026-08-28T12:35:26.389Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "6af8dcb8-1b72-4e1f-a0f1-d0d4b37ead8c",
+    "date": "2026-08-28T12:35:21.548Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "78d841ce-d7c9-4b6d-af20-24557aa8ce57",
+    "date": "2026-08-28T12:35:21.535Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "85d49fc4-b539-4b61-aeb6-9919dad496ef",
+    "date": "2026-08-28T12:35:06.066Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "a4920f14-3231-48ae-b650-8c148f3bfd9e",
+    "date": "2026-08-28T12:33:30.511Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "039fd691-cab8-4a1c-8215-0a7d07a85bc3",
+    "date": "2026-08-28T12:33:26.186Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "8110f283-aac9-46c9-9f5e-57f76d92dc43",
+    "date": "2026-08-28T12:33:07.960Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "6d6bcfbc-8d97-41d7-a3d0-a62d8ba832f8",
+    "date": "2026-08-28T12:32:30.218Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "a956b569-ad9b-4d4e-b53b-661f019afdc4",
+    "date": "2026-08-28T12:32:16.457Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "2"
+  },
+  {
+    "id": "d59f599a-71a7-4ba4-b3e7-30abbfe1c175",
+    "date": "2026-08-28T12:30:55.468Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "cc7123fb-fd37-4d8d-8822-2db8b2d9909b",
+    "date": "2026-08-28T12:30:43.080Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 13ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "868c44cf-39f6-4c79-92b9-a1fae3189ed0",
+    "date": "2026-08-28T12:27:56.130Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "17470692-50de-472d-8092-b80c549ae5b1",
+    "date": "2026-08-28T12:27:07.750Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "4675e27c-f14d-4846-9cc9-8a7fb1c87df7",
+    "date": "2026-08-28T12:26:08.739Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "d1b0daf3-fae7-4af1-9b9d-68404f16dbe1",
+    "date": "2026-08-28T12:22:52.822Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "e58707b3-85c5-4478-8887-85d17e825368",
+    "date": "2026-08-28T12:22:49.363Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c8022d48-96c1-4637-9584-602511d2cb34",
+    "date": "2026-08-28T12:22:49.357Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "caafad46-0b03-4a11-80f9-84bb8e384cbe",
+    "date": "2026-08-28T12:21:42.202Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "5883fb10-7c44-447b-8f66-9363f1b05f86",
+    "date": "2026-08-28T12:21:18.883Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "19b34a32-3edf-44f6-bd56-262adc7b6588",
+    "date": "2026-08-28T12:21:13.732Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "6aa1c214-fccb-464c-8e59-56d312103947",
+    "date": "2026-08-28T12:20:23.743Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "9262a944-92e2-4ae6-97ef-c957db58866c",
+    "date": "2026-08-28T12:20:23.741Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "fbd6c407-c475-4c6f-97da-7258e026befe",
+    "date": "2026-08-28T12:20:13.745Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2b375c2a-8e92-4549-a434-31159ec52815",
+    "date": "2026-08-28T12:20:09.738Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "328d0306-f8b3-4b0a-9512-c0c09c678959",
+    "date": "2026-08-28T12:20:07.744Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "a33a052f-7661-4521-9d06-42c02334d874",
+    "date": "2026-08-28T12:19:39.735Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c91cb7bb-ca95-4225-a5f0-f999dcb30ef8",
+    "date": "2026-08-28T12:19:00.746Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "d6ef4999-8784-47a2-8df5-8fd09fde0698",
+    "date": "2026-08-28T12:18:51.737Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "9bfb22e8-e8fd-464c-870a-6e2536b82853",
+    "date": "2026-08-28T12:18:34.746Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "af6add35-4474-4b3e-86f4-dc27a8248f6c",
+    "date": "2026-08-28T12:06:26.142Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2036dd12-2dac-4d03-a20d-da2bb9abc5dd",
+    "date": "2026-08-28T12:06:05.142Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "98449ea3-0c52-41ae-84a6-a6bcf4a2c37a",
+    "date": "2026-08-28T12:05:52.637Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "42ec23a2-e7d0-4c1d-b26e-5b7ca84332a3",
+    "date": "2026-08-28T12:05:49.955Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "b619d3b4-4bd1-4eeb-b9f2-2f844ecdb57b",
+    "date": "2026-08-28T12:05:46.803Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "40323343-0d13-4e17-90dd-1db03329ee3b",
+    "date": "2026-08-28T12:05:43.364Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "a3f6b49b-92af-460b-a15f-8f2646f9fae9",
+    "date": "2026-08-28T12:05:36.813Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "ee5b0712-5cad-44b0-bbeb-e37b9d31f8fd",
+    "date": "2026-08-28T12:05:29.084Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "4ad18af4-abc9-491d-8441-917759954b8e",
+    "date": "2026-08-28T12:01:45.618Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 12ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "681f1c42-40b9-4ec2-97b6-9453859a367f",
+    "date": "2026-08-28T12:01:13.841Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "4573752f-c039-47f0-a4f1-82e0f40ba41f",
+    "date": "2026-08-28T12:00:52.322Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 8ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "a29f11b5-3b07-4820-bb15-3e8176cbdeee",
+    "date": "2026-08-28T12:00:52.008Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 9ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "8e13c6c5-660b-46c6-ba8e-212728e47ad5",
+    "date": "2026-08-28T12:00:51.436Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 12ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "e5b32336-7d9b-4b88-b30a-d14a755d2282",
+    "date": "2026-08-28T12:00:45.256Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 9ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "dfbdd6a5-c5db-49ca-be75-cc8b6e2de30b",
+    "date": "2026-08-28T12:00:44.416Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 10ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "f2d4477b-961c-4fdf-ab30-6d911739d7b3",
+    "date": "2026-08-28T12:00:43.398Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 13ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "01d54226-f0f4-4ece-8d6c-5b37bcf2c62f",
+    "date": "2026-08-28T12:00:41.586Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 12ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "78aeff72-1d5c-4877-9db3-ea38b309e3d1",
+    "date": "2026-08-28T10:58:06.420Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "d1159da7-dc89-41cd-b199-f8df4ccd55ba",
+    "date": "2026-08-28T10:58:03.210Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "9189813f-e846-455c-9e46-68f5aeae2e7d",
+    "date": "2026-08-28T10:57:54.362Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "12d2cb55-c81f-4461-91d6-b291a1d30e30",
+    "date": "2026-08-28T10:57:46.249Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "d5632fcd-beba-4028-9b2d-430f6eb3f467",
+    "date": "2026-08-28T10:56:53.982Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "0350f3d7-b3a9-44be-bbe8-648b9d7057f3",
+    "date": "2026-08-28T10:56:36.239Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "11b95bee-9f24-4c8c-ad70-0adff5f3a324",
+    "date": "2026-08-28T10:56:32.630Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "10008b27-1229-43ae-8cab-089dfca1a536",
+    "date": "2026-08-28T10:56:05.670Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "7330ab2b-07f6-4f54-9660-016e32d9a38a",
+    "date": "2026-08-28T10:56:02.753Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "5ea63d36-f096-4da2-ba0c-9b76335caad3",
+    "date": "2026-08-28T10:55:21.491Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "dfb54a64-164c-442c-967b-e2e062c5a48a",
+    "date": "2026-08-28T10:55:16.240Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "921050d9-0fa4-4732-8a4e-94c36797f7d3",
+    "date": "2026-08-28T10:55:12.207Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "2c4234ae-d453-45ad-9fec-53bb4ed4b921",
+    "date": "2026-08-28T10:55:06.983Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f7880212-19d1-4ada-b7f5-4832ef76e922",
+    "date": "2026-08-28T10:55:03.240Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "412c4c26-682a-4cf8-8484-48ae1b8e5d14",
+    "date": "2026-08-28T10:54:58.835Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "3df4bfc7-3768-4490-85fc-073b667a3074",
+    "date": "2026-08-28T10:54:52.822Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "94c78351-91a7-4852-b57d-b99f5bd3c96b",
+    "date": "2026-08-28T10:54:48.726Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "197cdf8c-663e-49a1-9a8f-d95e1f5ad606",
+    "date": "2026-08-28T10:54:35.767Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "94fefc94-0cec-4e36-b893-e8b484833c13",
+    "date": "2026-08-28T10:52:27.035Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "753be663-7366-4416-956e-56747e8ed76c",
+    "date": "2026-08-28T10:51:59.756Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "6a09ac95-2ffd-4682-9d26-a4f9a53527ee",
+    "date": "2026-08-28T10:51:08.762Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f864ac6a-54f1-4218-850d-25807f997afb",
+    "date": "2026-08-28T10:49:09.781Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "500db58a-ddd0-43bb-8f73-fde9fe80d3ca",
+    "date": "2026-08-28T09:17:15.195Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "4c00ba1d-41f2-4020-afc0-9817d3f76cf7",
+    "date": "2026-08-28T09:16:58.336Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 51ms.\nDétails : Email ou mot de passe invalide",
+    "context": "[Auto-Log CLIENT_ERROR] POST /user/auth/login",
+    "page": "/user/auth/login"
+  },
+  {
+    "id": "915a48a7-a6ab-42d1-a596-dc9065796087",
+    "date": "2026-08-28T09:15:59.231Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 13ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "3d6bcfcb-eb1a-46e4-8a33-8f1fe3a55835",
+    "date": "2026-08-28T09:15:57.502Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "eea6b26f-f367-41ee-a29b-2929db2a690c",
+    "date": "2026-08-28T09:15:53.778Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "1f753700-91b9-47de-8594-f5332887a715",
+    "date": "2026-08-28T09:15:53.766Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "06129a70-4c8f-45a0-999d-1b5a3a5775d4",
+    "date": "2026-08-28T09:15:49.201Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 5ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "54795429-fdb6-4d85-96e1-91868840e95e",
+    "date": "2026-08-28T09:15:40.880Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 5ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "29de7180-36ba-4dec-b282-4bf576b3f061",
+    "date": "2026-08-28T09:15:40.581Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 7ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "25d0d1ec-4b52-402f-8bfa-459c76f9dc10",
+    "date": "2026-08-28T09:15:38.358Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 5ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "d16f8a14-39df-442d-9be6-10f549229a44",
+    "date": "2026-08-28T09:15:37.699Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 7ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "000dd26a-bb60-496b-823e-f352b74ff2ce",
+    "date": "2026-08-28T09:15:35.707Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 16ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "2"
+  },
+  {
+    "id": "603d84d6-9996-417d-b824-74504e02322f",
+    "date": "2026-08-28T09:15:33.531Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "c6ffae31-da89-4994-8572-d1a1fae6ad44",
+    "date": "2026-08-28T09:08:38.274Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "6bb44ee6-2782-4fc1-9fdc-60a1a0670214",
+    "date": "2026-08-28T09:06:45.369Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "1328267f-5bd7-406d-adc4-dd931a40976e",
+    "date": "2026-08-28T09:06:30.711Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "a7a55ff6-c8f2-48a3-b0e4-56799abaa09b",
+    "date": "2026-08-28T09:04:50.723Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "ae2c5366-547b-4912-bbb3-2a87752a6f86",
+    "date": "2026-08-28T09:03:49.720Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "8a7b053b-7726-48d9-8859-390fc514bf09",
+    "date": "2026-08-28T09:02:46.725Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "b0ac9d10-34c4-41e3-8457-854ed1208a58",
+    "date": "2026-08-28T09:02:39.731Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "0ec622a5-4e19-4397-a9d1-ed581ac80444",
+    "date": "2026-08-28T09:01:46.725Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2760d1df-a11f-484f-83b0-9c3d8c6ca373",
+    "date": "2026-08-28T08:59:49.741Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "ddbf3532-cfd0-4c81-9357-68dc7ba0e1ba",
+    "date": "2026-08-28T08:56:36.727Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "d77ad7af-52e0-485b-a3b1-2a018990925f",
+    "date": "2026-08-28T08:56:22.717Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "97ce8fc2-e014-4e6f-931f-ced9f4014509",
+    "date": "2026-08-28T08:55:38.721Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "cef17892-a8ce-481b-96a8-2c30011d2dbc",
+    "date": "2026-08-28T08:55:27.731Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "7558a68a-6f33-4013-b662-0e42a717979a",
+    "date": "2026-08-28T08:54:38.730Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "e5cb890e-8b3e-4c39-bcc3-7ef132dacb0e",
+    "date": "2026-08-28T08:54:38.729Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "2206614b-07ed-4496-97fd-6e5d17e2f75f",
+    "date": "2026-08-28T08:54:04.730Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "06a19d9f-9fd9-445c-952f-2f1c9b84eb02",
+    "date": "2026-08-28T08:54:04.728Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "f3d14d0a-3444-471b-8a25-5db52ddef0b5",
+    "date": "2026-08-28T08:44:19.097Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "498021ea-4834-49fa-9f79-df1c168326bb",
+    "date": "2026-08-28T08:11:01.574Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "bf195273-5f90-4c19-a637-617def199b0b",
+    "date": "2026-08-28T07:57:45.364Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "38f8dbc9-511a-4109-8406-b69acd59b05a",
+    "date": "2026-08-28T07:57:45.356Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "2"
+  },
+  {
+    "id": "745cc94f-b270-4ef4-b8a2-e8750c6040ed",
+    "date": "2026-08-27T15:12:46.674Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f257fdb8-ff52-41b2-aab0-7f54e455ca49",
+    "date": "2026-08-27T15:05:18.485Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 15ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "604fda74-5985-4196-bf06-274e12980b3b",
+    "date": "2026-08-27T14:34:14.831Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "b2299ec8-6dd0-466c-9b66-1a836db67c4f",
+    "date": "2026-08-27T14:33:21.257Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "41f7637b-3802-4d3b-92d6-bd1aadcd4998",
+    "date": "2026-08-27T14:32:49.846Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 10ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "7b01f354-07a7-4566-90ed-96c9cc7e4a29",
+    "date": "2026-08-27T14:32:09.391Z",
+    "comment": "[BACKNODE] - Erreur HTTP 402 (Payment Required) \nDurée : 19ms.\nDétails : Votre plan est limité à 5 contrats suivis. Passez à un plan supérieur pour en ajouter davantage.",
+    "context": "[Auto-Log CLIENT_ERROR] POST /contract",
+    "page": "/contract",
+    "userId": "5"
+  },
+  {
+    "id": "54f7e9d6-7179-400e-9116-91e5adf8f1e9",
+    "date": "2026-08-27T14:31:31.790Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 14ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c9484bc1-5339-46a2-ba2b-e41637b59dae",
+    "date": "2026-08-27T14:29:46.376Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 18ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "53551edd-4046-4d8c-a36c-581b28c67358",
+    "date": "2026-08-27T11:57:30.004Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "28c9c197-2809-426b-813d-30bf5e28064d",
+    "date": "2026-08-27T11:57:03.270Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "dc065915-7111-4b27-8989-3a6dda55edc1",
+    "date": "2026-08-27T11:56:58.629Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "2704dedd-473e-41b5-b56a-82a9fed3a34a",
+    "date": "2026-08-27T11:56:52.668Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e8e56b8d-3760-4f9b-b21e-c53d7052e5cc",
+    "date": "2026-08-27T11:56:36.140Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "63b02f6d-aefd-4037-9b17-6756fdf177b5",
+    "date": "2026-08-27T11:56:17.890Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "7e7b0623-15ed-4608-a7e4-21e689f3fd69",
+    "date": "2026-08-27T11:55:52.267Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "cadcb037-dd7f-4fdc-8698-090b00cd179e",
+    "date": "2026-08-27T11:55:37.510Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f8f8c2b8-368e-4908-b0cf-766571b57e28",
+    "date": "2026-08-27T11:55:24.646Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "79745de5-8d3f-4333-8cd9-e0f469b18d26",
+    "date": "2026-08-27T11:55:13.770Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "fb65fc3f-3e06-488a-89c4-bff3994c5fe6",
+    "date": "2026-08-27T11:55:10.419Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "5fdebcbb-9438-449f-9cf8-4b0037acada7",
+    "date": "2026-08-27T11:54:27.637Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "9dd19c79-db06-41ca-84f9-d94e1570b3b8",
+    "date": "2026-08-27T11:54:18.823Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "2842122a-c13e-4449-982b-d2491026e4f3",
+    "date": "2026-08-27T11:54:18.816Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "fa143c5f-fed3-40f5-99da-765fb4633cf7",
+    "date": "2026-08-27T11:53:30.996Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e334316a-86b0-430b-82f8-3e892b6dfab8",
+    "date": "2026-08-27T11:51:18.194Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c6a4cf62-10cd-4e3d-be91-e58202c2410f",
+    "date": "2026-08-27T11:50:52.191Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c24b98eb-0fe2-475a-9092-1cdb53b4e666",
+    "date": "2026-08-27T11:50:51.188Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "2cce9f83-a2bc-4780-b60a-c9829ae48490",
+    "date": "2026-08-27T11:49:50.212Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "0afd3c01-ee32-4315-8b0d-23ffef1a0bff",
+    "date": "2026-08-27T11:49:20.180Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "7da07367-71f7-4ab0-b44f-1418107b2086",
+    "date": "2026-08-27T11:47:49.198Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "30b28306-5109-44de-bab5-0271995884a3",
+    "date": "2026-08-27T11:47:49.192Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "bc03dcfd-ca20-4106-ada6-52cdddd02a07",
+    "date": "2026-08-27T11:44:40.278Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c9241b1b-d1d5-49a9-b615-3e05c05595ff",
+    "date": "2026-08-27T11:38:37.832Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 12ms.\nDétails : Impossible d'ouvrir la négociation.",
+    "context": "[Auto-Log SERVER_ERROR] POST /negotiation/enter",
+    "page": "/negotiation/enter",
+    "userId": "5"
+  },
+  {
+    "id": "eeafcd84-7469-413c-a4b8-de9341e481c6",
+    "date": "2026-08-27T11:38:23.800Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "75523d41-82b8-40df-bd01-c824b122ba5f",
+    "date": "2026-08-27T11:38:18.448Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "dbb4ff0c-969b-4732-a8f5-a637547591bb",
+    "date": "2026-08-27T11:38:18.442Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e0a6af10-5076-483a-a1af-6fe129f6e96c",
+    "date": "2026-08-27T11:38:01.652Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 49ms.\nDétails : Impossible d'ouvrir la négociation.",
+    "context": "[Auto-Log SERVER_ERROR] POST /negotiation/enter",
+    "page": "/negotiation/enter",
+    "userId": "5"
+  },
+  {
+    "id": "4706e9fe-4929-4a8c-8f56-8b32cc9226c6",
+    "date": "2026-08-27T11:37:09.072Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 8ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "c6917e4d-4d1d-4f7b-a8c5-2fcfbf11e843",
+    "date": "2026-08-27T11:37:02.138Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "4a98d492-a6c6-4aad-b474-ad025a2e192b",
+    "date": "2026-08-27T11:36:46.882Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 6ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f94ab4fe-d2e9-4246-88b5-ac53574ef336",
+    "date": "2026-08-27T11:36:24.113Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "a908ac36-c3b9-45c8-b4b9-6db63b223aa2",
+    "date": "2026-08-27T11:35:31.099Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e3d8964f-90b9-4dbb-98f2-08e475e5ab56",
+    "date": "2026-08-27T11:35:13.191Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "ae2ff662-f259-43cc-afff-d5dfa2215594",
+    "date": "2026-08-27T11:30:02.181Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "609905eb-d4e4-4b97-adc6-9a4436abe550",
+    "date": "2026-08-27T11:29:57.192Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "a1a458b3-028a-4720-9b5e-27c594c60ddb",
+    "date": "2026-08-27T11:28:07.190Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e4f87820-8298-4646-94f4-39e40a0c952c",
+    "date": "2026-08-27T11:26:59.189Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "7e699b13-947c-4672-813a-fadc22d39186",
+    "date": "2026-08-27T11:25:50.193Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "16ba201c-6840-44e9-b116-f338989883a1",
+    "date": "2026-08-27T11:25:42.189Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "8f82326b-7803-4456-9d44-bc0a59ef1820",
+    "date": "2026-08-27T11:25:19.194Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "0d0df232-9558-4978-a49b-d291922d0d51",
+    "date": "2026-08-27T11:25:12.184Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "fec43a50-4967-463e-8f4c-690d09ecd220",
+    "date": "2026-08-27T11:25:02.189Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "966dc07f-dde8-4ad8-82a2-2f2cd92ecb0b",
+    "date": "2026-08-27T11:24:47.193Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "3041683c-8978-4554-a481-ec6a6cdb6362",
+    "date": "2026-08-27T11:23:45.194Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "98171543-8a7a-4905-b26a-5515e39f1396",
+    "date": "2026-08-27T11:21:57.180Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "41ec57ee-eb5a-4e13-bab8-efabcae930bf",
+    "date": "2026-08-27T11:21:24.195Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "752f6ee8-d177-4a58-bde5-480532c189cb",
+    "date": "2026-08-27T11:14:36.386Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 3ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "ac5ba996-06b1-4fe7-b78b-0937ede20f57",
+    "date": "2026-08-27T11:14:35.364Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "edc2c813-cdd7-4aa0-a57f-329ee8e1661f",
+    "date": "2026-08-27T11:13:29.468Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "f1049b97-9323-4a3d-ab8a-c65a4903d137",
+    "date": "2026-08-27T11:12:56.073Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "224c999a-0e74-4e7a-a697-05cda9155089",
+    "date": "2026-08-27T11:10:51.427Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 5ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "64e58865-2f4e-4240-9f90-0bd16c0288d4",
+    "date": "2026-08-27T11:10:51.425Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 4ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "e2d8c9d3-bb0e-4b52-a527-173b59cb8f79",
+    "date": "2026-08-27T11:04:34.293Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 9ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "dc6c5d0c-e367-4c6f-94d0-f8a338280611",
+    "date": "2026-08-27T11:04:34.279Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "794383b0-4d75-4107-afa0-9455b263a242",
+    "date": "2026-08-27T08:53:45.629Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 1ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "5"
+  },
+  {
+    "id": "9c0d81bc-d5b4-44ee-8937-87202bbb2088",
+    "date": "2026-08-27T08:53:30.940Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 25ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
+    "id": "18f75050-e961-4cfb-9798-6973242dc916",
+    "date": "2026-08-27T08:53:30.921Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 20ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "5"
+  },
+  {
     "id": "dd8d33fd-a74c-480f-b2c6-faa62c84c9c6",
     "date": "2026-08-26T14:53:09.870Z",
     "comment": "[BACKNODE] - Erreur HTTP 404 (Not Found) \nDurée : 2ms.\nDétails : Lien invalide ou expiré.",

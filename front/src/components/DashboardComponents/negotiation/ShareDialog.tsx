@@ -6,9 +6,10 @@ import type { NegotiationDetail } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
 interface Props {
-  data: NegotiationDetail;
+  data?: NegotiationDetail | null; // <-- Rend data optionnel
   canEdit: boolean;
   onChanged: () => void;
+  onCreateNegotiation?: () => Promise<NegotiationDetail>;
 }
 
 function guestUrl(token: string): string {
@@ -17,7 +18,12 @@ function guestUrl(token: string): string {
 
 /** Partage externe sécurisé : liens invités nominatifs, à durée limitée,
  *  avec envoi d'e-mail d'invitation et relance. */
-export function ShareDialog({ data, canEdit, onChanged }: Props) {
+export function ShareDialog({ 
+  data, 
+  canEdit, 
+  onChanged, 
+  onCreateNegotiation 
+}: Props) { // <-- 1. Récupération de onCreateNegotiation ici
   const [ttl, setTtl] = useState(168);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,27 +35,41 @@ export function ShareDialog({ data, canEdit, onChanged }: Props) {
   const [validateModalOpen, setValidateModalOpen] = useState(false);
 
   async function create() {
-    setBusy(true);
-    try {
-      await negotiationApi.inviteGuest(data.id, {
-        ttlHours: ttl,
-        name: name.trim() || undefined,
-        email: email.trim() || undefined,
-        fillSide: data.mode === "COMPLETION" ? "COUNTERPARTY" : undefined,
-        role: data.mode === "COMPLETION" ? "FILLER" : "COMMENTER",
-        sendEmail: Boolean(email.trim()),
-      });
-      setName(""); setEmail("");
-      onChanged();
-    } finally { setBusy(false); }
+  setBusy(true);
+  try {
+    let currentData = data;
+
+    if (!currentData && onCreateNegotiation) {
+      currentData = await onCreateNegotiation();
+    }
+
+    if (!currentData) return;
+
+    // Utilisation stricte de currentData
+    await negotiationApi.inviteGuest(currentData.id, {
+      ttlHours: ttl,
+      name: name.trim() || undefined,
+      email: email.trim() || undefined,
+      fillSide: currentData.mode === "COMPLETION" ? "COUNTERPARTY" : undefined,
+      role: currentData.mode === "COMPLETION" ? "FILLER" : "COMMENTER",
+      sendEmail: Boolean(email.trim()),
+    });
+
+    setName(""); 
+    setEmail("");
+    onChanged();
+  } finally { 
+    setBusy(false); 
   }
+}
+
   async function revoke(id: string) {
     setLinkId(id);
     setValidateModalOpen(true);
   }
 
   async function validateConfirmed() {
-    if (!linkId) return;
+    if (!linkId || !data) return;
     try {
       await negotiationApi.revokeGuest(data.id, linkId);
       onChanged();
@@ -59,19 +79,30 @@ export function ShareDialog({ data, canEdit, onChanged }: Props) {
       setValidateModalOpen(false);
     }
   }
+
   async function remind(id: string) {
+    if (!data) return;
     setReminding(id);
     try {
       const r = await negotiationApi.remindGuest(data.id, id);
-      if (r.emailSent) { setRemindOk(id); setTimeout(() => setRemindOk(""), 2000); }
+      if (r.emailSent) { 
+        setRemindOk(id); 
+        setTimeout(() => setRemindOk(""), 2000); 
+      }
       onChanged();
-    } finally { setReminding(""); }
+    } finally { 
+      setReminding(""); 
+    }
   }
+
   function copy(token: string) {
     void navigator.clipboard.writeText(guestUrl(token));
     setCopied(token);
     setTimeout(() => setCopied(""), 1500);
   }
+
+  // Sécurisation au cas où data n'est pas encore défini
+  const guestAccesses = data?.guestAccesses || [];
 
   return (
     <div className="bg-white rounded-card border border-line shadow-card p-5 space-y-3">
@@ -111,11 +142,12 @@ export function ShareDialog({ data, canEdit, onChanged }: Props) {
         </div>
       )}
 
-      {data.guestAccesses.length === 0 ? (
+      {/* 3. Utilisation de la liste sécurisée */}
+      {guestAccesses.length === 0 ? (
         <p className="text-xs text-ink-muted italic py-2">Aucun lien partagé.</p>
       ) : (
         <div className="space-y-1.5">
-          {data.guestAccesses.map((g) => (
+          {guestAccesses.map((g) => (
             <div key={g.id} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-surface-subtle">
               <div className="min-w-0">
                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-chip ${g.active ? "text-success-dark bg-success-light" : "text-ink-muted bg-surface-muted"}`}>

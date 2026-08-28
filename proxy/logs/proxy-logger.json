@@ -1,5 +1,33 @@
 [
   {
+    "id": "f8603b5f-cd11-472a-afa9-5db97d4c0830",
+    "date": "2026-08-27T15:03:05.782Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 731ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/contract/extract",
+    "page": "/api/contract/extract"
+  },
+  {
+    "id": "97e4b871-4bbe-4c4f-804f-b469bc4739b1",
+    "date": "2026-08-27T09:12:32.788Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 427ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/contract/extract",
+    "page": "/api/contract/extract"
+  },
+  {
+    "id": "da106a22-da0a-43d4-b930-ffa32a0e5046",
+    "date": "2026-08-27T09:10:04.642Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 360ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/contract/extract",
+    "page": "/api/contract/extract"
+  },
+  {
+    "id": "d334bb30-543e-4925-acf3-b070ead533cf",
+    "date": "2026-08-27T09:01:08.408Z",
+    "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 643ms.\n",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/contract/extract",
+    "page": "/api/contract/extract"
+  },
+  {
     "id": "78fc365a-3cb6-4251-8649-f5d4d05618b8",
     "date": "2026-08-26T14:49:48.943Z",
     "comment": "[PROXY] - Erreur HTTP 500 (Internal Server Error)\nDurée : 392ms.\n",
