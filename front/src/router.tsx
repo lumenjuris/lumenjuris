@@ -99,7 +99,9 @@ export function App() {
           {/* Sous-ensemble (charge panneau latéral et header) */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/generateur" element={<Generateur />} />
-          <Route path="/generateur/filigranes" element={<MesFiligranes />} />
+
+          {/* En attente d'implémentation, décommenter le lien dans MainLayout pour réimplémenter */}
+          {/* <Route path="/generateur/filigranes" element={<MesFiligranes />} /> */}
           <Route path="/contrat-generation" element={<Generateur />} />
 
           <Route path="/contrat-statique" element={<Generateur />} />
