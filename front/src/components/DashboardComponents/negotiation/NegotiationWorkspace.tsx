@@ -17,6 +17,8 @@ import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
+
+
 /** Espace de négociation — vue document collaborative (surlignements + annotations). */
 export function NegotiationWorkspace() {
   const { negotiationId } = useParams<{ negotiationId: string }>();
@@ -217,7 +219,6 @@ export function NegotiationWorkspace() {
           </div>
         </div>
         </div>
-        
       </div>
 
       

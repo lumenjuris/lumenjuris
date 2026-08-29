@@ -3,7 +3,7 @@ import { UploadZone } from "../ContractAnalysis/UploadZone";
 import { useContractAnalysis } from "../../hooks/useContractAnalysis";
 import { ContractSummary, ContractSummuryList, ClauseItem, summarizeContract, deleteSummarizeContract } from "../../utils/contractSummarizer";
 import { fetchProxy } from "../../utils/fetchProxy";
-import { Clock, Plus, Trash2 } from "lucide-react";
+import { Clock, Trash2 } from "lucide-react";
 import { relativeTime } from "../../utils/format/relativeTime";
 import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
@@ -40,7 +40,13 @@ const hasValidContent = (obj: any) => {
 export function ComprendreContrat() {
   const { handleFileUpload, handleTextSubmit, isProcessing: isHookProcessing, processingPhase: hookPhase } = useContractAnalysis();
   const [summary, setSummary] = useState<ContractSummary | null>(null);
+
+
+
   const [selectedLlm, setSelectedLlm] = useState<string>("gpt-4o-mini");
+  
+
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractSummary | null>(null);
   const [contractsList, setContractsList] = useState<ContractSummuryList[] | null>(null);
@@ -49,13 +55,11 @@ export function ComprendreContrat() {
   const [isDeleteError, setIsDeleteError] = useState(false);
   const [validateModalOpen, setValidateModalOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-
   const [isLoadingContract, setIsLoadingContract] = useState(false);
   const [localProcessingPhase, setLocalProcessingPhase] = useState("");
 
   const isCurrentlyProcessing = isHookProcessing || isLoadingContract;
   const currentPhase = hookPhase || localProcessingPhase;
-
   const activeSummary = selectedContract || summary;
 
   const handleFile = async (file: File) => {

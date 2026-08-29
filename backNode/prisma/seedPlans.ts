@@ -81,7 +81,7 @@ const PLANS_SEED = [
         creditsIncluded: {
             analyzer: { unlimited: true },
             signatureEnhanced: { enabled: true, limit: 30 },
-            generationContractWithFiligrane: { enabled: true },
+            generationContractWithFiligrane: { enabled: false },
             contrathequeLimit: { unlimited: true },
             suivisEcheance: { enabled: true },
             dashboardRenouvellements: { enabled: true },
