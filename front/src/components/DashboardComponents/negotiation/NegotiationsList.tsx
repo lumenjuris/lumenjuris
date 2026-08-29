@@ -46,7 +46,7 @@ export function NegotiationsList() {
   }
 
 return (
-  <div className="w-full max-w-8xl mx-auto">
+  <div className="w-full max-w-7xl mx-auto">
     <div className="bg-white rounded-2xl border border-gray-300 shadow-sm overflow-hidden">
       <div className="bg-blue-primary px-8 py-6">
         <h1 className="text-2xl font-bold text-white tracking-tight">Négociation</h1>

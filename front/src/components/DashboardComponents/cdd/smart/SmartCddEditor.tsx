@@ -503,7 +503,10 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       fetchProxy("/api/billing/subscription", {credentials : "include"}).then((res) => res.ok ? res.json() : null).then((data) => {
         if (!isCurrent) return;
 
-        const hasActivePaidPlan = data !== null && data?.status === "ACTIVE" && data?.planName !== "Freemium";
+        const planName = data?.data?.subscription?.planName?.toUpperCase();
+        const status = data?.data?.subscription?.status?.toUpperCase();
+
+        const hasActivePaidPlan = data !== null && status === "ACTIVE" && planName !== "FREEMIUM";
         if (hasActivePaidPlan) {
           setIsFreemium(false);
         } else {
@@ -691,17 +694,27 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     `rounded-lg p-1.5 transition-colors ${active ? "bg-brand text-white" : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"}`;
 
   /** Élément du menu « Générer le contrat ». */
-  const MenuItem = ({ icon: Icon, label, onClick, tone = "default" }: {
-    icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "brand";
+  const MenuItem = ({ icon: Icon, label, onClick, tone = "default", disabled = false, buttonInfo }: {
+    icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "brand"; disabled?: boolean; buttonInfo? : string
   }) => (
+    <div title={disabled ? buttonInfo : undefined} className="w-full">
     <button
-      onClick={() => {  setGenOpen(false); onClick(); }}
-      className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-subtle ${
-        tone === "brand" ? "font-medium text-brand" : "text-ink-secondary"
+      type="button"
+      disabled={Boolean(disabled)}
+      onClick={(e) => { if (disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }  
+      setGenOpen(false); onClick(); }}
+      className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-surface-subtle ${
+        disabled ?  "opacity-50 cursor-not-allowed pointer-events-none text-ink-muted"
+        : tone === "brand" ? "font-medium text-brand" : "text-ink-secondary"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" /> {label}
     </button>
+    </div>
   );
 
   return (
@@ -736,19 +749,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       {/* Corps : panneau latéral + éditeur. En mode partage, la colonne
           s'élargit pour accueillir le panneau (on reste sur le contrat). */}
       <div className={`grid grid-cols-1 items-start gap-6 ${shareOpen ? "lg:grid-cols-[19rem_minmax(0,1fr)]" : "lg:grid-cols-[16rem_minmax(0,1fr)]"}`}>
-        {/* Voile gris très léger sur le contenu pendant le partage : borné sous
-            le header (top-16) et sous le menu latéral (z-30 > 25), au-dessus de
-            la barre d'outils du document (z-20) pour un grisé uniforme, sans
-            bande blanche. Le contenu reste cliquable (pointer-events-none). */}
         {shareOpen && <div aria-hidden className="fixed inset-x-0 top-16 bottom-0 z-[25] bg-ink/[0.03] pointer-events-none" />}
-        {/* Colonne gauche — alignée en haut (self-start) et fixée au scroll (sticky).
-            top-[4.5rem] : sous le header de l'app (h-14 = 56px) avec un petit écart
-            de 16px, à la même hauteur que la barre de fonctions sticky de l'éditeur. */}
-        {/* max-h + overflow interne : un panneau plus haut que l'écran ne peut
-            pas « suivre » le défilement — on le borne pour que le sticky opère. */}
         <aside className={`space-y-4 self-start lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
-          {/* En mode partage, le panneau remplace la liste des champs : on
-              assigne les champs directement dans le contrat, sans pop-up. */}
           {shareOpen && (
             <ShareContractPanel
               onClose={() => setShareOpen(false)}
@@ -801,9 +803,6 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         <div className="min-w-0 space-y-3">
           {/* Le contrat — entièrement éditable, avec sa barre de fonctions en en-tête */}
           <div className="rounded-2xl border border-line bg-white shadow-card">
-            {/* Barre de fonctions en haut du bloc éditeur — sticky : vient se
-                coller directement sous le header de l'app (h-16) pendant le
-                défilement, sans écart ni bande de raccord. */}
             <div className="sticky top-16 z-20 -mx-px -mt-px flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-line border-b-line-subtle bg-white px-4 py-2.5">
               {editor && (
                 <div className="flex shrink-0 items-center gap-1">
@@ -842,10 +841,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                           <MenuItem icon={ShieldCheck} label="Convention collective" onClick={() => setCcPanel(true)} />
                         )}
                         <div className="my-1 border-t border-line-subtle" />
-                        <MenuItem icon={Download} label="Télécharger en PDF" onClick={exportPdf} />
-                        {!isFreemium &&(
-                          <MenuItem icon={FileText} label="Télécharger en Word"  onClick={() => void exportDocx()} />
-                        )}
+                        <MenuItem icon={Download} label="Télécharger en PDF" onClick={exportPdf} /> 
+                        <MenuItem icon={FileText} label="Télécharger en Word" buttonInfo="Nécessite un plan supérieur" disabled={!!isFreemium} onClick={() => void exportDocx()} />               
                       </div>
                     </>
                   )}

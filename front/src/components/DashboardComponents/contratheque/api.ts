@@ -166,8 +166,16 @@ export const contractApi = {
     fd.append("file", file);
     fd.append("scan", "false");
     const res = await fetchProxy(`${BASE}/extract`, { method: "POST", credentials: "include", body: fd });
+    
+    if (!res.ok){ 
+      throw new Error(`Échec lors de l'analyse du document. Veuillez réessayer.`);
+    }
     const data = (await res.json()) as { success?: boolean; fields?: ExtractedField[]; ocr_text?: string; filename?: string; detail?: string };
-    if (!res.ok || data.success === false) throw new Error(data.detail || `Échec de l'extraction (${res.status})`);
+
+    if (data.success === false) {
+      throw new Error(data.detail || "Échec lors de l'analyse du document. Veuillez réessayer.");
+    }
+
     return { fields: data.fields ?? [], ocr_text: data.ocr_text ?? "", filename: data.filename ?? file.name };
   },
 

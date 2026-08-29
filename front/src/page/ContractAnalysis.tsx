@@ -21,12 +21,12 @@ const MarketComparison = React.lazy(() =>
 
 import { processContractAnalysisResults, useContractAnalysis } from "../hooks/useContractAnalysis";
 import { useRiskStats } from "../hooks/useRiskStats";
-import { useShareUrl } from "../hooks/useShareUrl";
 import { useAppliedRecommendationsStore } from "../store/appliedRecommendationsStore";
 import { useDocumentTextStore } from "../store/documentTextStore";
 import type { ContractAnalysis, ClauseRisk } from "../types";
 import type { AnalysisContext } from "../types/contextualAnalysis";
 import type { AnalysisProgress } from "../types/analysisProgress";
+import { negotiationApi } from "../components/DashboardComponents/negotiation/api";
 
 import {
   createContractHistoryId,
@@ -49,6 +49,9 @@ import { useContractHistory, TemporaryHistoryEntry } from "../hooks/Analyzer/use
 
 import { confirmLeavingUnfinishedAnalysis, RECENT_NAVIGATION_CONFIRM_MS, LEAVE_ANALYSIS_WARNING } from "../utils/aiAnalyser/confirmLeaving";
 import { handleAppendClause } from "../utils/aiAnalyser/handleAppendClause";
+import { contractApi } from "../components/DashboardComponents/contratheque/api";
+import { NegotiationDetail } from "../components/DashboardComponents/negotiation/types";
+import { ShareDialog } from "../components/DashboardComponents/negotiation/ShareDialog";
 
 
 const consumedNavigationUploadKeys = new Set<string>();
@@ -90,7 +93,9 @@ export default function ContractAnalysis() {
   const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
   const currentHistoryIdRef = useRef<string | null>(null);
   const sidebarCollapsed = false;
-
+  const [showShare, setShowShare] = useState<Boolean>(false);
+  const [shareData, setShareData] = useState<NegotiationDetail | null>(null);
+  const savedContractIdRef = useRef<string | null>(null);
 
 
   const { enterpriseContext } = useEnterpriseContext()  //Clef isLoading accessible au besoin d'UX
@@ -182,9 +187,47 @@ export default function ContractAnalysis() {
     activeTemporaryEntry?.analysisProgress ?? analysisProgress;
 
 
+  const createContractForShare = async (): Promise<string> => {
+    if (!contract) throw new Error("Aucun contrat chargé");
 
+    if (savedContractIdRef.current) {
+      return savedContractIdRef.current
+    }
 
+    const created = await contractApi.create({
+      title: contract.fileName,
+      ocrText: contract.content,
+      metadataFields: [],
+      contractType: null,
+      status: null,
+    });
 
+    savedContractIdRef.current = created.id;
+    
+    return  created.id
+  }
+
+  const openShare = async () => {
+      setShowShare(true);
+  }
+  
+  const handleCreateNegotiation = async (): Promise<NegotiationDetail> => {
+    const contractId = await createContractForShare();
+    const nego = await negotiationApi.enter(contractId, contract?.fileName || "Document");
+    const detail = await negotiationApi.get(nego.id);
+    setShareData(detail);
+    return detail;
+  }
+
+  const refreshShareData = async () => {
+    if (!shareData) return;
+    try {
+      const detail = await negotiationApi.get(shareData.id);
+      setShareData(detail);
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement des données de partage :", error);
+    }
+  };
 
 
   const startTemporaryAnalysis = async (
@@ -325,18 +368,6 @@ export default function ContractAnalysis() {
   };
 
 
-
-
-
-
-
-
-
-  const { handleShareReport, loadSharedData } = useShareUrl(contract, reviewedClauses, (_, loadedReviewedClauses) => {
-    setReviewedClauses(new Set(loadedReviewedClauses));
-  });
-
-  useEffect(() => { loadSharedData() }, [loadSharedData]);
 
   useEffect(() => {
     if (contract?.content && originalText !== contract.content) {
@@ -489,6 +520,8 @@ export default function ContractAnalysis() {
   const onFileUpload = async (file: File) => {
     if (await blockedByAnalyzerQuota()) return;
 
+    savedContractIdRef.current = null;
+
     const preparationKey = `file:${getFileUploadKey(file)}`;
 
     if (documentPreparationRef.current) {
@@ -563,6 +596,8 @@ export default function ContractAnalysis() {
 
   const onTextSubmit = async (text: string, fileName: string) => {
     if (await blockedByAnalyzerQuota()) return;
+
+    savedContractIdRef.current = null;
 
     const preparationKey = `text:${fileName}:${text.length}`;
 
@@ -751,7 +786,6 @@ export default function ContractAnalysis() {
     }
 
 
-
     const snapshot = await loadContractHistorySnapshot(historyId);
 
     if (!snapshot) {
@@ -789,12 +823,7 @@ export default function ContractAnalysis() {
     setActiveHistoryId(historyId);
   };
 
-
-
-
-
   const clauseData = contract?.clauses.find((c) => c.id === selectedClause);
-
 
 
 /*
@@ -862,7 +891,7 @@ export default function ContractAnalysis() {
 
                 <div className="flex justify-center items-center">
                   <ActionButtons
-                    onShareReport={handleShareReport}
+                    onShareReport={() => void openShare()}
                     contract={contract}
                     context={currentAnalysisContext || undefined}
                     isProcessed={Boolean(contract?.processed)}
@@ -879,7 +908,6 @@ export default function ContractAnalysis() {
 
               {/* 2. Grille principale Document + Sidebar */}
               <div className="flex flex-col md:flex-row gap-6 items-start">
-                
                 {/* Zone Visualiseur de Document */}
                 <div id="clauses-section" className="flex-1 w-full min-w-0">
                   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -915,7 +943,8 @@ export default function ContractAnalysis() {
 
                 {/* Sidebar des risques à droite */}
                 {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
-                  <div className="w-full md:w-80 border-gray-200 flex-shrink-0">
+                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4">
+                    
                     <ClausesSidebar
                       clauses={sortedClauses}
                       onClauseClick={(clause) => handleClauseClick(clause.id)}
@@ -926,6 +955,33 @@ export default function ContractAnalysis() {
                 )}
               </div>
 
+            </div>
+          )}
+          {showShare && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+              onClick={() => setShowShare(false)}
+            >
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="relative w-full max-w-lg"
+              >
+                {/* Bouton de fermeture */}
+                <button
+                  onClick={() => setShowShare(false)}
+                  className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                  aria-label="Fermer"
+                >
+                  ✕
+                </button>
+
+                <ShareDialog
+                  data={shareData}
+                  canEdit={true}
+                  onChanged={refreshShareData}
+                  onCreateNegotiation={handleCreateNegotiation}
+                />
+              </div>
             </div>
           )}
         </div>

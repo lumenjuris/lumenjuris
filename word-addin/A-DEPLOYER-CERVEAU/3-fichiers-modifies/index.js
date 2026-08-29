@@ -945,6 +945,7 @@ app.patch("/api/legal-watch/concepts/:concept", auth, (req, res) => relayToNode(
 // ─── Administration (gestion des utilisateurs & rôles) ───
 app.get("/api/admin/users", auth, (req, res) => relayToNode(req, res, "/admin/users"));
 app.patch("/api/admin/users/:idUser/role", auth, (req, res) => relayToNode(req, res, `/admin/users/${encodeURIComponent(req.params.idUser)}/role`));
+app.patch("/api/admin/users/:idUser/plan", auth, (req, res) => relayToNode(req, res, `/admin/users/${encodeURIComponent(req.params.idUser)}/plan`));
 // ─── Négociation (module isolé) ───
 // Publiques invité (sans auth — token = secret) ; placées AVANT /:externalId.
 app.get("/api/negotiation/public/:token", (req, res) => relayToNode(req, res, `/negotiation/public/${encodeURIComponent(req.params.token)}`));

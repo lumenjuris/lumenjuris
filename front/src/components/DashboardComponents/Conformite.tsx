@@ -135,7 +135,8 @@ export function Conformite() {
       toast.error(
         /403|éditeur|editor/i.test(msg)
           ? "Réservé aux rôles Juriste et Administrateur."
-          : "Échec de l'ajout à la contrathèque.",
+          : "La limite de la contrathèque est atteinte. Passez au plan supérieur pour augmenter le nombre d'emplacement.",
+          {duration : 10000}
       );
     }
   };
@@ -161,7 +162,7 @@ export function Conformite() {
 
   return (
     <>
-    <div className="lg:col-span-3 space-y-6">
+    <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
       {/* Title + CTA */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl">
         <div className="text-left">
@@ -174,7 +175,7 @@ export function Conformite() {
         </div>
         <button
           onClick={handleNewAnalysis}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-end"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 will-change-transform backface-invisible shadow-sm shrink-0 self-start sm:self-end"
         >
           <Plus className="text-base font-normal" /> Nouvelle analyse
         </button>
@@ -249,7 +250,7 @@ export function Conformite() {
       </div>
 
       {/* History table */}
-      <div className="bg-white border border-line rounded-card shadow-card overflow-hidden">
+      <div className="bg-white border border-line rounded-card shadow-card ">
   
   {/* ── Vue Mobile (Cartes / Liste) ── */}
   <div className="md:hidden divide-y divide-line-subtle">
@@ -263,7 +264,7 @@ export function Conformite() {
             onClick={() => handleOpenAnalyzer(item.id)}
           >
             {/* Entête Carte : Icône + Nom + Status + Actions */}
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between gap-2 whitespace-nowrap">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
                   <FileText className="w-4 h-4" />
@@ -293,7 +294,7 @@ export function Conformite() {
                       ? "Ajouté à la contrathèque"
                       : "Ajouter à la contrathèque"
                   }
-                  className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
+                  className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
                 >
                   {addState[item.id] === "done" ? (
                     <Check className="w-4 h-4 text-success stroke-[1.5]" />
@@ -380,16 +381,16 @@ export function Conformite() {
             return (
               <tr
                 key={item.id}
-                className="hover:bg-surface-subtle/60 transition-all group cursor-pointer"
+                className="hover:bg-slate-100 transition-all group cursor-pointer"
                 onClick={() => handleOpenAnalyzer(item.id)}
               >
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
+                    <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-blue-700 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                       <FileText className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink truncate max-w-xs">
+                      <p className="text-sm font-medium text-ink truncate max-w-xs group-hover:text-blue-600 transition-colors">
                         {item.fileName}
                       </p>
                       <p className="text-xs text-ink-subtle mt-0.5">
@@ -429,24 +430,6 @@ export function Conformite() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleAddToContratheque(item)}
-                      disabled={addState[item.id] === "saving"}
-                      title={
-                        addState[item.id] === "done"
-                          ? "Ajouté à la contrathèque"
-                          : "Ajouter à la contrathèque"
-                      }
-                      className="p-1.5 text-ink-subtle hover:text-brand transition-colors rounded-lg hover:bg-surface-muted disabled:opacity-50"
-                    >
-                      {addState[item.id] === "done" ? (
-                        <Check className="w-4 h-4 text-success stroke-[1.5]" />
-                      ) : addState[item.id] === "saving" ? (
-                        <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
-                      ) : (
-                        <FolderPlus className="w-4 h-4 stroke-[1.5]" />
-                      )}
-                    </button>
-                    <button
                       onClick={() =>
                         setOpenMenuId(openMenuId === item.id ? null : item.id)
                       }
@@ -455,23 +438,48 @@ export function Conformite() {
                       <MoreVertical className="w-4 h-4 stroke-[1.5]" />
                     </button>
                     {openMenuId === item.id && (
-                      <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
+                      <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md min-w-[140px]">
+
+                        <button
+                          onClick={() => handleOpenAnalyzer(item.id)}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 hover:rounded-t-panel transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Ouvrir
+                        </button>
+
+                        <button
+                          onClick={() => handleAddToContratheque(item)}
+                          disabled={addState[item.id] === "saving"}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors disabled:opacity-50"
+                        >
+                          {addState[item.id] === "done" ? (
+                            <>
+                              <Check className="w-4 h-4 text-success stroke-[1.5]" />
+                              <span>Ajouté à la contrathèque</span>
+                            </>
+                          ) : addState[item.id] === "saving" ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
+                              <span>Ajout en cours...</span>
+                            </>
+                          ) : (
+                            <>
+                              <FolderPlus className="w-3.5 h-3.5 stroke-[1.5]" />
+                              <span>Contrathèque</span>
+                            </>
+                          )}
+                        </button>
+
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light hover:rounded-b-panel transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Supprimer
                         </button>
 
-                        <button
-                          onClick={() => handleOpenAnalyzer(item.id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Ouvrir
-                        </button>
-                      </div>
+                      </div> 
                     )}
                   </div>
                 </td>

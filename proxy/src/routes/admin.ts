@@ -18,6 +18,10 @@ adminRouter.patch("/users/:idUser/role", auth, (req, res) =>
     relayToNode(req, res, `/admin/users/${encodeURIComponent(req.params.idUser as string)}/role`)
 );
 
+adminRouter.patch("/users/:idUser/plan", auth, (req, res) => 
+    relayToNode(req, res, `/admin/users/${encodeURIComponent(req.params.idUser as string)}/plan`)
+);
+
 adminRouter.get("/revenue", auth, (req, res) =>
     relayToNode(req, res, "/admin/revenue")
 );

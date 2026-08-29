@@ -130,7 +130,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
+    <div className=" space-y-6 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
         <div>
@@ -140,13 +140,13 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
           <button
             onClick={() => contractApi.exportCsv(filters)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors border border-white/15"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all durantion-200 hover:-translate-y-0.5 will-change-transform border border-white/15"
           >
             <Download className="w-4 h-4" /> Exporter
           </button>
           <button
             onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-sm"
           >
             <Plus className="w-4 h-4" /> Importer un contrat
           </button>

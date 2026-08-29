@@ -661,7 +661,7 @@ function FeatureLegend() {
 
 // ─── Panneau de détail d'activité utilisateur (slide-over) ─────────────────────
 
-function UserActivityPanel({
+export function UserActivityPanel({
   userId,
   days,
   onClose,

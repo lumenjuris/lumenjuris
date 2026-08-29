@@ -41,10 +41,9 @@ export function ComprendreContrat() {
   const { handleFileUpload, handleTextSubmit, isProcessing: isHookProcessing, processingPhase: hookPhase } = useContractAnalysis();
   const [summary, setSummary] = useState<ContractSummary | null>(null);
 
+  type llm = "gpt-4o-mini" | "gpt-4o" | "gpt-5.2" | "gpt-5.2-nano";
 
-
-  const [selectedLlm, setSelectedLlm] = useState<string>("gpt-4o-mini");
-  
+  const selectLlm : llm = "gpt-4o-mini";
 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,7 +72,7 @@ export function ComprendreContrat() {
       if (!extracted?.content) return;
 
       setLocalProcessingPhase("Génération du résumé par l'IA...");
-      const resSummary = await summarizeContract(extracted.content, extracted.fileName, selectedLlm);
+      const resSummary = await summarizeContract(extracted.content, extracted.fileName, selectLlm);
 
       setSummary(resSummary);
       setSelectedContract(null);
@@ -165,7 +164,7 @@ export function ComprendreContrat() {
       if (!contentToSummarize) return;
 
       setLocalProcessingPhase("Génération du résumé par l'IA...");
-      const resSummary = await summarizeContract(contentToSummarize, extracted.fileName, selectedLlm);
+      const resSummary = await summarizeContract(contentToSummarize, extracted.fileName, selectLlm);
       setSummary(resSummary);
       setSelectedContract(null);
       setIsModalOpen(false);
@@ -187,7 +186,7 @@ export function ComprendreContrat() {
 
   return (
 
-    <div className="flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col lg:flex-row gap-6 mx-auto w-full max-w-7xl">
       <div className="w-full lg:w-64 lg:shrink-0">
         <div className="flex flex-col overflow-hidden rounded-card border border-line bg-white shadow-card max-h-[calc(100vh-9rem)]">
           {/* En-tête */}
@@ -263,14 +262,15 @@ export function ComprendreContrat() {
               Analyse et compréhension de contrat
             </h2>
             <p className="text-sm text-gray-primary leading-relaxed">
-              Référentiel de clauses approuvées, réutilisables pour la génération et la négociation.
+              Obtenez une synthèse claire de vos documents : points d'attention, niveau de risque et obligations clés.
             </p>
           </div>
 
           {/* Bouton blanc à droite */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
+             transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0 self-start sm:self-auto"
           >
             <span className="text-base font-normal">+</span> Analysez un contrat
           </button>
@@ -593,7 +593,7 @@ export function ComprendreContrat() {
                 Importer ou coller votre texte
               </h3>
 
-              <div className="mb-4">
+               {/* <div className="mb-4">
                 <label htmlFor="llm-select" className="block text-xs font-semibold text-gray-600 mb-1">
                   Modèle d'IA utilisé
                 </label>
@@ -606,9 +606,8 @@ export function ComprendreContrat() {
                 >
                   <option value="gpt-4o-mini">GPT-4o Mini (Rapide & Économique)</option>
                   <option value="gpt-4o">GPT-4o (Standard - Recommandé)</option>
-                  <option value="gpt-5.2">GPT-5.2 (Raisonnement avancé)</option>
                 </select>
-              </div>
+              </div>  */}
 
               <UploadZone
                 onFileSelect={handleFile}

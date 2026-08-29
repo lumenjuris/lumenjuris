@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { Users, AlertCircle, ShieldCheck, Loader2, Check, Search, Ban, ShieldOff } from "lucide-react";
 import { fetchProxy } from "../../../utils/fetchProxy";
 import { useUserStore } from "../../../store/userStore";
+import { PlanName } from "../../../utils/planMapping";
+import { UserActivityPanel } from "../../MonitoringComponents/ActivitySection";
 
 type Role = "ADMIN" | "JURISTE" | "USER" | "LECTEUR";
 
@@ -11,6 +13,7 @@ interface AdminUser {
   nom: string | null;
   prenom: string | null;
   role: Role;
+  plan: PlanName;
   isVerified: boolean;
   isBanned: boolean;
 }
@@ -21,6 +24,15 @@ const ROLE_LABEL: Record<Role, string> = {
   USER: "Utilisateur",
   LECTEUR: "Lecteur (lecture seule)",
 };
+
+const USER_PLAN: Record<PlanName, string> = {
+  Freemium: "Freemium",
+  Betatesteur: "Betatesteur",
+  Starter_mensuel: "Starter mensuel",
+  Starter_annuel: "Starter annuel",
+  Pro_mensuel: "Pro mensuel",
+  Pro_annuel: "Pro annuel",
+}
 
 const ROLE_STYLE: Record<Role, { bg: string; fg: string }> = {
   ADMIN:    { bg: "#ede9fe", fg: "#5b21b6" },
@@ -45,8 +57,11 @@ export function UserManagement() {
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const [savingPlanId, setSavingPlanId] = useState<number | null>(null);
+  const [savedPlanId, setSavedPlanId] = useState<number | null>(null);
   const [banningId, setBanningId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -90,6 +105,27 @@ export function UserManagement() {
       await load();
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function changePlan(u: AdminUser, newPlan: PlanName) {
+    if (newPlan === u.plan) return;
+    setSavingPlanId(u.idUser);
+    setError("");
+    setUsers((prev) => prev.map((x) => (x.idUser === u.idUser ? {...x, plan: newPlan } : x)));
+    try {
+      await fetchProxy(`/api/admin/users/${u.idUser}/plan`, {
+        method: "PATCH", credentials: "include",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({plan: newPlan}),
+      }).then(json<unknown>);
+      setSavedPlanId(u.idUser);
+      setTimeout(() => setSavedPlanId(null), 1500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Echec du changement de plan");
+      await load();
+    } finally {
+      setSavingPlanId(null);
     }
   }
 
@@ -174,6 +210,7 @@ export function UserManagement() {
                 <th className="px-4 py-3">Utilisateur</th>
                 <th className="px-4 py-3">Rôle actuel</th>
                 <th className="px-4 py-3">Modifier le rôle</th>
+                <th className="px-4 py-3">Modifier le plan</th>
                 <th className="px-4 py-3">Statut</th>
               </tr>
             </thead>
@@ -185,13 +222,15 @@ export function UserManagement() {
                   "?";
                 const name =
                   [u.prenom, u.nom].filter(Boolean).join(" ") || u.email.split("@")[0];
-                const isSelf = u.idUser === myId;
+                const isSelf = u.idUser === Number(myId);
                 const isSaving = savingId === u.idUser;
+                const isSavingPlan = savingPlanId === u.idUser;
                 const isBanning = banningId === u.idUser;
 
                 return (
                   <tr
                     key={u.idUser}
+                    onClick={() => setSelectedUserId(u.idUser)}
                     className={`transition-colors ${
                       u.isBanned
                         ? "bg-red-50/40 hover:bg-red-50/70"
@@ -236,7 +275,7 @@ export function UserManagement() {
                     </td>
 
                     {/* Modifier le rôle */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <select
                           value={u.role}
@@ -257,6 +296,31 @@ export function UserManagement() {
                         </select>
                         {isSaving && <Loader2 className="w-4 h-4 animate-spin text-ink-subtle" />}
                         {savedId === u.idUser && <Check className="w-4 h-4 text-success" />}
+                      </div>
+                    </td>
+
+                    {/* Modifier le plan */}
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={u.plan}
+                          disabled={isSavingPlan || isSelf || u.isBanned}
+                          onChange={(e) => void changePlan(u, e.target.value as PlanName)}
+                          className="bg-white border border-line px-3 py-1.5 rounded-lg text-sm text-ink-secondary outline-none focus:border-brand/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            isSelf
+                              ? "Vous ne pouvez pas modifier votre propre plan"
+                              : u.isBanned
+                              ? "Débannissez l'utilisateur pour modifier son rôle"
+                              : undefined
+                          }
+                        >
+                          {(Object.keys(USER_PLAN) as PlanName[]).map((p) => (
+                            <option key={p} value={p}>{USER_PLAN[p]}</option>
+                          ))}
+                        </select>
+                        {isSavingPlan && <Loader2 className="w-4 h-4 animate-spin text-ink-subtle" />}
+                        {savedPlanId === u.idUser && <Check className="w-4 h-4 text-success" />}
                       </div>
                     </td>
 
@@ -293,6 +357,14 @@ export function UserManagement() {
           </table>
         )}
       </div>
+
+      {selectedUserId !== null && (
+        <UserActivityPanel 
+          userId={selectedUserId}
+          days={30}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
 
       <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
         <Users className="w-3.5 h-3.5" />
