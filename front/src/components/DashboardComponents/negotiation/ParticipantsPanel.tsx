@@ -11,6 +11,8 @@ interface Props {
   onChanged: () => void;
 }
 
+
+
 /** Participants internes / externes et leurs rôles. */
 export function ParticipantsPanel({ data, canEdit, onChanged }: Props) {
   const [open, setOpen] = useState(false);

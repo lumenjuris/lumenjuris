@@ -15,9 +15,8 @@ import {
   FolderPlus,
   Check,
   Loader2,
-  Sparkles,
-  PlusCircle,
 } from "lucide-react";
+
 import {
   loadContractHistoryIndex,
   loadContractHistorySnapshot,

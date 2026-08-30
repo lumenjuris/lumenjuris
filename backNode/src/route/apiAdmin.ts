@@ -550,7 +550,7 @@ router.get("/overview", authMiddleware, requireAdmin, async (_req: Request, res:
         })
     } catch (err) {
         console.error("[admin] overview error:", err)
-        return res.status(500).json({ success: false, message: "Erreur serveur." })
+        return res.status(500).json({ success: false, message: "Erreur serveur lors de la récupération de l'overview." })
     }
 })
 

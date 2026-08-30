@@ -3,7 +3,7 @@ import { UploadZone } from "../ContractAnalysis/UploadZone";
 import { useContractAnalysis } from "../../hooks/useContractAnalysis";
 import { ContractSummary, ContractSummuryList, ClauseItem, summarizeContract, deleteSummarizeContract } from "../../utils/contractSummarizer";
 import { fetchProxy } from "../../utils/fetchProxy";
-import { Clock, Plus, Trash2 } from "lucide-react";
+import { Clock, Trash2 } from "lucide-react";
 import { relativeTime } from "../../utils/format/relativeTime";
 import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
@@ -43,7 +43,6 @@ export function ComprendreContrat() {
 
   type llm = "gpt-4o-mini" | "gpt-4o" | "gpt-5.2" | "gpt-5.2-nano";
 
-  const [selectedLlm, setSelectedLlm] = useState<string>("gpt-4o-mini");
   const selectLlm : llm = "gpt-4o-mini";
 
 
@@ -55,13 +54,11 @@ export function ComprendreContrat() {
   const [isDeleteError, setIsDeleteError] = useState(false);
   const [validateModalOpen, setValidateModalOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-
   const [isLoadingContract, setIsLoadingContract] = useState(false);
   const [localProcessingPhase, setLocalProcessingPhase] = useState("");
 
   const isCurrentlyProcessing = isHookProcessing || isLoadingContract;
   const currentPhase = hookPhase || localProcessingPhase;
-
   const activeSummary = selectedContract || summary;
 
   const handleFile = async (file: File) => {
@@ -167,7 +164,7 @@ export function ComprendreContrat() {
       if (!contentToSummarize) return;
 
       setLocalProcessingPhase("Génération du résumé par l'IA...");
-      const resSummary = await summarizeContract(contentToSummarize, extracted.fileName, selectedLlm);
+      const resSummary = await summarizeContract(contentToSummarize, extracted.fileName, selectLlm);
       setSummary(resSummary);
       setSelectedContract(null);
       setIsModalOpen(false);

@@ -871,7 +871,7 @@ function CustomTemplateEditor({ templateId, onBack }: { templateId: string; onBa
  * bibliothèque de modèles (ScratchWizard : questions fermées une à une,
  * puis rédaction IA et ouverture dans l'éditeur).
  */
-function ScratchEntry({ onStart, onBack }: { onStart: (title: string) => void; onBack: () => void }) {
+function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: () => void }) {
   const [title, setTitle] = useState("");
   const canStart = title.trim().length >= 3;
 

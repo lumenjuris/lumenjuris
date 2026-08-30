@@ -88,11 +88,7 @@ app.use("/api/delete-summarize-contract", summarizeContractRouter);
 
 
 
-app.get("/api/google", (req, res) => {
-  console.log("[proxy/google] redirect vers :", `${BACKNODE_URL}/api/user/auth/google`);
-  console.log("[proxy/google] cookies entrants :", req.headers.cookie);
-  res.redirect(`${BACKNODE_URL}/auth/google`);
-});
+app.get("/api/google", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/google`)});
 
 
 // Health pour tester le serveur

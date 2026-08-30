@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, ChevronDown, Loader2, AlertCircle, Ban, PenTool, FilePlus2, CheckCircle2, Users, GitCompare,
+  ChevronLeft, ChevronDown, Loader2, AlertCircle, FilePlus2,  Users, GitCompare,
 } from "lucide-react";
 import { useUserStore } from "../../../store/userStore";
 import { negotiationApi } from "./api";
@@ -12,10 +12,12 @@ import { ShareDialog } from "./ShareDialog";
 import { VersionDiff } from "./VersionDiff";
 import { CompletionOwnerPanel } from "./CompletionOwnerPanel";
 import { buildPdfFromText } from "./buildPdfFromText";
-import { STATUS_LABEL, STATUS_STYLE, MODE_LABEL, MODE_STYLE } from "./types";
+import { STATUS_LABEL, STATUS_STYLE } from "./types";
 import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
+
+
 
 /** Espace de négociation — vue document collaborative (surlignements + annotations). */
 export function NegotiationWorkspace() {
