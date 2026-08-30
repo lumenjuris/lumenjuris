@@ -186,7 +186,7 @@ async function handleTemplateGenerate(
       body: JSON.stringify({
         prompt,
         reasoning: "medium",
-        verbosity: "high",
+        verbosity: "medium",
         model: "gpt-5.2",
       }),
     });

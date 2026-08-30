@@ -1,363 +1,54 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  Library, FileText, ShieldCheck, ScrollText, PenTool, 
-  ArrowRight, Handshake,
-} from "lucide-react";
+import { useUserStore } from "../store/userStore";
+import { useDashboardData } from "../components/DashboardComponents/home/useDashboardData";
+import { InfoBanner } from "../components/DashboardComponents/home/InfoBanner";
+import { HeroHeader } from "../components/DashboardComponents/home/HeroHeader";
+import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
+import { UpcomingDeadlines } from "../components/DashboardComponents/home/UpcomingDeadlines";
+import { ModulesGrid } from "../components/DashboardComponents/home/ModulesGrid";
+import { QuickGenerateCard } from "../components/DashboardComponents/home/QuickGenerateCard";
+import { RiskPanel } from "../components/DashboardComponents/home/RiskPanel";
+import { PlanCard } from "../components/DashboardComponents/home/PlanCard";
 
-interface Tool {
-  icon: React.ElementType;
-  name: string;
-  title: string;
-  desc: string;
-  to: string;
-  accent: string;
-  img?: string;
-}
-
-const TOOLS: Tool[] = [
-  {
-    icon: FileText,
-    name: "Generation",
-    title: "Créez des contrats conformes à partir de vos modèles et clauses approuvées.",
-    desc: "Rédigez vos actes juridiques et contrats en quelques clics. Indiquez simplement votre besoin ou répondez à quelques questions guidées pour obtenir un document personnalisé, juridiquement sécurisé et conforme aux dernières évolutions du droit français",
-    to: "/contratheque",
-    accent: "#354F99",
-  },
-  {
-    icon: ShieldCheck,
-    name: "Analyser",
-    title: "Annotez vos contrats , échangez les redlines et validez la version finale.",
-    desc: "Débloquez vos discussions et défendez efficacement vos intérêts face à vos interlocuteurs. L'outil génère des contre-propositions équilibrées et vous fournit des arguments percutants pour négocier chaque clause stratégique sans fermer le dialogue.",
-    to: "/conformite",
-    accent: "#d97706",
-  },
-  {
-    icon: Handshake,
-    name: "Négociation",
-    title: "Annotez vos contrats , échangez les redlines et validez la version finale.",
-    desc: "Débloquez vos discussions et défendez efficacement vos intérêts face à vos interlocuteurs. L'outil génère des contre-propositions équilibrées et vous fournit des arguments percutants pour négocier chaque clause stratégique sans fermer le dialogue.",
-    to: "/contratheque",
-    accent: "#7c3aed",
-  },
-  {
-    icon: Library,
-    name: "Contratheque",
-    title: "Centralisez et suivez le cycle de vie de tous vos contrat au même endroit.",
-    desc: "Centralisez, classez et retrouvez tous vos documents juridiques au même endroit. Votre espace sécurisé analyse automatiquement vos contrats importés pour les organiser par type, extraire les dates clés et vous alerter avant chaque échéance importante.",
-    to: "/generateur",
-    accent: "#059669",
-  },
-  {
-    icon: ScrollText,
-    name: "Bibliothèque de clauses",
-    title: "Réutilisez vos clauses validées juridiquement à chaque rédaction.",
-    desc: "Créez votre propre catalogue complet de clauses juridiques prêtes à l'emploi et parfaitement sécurisées. Retrouvez en un instant la formulation idéale pour enrichir vos contrats, adapter une obligation spécifique ou verrouiller une situation particulière selon le droit français.",
-    to: "/clauses",
-    accent: "#0891b2",
-  },
-  {
-    icon: PenTool,
-    name: "Signature électronique",
-    title: "Faites signer vos contrats en ligne, en toute sécurité.",
-    desc: "Faites signer vos contrats en ligne rapidement et en toute sécurité. Envoyez vos documents validés directement depuis l'application, suivez l'avancement des signatures en temps réel et garantissez la valeur juridique de vos accords.",
-    to: "/signature",
-    accent: "#2563eb",
-  },
-];
-
-const PATH_CONFIG = [
-  { ratioX: 0.34, curveShift: 110, tension: 0.85 },
-  { ratioX: 0.82, curveShift: 0, tension: 0.55 },
-  { ratioX: 0.34, curveShift: 110, tension: 0.85 },
-  { ratioX: 0.82, curveShift: 0, tension: 0.55 },
-  { ratioX: 0.34, curveShift: 110,  tension: 0.85 },
-  { ratioX: 0.82, curveShift: -0, tension: 0.55 },
-];
-
+/**
+ * Page d'accueil (`/dashboard`).
+ *
+ * Assemble les blocs de `components/DashboardComponents/home` autour d'un seul
+ * chargement de données (`useDashboardData`) :
+ *   - colonne principale : file de travail, échéances, modules
+ *   - colonne latérale   : génération rapide, risques, abonnement
+ */
 export function Dashboard() {
-  const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pathRef = useRef<SVGPathElement>(null);
-  const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const [svgPath, setSvgPath] = useState("");
-  const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 });
-  const [pathLength, setPathLength] = useState(0);
-
-  const updatePath = () => {
-    if (!containerRef.current) return;
-
-    // Taille du conteneur
-    const containerRect = containerRef.current.getBoundingClientRect();
-    setSvgDimensions({ width: containerRect.width, height: containerRect.height });
-
-    const points: { x: number; y: number }[] = [];
-
-    // Définit un point où se greffera le fil
-    cardRefs.current.forEach((card, index) => {
-      if (card) {
-        const rect = card.getBoundingClientRect();
-        const y = (rect.top - containerRect.top) + rect.height / 2;
-        
-        const config = PATH_CONFIG[index % PATH_CONFIG.length];
-        const x = (rect.left - containerRect.left) + rect.width * config.ratioX;
-
-        points.push({ x, y });
-      }
-    });
-
-    if (points.length < 2) return;
-
-    // Initialise un point de départ
-    let d = `M ${points[0].x} ${points[0].y}`;
-
-    // Boucle sur chaque pair de point
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-
-      // Filet de sécurité si des cartes sont ajoutées
-      const config = PATH_CONFIG[i % PATH_CONFIG.length];
-      const distY = Math.abs(p2.y - p1.y) * config.tension;
-      const shift = config.curveShift;
-
-      // Pousse le fil vers la gauche ou la droite
-      const cp1x = p1.x + shift;
-      // Descend le fil vers le bas
-      const cp1y = p1.y + distY;
-
-      // Adoucit l'angle
-      const cp2x = p2.x - (shift * 0.5);
-      // Freine la descente avant d'atteindre la seconde carte
-      const cp2y = p2.y - (distY * 0.8);
-
-      // Ajout de la courbe de bézier au tracé svg
-      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
-
-    setSvgPath(d);
-  };
-
-  useEffect(() => {
-    updatePath();
-    window.addEventListener("resize", updatePath);
-    return () => window.removeEventListener("resize", updatePath);
-  }, []);
-
-  // Calcule la longueur réelle du chemin SVG pour calibrer l'animation
-  useEffect(() => {
-    if (pathRef.current) {
-      setPathLength(pathRef.current.getTotalLength());
-    }
-  }, [svgPath]);
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const form = e.currentTarget;
-    const select = form.elements.namedItem("contractType") as HTMLSelectElement;
-    const rawLabel = select.selectedOptions[0]?.text || select.value;
-
-    const cleanTitle = rawLabel.includes(" - ") 
-      ? rawLabel.split(" - ")[1] 
-      : rawLabel;
-
-    const formData = new FormData(form);
-    const details = (formData.get("details") as string) || "";
-
-    navigate(`/contrat-generation?section=scratch&titre=${encodeURIComponent(cleanTitle)}&step=brief&de=dashboard`, { state: { brief: details } });
-  };
+  const firstName = useUserStore((s) => s.userData?.profile?.prenom) ?? "";
+  const data = useDashboardData();
 
   return (
-    <div>
-      {/* Style pour l'animation de la lumière */}
-      <style>{`
-        @keyframes pulseLight {
-          0% {
-            stroke-dashoffset: ${pathLength || 1000};
-          }
-          100% {
-            stroke-dashoffset: -${pathLength || 1000};
-          }
-        }
-        .path-light-pulse {
-          stroke-dasharray: 160 ${pathLength || 1000};
-          animation: pulseLight 9s cubic-bezier(0.8, 0.5, 0.6, 1) infinite;
-        }
-      `}</style>
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-5">
+      <InfoBanner />
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-12">
-        <div>
-          <span className="inline-block rounded-full border border-red-primary px-4 py-1.5 text-xs font-medium uppercase text-red-primary mb-4">
-            plateforme de gestion contractuelle
-          </span>
+      <HeroHeader
+        firstName={firstName}
+        isEmpty={data.isEmpty}
+        kpis={data.kpis}
+        loading={data.loading}
+      />
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Le cycle de vie de vos contrats, maitrisé de bout en bout.
-          </h1>
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <TodayQueue items={data.queue} loading={data.loading} />
+          <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
+          <ModulesGrid counts={data.moduleCounts} />
 
-          <p className="text-base text-ink-muted mt-4 max-w-lg">
-            De la rédaction à l'archivage, Lumen Juris centralise, sécurise et fiabilise chaque étape de vos contrats, pour que vos équipes juridiques passent moins de temps à chercher, et plus de temps à décider.
+          <p className="mt-0.5 font-serif text-sm italic text-ink-muted">
+            Lumen Juris — la clarté contractuelle, en continu.
           </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-            <Link 
-              to="/contrat-generation" 
-              className="flex items-center justify-center text-center bg-blue-primary text-white font-medium py-3 px-4 border border-gray-500 rounded-md active:scale-[0.99] transition-all durantion-200 hover:-translate-y-0.5 will-change-transform text-sm shadow-sm"
-            >   
-              Générez votre premier contrat
-            </Link>
-
-            <Link 
-              to="/souscription" 
-              className="flex items-center justify-center text-center bg-white text-blue-primary font-medium py-3 px-4 border border-gray-500 rounded-md active:scale-[0.99] transition-all durantion-200 hover:-translate-y-0.5 will-change-transform text-sm shadow-sm"
-            >
-              Découvrir nos abonnements
-            </Link>
-          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-blue-primary text-white p-6 rounded-2xl w-full max-w-md justify-self-end flex flex-col gap-5 shadow-lg border border-white/10">
-          <div>
-            <h2 className="text-xl font-bold text-white mb-1">
-              Générez votre premier contrat
-            </h2>
-            <p className="text-sm text-gray-300/80 leading-snug">
-              Choisissez un type, Lumen Juris s'occupe de la structure et des clauses.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="contract-type" className="text-sm font-medium text-white">
-              Quel contrat souhaitez-vous créer ?
-            </label>
-            
-            <select
-              id="contract-type"
-              name="contractType"
-              defaultValue="CDI"
-              className="w-full bg-[#E5E7EB] text-gray-900 text-sm font-medium rounded-lg p-3 outline-none focus:ring-2 focus:ring-white/50 transition-all cursor-pointer"
-            >
-              <option value="" disabled>Sélectionnez un type de contrat</option>
-              
-              <optgroup label="Contrats de travail">
-                <option value="CDI">CDI - Contrat à durée indéterminée</option>
-                <option value="CDD">CDD - Contrat à durée déterminée</option>
-                <option value="STAGE">Convention de stage</option>
-                <option value="ALTERNANCE">Contrat d'apprentissage / Alternance</option>
-              </optgroup>
-
-              <optgroup label="Prestations & Commerce">
-                <option value="PRESTATION">Contrat de prestation de services</option>
-                <option value="FREELANCE">Contrat d'indépendant / Freelance</option>
-                <option value="NDA">NDA - Accord de confidentialité</option>
-                <option value="CGV">Conditions Générales de Vente (CGV)</option>
-                <option value="SOUS_TRAITANCE">Contrat de sous-traitance</option>
-              </optgroup>
-
-              <optgroup label="Immobilier & Locatif">
-                <option value="BAIL_COMMERCIAL">Bail commercial</option>
-                <option value="BAIL_PROFESSIONNEL">Bail professionnel</option>
-              </optgroup>
-
-              <optgroup label="Sociétés & Partenariats">
-                <option value="PAG">Pacte d'associés / d'actionnaires</option>
-                <option value="PARTENARIAT">Convention de partenariat commercial</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <textarea
-              name="details"
-              rows={4}
-              placeholder="Plus de précision ?"
-              className="w-full bg-white text-gray-900 placeholder:text-gray-500 text-sm rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-white/50 transition-all resize-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-white text-gray-900 font-medium py-3 rounded-full hover:bg-gray-100 active:scale-[0.99] transition-all text-sm mt-1 shadow-sm"
-          >
-            Commencer la génération
-          </button>
-        </form>
+        <div className="flex min-w-0 flex-col gap-5">
+          <QuickGenerateCard />
+          <RiskPanel alerts={data.alerts} loading={data.loading} />
+          <PlanCard planName={data.planName} quotas={data.quotas} loading={data.loading} />
+        </div>
       </div>
-
-      <section ref={containerRef} className="relative">
-        <svg
-          className="absolute inset-0 pointer-events-none z-0 hidden sm:block"
-          width={svgDimensions.width}
-          height={svgDimensions.height}
-        >
-
-          {/* Chemin principal */}
-          <path
-            ref={pathRef}
-            d={svgPath}
-            fill="none"
-            className="stroke-blue-primary"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-
-          {/* Lumière animée qui parcourt le chemin */}
-          {pathLength > 0 && (
-            <path
-              d={svgPath}
-              fill="none"
-              stroke="#60A5FA"
-              strokeWidth="5"
-              strokeLinecap="round"
-              className="path-light-pulse filter drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]"
-            />
-          )}
-        </svg>
-
-        <div className="max-w-6xl mx-auto flex flex-col gap-20 relative z-1">
-          {TOOLS.map((t, index) => (
-            <Link
-              key={t.title}
-              ref={(el) => (cardRefs.current[index] = el)}
-              to={t.to}
-              className={`group flex flex-col md:flex-row gap-6 backdrop-blur-2xl rounded-xl border border-gray-200 
-              p-6 hover:border-gray-300 transition-all hover:-translate-y-1 shadow-sm hover:shadow-md ${index % 2 === 0 ? "bg-gradient-to-r from-slate-100/30 via-slate-100/60 to-sky-200/35 hover:border-blue-200"
-          : "bg-gradient-to-r from-sky-200/35 via-slate-100/60 to-slate-100/40 hover:border-blue-200"}`}
-            >
-              <div className="flex flex-col gap-4 w-full md:w-44 shrink-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                  {t.name}
-                </span>
-                
-                <div className="w-full aspect-square bg-[#E5E5E5] rounded-md flex items-center justify-center text-xs text-gray-600 font-medium text-center p-2 overflow-hidden">
-                  {t.img ? (
-                    <img src={t.img} alt={t.name} className="w-full h-full object-cover rounded-md" />
-                  ) : (
-                    "img ou vidéo"
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col flex-1 justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 leading-snug">
-                    {t.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-3">
-                    {t.desc}
-                  </p>
-                </div>
-
-                <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900 group-hover:text-blue-primary transition-colors">
-                  Découvrir
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
