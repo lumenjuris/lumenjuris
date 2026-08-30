@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { contractApi } from "./contratheque/api";
 import { QuotaLimitModal } from "../common/QuotaLimitModal";
 import { ContrathequeList } from "./contratheque/ContrathequeList";
@@ -25,8 +25,12 @@ export function Contratheque() {
   // Éditeurs (admin/juriste/user) : peuvent supprimer leurs propres contrats.
   const canDelete = role === "ADMIN" || role === "JURISTE" || role === "USER";
 
+  // `?vue=echeances` ouvre directement l'onglet Échéances (liens du dashboard).
+  const [searchParams] = useSearchParams();
   const [importing, setImporting] = useState(false);
-  const [tab, setTab] = useState<ContrathequeTab>("contrats");
+  const [tab, setTab] = useState<ContrathequeTab>(
+    searchParams.get("vue") === "echeances" ? "echeances" : "contrats",
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   // Message de plafond atteint (null = carte fermée).
   const [limitMessage, setLimitMessage] = useState<string | null>(null);

@@ -84,6 +84,8 @@ export default {
       },
       fontFamily: {
         sans: ['"Inter Variable"', "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Titres éditoriaux du tableau de bord (classe `font-serif`)
+        serif: ["Newsreader", "Georgia", "ui-serif", "serif"],
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.875rem" }], // 10px
