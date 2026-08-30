@@ -73,10 +73,17 @@ export function relayToNode(
   res: Response,
   targetPath: string,
 ): void {
+  // L'hébergeur (O2switch) bloque les requêtes PATCH : la connexion est coupée
+  // avant d'atteindre backNode. On les envoie donc en POST, avec un en-tête qui
+  // porte la vraie méthode ; backNode la rétablit avant son routage
+  // (voir methodOverrideMiddleware côté backNode).
+  const estUnPatch = req.method === "PATCH";
+
   fetch(`${BACKNODE_URL}${targetPath}`, {
-    method: req.method,
+    method: estUnPatch ? "POST" : req.method,
     headers: {
       "Content-Type": "application/json",
+      ...(estUnPatch ? { "x-http-method-override": "PATCH" } : {}),
       cookie: req.headers.cookie || "",
       // IP reelle du visiteur : sans elle, backNode voit le proxy et applique
       // ses quotas (connexion, quota global) a tous les utilisateurs en commun.

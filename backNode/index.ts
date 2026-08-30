@@ -31,6 +31,7 @@ import { authMiddleware } from "./src/middleware/authMiddleware.js";
 import { prisma } from "./prisma/singletonPrisma.js";
 import fs from "fs";
 import { internalApiKeyMiddleware } from "./src/middleware/internalApiKeyMiddleware.js";
+import { methodOverrideMiddleware } from "./src/middleware/methodOverrideMiddleware.js";
 import { addErrorFeedbackLogger } from "./src/middleware/loggerFeedback.js";
 import { globalErrorHandler } from "./src/middleware/globalErrorHandle.js";
 
@@ -64,6 +65,10 @@ app.use(
 app.use(express.json({ limit: "20mb" }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
+// Retablit la methode PATCH que le proxy a du deguiser en POST : l'hebergeur
+// bloque PATCH avant Express. Doit rester AVANT les routers.
+app.use(methodOverrideMiddleware);
 
 
 app.use(cors({
