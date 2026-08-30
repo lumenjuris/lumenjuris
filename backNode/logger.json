@@ -1,5 +1,33 @@
 [
   {
+    "id": "ae9b95cc-af39-4855-a44c-13773c35fb7a",
+    "date": "2026-08-30T15:36:03.724Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "40d88652-3443-4f74-b15a-245b3aadec5e",
+    "date": "2026-08-30T15:36:03.717Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 0ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "99be5b91-0ad1-417a-b79c-d37db306a080",
+    "date": "2026-08-30T15:30:49.184Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 0ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "abdcef8b-6772-465a-9b5c-6af2356f99e2",
+    "date": "2026-08-30T15:30:49.178Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
     "id": "bfc287a1-90e6-48ce-a263-22e42c00ea9e",
     "date": "2026-08-30T00:09:22.672Z",
     "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
