@@ -1,5 +1,7 @@
 import crypto from "crypto"
 import { prisma } from "../../../prisma/singletonPrisma.js"
+import { ContractStatus, Prisma } from "@prisma/client";
+
 import { recordAudit } from "./audit.js"
 import { safeEmit } from "./events.js"
 
@@ -170,7 +172,7 @@ export async function abortNegotiation(
     if (!s) return false
     if (s.status === "CLOSED") return true
     await prisma.negotiationSession.update({ where: { idNegotiation: s.idNegotiation }, data: { status: "CLOSED" } })
-    await prisma.contract.update({where: {externalId: s.contractExternalId}, data: {status: "CLOSED"}  });
+    await prisma.contract.update({where: {externalId: s.contractExternalId}, data: {status: ContractStatus.CLOSED}  });
     await recordAudit(s.idNegotiation, "ABORTED", { actorUserId: actorUserId ?? null })
     safeEmit("negotiation.aborted", { negotiationExternalId, contractExternalId: s.contractExternalId })
     return true

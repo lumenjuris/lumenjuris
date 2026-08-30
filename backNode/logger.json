@@ -1,3 +1,121 @@
 [
-  
+  {
+    "id": "bfc287a1-90e6-48ce-a263-22e42c00ea9e",
+    "date": "2026-08-30T00:09:22.672Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] PATCH /admin/users/1/ban",
+    "page": "/admin/users/1/ban"
+  },
+  {
+    "id": "5fd2f93e-b8b5-4050-8e00-3bdc9ebf0739",
+    "date": "2026-08-29T23:12:55.742Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 15ms.\nDétails : Email ou mot de passe invalide",
+    "context": "[Auto-Log CLIENT_ERROR] POST /user/auth/login",
+    "page": "/user/auth/login"
+  },
+  {
+    "id": "20db2a76-b234-4e1f-91c6-0064753a42d8",
+    "date": "2026-08-29T23:12:41.420Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 246ms.\nDétails : Email ou mot de passe invalide",
+    "context": "[Auto-Log CLIENT_ERROR] POST /user/auth/login",
+    "page": "/user/auth/login"
+  },
+  {
+    "id": "ee1fc48a-25c4-4ff5-a3be-07595fb74c8f",
+    "date": "2026-08-29T23:12:19.525Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 10028ms.\nDétails : Email ou mot de passe invalide",
+    "context": "[Auto-Log CLIENT_ERROR] POST /user/auth/login",
+    "page": "/user/auth/login"
+  },
+  {
+    "id": "ad9b9efe-34e1-4e1a-b73c-171124172cc2",
+    "date": "2026-08-29T23:12:05.389Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10031ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "76061436-b731-4f9e-b36b-1da1d5426a82",
+    "date": "2026-08-29T23:11:55.307Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10015ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "cacd22a3-14a3-4e66-9046-4f5c18aa28fe",
+    "date": "2026-08-29T23:11:28.713Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10496ms.\nDétails : pool timeout: failed to retrieve a connection from pool after 10003ms\n    (pool connections: active=0 idle=0 limit=5)",
+    "context": "[Auto-Log SERVER_ERROR] GET /auth/google/callback?state=bb068f68-91d9-4559-8587-174847079a7d&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0ATsMZqAmCtGguoRr4TqviE3nhYBgD7AsdXNB-YgmVjlaU8mDvvLD-sSIiu_XBJ7rmBgDMQ&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=none",
+    "page": "/auth/google/callback"
+  },
+  {
+    "id": "b34ab9fe-0b17-45c3-9548-10733016e43f",
+    "date": "2026-08-29T23:11:23.237Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10029ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "7dd55187-7ab8-41da-b145-e51e4c05d4e2",
+    "date": "2026-08-29T23:11:13.189Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10018ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "c57137fb-c15b-4a39-88e0-13ea2e8b56d8",
+    "date": "2026-08-29T23:11:04.568Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10037ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "60ef762d-0303-4a30-946a-ba3654ef0c01",
+    "date": "2026-08-29T23:10:59.869Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 2ms.\nDétails : Invalid State",
+    "context": "[Auto-Log CLIENT_ERROR] GET /auth/google/callback?state=a84f1169-f899-44a4-a397-51ba4279c62f&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0ATsMZqDxXL18OqPpv2nx5-JLFT-LZBWWo4IEcc56gU-ciWeYTl0j34S6V8B2ZzdDIHEDMg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none",
+    "page": "/auth/google/callback"
+  },
+  {
+    "id": "edfd1269-55a4-498d-986e-2b714767f2a7",
+    "date": "2026-08-29T23:10:49.621Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10573ms.\nDétails : pool timeout: failed to retrieve a connection from pool after 10004ms\n    (pool connections: active=0 idle=0 limit=5)",
+    "context": "[Auto-Log SERVER_ERROR] GET /auth/google/callback?state=a84f1169-f899-44a4-a397-51ba4279c62f&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0ATsMZqConKXqWsd-mzN_Fch-EO6CLr6zd13YhEwUkyVGVJzd9sUhO-ydlalDBudN0egtjg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none",
+    "page": "/auth/google/callback"
+  },
+  {
+    "id": "c8d78efd-57e1-402d-b98f-066ef2d57242",
+    "date": "2026-08-29T23:10:39.013Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10010ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "26c5dbbf-18e0-4ce3-b720-9564426b82a0",
+    "date": "2026-08-29T23:10:28.988Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10050ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "7a2540b8-9804-443d-9c85-1e914d6e7715",
+    "date": "2026-08-29T23:09:51.154Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10758ms.\nDétails : pool timeout: failed to retrieve a connection from pool after 10010ms\n    (pool connections: active=0 idle=0 limit=5)",
+    "context": "[Auto-Log SERVER_ERROR] GET /auth/google/callback?state=a1538f3f-700d-47fd-97c2-9ddbad2e4e2f&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0ATsMZqAVrT0gBlj9S4FKH5VYDlw5hYwDS7cyQGfxrB0JpstWtezdoDPaXZAiIV-n3vkyCQ&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none",
+    "page": "/auth/google/callback"
+  },
+  {
+    "id": "27c17abd-645f-4d79-98e6-7bf7ee639c4f",
+    "date": "2026-08-29T23:09:33.180Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10065ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "364d5e2b-9057-4905-8f16-c220293c162e",
+    "date": "2026-08-29T23:09:33.169Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 10068ms.\nDétails : Erreur serveur",
+    "context": "[Auto-Log SERVER_ERROR] GET /user/get",
+    "page": "/user/get"
+  }
 ]

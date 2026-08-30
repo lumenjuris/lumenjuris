@@ -84,15 +84,15 @@ export function relayToNode(
       "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
       ...(res.locals.userId !== undefined
         ? {
-            "x-user-id": String(res.locals.userId),
-            "x-user-role": String(res.locals.role ?? "USER"),
-          }
+          "x-user-id": String(res.locals.userId),
+          "x-user-role": String(res.locals.role ?? "USER"),
+        }
         : {}),
     },
     body: req.method === "GET" ? undefined : JSON.stringify(req.body),
   })
     .then(async (r) => {
-      if ((r.headers.has("x-auto-logged") || r.headers.get("x-auto-logged")) === true) {
+      if (r.headers.has("x-auto-logged")) {
         res.setHeader("X-Auto-Logged", "true");
       }
       const setCookieHeader =
@@ -154,9 +154,9 @@ export function relayToNodeRaw(
       "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
       ...(res.locals.userId !== undefined
         ? {
-            "x-user-id": String(res.locals.userId),
-            "x-user-role": String(res.locals.role ?? "USER"),
-          }
+          "x-user-id": String(res.locals.userId),
+          "x-user-role": String(res.locals.role ?? "USER"),
+        }
         : {}),
     },
   })

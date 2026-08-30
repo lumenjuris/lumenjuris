@@ -1,3 +1,9 @@
 [
-  
+  {
+    "id": "76c56f5d-d007-4238-8d69-07910d9c6306",
+    "date": "2026-08-29T23:12:47.878Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 12ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user/auth/login",
+    "page": "/api/user/auth/login"
+  }
 ]
