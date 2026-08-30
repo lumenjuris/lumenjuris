@@ -1,5 +1,19 @@
 [
   {
+    "id": "1c375c9c-5e84-4b5d-87f5-1de9c9815f67",
+    "date": "2026-08-30T16:03:33.944Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "1c8104f7-ba2f-477a-be71-2f66008c2c97",
+    "date": "2026-08-30T16:03:33.936Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
     "id": "ae9b95cc-af39-4855-a44c-13773c35fb7a",
     "date": "2026-08-30T15:36:03.724Z",
     "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
