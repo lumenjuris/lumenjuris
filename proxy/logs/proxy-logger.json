@@ -1,5 +1,47 @@
 [
   {
+    "id": "de8c6a2d-1d56-49f2-8ea3-8bdf2a7783e0",
+    "date": "2026-08-30T16:25:41.536Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 10ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/openai/chat",
+    "page": "/api/openai/chat"
+  },
+  {
+    "id": "624f4f0d-093b-44ef-9315-20c2b62c4367",
+    "date": "2026-08-30T16:25:28.024Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 15ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/legal-text/jurisprudence",
+    "page": "/api/legal-text/jurisprudence"
+  },
+  {
+    "id": "40c1d8df-d523-4f5d-9b1a-3304b4db63b5",
+    "date": "2026-08-30T16:25:28.019Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 15ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/legal-text/jurisprudence",
+    "page": "/api/legal-text/jurisprudence"
+  },
+  {
+    "id": "d750a408-30f6-4660-be9f-3d1806e21c68",
+    "date": "2026-08-30T16:25:27.993Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 11ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/openai/openai-chat-5",
+    "page": "/api/openai/openai-chat-5"
+  },
+  {
+    "id": "7dd759a4-1afe-45b1-b984-11168d037463",
+    "date": "2026-08-30T16:24:39.831Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 26ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
+    "id": "c2de3d3d-9eb3-4f94-8c23-d8bf9bd26249",
+    "date": "2026-08-30T16:24:33.779Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 11ms.\nDétails : python_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/user-uploads/extract-document-text",
+    "page": "/api/user-uploads/extract-document-text"
+  },
+  {
     "id": "4e7e4e9e-aa56-42c8-9f3a-8e4473dd0333",
     "date": "2026-08-30T14:31:55.226Z",
     "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 11ms.\nDétails : backnode_unreachable",

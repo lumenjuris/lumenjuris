@@ -11,17 +11,18 @@ import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
 import { Plan, PlanName } from "@prisma/client"
+import fs from "fs/promises"
 
 const router: Router = express.Router()
 
 const VALID_ROLES = new Set(["ADMIN", "JURISTE", "USER", "LECTEUR"])
-const VALID_PLANS = new Set(["Freemium", "Betatesteur", "Starter_mensuel", "Starter_annuel",  "Pro_mensuel" ,"Pro_annuel"]);
+const VALID_PLANS = new Set(["Freemium", "Betatesteur", "Starter_mensuel", "Starter_annuel", "Pro_mensuel", "Pro_annuel"]);
 
 /** GET /admin/users — liste tous les utilisateurs (mono-entreprise). */
 router.get("/users", authMiddleware, requireAdmin, async (_req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
-            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true, subscription: {select: {plan: {select: {name: true}} } } },
+            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true, subscription: { select: { plan: { select: { name: true } } } } },
             orderBy: { idUser: "asc" },
         })
         const formattedUsers = users.map((u) => ({
@@ -67,39 +68,39 @@ router.patch("/users/:idUser/role", authMiddleware, requireAdmin, async (req: Re
 router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Request, res: Response) => {
     try {
         const targetId = Number(req.params["idUser"]);
-        const {plan: planName} = req.body as {plan?: string}
+        const { plan: planName } = req.body as { plan?: string }
 
         if (!planName || !VALID_PLANS.has(planName)) {
-            return res.status(400).json({success: false, message: "Plan invalide"});
+            return res.status(400).json({ success: false, message: "Plan invalide" });
         }
 
         if (targetId === Number(req.idUser)) {
-            return res.status(400).json({success : false, message: "Vous ne pouvez pas modifier votre propre plan"});
+            return res.status(400).json({ success: false, message: "Vous ne pouvez pas modifier votre propre plan" });
         }
 
-        const newPlan = await prisma.plan.findFirst({ where: {name: planName as PlanName }});
+        const newPlan = await prisma.plan.findFirst({ where: { name: planName as PlanName } });
 
         if (!newPlan) {
-            return res.status(400).json({success: false, message: "Le plan spécifié n'existe pas."})
+            return res.status(400).json({ success: false, message: "Le plan spécifié n'existe pas." })
         }
 
         const targetUser = await prisma.user.findUnique({
-            where: {idUser: targetId},
-            include: { subscription: true},
+            where: { idUser: targetId },
+            include: { subscription: true },
         });
 
         if (!targetUser) {
-            return res.status(400).json({success: false, message: "Utilisateur introuvable."})
+            return res.status(400).json({ success: false, message: "Utilisateur introuvable." })
         }
 
         const now = new Date();
-        let expiresAt= new Date();
+        let expiresAt = new Date();
 
         if (planName === "Freemium" || planName === "Betatesteur") {
             expiresAt = new Date("2099-12-31T23:59:59.999Z");
         } else if (planName.endsWith("_annuel")) {
             expiresAt = new Date(now);
-            expiresAt.setDate(expiresAt.getDate() +365);
+            expiresAt.setDate(expiresAt.getDate() + 365);
         } else if (planName.endsWith("_mensuel")) {
             expiresAt = new Date(now);
             expiresAt.setDate(expiresAt.getDate() + 30);
@@ -107,7 +108,7 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
 
         await prisma.$transaction([
             prisma.subscription.upsert({
-                where: {userId: targetId},
+                where: { userId: targetId },
                 create: {
                     userId: targetId,
                     planId: newPlan.idPlan,
@@ -128,7 +129,7 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
             }),
 
             prisma.userCredit.upsert({
-                where: {userId: targetId},
+                where: { userId: targetId },
                 create: {
                     userId: targetId,
                     quotas: (newPlan.creditsIncluded ?? {}),
@@ -136,12 +137,12 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
                 update: {
                     quotas: (newPlan.creditsIncluded ?? {}),
                 },
-            }),        
+            }),
         ]);
-        return res.json({success: true, data: {plan: newPlan.name, expiresAt,}});
+        return res.json({ success: true, data: { plan: newPlan.name, expiresAt, } });
     } catch (err) {
         console.error("[admin] update plan error", err);
-        return res.status(500).json({ success: false, message: "Erreur serveur"})
+        return res.status(500).json({ success: false, message: "Erreur serveur" })
     }
 })
 
@@ -819,6 +820,97 @@ router.get("/fiscalite/factures-zip", authMiddleware, requireAdmin, async (req: 
         }
         return res.end()
     }
+})
+
+
+
+interface DataBanner {
+    messageType: string
+    title: string
+    content: string
+    link: boolean | string
+}
+//Route Admin pour set un nouveau message banner dans la page d'accueil
+router.post("/message-banner", authMiddleware, requireAdmin, async (req, res) => {
+
+    try {
+        const { messageType, title, content, link } = req.body;
+        const data: DataBanner = {
+            messageType,
+            title,
+            content,
+            link
+        }
+        await fs.writeFile(
+            "./message-banner.json",
+            JSON.stringify(
+                data,
+                null,
+                2
+            ),
+            "utf-8"
+        );
+        return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Le message banner de l'accueil à été mis à jour avec succès."
+            })
+    } catch (err) {
+        console.error(err)
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+                error: err
+            })
+    }
+})
+
+
+// Route publique pour obtenir la bannière des messages d'informations de Lumen Juris
+router.get("/message-banner", async (req, res) => {
+    try {
+        const data = await fs.readFile(
+            "./message-banner.json",
+            {
+                encoding: "utf-8",
+            }
+        )
+        console.log(data)
+        if (!data) {
+            return res
+                .status(404)
+                .json({
+                    success: false,
+                    message: "Aucun message de banner d'accueil n'a pu être trouvé",
+                    data: null
+                })
+        }
+
+        return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Le message banner de l'accueil a été récupéré avec succès.",
+                data
+            })
+
+
+    } catch (err) {
+        console.error(err);
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la récupération du message banner de l'accueil",
+                error: err
+            })
+    }
+
+
+
 })
 
 export default router

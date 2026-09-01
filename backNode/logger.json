@@ -1,5 +1,36 @@
 [
   {
+    "id": "d6c53e78-8f8c-44b5-8fea-dcb99a445772",
+    "date": "2026-08-30T16:25:22.354Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 13ms.\nDétails : La feature ciblée est requise.",
+    "context": "[Auto-Log CLIENT_ERROR] PUT /billing/remove-credits",
+    "page": "/billing/remove-credits",
+    "userId": "4"
+  },
+  {
+    "id": "edf986e7-f992-4627-8bf6-b0682400039d",
+    "date": "2026-08-30T16:24:26.881Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 7ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "4"
+  },
+  {
+    "id": "288f4bc6-7ad7-4f72-ad9b-39154a349bf4",
+    "date": "2026-08-30T16:24:26.868Z",
+    "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 11ms.\nDétails : Aucun profil entreprise n'est enregistré pour cet utilisateur.",
+    "context": "[Auto-Log CLIENT_ERROR] GET /enterprise",
+    "page": "/enterprise",
+    "userId": "4"
+  },
+  {
+    "id": "087ae461-c58a-4cbf-b28c-31698dd957dd",
+    "date": "2026-08-30T16:22:43.225Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
     "id": "6a4ecae8-b86d-4b11-b21c-09cfd0fcbd8e",
     "date": "2026-08-30T16:05:30.049Z",
     "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
