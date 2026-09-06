@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart2, MessageSquare, Users, TrendingUp, Activity, LayoutDashboard, Landmark, Library } from "lucide-react";
+import { BarChart2, MessageSquare, Users, TrendingUp, Activity, LayoutDashboard, Landmark, Library, Mailbox } from "lucide-react";
 import { useUserStore } from "../store/userStore";
 import { Navigate } from "react-router-dom";
 import { LlmUsageSection } from "../components/MonitoringComponents/LlmUsageSection";
@@ -11,8 +11,9 @@ import { OverviewSection } from "../components/MonitoringComponents/OverviewSect
 import { LegalWatchSection } from "../components/MonitoringComponents/LegalWatchSection";
 import { FiscaliteSection } from "../components/MonitoringComponents/FiscaliteSection";
 import { Logger } from "../components/MonitoringComponents/Logger";
+import { MessageBanner } from "../components/MonitoringComponents/MessageBanner";
 
-type Tab = "overview" | "llm" | "feedbacks" | "users" | "revenue" | "activity" | "legalWatch" | "fiscalite" | "logger";
+type Tab = "overview" | "llm" | "feedbacks" | "users" | "revenue" | "activity" | "legalWatch" | "fiscalite" | "logger" | "messageBanner";
 
 
 const TABS: { id: Tab; label: string; icon: React.ElementType; description: string }[] = [
@@ -22,9 +23,10 @@ const TABS: { id: Tab; label: string; icon: React.ElementType; description: stri
   { id: "users", label: "Utilisateurs", icon: Users, description: "Gestion des comptes et rôles" },
   { id: "revenue", label: "Revenus", icon: TrendingUp, description: "Abonnements et paiements" },
   { id: "activity", label: "Activité", icon: Activity, description: "Usage des fonctionnalités IA" },
-  { id: "legalWatch", label: "Actualité juridique", icon: Library , description: "Ajout de conventions collectives"},
+  { id: "legalWatch", label: "Actualité juridique", icon: Library, description: "Ajout de conventions collectives" },
   { id: "fiscalite", label: "Fiscalité", icon: Landmark, description: "TVA et factures par mois" },
-  {id: "logger", label: "Logger", icon: MessageSquare, description: "Logs des utilisateurs"}
+  { id: "logger", label: "Logger", icon: MessageSquare, description: "Logs des utilisateurs" },
+  { id: "messageBanner", label: "Message Banner", icon: Mailbox, description: "Manager le message banner de l'accueil" }
 ];
 
 const SECTION_TITLES: Record<Tab, { title: string; sub: string }> = {
@@ -34,9 +36,10 @@ const SECTION_TITLES: Record<Tab, { title: string; sub: string }> = {
   users: { title: "Gestion des utilisateurs", sub: "Rôles et droits d'accès" },
   revenue: { title: "Revenus", sub: "Abonnements actifs, paiements et chiffre d'affaires" },
   activity: { title: "Activité des fonctionnalités", sub: "Usage de chaque fonctionnalité IA par période" },
-  legalWatch: { title: "Actualité juridique", sub: "Ajout de conventions collectives"},
+  legalWatch: { title: "Actualité juridique", sub: "Ajout de conventions collectives" },
   fiscalite: { title: "Fiscalité", sub: "Récapitulatif TVA mensuel et export des factures" },
-  logger: {title: "Logger", sub: "Logs des utilisateurs"}
+  logger: { title: "Logger", sub: "Logs des utilisateurs" },
+  messageBanner : { title : "Banner", sub: "Setup du message d'accueil"},
 };
 
 export const Monitoring = () => {
@@ -82,11 +85,10 @@ export const Monitoring = () => {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                  activeTab === id
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${activeTab === id
                     ? "bg-indigo-600 text-white shadow-sm"
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                }`}
+                  }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>{label}</span>
@@ -110,7 +112,8 @@ export const Monitoring = () => {
             {activeTab === "activity" && <ActivitySection />}
             {activeTab === "legalWatch" && <LegalWatchSection />}
             {activeTab === "fiscalite" && <FiscaliteSection />}
-            {activeTab === "logger" &&< Logger />}
+            {activeTab === "logger" && < Logger />}
+            {activeTab === "messageBanner" && <MessageBanner />}
           </div>
 
         </div>

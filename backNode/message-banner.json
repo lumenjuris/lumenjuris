@@ -1,3 +1,47 @@
 [
-    
+  {
+    "messageType": "maintenance",
+    "title": "fe",
+    "content": "fe",
+    "link": false,
+    "startAt": "2026-09-17T00:00:00.000Z",
+    "endAt": "2026-09-30T00:00:00.000Z",
+    "id": "1a9a902a-90b7-400f-a117-df0b40e45ff7"
+  },
+  {
+    "messageType": "maintenance",
+    "title": "teste",
+    "content": "testttee",
+    "link": false,
+    "startAt": "2026-09-25T00:00:00.000Z",
+    "endAt": "2026-10-03T00:00:00.000Z",
+    "id": "60791716-65cc-4a54-9ec6-43a568f6ea3f"
+  },
+  {
+    "messageType": "maintenance",
+    "title": "teste",
+    "content": "testttee",
+    "link": false,
+    "startAt": "2026-09-25T00:00:00.000Z",
+    "endAt": "2026-10-03T00:00:00.000Z",
+    "id": "fbdd1f4f-78f9-4f31-8b17-138ab93b4a23"
+  },
+  {
+    "messageType": "nouveaute",
+    "title": "Lancement officiel de la beta",
+    "content": "Vous l'ttendez avec impatiance, la beta de lumen juris est désormé disponible",
+    "link": false,
+    "startAt": "2026-09-05T00:00:00.000Z",
+    "endAt": "2026-09-13T23:59:59.999Z",
+    "id": "766e7702-9977-4fce-bcbd-a3311af0eb8b"
+  },
+  {
+    "id": "b98dba2d-dbec-498c-9ac9-a2b96f807c00",
+    "messageType": "alerte",
+    "title": "Attention faille de sécurité",
+    "content": "Nous avons fais fasse a une cyber attaque, une email pour d'information complémentaire à cette attque vous a été envoyé",
+    "link": false,
+    "startAt": "2026-09-05T00:00:00.000Z",
+    "endAt": "2026-09-19T23:59:59.999Z"
+  }
 ]

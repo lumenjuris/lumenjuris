@@ -1,5 +1,88 @@
 [
   {
+    "id": "d2db8633-e4ee-48d0-abd4-f042ad0dd021",
+    "date": "2026-09-06T10:16:02.870Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] DELETE /admin/message-banner/1a9a902a-90b7-400f-a117-df0b40e45ff7",
+    "page": "/admin/message-banner/1a9a902a-90b7-400f-a117-df0b40e45ff7"
+  },
+  {
+    "id": "eea5a3d3-5341-48e9-9bf4-e77e61363f35",
+    "date": "2026-09-06T10:16:02.789Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] DELETE /admin/message-banner/1a9a902a-90b7-400f-a117-df0b40e45ff7",
+    "page": "/admin/message-banner/1a9a902a-90b7-400f-a117-df0b40e45ff7"
+  },
+  {
+    "id": "1fbd039e-70b0-4667-8f90-a25e0f92f82a",
+    "date": "2026-09-06T10:15:51.937Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner"
+  },
+  {
+    "id": "74490344-8116-447f-b6df-30b29bba317f",
+    "date": "2026-09-06T10:06:45.574Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 1ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "359c7ce9-a4c1-4e0d-88df-e1e82fd70e84",
+    "date": "2026-09-06T10:06:45.504Z",
+    "comment": "[BACKNODE] - Erreur HTTP 401 (Unauthorized) \nDurée : 2ms.\nDétails : Unauthorized",
+    "context": "[Auto-Log CLIENT_ERROR] GET /user/get",
+    "page": "/user/get"
+  },
+  {
+    "id": "dd5d3ae1-1824-4696-8091-729c29b38961",
+    "date": "2026-09-01T16:41:28.353Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 17ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
+    "id": "70065879-fc0d-465a-8166-df08ff5e1911",
+    "date": "2026-09-01T16:39:52.608Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 5ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
+    "id": "78b7b61f-0765-4b73-b17e-0cd07c3ae9f7",
+    "date": "2026-09-01T16:39:52.522Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 7ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
+    "id": "7068a44f-906e-4af1-8d5e-97074440478b",
+    "date": "2026-09-01T16:39:52.455Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 23ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
+    "id": "408e68cb-922f-45d9-9336-462eb791ff67",
+    "date": "2026-09-01T16:34:21.512Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 5ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
+    "id": "29516b77-5c3d-479c-9995-edd178a32d12",
+    "date": "2026-09-01T16:34:21.400Z",
+    "comment": "[BACKNODE] - Erreur HTTP 500 (Internal Server Error) \nDurée : 12ms.\nDétails : Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+    "context": "[Auto-Log SERVER_ERROR] POST /admin/message-banner",
+    "page": "/admin/message-banner",
+    "userId": "3"
+  },
+  {
     "id": "d6c53e78-8f8c-44b5-8fea-dcb99a445772",
     "date": "2026-08-30T16:25:22.354Z",
     "comment": "[BACKNODE] - Erreur HTTP 400 (Bad Request) \nDurée : 13ms.\nDétails : La feature ciblée est requise.",

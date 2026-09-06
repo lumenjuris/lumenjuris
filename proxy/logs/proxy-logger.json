@@ -1,5 +1,236 @@
 [
   {
+    "id": "73d58223-42af-4dbb-8b6b-f33dcd5f1b8f",
+    "date": "2026-09-06T10:16:03.072Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] DELETE /api/admin/route-qui-nexiste-pas/123",
+    "page": "/api/admin/route-qui-nexiste-pas/123"
+  },
+  {
+    "id": "27fb0799-c1e6-4ca7-9e92-753190aa2bfa",
+    "date": "2026-09-06T10:16:02.983Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 6ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] DELETE /api/admin/route-qui-nexiste-pas/123",
+    "page": "/api/admin/route-qui-nexiste-pas/123"
+  },
+  {
+    "id": "ecc0a738-be9e-4c0d-bbca-5c1d844e6410",
+    "date": "2026-09-06T10:12:04.470Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 190ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/billing/subscription",
+    "page": "/api/billing/subscription"
+  },
+  {
+    "id": "34e91f22-b7e5-4f41-adb2-5cff0f79f72a",
+    "date": "2026-09-06T10:12:04.430Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 165ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/negotiation/",
+    "page": "/api/negotiation/"
+  },
+  {
+    "id": "d8ef6654-62ba-4473-9a13-7f3d7982adb8",
+    "date": "2026-09-06T10:12:04.392Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 624ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/signature-envelope",
+    "page": "/api/signature-envelope"
+  },
+  {
+    "id": "bd04e7b5-54a7-417b-bde4-48b2fb5afda3",
+    "date": "2026-09-06T10:12:04.362Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 633ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract/deadlines?horizonDays=90",
+    "page": "/api/contract/deadlines"
+  },
+  {
+    "id": "b3d474e7-a13e-4cfb-8b74-d49ee43e0a3e",
+    "date": "2026-09-06T10:12:04.190Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 496ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/billing/subscription",
+    "page": "/api/billing/subscription"
+  },
+  {
+    "id": "4f98136b-acc2-4cbc-8489-408ce211bd94",
+    "date": "2026-09-06T10:12:04.036Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 356ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/negotiation/",
+    "page": "/api/negotiation/"
+  },
+  {
+    "id": "f3b7e983-7068-4aba-94e6-8dc0fb926ced",
+    "date": "2026-09-06T10:12:03.998Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 470ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/signature-envelope",
+    "page": "/api/signature-envelope"
+  },
+  {
+    "id": "50af571c-1cd9-4c1a-bca2-46a3529c6ff5",
+    "date": "2026-09-06T10:12:03.879Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 378ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract/deadlines?horizonDays=90",
+    "page": "/api/contract/deadlines"
+  },
+  {
+    "id": "9ace29b4-c703-45c7-8ad1-70b26d22ae86",
+    "date": "2026-09-06T10:12:03.712Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 556ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract?sortBy=createdAt&sortDir=desc&pageSize=50",
+    "page": "/api/contract"
+  },
+  {
+    "id": "7ef15dc6-a812-4a77-aca5-0119d142e269",
+    "date": "2026-09-06T10:12:03.669Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 528ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract/stats",
+    "page": "/api/contract/stats"
+  },
+  {
+    "id": "dd170c20-afc4-49f2-8ab0-dc54e1fccdda",
+    "date": "2026-09-06T10:12:03.585Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 479ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "f853fccb-0e2d-4199-b6f2-2a119420d852",
+    "date": "2026-09-06T10:12:03.484Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 391ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract?sortBy=createdAt&sortDir=desc&pageSize=50",
+    "page": "/api/contract"
+  },
+  {
+    "id": "87f652cf-8af7-4d63-bc53-7ba7fbea0482",
+    "date": "2026-09-06T10:12:03.434Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 353ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/contract/stats",
+    "page": "/api/contract/stats"
+  },
+  {
+    "id": "e35973cc-2e5a-4e67-9c9b-747c3abf837a",
+    "date": "2026-09-06T10:12:03.207Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 141ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "4a2d92ce-731e-4d61-aca6-ab52e5e36258",
+    "date": "2026-09-01T18:27:08.521Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 16ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "09b35230-d73c-4b37-bed3-0195fc073e1d",
+    "date": "2026-09-01T18:27:08.515Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 18ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "e9569d13-2aaa-406f-be19-e55c628b22d2",
+    "date": "2026-09-01T18:25:25.850Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 20ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "1d586ac3-165c-472a-a2e2-28566c1813df",
+    "date": "2026-09-01T18:25:25.841Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 17ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "13baad80-564f-4c44-a1cf-eba040fd15a4",
+    "date": "2026-09-01T18:22:38.070Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 23ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "edd72e75-2d14-4186-9d46-bc5844bdd3a9",
+    "date": "2026-09-01T18:22:38.061Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 20ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "3d64b95c-0e2d-417a-af4c-57069e48dcf9",
+    "date": "2026-09-01T16:38:26.899Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 20ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/legal-watch/unread-count",
+    "page": "/api/legal-watch/unread-count"
+  },
+  {
+    "id": "5caa0e6c-299d-4df4-a296-cb101d9e0ca7",
+    "date": "2026-09-01T16:33:00.162Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 12ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] GET /api/legal-watch/unread-count",
+    "page": "/api/legal-watch/unread-count"
+  },
+  {
+    "id": "676bef84-cc38-42c1-a490-961069b938c6",
+    "date": "2026-09-01T16:24:21.169Z",
+    "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 22ms.\nDétails : backnode_unreachable",
+    "context": "[Auto-Log SERVER_ERROR] POST /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "a33c74fb-e7f1-4a6c-b3ec-632ff3ab8523",
+    "date": "2026-09-01T15:18:07.821Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "3fd66505-a20e-4997-bb33-7d4c83b9aeb0",
+    "date": "2026-09-01T15:18:07.817Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "c1d837da-9697-489a-a12b-c4e91326b7e2",
+    "date": "2026-09-01T15:17:50.966Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 4ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "e74d8def-c4b6-4dd1-90a7-78b7d1a09050",
+    "date": "2026-09-01T15:17:50.957Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "6fbf0cd7-bd7d-4f27-9c73-8f265952f6ed",
+    "date": "2026-09-01T15:17:15.126Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "0d87c52e-052c-4a80-94e5-0d6973d736da",
+    "date": "2026-09-01T15:17:15.122Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /api/admin/message-banner",
+    "page": "/api/admin/message-banner"
+  },
+  {
+    "id": "e134415c-eca1-4ee5-b3cf-7ab3dae324ae",
+    "date": "2026-09-01T15:15:59.961Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 1ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /admin/message-banner",
+    "page": "/admin/message-banner"
+  },
+  {
+    "id": "14ca164a-4f6e-432a-bf71-bbb32e6a523e",
+    "date": "2026-09-01T15:15:59.956Z",
+    "comment": "[PROXY] - Erreur HTTP 404 (Not Found)\nDurée : 2ms.\n",
+    "context": "[Auto-Log CLIENT_ERROR] GET /admin/message-banner",
+    "page": "/admin/message-banner"
+  },
+  {
     "id": "de8c6a2d-1d56-49f2-8ea3-8bdf2a7783e0",
     "date": "2026-08-30T16:25:41.536Z",
     "comment": "[PROXY] - Erreur HTTP 502 (Bad Gateway)\nDurée : 10ms.\nDétails : python_unreachable",

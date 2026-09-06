@@ -12,6 +12,9 @@ import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
 import { Plan, PlanName } from "@prisma/client"
 import fs from "fs/promises"
+import path from "path"
+import crypto from "crypto"
+import { fileURLToPath } from "url"
 
 const router: Router = express.Router()
 
@@ -824,70 +827,141 @@ router.get("/fiscalite/factures-zip", authMiddleware, requireAdmin, async (req: 
 
 
 
+
+const __bannerFilename = fileURLToPath(import.meta.url)
+const __bannerDirname = path.dirname(__bannerFilename)
+const BANNER_FILE = path.resolve(__bannerDirname, "../../message-banner.json")
+
+
+const VALID_BANNER_TYPES = new Set(["information", "nouveaute", "update", "maintenance", "alerte"])
+
+
+
 interface DataBanner {
-    messageType: string
-    title: string
-    content: string
-    link: boolean | string
+    id: string;
+    messageType: string;
+    title: string;
+    content: string;
+    link: boolean | string;
+    startAt: string;
+    endAt: string;
 }
+
+/** lecture du fichier, un fichier absent ou vide renvoie "aucun message" */
+async function readBannerFile(): Promise<DataBanner[]> {
+    try {
+        const file = await fs.readFile(BANNER_FILE, "utf-8")
+        const parsed = file.trim() ? JSON.parse(file) : []
+        return Array.isArray(parsed) ? parsed : []
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return []
+        throw err
+    }
+}
+
+async function writeBannerFile(messages: DataBanner[]): Promise<void> {
+    await fs.writeFile(BANNER_FILE, JSON.stringify(messages, null, 2), "utf-8")
+}
+
+
+async function readBannerMessages(): Promise<DataBanner[]> {
+    const messages = await readBannerFile()
+    if (messages.every((message) => message.id)) return messages
+
+    const repaired = messages.map((message) =>
+        message.id ? message : { ...message, id: crypto.randomUUID() }
+    )
+    await writeBannerFile(repaired)
+    return repaired
+}
+
+// Convertit une date reçue en ISO, ou `null` si elle n'est pas exploitable 
+function toIsoDate(value: unknown): string | null {
+    if (typeof value !== "string" && !(value instanceof Date)) return null
+    const date = new Date(value as string)
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 //Route Admin pour set un nouveau message banner dans la page d'accueil
 router.post("/message-banner", authMiddleware, requireAdmin, async (req, res) => {
-
     try {
-        const { messageType, title, content, link } = req.body;
-        const data: DataBanner = {
-            messageType,
-            title,
-            content,
-            link
+        const { messageType, title, content, link, startAt, endAt } = req.body;
+
+        const startAtIso = toIsoDate(startAt)
+        const endAtIso = toIsoDate(endAt)
+
+        if (!VALID_BANNER_TYPES.has(messageType)) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: `Type de message inconnu : ${messageType}`
+                })
         }
-        await fs.writeFile(
-            "./message-banner.json",
-            JSON.stringify(
-                data,
-                null,
-                2
-            ),
-            "utf-8"
-        );
+        if (typeof title !== "string" || !title.trim() || typeof content !== "string" || !content.trim()) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "Le titre et le contenu du message sont obligatoires."
+                })
+        }
+        if (!startAtIso || !endAtIso) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "Les dates de début et de fin de diffusion sont obligatoires et doivent être valides."
+                })
+        }
+        if (endAtIso < startAtIso) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "La date de fin de diffusion doit être postérieure à la date de début."
+                })
+        }
+
+        const data: DataBanner = {
+            id: crypto.randomUUID(),
+            messageType,
+            title: title.trim(),
+            content: content.trim(),
+            // Un lien vide vaut « pas de bouton En savoir plus ».
+            link: typeof link === "string" && link.trim() ? link.trim() : false,
+            startAt: startAtIso,
+            endAt: endAtIso
+        }
+
+        const messages = await readBannerMessages();
+        messages.push(data);
+        await writeBannerFile(messages);
+
         return res
-            .status(200)
+            .status(201)
             .json({
                 success: true,
-                message: "Le message banner de l'accueil à été mis à jour avec succès."
-            })
+                message: "Le message banner de l'accueil à été mis à jour avec succès.",
+                data: [data]
+            });
     } catch (err) {
-        console.error(err)
+        console.error(err);
         return res
             .status(500)
             .json({
                 success: false,
                 message: "Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
                 error: err
-            })
+            });
     }
 })
 
 
 // Route publique pour obtenir la bannière des messages d'informations de Lumen Juris
-router.get("/message-banner", async (req, res) => {
+router.get("/message-banner", async (_req, res) => {
     try {
-        const data = await fs.readFile(
-            "./message-banner.json",
-            {
-                encoding: "utf-8",
-            }
-        )
-        console.log(data)
-        if (!data) {
-            return res
-                .status(404)
-                .json({
-                    success: false,
-                    message: "Aucun message de banner d'accueil n'a pu être trouvé",
-                    data: null
-                })
-        }
+        const data = await readBannerMessages()
 
         return res
             .status(200)
@@ -896,8 +970,6 @@ router.get("/message-banner", async (req, res) => {
                 message: "Le message banner de l'accueil a été récupéré avec succès.",
                 data
             })
-
-
     } catch (err) {
         console.error(err);
         return res
@@ -908,9 +980,44 @@ router.get("/message-banner", async (req, res) => {
                 error: err
             })
     }
+})
 
 
+// Route Admin pour supprimer un message du bandeau d'accueil
+router.delete("/message-banner/:id", authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params
+        const messages = await readBannerMessages()
+        const remaining = messages.filter((message) => message.id !== id)
 
+        if (remaining.length === messages.length) {
+            return res
+                .status(404)
+                .json({
+                    success: false,
+                    message: "Aucun message du bandeau d'accueil ne correspond à cet identifiant."
+                })
+        }
+
+        await writeBannerFile(remaining)
+
+        return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Le message du bandeau d'accueil a été supprimé avec succès.",
+                data: remaining
+            })
+    } catch (err) {
+        console.error(err);
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la suppression du message du bandeau d'accueil",
+                error: err
+            })
+    }
 })
 
 export default router
