@@ -906,6 +906,8 @@ export default function ContractAnalysis() {
                 </div>
               </div>
 
+
+
               {/* 2. Grille principale Document + Sidebar */}
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 {/* Zone Visualiseur de Document */}

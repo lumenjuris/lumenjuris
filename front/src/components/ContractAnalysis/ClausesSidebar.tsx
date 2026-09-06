@@ -12,11 +12,6 @@ interface ClausesSidebarProps {
   recommandationApplied?: TextPatch[];
 }
 
-const LEGEND = [
-  { label: "Critique", dot: "bg-red-500", text: "text-red-700" },
-  { label: "Moyen", dot: "bg-orange-400", text: "text-orange-700" },
-  { label: "Modéré", dot: "bg-green-500", text: "text-green-700" },
-] as const;
 
 export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
   clauses,
@@ -74,21 +69,6 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
           </div>
         )}
 
-        {/* Color legend */}
-        <div className="flex items-center gap-3 text-[11px] border-t border-white bg-white px-2.5 py-1.5 rounded-xl">
-          <span className="text-blue-primary font-medium uppercase tracking-wider text-[10px]">
-            Légende
-          </span>
-          {LEGEND.map(({ label, dot, text }) => (
-            <span
-              key={label}
-              className={`flex items-center gap-1 font-medium ${text}`}
-            >
-              <span className={`w-2 h-2 rounded-full ${dot} inline-block`} />
-              {label}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* Clauses list */}

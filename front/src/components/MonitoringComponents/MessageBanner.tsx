@@ -22,12 +22,13 @@ interface BannerFormValues {
   endAt: string;
 }
 
+
 const EMPTY_FORM: BannerFormValues = {
   messageType: "information",
   title: "",
   content: "",
   link: "",
-  startAt: "",
+  startAt: new Date().toISOString().split("T")[0],
   endAt: "",
 };
 
@@ -221,7 +222,7 @@ export function MessageBanner() {
               type="text"
               id="link"
               name="link"
-              placeholder="/negociations ou https://…"
+              placeholder="liens vers la page d'information"
               value={form.link}
               onChange={(event) => setForm({ ...form, link: event.target.value })}
             />
