@@ -56,3 +56,7 @@ billingRouter.put("/remove-credits", auth, (req, res) =>
 billingRouter.get("/credits", auth, (req, res) =>
   relayToNode(req, res, "/billing/credits"),
 );
+
+billingRouter.post("/portal", auth, (req,res)=>{
+  relayToNode(req,res, "/billing/portal")
+})
