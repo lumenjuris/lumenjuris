@@ -44,17 +44,28 @@ export interface QueueItem {
   updatedAt: number;
 }
 
-/** Une des 4 statistiques du bandeau d'en-tête. */
+/** Une des statistiques compactes affichées en bas de l'en-tête. */
 export interface KpiCard {
   label: string;
   value: number;
-  /** Précision affichée à côté du chiffre (« 2 en retard »). */
+  /** Précision affichée à côté du chiffre (« 2 en retard »), vide si inutile. */
   hint: string;
-  /** Classe Tailwind de la couleur du `hint` et de la barre. */
+  /** Classe Tailwind de la couleur du `hint`, lisible sur fond sombre. */
   toneClassName: string;
-  barClassName: string;
-  /** Remplissage de la barre, de 0 à 100. */
-  barPercent: number;
+  /** Vrai pour les compteurs qu'on retire de la ligne quand ils valent 0. */
+  hideWhenZero: boolean;
+  to: string;
+}
+
+/** Une étape du bloc « Premiers pas », cochée automatiquement. */
+export interface OnboardingStep {
+  key: string;
+  title: string;
+  description: string;
+  /** Vrai dès que les données montrent que l'étape a été franchie. */
+  done: boolean;
+  /** Libellé du bouton affiché sur la prochaine étape à faire. */
+  actionLabel: string;
   to: string;
 }
 
@@ -82,12 +93,23 @@ export interface RiskAlert {
   to: string;
 }
 
-/** Une jauge de consommation du bloc « Votre abonnement ». */
+/**
+ * Où en est une consommation, pour colorer la jauge sans que le composant ait
+ * à refaire le calcul :
+ *   - `ok`        : il reste de la marge ;
+ *   - `warning`   : 80 % ou plus du quota est consommé ;
+ *   - `full`      : le quota est épuisé, c'est le moment de proposer une offre ;
+ *   - `unlimited` : quota illimité dans la formule ;
+ *   - `disabled`  : fonctionnalité non incluse dans la formule.
+ */
+export type QuotaState = "ok" | "warning" | "full" | "unlimited" | "disabled";
+
+/** Une jauge de consommation de la carte « Votre abonnement ». */
 export interface QuotaBar {
   label: string;
-  /** Texte de droite : « 42 / 100 », « Illimité », « Non inclus ». */
+  /** Valeur lisible : « 42 / 100 », « Illimité », « Non inclus ». */
   text: string;
   /** Remplissage de la barre, de 0 à 100. */
   percent: number;
-  barClassName: string;
+  state: QuotaState;
 }
