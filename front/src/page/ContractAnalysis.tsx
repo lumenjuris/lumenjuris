@@ -203,14 +203,14 @@ export default function ContractAnalysis() {
     });
 
     savedContractIdRef.current = created.id;
-    
-    return  created.id
+
+    return created.id
   }
 
   const openShare = async () => {
-      setShowShare(true);
+    setShowShare(true);
   }
-  
+
   const handleCreateNegotiation = async (): Promise<NegotiationDetail> => {
     const contractId = await createContractForShare();
     const nego = await negotiationApi.enter(contractId, contract?.fileName || "Document");
@@ -826,12 +826,12 @@ export default function ContractAnalysis() {
   const clauseData = contract?.clauses.find((c) => c.id === selectedClause);
 
 
-/*
-    RETOUR DU JSX
-  */
+  /*
+      RETOUR DU JSX
+    */
   return (
     <>
-      <div className="-m-5 lg:-m-7 px-4 py-8 overflow-x-hidden">
+      <div className="-m-5 lg:-m-7 p-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
           {!contract && (
             <div className="max-w-5xl mx-auto space-y-8">
@@ -879,8 +879,8 @@ export default function ContractAnalysis() {
           )}
 
           {contract?.processed && !displayedIsProcessing && (
-            <div className="max-w-7xl mx-auto space-y-6">
-              
+            <div className="max-w-7xl mx-auto">
+              {/* RETRAIT DU BANDEAU PRINCIPAL POUR GAGNER DE LA PLACE
               <div className="bg-blue-primary text-white rounded-2xl p-6 shadow-sm text-center space-y-4">
                 <div>
                   <h1 className="text-2xl font-bold">Analyse de conformité</h1>
@@ -890,26 +890,27 @@ export default function ContractAnalysis() {
                 </div>
 
                 <div className="flex justify-center items-center">
-                  <ActionButtons
-                    onShareReport={() => void openShare()}
-                    contract={contract}
-                    context={currentAnalysisContext || undefined}
-                    isProcessed={Boolean(contract?.processed)}
-                    originalContent={contract?.content}
-                    htmlContent={htmlContent}
-                    fileName={contract?.fileName || "document"}
-                    onRelaunchAnalysis={handleForceRelaunchAnalysis}
-                    isRelaunchingAnalysis={displayedIsProcessing}
-                    onSuggestedClauses={handleMarketAnalysisClick}
-                    isLoadingSuggested={isMarketAnalysisLoading}
-                  />
                 </div>
-              </div>
+              </div> */}
 
+              <ActionButtons
+                onShareReport={() => void openShare()}
+                contract={contract}
+                context={currentAnalysisContext || undefined}
+                isProcessed={Boolean(contract?.processed)}
+                originalContent={contract?.content}
+                htmlContent={htmlContent}
+                fileName={contract?.fileName || "document"}
+                onRelaunchAnalysis={handleForceRelaunchAnalysis}
+                isRelaunchingAnalysis={displayedIsProcessing}
+                onSuggestedClauses={handleMarketAnalysisClick}
+                isLoadingSuggested={isMarketAnalysisLoading}
+              />
 
 
               {/* 2. Grille principale Document + Sidebar */}
               <div className="flex flex-col md:flex-row gap-6 items-start">
+
                 {/* Zone Visualiseur de Document */}
                 <div id="clauses-section" className="flex-1 w-full min-w-0">
                   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -946,7 +947,7 @@ export default function ContractAnalysis() {
                 {/* Sidebar des risques à droite */}
                 {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
                   <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4">
-                    
+
                     <ClausesSidebar
                       clauses={sortedClauses}
                       onClauseClick={(clause) => handleClauseClick(clause.id)}
@@ -964,8 +965,8 @@ export default function ContractAnalysis() {
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
               onClick={() => setShowShare(false)}
             >
-              <div 
-                onClick={(e) => e.stopPropagation()} 
+              <div
+                onClick={(e) => e.stopPropagation()}
                 className="relative w-full max-w-lg"
               >
                 {/* Bouton de fermeture */}
