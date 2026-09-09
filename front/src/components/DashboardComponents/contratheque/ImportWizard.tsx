@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText, Loader2, ChevronLeft, ChevronRight, Check,
   AlertCircle, ShieldCheck, X, Sparkles, RotateCw,
@@ -286,7 +287,7 @@ function ReviewStep({
   const it = items[active];
   const iaEnCours = it.aiStatus === "waiting" || it.aiStatus === "running";
   const allValidated = it.fields.every((f) => it.validated[f.field_key] || !f.value);
-
+  const navigate = useNavigate()
   return (
     <div className="space-y-4">
       {iaEnCours ? (
@@ -365,7 +366,7 @@ function ReviewStep({
         <p className="text-xs text-ink-subtle">
           {analyseEnCours ? "Analyse IA en cours…" : allValidated ? "Tous les champs sont validés ✓" : "Validez les champs restants"}
         </p>
-        <button onClick={onConfirm} disabled={saving || analyseEnCours} className="flex items-center gap-2 px-5 py-2.5 bg-success text-white text-sm font-semibold rounded-xl hover:bg-success-dark disabled:opacity-40 transition-all shadow-card">
+        <button onClick={()=>navigate("/contratheque")} disabled={saving || analyseEnCours} className="flex items-center gap-2 px-5 py-2.5 bg-success text-white text-sm font-semibold rounded-xl hover:bg-success-dark disabled:opacity-40 transition-all shadow-card">
           {saving || analyseEnCours ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {saving ? "Enregistrement…"
             : analyseEnCours ? "Analyse IA en cours…"
