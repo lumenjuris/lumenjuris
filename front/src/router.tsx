@@ -9,7 +9,7 @@ import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
 import { Calculateur } from "./components/DashboardComponents/Calculateur";
 import { Veille } from "./components/DashboardComponents/Veille";
 import { Conformite } from "./components/DashboardComponents/Conformite";
-import { Contratheque } from "./components/DashboardComponents/Contratheque";
+import { Contratheque } from "./page/Contratheque";
 import { ClausesLibrary } from "./components/DashboardComponents/clauses/ClausesLibrary";
 import { UserManagement } from "./components/DashboardComponents/admin/UserManagement";
 import { NegotiationWorkspace } from "./components/DashboardComponents/negotiation/NegotiationWorkspace";
@@ -123,7 +123,7 @@ export function App() {
           <Route path="/mon-compte" element={<ParamCompte />} />
           <Route path="/analyzer" element={<ContractAnalysis />} />
 
-          
+
           {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
           <Route path="/subscription/success" element={<SubscriptionSuccess />} />
           <Route path="/subscription/failed" element={<SubscriptionFailed />} />

@@ -4,6 +4,7 @@ import {
   relayToNode,
   relayToNodeRaw,
   relayStreamToPython,
+  relayJsonToPython,
   withQuery,
 } from "../relay.js";
 import { trackFeature } from "../tracking.js";
@@ -15,7 +16,19 @@ export const contractRouter: Router = Router();
 const eid = (req: Request) =>
   encodeURIComponent(req.params.externalId as string);
 
-// Extraction IA des métadonnées (multipart → Python). Aucune écriture base.
+// Import en deux temps, pour ne pas faire attendre l'utilisateur devant un écran vide :
+//   1. /extract-text     : texte seul (PyMuPDF/Word), rapide → aperçu affiché tout de suite
+//   2. /extract-metadata : analyse IA sur ce texte, jouée en tâche de fond pendant la revue
+// Aucune écriture en base dans les deux cas.
+contractRouter.post("/extract-text", auth, (req, res) =>
+  relayStreamToPython(req, res, "/extract-contract-text"),
+);
+contractRouter.post("/extract-metadata", auth, (req, res) =>
+  relayJsonToPython(req, res, "/extract-contract-metadata-from-text"),
+);
+
+// Extraction complète en un appel (texte + IA). Conservée pour les appelants
+// qui ne découpent pas les deux étapes.
 contractRouter.post("/extract", auth, (req, res) =>
   relayStreamToPython(req, res, "/extract-contract-metadata"),
 );
