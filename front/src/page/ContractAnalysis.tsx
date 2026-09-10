@@ -97,7 +97,6 @@ export default function ContractAnalysis() {
   const [shareData, setShareData] = useState<NegotiationDetail | null>(null);
   const savedContractIdRef = useRef<string | null>(null);
 
-
   const { enterpriseContext } = useEnterpriseContext()  //Clef isLoading accessible au besoin d'UX
   const {
     currentHistoryId,
@@ -505,7 +504,6 @@ export default function ContractAnalysis() {
 
 
 
-
   // Vérifie le quota d'analyses AVANT l'import, pour bloquer tôt (et non après le
   // formulaire). Ouvre la carte de plafond si épuisé et renvoie `true` (import à
   // stopper). Fail-open : le serveur /analyze-contract reste le garde-fou (402).
@@ -653,8 +651,7 @@ export default function ContractAnalysis() {
 
 
 
-  //Redemarrage d'une analyse en cas de crash
-  const handleForceRelaunchAnalysis = () => {
+  const handleForceRelaunchAnalysis = async () => {
     const analysisHistoryId = currentHistoryIdRef.current;
     if (!analysisHistoryId || !contract) return;
 
@@ -880,10 +877,10 @@ export default function ContractAnalysis() {
 
           {contract?.processed && !displayedIsProcessing && (
             <div className="max-w-7xl mx-auto">
-              {/* RETRAIT DU BANDEAU PRINCIPAL POUR GAGNER DE LA PLACE
-              <div className="bg-blue-primary text-white rounded-2xl p-6 shadow-sm text-center space-y-4">
+
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
                 <div>
-                  <h1 className="text-2xl font-bold">Analyse de conformité</h1>
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">Analyse de conformité</h1>
                   <p className="text-sm text-slate-300 mt-1">
                     Vérifiez la conformité juridique de vos documents
                   </p>
@@ -891,7 +888,7 @@ export default function ContractAnalysis() {
 
                 <div className="flex justify-center items-center">
                 </div>
-              </div> */}
+              </div> 
 
               <ActionButtons
                 onShareReport={() => void openShare()}
@@ -946,7 +943,7 @@ export default function ContractAnalysis() {
 
                 {/* Sidebar des risques à droite */}
                 {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
-                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4">
+                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4 justify-start">
 
                     <ClausesSidebar
                       clauses={sortedClauses}

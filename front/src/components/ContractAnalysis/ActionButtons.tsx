@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Share2, FileText, RefreshCw, Lightbulb } from "lucide-react";
 import { useAppliedRecommendationsStore } from "../../store/appliedRecommendationsStore";
 import { AddToContrathequeButton } from "./AddToContrathequeButton";
 import { ContractAnalysis } from "../../types";
 import { AnalysisContext } from "../../types/contextualAnalysis";
 import { AlertBanner } from "../common/AlertBanner";
-
+import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
 interface ActionButtonsProps {
   onShareReport: () => void;
   isProcessed: boolean;
@@ -16,9 +16,8 @@ interface ActionButtonsProps {
   isRelaunchingAnalysis?: boolean;
   onSuggestedClauses?: () => void;
   isLoadingSuggested?: boolean;
-  /** Actions supplémentaires (ex. « Ajouter à la contrathèque »). */
-  extraActions?: React.ReactNode;
 
+  extraActions?: React.ReactNode;
 
   contract: ContractAnalysis;
   context: AnalysisContext | undefined
@@ -43,6 +42,12 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   const generateWordDocument = useAppliedRecommendationsStore(
     (s) => s.generateWordDocument,
   );
+
+  const [enoughtCredit, setEnoughtCredit] = useState<boolean>()
+
+  useEffect(() =>{
+     isAnalyzerQuotaExhausted().then((ec)=>setEnoughtCredit(ec))
+  }, [])
 
 
   const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white  hover:-translate-y-0.5 rounded-xl shadow-sm transition-all disabled:opacity-50 hover:bg-blue-900";
@@ -95,9 +100,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {onRelaunchAnalysis && (
         <button
           onClick={onRelaunchAnalysis}
-          disabled={isRelaunchingAnalysis}
+          disabled={isRelaunchingAnalysis || enoughtCredit}
           className={btnPrimary}
-          title="Relancer une nouvelle analyse complète"
+          title={!enoughtCredit ? "Relancer une nouvelle analyse complète" : "Vos crédits d'analyse de contrat sont épuisés"}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isRelaunchingAnalysis ? "animate-spin text-blue-400" : ""}`} />
           <span>{isRelaunchingAnalysis ? "Analyse..." : "Relancer"}</span>

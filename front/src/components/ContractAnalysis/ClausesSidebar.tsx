@@ -49,11 +49,6 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
               Risques détectés
             </span>
           </div>
-
-          {/*         RETIRE CAR NON PERTINANT 
-  <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-            {clauses.length}
-          </span> */}
         </div>
 
         {/* Summary counters */}
