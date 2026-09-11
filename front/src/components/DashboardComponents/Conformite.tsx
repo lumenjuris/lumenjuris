@@ -102,6 +102,7 @@ export function Conformite() {
       window.removeEventListener("click", handleClickOutside);
     };
   }, []);
+  
   /** Enregistre le document analysé dans la contrathèque (charge le texte du snapshot). */
   const handleAddToContratheque = async (item: ContractHistoryItem) => {
     if (addState[item.id]) return;

@@ -97,7 +97,6 @@ export default function ContractAnalysis() {
   const [shareData, setShareData] = useState<NegotiationDetail | null>(null);
   const savedContractIdRef = useRef<string | null>(null);
 
-
   const { enterpriseContext } = useEnterpriseContext()  //Clef isLoading accessible au besoin d'UX
   const {
     currentHistoryId,
@@ -203,14 +202,14 @@ export default function ContractAnalysis() {
     });
 
     savedContractIdRef.current = created.id;
-    
-    return  created.id
+
+    return created.id
   }
 
   const openShare = async () => {
-      setShowShare(true);
+    setShowShare(true);
   }
-  
+
   const handleCreateNegotiation = async (): Promise<NegotiationDetail> => {
     const contractId = await createContractForShare();
     const nego = await negotiationApi.enter(contractId, contract?.fileName || "Document");
@@ -505,7 +504,6 @@ export default function ContractAnalysis() {
 
 
 
-
   // Vérifie le quota d'analyses AVANT l'import, pour bloquer tôt (et non après le
   // formulaire). Ouvre la carte de plafond si épuisé et renvoie `true` (import à
   // stopper). Fail-open : le serveur /analyze-contract reste le garde-fou (402).
@@ -653,8 +651,7 @@ export default function ContractAnalysis() {
 
 
 
-  //Redemarrage d'une analyse en cas de crash
-  const handleForceRelaunchAnalysis = () => {
+  const handleForceRelaunchAnalysis = async () => {
     const analysisHistoryId = currentHistoryIdRef.current;
     if (!analysisHistoryId || !contract) return;
 
@@ -826,12 +823,12 @@ export default function ContractAnalysis() {
   const clauseData = contract?.clauses.find((c) => c.id === selectedClause);
 
 
-/*
-    RETOUR DU JSX
-  */
+  /*
+      RETOUR DU JSX
+    */
   return (
     <>
-      <div className="-m-5 lg:-m-7 px-4 py-8 overflow-x-hidden">
+      <div className="-m-5 lg:-m-7 p-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
           {!contract && (
             <div className="max-w-5xl mx-auto space-y-8">
@@ -879,37 +876,38 @@ export default function ContractAnalysis() {
           )}
 
           {contract?.processed && !displayedIsProcessing && (
-            <div className="max-w-7xl mx-auto space-y-6">
-              
-              <div className="bg-blue-primary text-white rounded-2xl p-6 shadow-sm text-center space-y-4">
+            <div className="max-w-7xl mx-auto">
+
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
                 <div>
-                  <h1 className="text-2xl font-bold">Analyse de conformité</h1>
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">Analyse de conformité</h1>
                   <p className="text-sm text-slate-300 mt-1">
                     Vérifiez la conformité juridique de vos documents
                   </p>
                 </div>
 
                 <div className="flex justify-center items-center">
-                  <ActionButtons
-                    onShareReport={() => void openShare()}
-                    contract={contract}
-                    context={currentAnalysisContext || undefined}
-                    isProcessed={Boolean(contract?.processed)}
-                    originalContent={contract?.content}
-                    htmlContent={htmlContent}
-                    fileName={contract?.fileName || "document"}
-                    onRelaunchAnalysis={handleForceRelaunchAnalysis}
-                    isRelaunchingAnalysis={displayedIsProcessing}
-                    onSuggestedClauses={handleMarketAnalysisClick}
-                    isLoadingSuggested={isMarketAnalysisLoading}
-                  />
                 </div>
-              </div>
+              </div> 
 
+              <ActionButtons
+                onShareReport={() => void openShare()}
+                contract={contract}
+                context={currentAnalysisContext || undefined}
+                isProcessed={Boolean(contract?.processed)}
+                originalContent={contract?.content}
+                htmlContent={htmlContent}
+                fileName={contract?.fileName || "document"}
+                onRelaunchAnalysis={handleForceRelaunchAnalysis}
+                isRelaunchingAnalysis={displayedIsProcessing}
+                onSuggestedClauses={handleMarketAnalysisClick}
+                isLoadingSuggested={isMarketAnalysisLoading}
+              />
 
 
               {/* 2. Grille principale Document + Sidebar */}
               <div className="flex flex-col md:flex-row gap-6 items-start">
+
                 {/* Zone Visualiseur de Document */}
                 <div id="clauses-section" className="flex-1 w-full min-w-0">
                   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -945,8 +943,8 @@ export default function ContractAnalysis() {
 
                 {/* Sidebar des risques à droite */}
                 {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
-                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4">
-                    
+                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4 justify-start">
+
                     <ClausesSidebar
                       clauses={sortedClauses}
                       onClauseClick={(clause) => handleClauseClick(clause.id)}
@@ -964,8 +962,8 @@ export default function ContractAnalysis() {
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
               onClick={() => setShowShare(false)}
             >
-              <div 
-                onClick={(e) => e.stopPropagation()} 
+              <div
+                onClick={(e) => e.stopPropagation()}
                 className="relative w-full max-w-lg"
               >
                 {/* Bouton de fermeture */}

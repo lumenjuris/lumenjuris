@@ -339,14 +339,14 @@ export const DocumentViewer = forwardRef<
                   </button>
                 );
               })()}
-            <button
+            { activePatchCount > 0 && (<button
               onClick={() => resetAll()}
               disabled={activePatchCount === 0}
-              className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full border text-[10px] md:text-xs font-medium transition-colors ${activePatchCount === 0 ? "border-gray-200 text-gray-300 cursor-not-allowed" : "border-red-300 text-red-600 hover:bg-red-50"}`}
+              className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full border text-[10px] md:text-xs font-medium transition-colors ${activePatchCount === 0 ? "border-gray-200 text-gray-300 cursor-not-allowed" : "border-red-300 bg-white text-red-600 hover: font-bolder"}`}
               title="Réinitialiser toutes les modifications"
             >
-              Réinitialiser tout
-            </button>
+              Réinitialiser les modifications
+            </button>)}
           </div>
         </div>
 

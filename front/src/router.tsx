@@ -15,7 +15,7 @@ import { UserManagement } from "./components/DashboardComponents/admin/UserManag
 import { NegotiationWorkspace } from "./components/DashboardComponents/negotiation/NegotiationWorkspace";
 import { NegotiationsList } from "./components/DashboardComponents/negotiation/NegotiationsList";
 import { NegotiationGuest } from "./page/NegotiationGuest";
-import { MesFiligranes } from "./components/DashboardComponents/MesFiligranes";
+//import { MesFiligranes } from "./components/DashboardComponents/MesFiligranes";
 import { ComprendreContrat } from "./components/DashboardComponents/ComprendreContrat";
 
 import { Dashboard } from "./page/Dashboard";

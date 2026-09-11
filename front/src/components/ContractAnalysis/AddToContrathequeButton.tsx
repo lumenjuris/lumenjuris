@@ -12,21 +12,20 @@ import type { AnalysisContext } from "../../types/contextualAnalysis";
  * et le type de contrat détecté. Statut initial DRAFT : c'est un import à
  * compléter, pas un contrat validé.
  */
-export function AddToContrathequeButton({
-  contract,
-  context,
-}: {
+interface PropsBtn {
   contract: ContractAnalysis;
   context?: AnalysisContext | null;
-}) {
+}
+
+export function AddToContrathequeButton({ contract, context }: PropsBtn) {
+
   const navigate = useNavigate();
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const btnBase =
-    "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
-  const btnGhost = `${btnBase} bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300`;
-  const btnDone = `${btnBase} bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100`;
+  const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white  hover:-translate-y-0.5 rounded-xl shadow-sm transition-all disabled:opacity-50 hover:bg-blue-900";
+
+  const btnDone = `${btnPrimary}`;
 
   const handleAdd = async () => {
     if (state === "saving") return;
@@ -66,7 +65,7 @@ export function AddToContrathequeButton({
         title="Ouvrir la fiche dans la contrathèque"
       >
         <Check className="w-4 h-4" />
-        Ajouté — voir la fiche
+        Voir dans la contrathèque
       </button>
     );
   }
@@ -75,7 +74,7 @@ export function AddToContrathequeButton({
     <button
       onClick={handleAdd}
       disabled={state === "saving"}
-      className={btnGhost}
+      className={state === "saving" ? btnPrimary : btnDone}
       title="Enregistrer ce contrat dans la contrathèque"
     >
       {state === "saving" ? (

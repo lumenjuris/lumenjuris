@@ -3,7 +3,7 @@ import { ShieldAlert } from "lucide-react";
 import { ClauseRisk } from "../../types";
 import { ClauseRiskCard } from "./ClauseRiskCard";
 import { TextPatch } from "../../store/documentTextStore";
-
+import { CheckCircle } from "lucide-react";
 interface ClausesSidebarProps {
   clauses: ClauseRisk[];
   onClauseClick?: (clause: ClauseRisk, index: number) => void;
@@ -29,6 +29,9 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
     }
   };
 
+  console.log(recommandationApplied)
+  const activePatchCount = recommandationApplied ? recommandationApplied.length : 0
+  //const activePatchCount = patches.filter((p) => p.active).length;ull
   const critiqueCount = clauses.filter((c) => c.riskScore === 5).length;
   const moyenCount = clauses.filter(
     (c) => c.riskScore >= 3 && c.riskScore < 5,
@@ -46,14 +49,13 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
               Risques détectés
             </span>
           </div>
-          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-            {clauses.length}
-          </span>
         </div>
 
         {/* Summary counters */}
         {(critiqueCount > 0 || moyenCount > 0) && (
+
           <div className="flex gap-2 mb-3">
+
             {critiqueCount > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
@@ -70,6 +72,14 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
         )}
 
       </div>
+      {activePatchCount > 0 && (
+        <div className="flex justify-center items-center gap-2 text-sm font-medium text-gray-600 mt-2">
+          <CheckCircle className="w-4 h-4 text-green-500" />
+          {activePatchCount} recommandation{activePatchCount > 1 ? "s" : ""}{" "}
+          appliquée{activePatchCount > 1 ? "s" : ""}
+        </div>
+      )}
+
 
       {/* Clauses list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -82,6 +92,9 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
           />
         ))}
       </div>
+
+
+
     </div>
   );
 };
