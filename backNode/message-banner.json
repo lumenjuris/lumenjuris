@@ -1,11 +1,11 @@
 [
   {
-    "id": "9de611ed-81bb-4799-97e1-41a0db42c504",
-    "messageType": "nouveaute",
-    "title": "Nouveau design de la page d'accueil",
-    "content": "Bonjour à tous, vous pouvez dés maintenant comparer le nouveu design de la page d'accueil.",
+    "id": "45dded9b-1688-452a-b6c8-fa9e7ec556b7",
+    "messageType": "information",
+    "title": "Nouvelle mise à jour disponible",
+    "content": "Venez découvrir nous nouvelles fonctionnalités",
     "link": false,
-    "startAt": "2026-09-06T00:00:00.000Z",
-    "endAt": "2026-09-12T23:59:59.999Z"
+    "startAt": "2026-09-11T00:00:00.000Z",
+    "endAt": "2026-09-17T23:59:59.999Z"
   }
 ]
