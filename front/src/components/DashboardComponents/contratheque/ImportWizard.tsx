@@ -189,6 +189,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
     (it) => it.textStatus !== "error" && (it.aiStatus === "waiting" || it.aiStatus === "running"),
   );
 
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
@@ -230,7 +231,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
             <div key={i} className="flex items-center gap-3 text-sm">
               {it.textStatus === "ready" ? <Check className="w-4 h-4 text-success" />
                 : it.textStatus === "error" ? <AlertCircle className="w-4 h-4 text-danger" />
-                : <Loader2 className="w-4 h-4 animate-spin text-ink-subtle" />}
+                  : <Loader2 className="w-4 h-4 animate-spin text-ink-subtle" />}
               <span className="text-ink-secondary truncate">{it.file.name}</span>
             </div>
           ))}
@@ -288,6 +289,12 @@ function ReviewStep({
   const iaEnCours = it.aiStatus === "waiting" || it.aiStatus === "running";
   const allValidated = it.fields.every((f) => it.validated[f.field_key] || !f.value);
   const navigate = useNavigate()
+
+  useEffect(() => {
+    console.log(it)
+    it.fields.sort((a,b)=> a.confidence_score - b.confidence_score)
+  }, [it])
+
   return (
     <div className="space-y-4">
       {iaEnCours ? (
@@ -317,7 +324,7 @@ function ReviewStep({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Aperçu texte du contrat — disponible dès la lecture, sans attendre l'IA */}
-        <div className="bg-white rounded-card border border-line shadow-card p-5 overflow-y-auto" style={{ height: 560 }}>
+        <div className="bg-white rounded-card border border-line shadow-card p-5 overflow-y-auto " >
           <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest mb-3">Aperçu du contrat</p>
           {it.ocrText ? (
             <pre className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans">{it.ocrText}</pre>
@@ -354,9 +361,11 @@ function ReviewStep({
                 </div>
               )}
 
-              {it.aiStatus === "ready" && it.fields.map((f) => (
-                <ReviewField key={f.field_key} field={f} validated={!!it.validated[f.field_key]} onToggle={() => onToggleValidate(f.field_key)} onEdit={(v) => onEditField(f.field_key, v)} />
-              ))}
+              {it.aiStatus === "ready" && it.fields.map((f) => {
+                return (
+                  <ReviewField key={f.field_key} field={f} validated={!!it.validated[f.field_key]} onToggle={() => onToggleValidate(f.field_key)} onEdit={(v) => onEditField(f.field_key, v)} />
+                )
+              })}
             </>
           )}
         </div>
@@ -366,11 +375,11 @@ function ReviewStep({
         <p className="text-xs text-ink-subtle">
           {analyseEnCours ? "Analyse IA en cours…" : allValidated ? "Tous les champs sont validés ✓" : "Validez les champs restants"}
         </p>
-        <button onClick={()=>navigate("/contratheque")} disabled={saving || analyseEnCours} className="flex items-center gap-2 px-5 py-2.5 bg-success text-white text-sm font-semibold rounded-xl hover:bg-success-dark disabled:opacity-40 transition-all shadow-card">
+        <button onClick={() => navigate("/contratheque")} disabled={saving || analyseEnCours} className="flex items-center gap-2 px-5 py-2.5 bg-success text-white text-sm font-semibold rounded-xl hover:bg-success-dark disabled:opacity-40 transition-all shadow-card">
           {saving || analyseEnCours ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {saving ? "Enregistrement…"
             : analyseEnCours ? "Analyse IA en cours…"
-            : `Enregistrer ${items.filter((i) => i.textStatus !== "error").length} contrat(s)`}
+              : `Enregistrer ${items.filter((i) => i.textStatus !== "error").length} contrat(s)`}
         </button>
       </div>
     </div>
