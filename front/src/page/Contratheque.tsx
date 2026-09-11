@@ -72,7 +72,7 @@ export function Contratheque() {
   if (filesToImport.length > 0) {
     return (
       <ImportWizard
-        //files={filesToImport}
+        files={filesToImport}
         onCancel={() => setFilesToImport([])}
         onDone={() => { setFilesToImport([]); setRefreshKey((k) => k + 1); }}
       />

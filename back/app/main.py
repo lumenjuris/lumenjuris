@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional, Dict, Any, Set, Tuple
 import os
 import requests
 import asyncio
@@ -273,34 +273,33 @@ def healtMonitor():
             "status" : "echec"
         }
 
-@app.post("/extract-contract-metadata")
-async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = Form(False)):
-    """Extrait les métadonnées structurées d'un contrat avec un score de confiance par champ."""
-    if file.filename == "" or not allowed_file(file.filename):
-        raise HTTPException(status_code=400, detail="Type de fichier non autorisé (PDF ou WORD requis)")
+class ContractMetadataFromTextRequest(BaseModel):
+    text: str
 
-    content = await file.read()
 
-    if is_word_file(file.filename):
+def _lire_texte_contrat(filename: str, content: bytes, scan: bool) -> Tuple[str, str]:
+    """Extrait le texte d'un contrat (Word ou PDF) et la méthode utilisée.
+
+    Étape rapide (PyMuPDF / python-docx) : c'est elle qui alimente l'aperçu
+    affiché immédiatement à l'utilisateur, avant l'analyse IA.
+    """
+    if is_word_file(filename):
         try:
             texte_brut, _ = extract_text_from_word(content)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-        extraction_method = "word"
-    else:
-        try:
-            texte_brut = _extract_text_from_pdf_content(content, scan)
-        except ValueError as e:
-            raise HTTPException(status_code=422, detail=str(e))
-        extraction_method = "server"
+        return corriger_espaces(texte_brut), "word"
 
-    texte = corriger_espaces(texte_brut)
+    try:
+        texte_brut = _extract_text_from_pdf_content(content, scan)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return corriger_espaces(texte_brut), "server"
 
-    if not _openai_client:
-        raise HTTPException(status_code=503, detail="Service d'extraction IA non disponible")
 
+def _construire_prompt_metadonnees(texte: str) -> str:
     keys_desc = "\n".join(f"- {k}" for k in CONTRACT_METADATA_KEYS)
-    prompt = (
+    return (
         "Tu es un juriste expert en droit français des contrats. Analyse le contrat ci-dessous "
         "et extrais ses métadonnées. Pour CHAQUE champ, fournis la valeur trouvée et un score de "
         "confiance entre 0 et 1 (1 = certitude, 0 = absent/illisible). Si un champ est absent, "
@@ -316,34 +315,19 @@ async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = F
         "limitation de responsabilité, cession, confidentialité…).\n\n"
         "Réponds UNIQUEMENT en JSON strict de la forme :\n"
         '{ "fields": { "<clé>": { "value": <valeur ou null>, "confidence": <0..1> }, ... } }\n\n'
-        f"Contrat :\n{texte[:12000]}"
+        f"Contrat :\n{texte}"
     )
 
-    def _call():
-        return _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=1200,
-            response_format={"type": "json_object"},
-        )
 
-    try:
-        resp = await run_in_threadpool(_call)
-        raw = resp.choices[0].message.content or "{}"
-        import json as _json
-        parsed = _json.loads(raw)
-    except Exception as e:
-        logger.error(f"[extract-contract-metadata] Erreur OpenAI/JSON: {e}")
-        raise HTTPException(status_code=500, detail="Échec de l'extraction des métadonnées.")
-
+def _normaliser_champs(parsed: Any) -> List[Dict[str, Any]]:
+    """Remet les champs de l'IA dans l'ordre attendu, en bornant les scores."""
     raw_fields = parsed.get("fields", {}) if isinstance(parsed, dict) else {}
     fields = []
     for key in CONTRACT_METADATA_KEYS:
         entry = raw_fields.get(key) or {}
         value = entry.get("value") if isinstance(entry, dict) else entry
         confidence = entry.get("confidence") if isinstance(entry, dict) else None
-        # sensitive_clauses peut être une liste → on la sérialise pour stockage homogène
+        # sensitive_clauses peut être une liste : on la sérialise pour un stockage homogène
         if isinstance(value, list):
             value = ", ".join(str(v) for v in value) if value else None
         try:
@@ -355,6 +339,90 @@ async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = F
             "value": None if value in ("", None) else str(value),
             "confidence_score": max(0.0, min(1.0, confidence)),
         })
+    return fields
+
+
+async def _analyser_metadonnees_ia(texte: str) -> Tuple[List[Dict[str, Any]], Any]:
+    """Appel IA d'extraction des métadonnées.
+
+    Étape lente : le front la joue en tâche de fond pendant que l'utilisateur
+    lit déjà le texte du contrat.
+    """
+    if not _openai_client:
+        raise HTTPException(status_code=503, detail="Service d'extraction IA non disponible")
+
+    prompt = _construire_prompt_metadonnees(texte)
+
+    def _call():
+        return _openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=1200,
+            response_format={"type": "json_object"},
+        )
+
+    debut = datetime.now()
+    try:
+        resp = await run_in_threadpool(_call)
+        raw = resp.choices[0].message.content or "{}"
+        import json as _json
+        parsed = _json.loads(raw)
+    except Exception as e:
+        logger.error(f"[metadonnees-contrat] Erreur OpenAI/JSON: {e}")
+        raise HTTPException(status_code=500, detail="Échec de l'extraction des métadonnées.")
+
+    duree = (datetime.now() - debut).total_seconds()
+    logger.info(f"[metadonnees-contrat] IA terminée en {duree:.1f}s ({len(texte)} car. envoyés).")
+    return _normaliser_champs(parsed), resp
+
+
+@app.post("/extract-contract-text")
+async def extract_contract_text(file: UploadFile = File(...), scan: bool = Form(False)):
+    """Étape 1 : texte seul, sans IA. Permet d'afficher l'aperçu tout de suite."""
+    if file.filename == "" or not allowed_file(file.filename):
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé (PDF ou WORD requis)")
+
+    content = await file.read()
+    debut = datetime.now()
+    texte, extraction_method = _lire_texte_contrat(file.filename, content, scan)
+    duree = (datetime.now() - debut).total_seconds()
+    logger.info(f"[texte-contrat] {file.filename} lu en {duree:.1f}s ({len(texte)} car., {extraction_method}).")
+
+    return {
+        "success": True,
+        "ocr_text": texte,
+        "filename": file.filename,
+        "extraction_method": extraction_method,
+    }
+
+
+@app.post("/extract-contract-metadata-from-text")
+async def extract_contract_metadata_from_text(req: ContractMetadataFromTextRequest):
+    """Étape 2 : métadonnées IA à partir d'un texte déjà extrait, sans relire le
+    fichier. Appelée en tâche de fond pendant la revue humaine."""
+    texte = (req.text or "").strip()
+    if not texte:
+        raise HTTPException(status_code=400, detail="Aucun texte de contrat fourni.")
+
+    fields, resp = await _analyser_metadonnees_ia(texte)
+    return {
+        "success": True,
+        "fields": fields,
+        "openai_tokens": extract_token_usage(resp, "gpt-4o"),
+    }
+
+
+@app.post("/extract-contract-metadata")
+async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = Form(False)):
+    """Extraction complète en un appel (texte + IA). Conservée pour les appelants
+    qui ne découpent pas les deux étapes."""
+    if file.filename == "" or not allowed_file(file.filename):
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé (PDF ou WORD requis)")
+
+    content = await file.read()
+    texte, extraction_method = _lire_texte_contrat(file.filename, content, scan)
+    fields, resp = await _analyser_metadonnees_ia(texte)
 
     return {
         "success": True,

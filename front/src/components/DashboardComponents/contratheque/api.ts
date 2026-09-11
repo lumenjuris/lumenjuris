@@ -160,23 +160,50 @@ export const contractApi = {
       body: JSON.stringify({ name, parentExternalId }),
     }).then(json<{ id: string }>),
 
-  /** Extraction IA des métadonnées (multipart, relayé vers Python). */
-  extract: async (file: File): Promise<{ fields: ExtractedField[]; ocr_text: string; filename: string }> => {
+  /**
+   * Étape 1 de l'import : texte du document seul, sans IA (multipart → Python).
+   * Rapide, c'est elle qui permet d'afficher l'aperçu du contrat sans attente.
+   */
+  extractText: async (file: File): Promise<{ ocr_text: string; filename: string }> => {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("scan", "false");
-    const res = await fetchProxy(`${BASE}/extract`, { method: "POST", credentials: "include", body: fd });
-    
-    if (!res.ok){ 
-      throw new Error(`Échec lors de l'analyse du document. Veuillez réessayer.`);
+    const res = await fetchProxy(`${BASE}/extract-text`, { method: "POST", credentials: "include", body: fd });
+
+    if (!res.ok) {
+      throw new Error("Échec de la lecture du document. Veuillez réessayer.");
     }
-    const data = (await res.json()) as { success?: boolean; fields?: ExtractedField[]; ocr_text?: string; filename?: string; detail?: string };
+    const data = (await res.json()) as { success?: boolean; ocr_text?: string; filename?: string; detail?: string };
 
     if (data.success === false) {
-      throw new Error(data.detail || "Échec lors de l'analyse du document. Veuillez réessayer.");
+      throw new Error(data.detail || "Échec de la lecture du document. Veuillez réessayer.");
     }
 
-    return { fields: data.fields ?? [], ocr_text: data.ocr_text ?? "", filename: data.filename ?? file.name };
+    return { ocr_text: data.ocr_text ?? "", filename: data.filename ?? file.name };
+  },
+
+  /**
+   * Étape 2 de l'import : métadonnées IA à partir du texte déjà extrait.
+   * Lente — le front l'appelle en tâche de fond pendant la revue humaine.
+   */
+  extractMetadata: async (text: string): Promise<ExtractedField[]> => {
+    const res = await fetchProxy(`${BASE}/extract-metadata`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Échec de l'analyse IA du document.");
+    }
+    const data = (await res.json()) as { success?: boolean; fields?: ExtractedField[]; detail?: string };
+
+    if (data.success === false) {
+      throw new Error(data.detail || "Échec de l'analyse IA du document.");
+    }
+
+    return data.fields ?? [];
   },
 
   /** URL du document PDF (déchiffré côté serveur). */
