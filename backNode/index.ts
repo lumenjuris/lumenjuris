@@ -55,12 +55,13 @@ app.set("etag", false);
 const port = process.env.PORT || 3020;
 
 //NE PAS DEPLACER CETTE ROUTE
-//Le reste de la route est gérer dans le controller billing mais celle-ci est déclarer avant express.json()
-//Pour conserver le corp non parse (indispensable pour la signature de stripe!)
+//Le reste de la route est gérer dans le controller billing mais celle-ci est déclarée avant express.json()
+//Afin de conserver le corp non parse (indispensable pour la signature de stripe!)
 app.use(
   "/billing/stripe/webhook",
   express.raw({ type: "application/json" })
 );
+
 
 app.use(express.json({ limit: "20mb" }));
 app.use(cookieParser());

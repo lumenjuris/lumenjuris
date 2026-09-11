@@ -19,7 +19,8 @@ import type { CreditsData } from "../../../types/creditsData";
 import { readQuotaValue } from "../../../types/quotas";
 import type { SubscriptionData } from "../../../types/subscriptionData";
 import type {
-  DeadlineCard, KpiCard, QueueItem, QuotaBar, RiskAlert, SignatureEnvelope,
+  DeadlineCard, KpiCard, OnboardingStep, QueueItem, QuotaBar, QuotaState, RiskAlert,
+  SignatureEnvelope,
 } from "./types";
 
 /** Statuts d'un contrat encore en cours de rédaction / discussion. */
@@ -61,12 +62,6 @@ function timestamp(iso: string | null): number {
   if (!iso) return 0;
   const time = new Date(iso).getTime();
   return Number.isNaN(time) ? 0 : time;
-}
-
-/** Pourcentage borné à [0, 100] ; renvoie 0 si le total est nul. */
-function ratio(value: number, total: number): number {
-  if (total <= 0) return 0;
-  return Math.min(100, Math.round((value / total) * 100));
 }
 
 /** Accorde le pluriel d'un mot selon le nombre : « 2 propositions ». */
@@ -200,10 +195,15 @@ function buildQueue(raw: RawData): QueueItem[] {
   });
 }
 
-/** Construit les quatre statistiques de l'en-tête. */
+/**
+ * Construit les statistiques compactes de l'en-tête.
+ *
+ * Le `hint` n'est renseigné que lorsqu'il ajoute vraiment une information
+ * (retards, propositions reçues, plafond de la formule) : sur une ligne aussi
+ * dense, un « aucune » de plus ne serait que du bruit.
+ */
 function buildKpis(raw: RawData, queue: QueueItem[]): KpiCard[] {
   const contractTotal = raw.contractStats?.total ?? 0;
-  const contractLimit = readQuotaValue(raw.credits?.planQuotas?.contrathequeLimit);
 
   const pendingSignatures = queue.filter((item) => item.group === "Signature").length;
   const openNegotiations = queue.filter((item) => item.group === "Négociation").length;
@@ -212,49 +212,74 @@ function buildKpis(raw: RawData, queue: QueueItem[]): KpiCard[] {
   const soon = raw.deadlines.filter((event) => (daysUntil(event.date) ?? 999) <= 30);
   const overdue = soon.filter((event) => (daysUntil(event.date) ?? 0) < 0).length;
 
-  let contractHint = "—";
-  if (contractLimit.kind === "finite") contractHint = `sur ${contractLimit.value}`;
-  else if (contractLimit.kind === "unlimited") contractHint = "illimité";
-
-  let contractPercent = contractTotal > 0 ? 100 : 0;
-  if (contractLimit.kind === "finite") contractPercent = ratio(contractTotal, contractLimit.value);
-
   return [
     {
-      label: "Contrats suivis",
+      // Toujours affiché : c'est le repère de volume de l'espace de travail.
+      label: contractTotal > 1 ? "contrats suivis" : "contrat suivi",
       value: contractTotal,
-      hint: contractHint,
-      toneClassName: "text-white/55",
-      barClassName: "bg-white",
-      barPercent: contractPercent,
+      hint: "",
+      toneClassName: "text-white/45",
+      hideWhenZero: false,
       to: "/contratheque",
     },
     {
-      label: "Signatures en attente",
+      label: pendingSignatures > 1 ? "signatures en attente" : "signature en attente",
       value: pendingSignatures,
-      hint: pendingSignatures > 0 ? "à suivre" : "aucune",
-      toneClassName: "text-[#f0c86a]",
-      barClassName: "bg-[#f0c86a]",
-      barPercent: ratio(pendingSignatures, raw.envelopes.length),
+      hint: "",
+      toneClassName: "text-white/45",
+      hideWhenZero: true,
       to: "/signature",
     },
     {
-      label: "Négociations",
+      label: openNegotiations > 1 ? "négociations ouvertes" : "négociation ouverte",
       value: openNegotiations,
-      hint: proposals > 0 ? plural(proposals, "proposition") : "aucune réponse",
+      hint: proposals > 0 ? `· ${plural(proposals, "proposition")}` : "",
       toneClassName: "text-[#b9a7ee]",
-      barClassName: "bg-[#b9a7ee]",
-      barPercent: ratio(openNegotiations, raw.negotiations.length),
+      hideWhenZero: true,
       to: "/negociations",
     },
     {
-      label: "Échéances à 30 j",
+      label: soon.length > 1 ? "échéances à 30 jours" : "échéance à 30 jours",
       value: soon.length,
-      hint: overdue > 0 ? plural(overdue, "en retard") : "à venir",
-      toneClassName: overdue > 0 ? "text-[#ff8f96]" : "text-white/55",
-      barClassName: "bg-[#ff8f96]",
-      barPercent: ratio(soon.length, raw.deadlines.length),
+      hint: overdue > 0 ? `· ${plural(overdue, "en retard")}` : "",
+      toneClassName: "text-[#ff8f96]",
+      hideWhenZero: true,
       to: "/contratheque?vue=echeances",
+    },
+  ];
+}
+
+/**
+ * Construit les trois étapes de prise en main.
+ *
+ * Elles suivent le parcours naturel de l'outil (rédiger → négocier → signer) et
+ * se cochent à partir des données déjà chargées : aucun état n'est stocké.
+ */
+function buildOnboarding(raw: RawData): OnboardingStep[] {
+  return [
+    {
+      key: "premier-contrat",
+      title: "Ajoutez un premier contrat",
+      description: "Générez-en un depuis un brief, ou importez un document existant.",
+      done: (raw.contractStats?.total ?? 0) > 0,
+      actionLabel: "Commencer",
+      to: "/contrat-generation?section=scratch",
+    },
+    {
+      key: "premiere-negociation",
+      title: "Ouvrez une négociation",
+      description: "Partagez le document, recevez les propositions et tranchez.",
+      done: raw.negotiations.length > 0,
+      actionLabel: "Ouvrir",
+      to: "/negociations",
+    },
+    {
+      key: "premiere-signature",
+      title: "Envoyez en signature",
+      description: "Faites signer en ligne, avec valeur probante.",
+      done: raw.envelopes.length > 0,
+      actionLabel: "Envoyer",
+      to: "/signature",
     },
   ];
 }
@@ -263,7 +288,7 @@ function buildKpis(raw: RawData, queue: QueueItem[]): KpiCard[] {
 function buildDeadlines(raw: RawData): DeadlineCard[] {
   return [...raw.deadlines]
     .sort((a, b) => timestamp(a.date) - timestamp(b.date))
-    .slice(0, 4)
+    .slice(0, 5)
     .map((event) => {
       const date = new Date(event.date);
       const remaining = daysUntil(event.date) ?? 0;
@@ -339,28 +364,52 @@ function buildAlerts(raw: RawData): RiskAlert[] {
 const QUOTA_FEATURES: {
   key: "contrathequeLimit" | "analyzer" | "signatureEnhanced";
   label: string;
-  barClassName: string;
 }[] = [
-  { key: "contrathequeLimit", label: "Contrats suivis", barClassName: "bg-blue-primary" },
-  { key: "analyzer", label: "Analyses de contrat", barClassName: "bg-[#354F99]" },
-  { key: "signatureEnhanced", label: "Signatures avancées", barClassName: "bg-[#6b86d6]" },
+  { key: "contrathequeLimit", label: "Contrats suivis" },
+  { key: "analyzer", label: "Analyses de contrat" },
+  { key: "signatureEnhanced", label: "Signatures avancées" },
 ];
+
+/** À partir de ce pourcentage consommé, la jauge passe en orange. */
+const QUOTA_WARNING_PERCENT = 80;
+
+/** Pourcentage borné à [0, 100] ; renvoie 0 si le total est nul. */
+function ratio(value: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(100, Math.round((value / total) * 100));
+}
 
 /** Construit les jauges de consommation de la formule. */
 function buildQuotas(raw: RawData): QuotaBar[] {
-  return QUOTA_FEATURES.map(({ key, label, barClassName }) => {
+  const contractTotal = raw.contractStats?.total ?? 0;
+
+  return QUOTA_FEATURES.map(({ key, label }) => {
     const full = readQuotaValue(raw.credits?.planQuotas?.[key]);
     const remaining = readQuotaValue(raw.credits?.quotas?.[key]);
 
-    if (full.kind === "disabled") {
-      return { label, text: "Non inclus", percent: 0, barClassName: "bg-line-emphasis" };
-    }
     if (full.kind === "unlimited") {
-      return { label, text: "Illimité", percent: 100, barClassName };
+      return { label, text: "Illimité", percent: 100, state: "unlimited" as const };
+    }
+    // Un plafond à zéro revient à ne pas inclure la fonctionnalité.
+    if (full.kind === "disabled" || full.value <= 0) {
+      return { label, text: "Non inclus", percent: 0, state: "disabled" as const };
     }
 
-    const used = full.value - (remaining.kind === "finite" ? remaining.value : 0);
-    return { label, text: `${used} / ${full.value}`, percent: ratio(used, full.value), barClassName };
+    // La contrathèque est un plafond de stockage et non un compteur consommé :
+    // on part du nombre réel de contrats, sinon le chiffre contredirait celui
+    // affiché en haut de la page.
+    const consumed = key === "contrathequeLimit"
+      ? contractTotal
+      : full.value - (remaining.kind === "finite" ? remaining.value : 0);
+
+    const used = Math.max(0, Math.min(consumed, full.value));
+    const percent = ratio(used, full.value);
+
+    let state: QuotaState = "ok";
+    if (used >= full.value) state = "full";
+    else if (percent >= QUOTA_WARNING_PERCENT) state = "warning";
+
+    return { label, text: `${used} / ${full.value}`, percent, state };
   });
 }
 
@@ -370,9 +419,14 @@ export interface DashboardData {
   /** Vrai quand l'utilisateur n'a encore ni contrat, ni signature, ni négociation. */
   isEmpty: boolean;
   kpis: KpiCard[];
+  /** Nombre total d'éléments en attente, hors contrats suivis. */
+  pendingActions: number;
   queue: QueueItem[];
   deadlines: DeadlineCard[];
   alerts: RiskAlert[];
+  onboarding: OnboardingStep[];
+  /** Vrai quand les trois étapes de prise en main sont franchies. */
+  onboardingCompleted: boolean;
   quotas: QuotaBar[];
   planName: string;
   /** Compteurs affichés en indice sur les cartes de modules. */
@@ -422,6 +476,7 @@ export function useDashboardData(): DashboardData {
     const queue = buildQueue(raw);
     const alerts = buildAlerts(raw);
     const contracts = raw.contractStats?.total ?? 0;
+    const onboarding = buildOnboarding(raw);
 
     return {
       loading,
@@ -431,9 +486,12 @@ export function useDashboardData(): DashboardData {
         && raw.envelopes.length === 0
         && raw.negotiations.length === 0,
       kpis: buildKpis(raw, queue),
+      pendingActions: queue.length,
       queue,
       deadlines: buildDeadlines(raw),
       alerts,
+      onboarding,
+      onboardingCompleted: !loading && onboarding.every((step) => step.done),
       quotas: buildQuotas(raw),
       planName: raw.planName ?? "Découverte",
       moduleCounts: {

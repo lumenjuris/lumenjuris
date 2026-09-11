@@ -36,6 +36,7 @@ backNode/signatureenvelopes/
 backNode/feedback-logs.json
 backNode/app.log.json
 backNode/logger.json
+backNode/message-banner.json
 backNode/facture
 
 #proxy
