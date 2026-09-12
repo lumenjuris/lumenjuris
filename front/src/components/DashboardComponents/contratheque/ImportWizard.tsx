@@ -5,7 +5,7 @@ import type { ExtractedField } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { ContractTextPreview } from "./ContractTextPreview";
 import { ImportReviewPanel } from "./ImportReviewPanel";
-import type { FieldChanges } from "./ImportReviewPanel";
+import type { FieldChanges } from "./FieldReviewList";
 import {
   applyDeductions, buildReviewFields, buildSearchTerms, countFieldsToHandle,
   suggestTitle, titleFromFileName, toContractColumns, toMetadataPayload,

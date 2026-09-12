@@ -170,6 +170,14 @@ function normalizeAiValue(kind: FieldInputKind, rawValue: string | null): string
   }
 }
 
+/**
+ * Normalise une valeur venant du backend (colonne ou métadonnée enregistrée)
+ * pour l'afficher dans la saisie du champ.
+ */
+export function normalizeFieldValue(key: string, rawValue: string | null): string | null {
+  return normalizeAiValue(getFieldConfig(key).kind, rawValue);
+}
+
 /** "2026-03-01" ou "01/03/2026" → "2026-03-01". Null si la date est illisible. */
 function toIsoDate(text: string): string | null {
   // Format demandé à l'IA : AAAA-MM-JJ (parfois suivi d'une heure).

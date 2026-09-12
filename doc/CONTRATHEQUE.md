@@ -147,10 +147,15 @@ Module `front/src/components/DashboardComponents/contratheque/` :
   dossiers + tags colorés (`Sidebar`), recherche full-text, filtres (statut,
   B2B/B2C), tableau triable avec badges de statut et indicateur d'urgence
   d'échéance (`ContractTable`), pagination, boutons Importer / Exporter CSV.
-- **Écran 2 — fiche** (`ContractDetail`) : 3 colonnes (viewer PDF + panneau
-  métadonnées + résumé), chaque champ affiche **score de confiance** et **état
-  de validation** avec actions valider/corriger (`MetadataPanel`), chronologie
-  avenants + versions + journal d'audit, actions archiver / supprimer (admin).
+- **Écran 2 — fiche** (`ContractDetail`) : le contenu du contrat à gauche
+  (lecture ou édition par clause), à droite les **informations du contrat**
+  (`ContractFieldsPanel`) qui réutilisent la même liste que l'import
+  (`FieldReviewList`) : mêmes états à compléter / à vérifier / validé, mêmes
+  saisies typées, action « Absent », et **enregistrement à la sortie du champ**
+  (jamais à chaque frappe). Viennent ensuite le **suivi** (statut du cycle de
+  vie et responsable, modifiables), les avenants et la comparaison de versions.
+  Après chaque enregistrement la fiche se recharge en arrière-plan, sans écran
+  de chargement.
 - **Import** (`ImportWizard`) en un seul écran : le contrat à gauche (texte
   mis en page, ou PDF original), les informations extraites à droite
   (`ImportReviewPanel`). Les champs sont rangés par statut, calculé
