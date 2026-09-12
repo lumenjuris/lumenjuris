@@ -64,3 +64,19 @@ adminRouter.get("/fiscalite/factures-zip", auth, (req, res) =>
 adminRouter.get("/fiscalite/factures-csv", auth, (req, res) =>
     relayToNodeRaw(req, res, withQuery("/admin/fiscalite/factures-csv", req))
 );
+
+
+//Création d'un nouveau mesasge banner pour l'accueil
+adminRouter.post("/message-banner", auth, (req,res)=>{
+    relayToNode(req,res, "/admin/message-banner")
+})
+
+//Get des messages banner de l'accueil
+adminRouter.get("/message-banner", auth, (req,res)=>{
+    relayToNode(req,res, "/admin/message-banner")
+})
+
+//Suppression d'un message banner de l'accueil
+adminRouter.delete("/message-banner/:id", auth, (req, res) =>
+    relayToNode(req, res, `/admin/message-banner/${encodeURIComponent(req.params.id as string)}`)
+);

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { EmptyHint } from "./EmptyHint";
 import type { DeadlineCard } from "./types";
 
 interface Props {
@@ -10,6 +11,9 @@ interface Props {
 /**
  * Bloc « Échéances à venir » : les prochaines dates clés extraites des contrats
  * de la contrathèque (fin de contrat, préavis, information consommateur).
+ *
+ * C'est l'information la plus consultée au retour sur l'accueil : elle est
+ * placée juste sous les actions principales.
  */
 export function UpcomingDeadlines({ items, loading }: Props) {
   return (
@@ -35,7 +39,7 @@ export function UpcomingDeadlines({ items, loading }: Props) {
             <Link
               key={item.key}
               to={item.to}
-              className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 border-b border-line-subtle px-4 py-3 transition-colors hover:bg-[#fafbfd]"
+              className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 border-b border-line-subtle px-4 py-3 last:border-b-0 transition-colors hover:bg-[#fafbfd]"
             >
               <div className="flex flex-col items-center gap-px border-r border-line-subtle py-1">
                 <span className="font-serif text-[19px] font-normal leading-none tabular-nums text-blue-primary">
@@ -65,15 +69,7 @@ export function UpcomingDeadlines({ items, loading }: Props) {
         </div>
       )}
 
-      {!loading && items.length === 0 && (
-        <div className="flex flex-col items-center gap-1.5 border-t border-line-subtle px-6 py-8 text-center">
-          <span className="font-serif text-[17px] text-blue-primary">Aucune échéance suivie</span>
-          <span className="max-w-[400px] text-[12.5px] leading-relaxed text-ink-subtle">
-            Les dates clés sont extraites automatiquement de vos contrats :
-            renouvellements, préavis, fins de période d'essai.
-          </span>
-        </div>
-      )}
+      {!loading && items.length === 0 && <EmptyHint>Aucune échéance à venir.</EmptyHint>}
     </section>
   );
 }

@@ -1,13 +1,11 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, FileText, MessagesSquare, PenTool } from "lucide-react";
 
+import { EmptyHint } from "./EmptyHint";
 import type { QueueGroup, QueueItem } from "./types";
 
 /** Nombre de lignes affichées au maximum dans la file. */
 const MAX_ROWS = 5;
-
-const TABS: (QueueGroup | "Tout")[] = ["Tout", "Rédaction", "Signature", "Négociation"];
 
 /** Icône et couleurs de chaque famille de travail. */
 const GROUP_STYLE: Record<QueueGroup, {
@@ -32,46 +30,21 @@ interface Props {
 }
 
 /**
- * File « À traiter aujourd'hui » : brouillons, signatures en attente et
- * négociations ouvertes, regroupés dans une seule liste filtrable.
+ * File « À traiter » : brouillons, signatures en attente et négociations
+ * ouvertes, dans une seule liste triée par urgence.
  */
 export function TodayQueue({ items, loading }: Props) {
-  const [tab, setTab] = useState<QueueGroup | "Tout">("Tout");
-
-  const filtered = tab === "Tout" ? items : items.filter((item) => item.group === tab);
-  const visible = filtered.slice(0, MAX_ROWS);
-
-  let subline = "Chargement…";
-  if (!loading) {
-    subline = items.length > 0
-      ? `${filtered.length} élément${filtered.length > 1 ? "s" : ""}, triés par urgence`
-      : "Rien en cours";
-  }
+  const visible = items.slice(0, MAX_ROWS);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#e8eaf0] bg-white shadow-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3.5 pt-4">
-        <div className="flex items-baseline gap-2.5">
-          <h2 className="font-serif text-[19px] font-normal text-ink">À traiter aujourd'hui</h2>
-          <span className="text-xs text-ink-subtle">{subline}</span>
-        </div>
-
-        <div className="flex gap-0.5 rounded-[9px] bg-surface-subtle p-0.5">
-          {TABS.map((label) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setTab(label)}
-              className={`h-7 rounded-md px-2.5 text-xs font-medium transition-colors ${
-                label === tab
-                  ? "bg-white text-blue-primary shadow-card"
-                  : "text-ink-subtle hover:text-ink-secondary"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-baseline justify-between gap-3 px-4 pb-3.5 pt-4">
+        <h2 className="font-serif text-[19px] font-normal text-ink">À traiter</h2>
+        {!loading && items.length > MAX_ROWS && (
+          <span className="text-xs text-ink-subtle">
+            {visible.length} sur {items.length}
+          </span>
+        )}
       </div>
 
       {loading && <QueueSkeleton />}
@@ -85,7 +58,7 @@ export function TodayQueue({ items, loading }: Props) {
               <Link
                 key={item.key}
                 to={item.to}
-                className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line-subtle px-4 py-3.5 transition-shadow hover:bg-[#fafbfd] hover:shadow-[inset_2px_0_0_#213957]"
+                className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line-subtle px-4 py-3.5 last:border-b-0 transition-shadow hover:bg-[#fafbfd] hover:shadow-[inset_2px_0_0_#213957]"
               >
                 <span className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg ${style.iconClassName}`}>
                   <Icon className="h-[15px] w-[15px]" />
@@ -115,9 +88,7 @@ export function TodayQueue({ items, loading }: Props) {
         </div>
       )}
 
-      {!loading && visible.length === 0 && (
-        <EmptyQueue hasItems={items.length > 0} />
-      )}
+      {!loading && visible.length === 0 && <EmptyHint>Aucun élément en cours.</EmptyHint>}
     </section>
   );
 }
@@ -129,53 +100,6 @@ function QueueSkeleton() {
       {[0, 1, 2].map((row) => (
         <div key={row} className="h-9 animate-pulse rounded-lg bg-surface-subtle" />
       ))}
-    </div>
-  );
-}
-
-/**
- * Deux cas de file vide : aucun élément du tout (on invite à démarrer), ou
- * simplement aucun élément dans l'onglet sélectionné.
- */
-function EmptyQueue({ hasItems }: { hasItems: boolean }) {
-  if (hasItems) {
-    return (
-      <div className="border-t border-line-subtle px-6 py-10 text-center text-[13px] text-ink-subtle">
-        Rien à traiter dans cette catégorie.
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-4 border-t border-line-subtle px-6 pb-10 pt-9 text-center">
-      <div className="flex w-full max-w-[330px] flex-col gap-1.5">
-        <div className="h-2 w-full rounded-full bg-line-subtle" />
-        <div className="h-2 w-[78%] rounded-full bg-surface-subtle" />
-        <div className="h-2 w-[54%] rounded-full bg-[#f7f8fb]" />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <span className="font-serif text-[19px] text-blue-primary">Votre file de travail est vide</span>
-        <span className="max-w-[390px] text-[13px] leading-relaxed text-ink-subtle">
-          Générez un premier contrat ou importez un document existant : échéances,
-          signatures et risques se suivent ensuite tout seuls.
-        </span>
-      </div>
-
-      <div className="mt-0.5 flex gap-2">
-        <Link
-          to="/contrat-generation?section=scratch"
-          className="flex h-9 items-center rounded-[9px] bg-blue-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand-hover"
-        >
-          Générer un contrat
-        </Link>
-        <Link
-          to="/contrat-generation?section=import"
-          className="flex h-9 items-center rounded-[9px] border border-line bg-white px-4 text-[13px] font-medium text-ink-secondary transition-colors hover:bg-surface-subtle"
-        >
-          Importer
-        </Link>
-      </div>
     </div>
   );
 }

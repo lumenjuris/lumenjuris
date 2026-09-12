@@ -1,18 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Loader2, AlertCircle, FileText, Trash2, Download, Handshake, Pencil,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { MetadataPanel } from "./MetadataPanel";
+import { ContractFieldsPanel } from "./ContractFieldsPanel";
 import { ContractEditor } from "./ContractEditor";
 import { contractApi } from "./api";
 import { negotiationApi } from "../negotiation/api";
-import { fmtDate, daysUntil, RENEWAL_LABEL } from "./types";
-import type { ContractDetail as Detail, ValidationStatus } from "./types";
+import { daysUntil, STATUS_LABEL } from "./types";
+import type { AmendmentDTO, ContractDetail as Detail, ContractStatus } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { VersionCompare } from "./VersionCompare";
-import { AmendmentDTO } from "./types";
 import { Amendments } from "./Amendments";
 
 interface Props {
@@ -30,8 +29,8 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
   const [error, setError] = useState("");
   const [openingNego, setOpeningNego] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [contractDelete, setContractDelete] = useState(false);
-  const [validateModalOpen, setValidateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Point d'entrée du tunnel : ouvre (ou rejoint) la négociation isolée de ce contrat.
   async function handleNegotiate() {
@@ -45,85 +44,84 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
     }
   }
 
-  const load = useCallback(async () => {
-    setLoading(true); setError("");
+  /**
+   * Recharge la fiche. Après une modification, le rechargement est silencieux :
+   * repasser toute la page en écran de chargement à chaque champ validé faisait
+   * clignoter l'écran et perdre la position de lecture.
+   */
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
+    setError("");
     try {
-      const d = await contractApi.get(contractId);
-      setData(d);
+      const detail = await contractApi.get(contractId);
+      setData(detail);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur réseau");
     } finally {
-      setLoading(false);
+      if (!options?.silent) setLoading(false);
     }
   }, [contractId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  async function handleValidate(fieldKey: string, value: string | null, status: ValidationStatus) {
-    await contractApi.validateField(contractId, fieldKey, value, status);
-    await load();
+  const refreshInBackground = useCallback(() => { void load({ silent: true }); }, [load]);
+
+  async function handleAmendment(payload: Partial<AmendmentDTO>) {
+    await contractApi.addAmendment(contractId, payload);
+    refreshInBackground();
   }
 
-  async function handleAmendment( payload: Partial<AmendmentDTO>) {
-    await contractApi.addAmendment(contractId, payload );
-    await load();
-  }
-
-  async function handleDelete() {
-    setContractDelete(true);
-    setValidateModalOpen(true);
-  }
-
-  async function validateConfirmed() {
-    if (!contractDelete) return;
+  async function confirmDelete() {
+    setDeleteError("");
     try {
       await contractApi.remove(contractId);
       onDeleted();
-    } catch {}
-    finally {
-      setContractDelete(false);
-      setValidateModalOpen(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "La suppression a échoué.");
+    } finally {
+      setDeleteModalOpen(false);
     }
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+    return <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-ink-subtle" /></div>;
   }
   if (error || !data) {
     return (
       <div className="space-y-4">
         <BackBtn onBack={onBack} />
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 px-4 py-3 rounded-xl">
+        <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
           <AlertCircle className="w-4 h-4" /> {error || "Contrat introuvable."}
         </div>
       </div>
     );
   }
 
-  const d = daysUntil(data.endDate);
-  const urgent = d !== null && d >= 0 && d <= 90;
+  const remainingDays = daysUntil(data.endDate);
+  const urgent = remainingDays !== null && remainingDays >= 0 && remainingDays <= 90;
 
   return (
     <div className="space-y-4">
       <BackBtn onBack={onBack} />
-      {/* Header */}
+
+      {/* En-tête : identité du contrat et actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-primary py-6 px-8 rounded-2xl">
-        {/* Titre & Badges */}
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
-              {data.title.replace(/-/g, " ")}
-            </h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{data.title}</h1>
             <StatusBadge status={data.status} />
+            {urgent && (
+              <span className="text-[10px] font-bold text-amber-200 bg-amber-500/20 border border-amber-300/30 px-2 py-0.5 rounded-md">
+                Échéance dans {remainingDays} j
+              </span>
+            )}
             {data.isB2C && (
               <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-400/30 px-2 py-0.5 rounded-md">
                 B2C · loi Chatel
               </span>
             )}
             {data.isArchived && (
-              <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded-md">
-                Archivé
-              </span>
+              <span className="text-[10px] font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded-md">Archivé</span>
             )}
           </div>
         </div>
@@ -134,7 +132,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
               href={contractApi.documentUrl(contractId)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
             >
               <Download className="w-3.5 h-3.5" /> Télécharger
             </a>
@@ -143,7 +141,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
           <button
             onClick={() => void handleNegotiate()}
             disabled={openingNego}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-900 bg-white rounded-xl shadow-sm transition-all durantion-200 hover:-translate-y-0.5 will-change-transform disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-900 bg-white rounded-xl shadow-sm transition-all duration-200 hover:-translate-y-0.5 will-change-transform disabled:opacity-50"
           >
             {openingNego ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
@@ -155,18 +153,23 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
 
           {canDelete && (
             <button
-              onClick={handleDelete}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-red-500 bg-white border border-red-500 rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform"
+              onClick={() => setDeleteModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-danger bg-white border border-danger rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
             >
-              <Trash2 className="w-3.5 h-3.5 text-red-500" /> Supprimer
+              <Trash2 className="w-3.5 h-3.5" /> Supprimer
             </button>
           )}
         </div>
       </div>
 
-      {/* Aperçu texte (gauche) + informations clés (droite) */}
+      {deleteError && (
+        <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" /> {deleteError}
+        </div>
+      )}
+
+      {/* Contenu du contrat (gauche) + informations et suivi (droite) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Colonne gauche : contenu du contrat — lecture ou édition */}
         <div
           className={`lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 ${editing ? "" : "overflow-y-auto"}`}
           style={editing ? undefined : { maxHeight: 620 }}
@@ -176,7 +179,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold  bg-white border border-[#354F99]/20 rounded-lg hover:bg-[#354F99]/10 border border-white hover:text-white"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-primary bg-white border border-white rounded-lg hover:bg-blue-50 transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" /> Modifier le contrat
               </button>
@@ -187,7 +190,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             <ContractEditor
               contractId={contractId}
               initialText={data.ocrText ?? ""}
-              onSaved={() => { setEditing(false); void load(); }}
+              onSaved={() => { setEditing(false); refreshInBackground(); }}
               onCancel={() => setEditing(false)}
             />
           ) : data.ocrText ? (
@@ -196,38 +199,33 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             </pre>
           ) : (
             <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
-              <FileText className="w-8 h-8 text-gray-200" />
-              <p className="text-sm text-gray-400">Aucun texte disponible. Cliquez sur « Modifier le contrat » pour le saisir.</p>
+              <FileText className="w-8 h-8 text-ink-placeholder" />
+              <p className="text-sm text-ink-subtle">Aucun texte disponible. Cliquez sur « Modifier le contrat » pour le saisir.</p>
             </div>
           )}
         </div>
 
-        {/* Colonne droite : infos clés + métadonnées (validées en avant, manquantes en bas) */}
+        {/* Colonne droite : ce qu'il reste à traiter d'abord, le reste ensuite */}
         <div className="space-y-4">
-          <SummaryCard data={data} urgent={urgent} days={d} />
-          <VersionCompare
-            data={data}
-            canEdit={!editing}
-            onChanged={load}
-          />
+          <ContractFieldsPanel key={data.id} contract={data} onSaved={refreshInBackground} />
+          <TrackingCard contract={data} onUpdated={refreshInBackground} />
           <Amendments
             contractId={contractId}
             amendments={data.amendments ?? []}
             onAddAmendment={handleAmendment}
           />
-          <div className="bg-white rounded-2xl border border-gray-200 p-4">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Métadonnées extraites</p>
-            <MetadataPanel fields={data.metadataFields} onValidate={handleValidate} />
-          </div>
+          <VersionCompare data={data} canEdit={!editing} onChanged={refreshInBackground} />
         </div>
       </div>
+
       <ConfirmationModal
-        open={validateModalOpen}
+        open={deleteModalOpen}
         title="Supprimer le contrat"
-        description={`Souhaitez-vous supprimer le contrat : ${data?.title} ?`}
-        confirmLabel="Valider"
-        onConfirm={validateConfirmed}
-        onCancel={() => { setValidateModalOpen(false); setContractDelete(false); }}
+        description={`Le contrat « ${data.title} » sera définitivement supprimé, avec son document et son historique.`}
+        confirmLabel="Supprimer"
+        confirmClassName="bg-danger text-white hover:bg-danger-dark"
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteModalOpen(false)}
       />
     </div>
   );
@@ -235,37 +233,79 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
 
 function BackBtn({ onBack }: { onBack: () => void }) {
   return (
-    <button onClick={onBack} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#354F99] font-medium transition-colors">
+    <button onClick={onBack} className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-brand font-medium transition-colors">
       <ChevronLeft className="w-3.5 h-3.5" /> Retour à la contrathèque
     </button>
   );
 }
 
-function SummaryCard({ data, urgent, days }: { data: Detail; urgent: boolean; days: number | null }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2 text-sm h-fit">
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Informations clés</p>
-      <Row label="Cocontractant" value={data.counterpartyName} />
-      <Row label="Responsable" value={data.responsibleName} />
-      <Row label="Signature" value={fmtDate(data.signatureDate)} />
-      <Row label="Échéance" value={
-        <span className="inline-flex items-center gap-1.5">
-          {fmtDate(data.endDate)}
-          {urgent && <span className="text-[10px] font-bold text-amber-600">J-{days}</span>}
-        </span>
-      } />
-      <Row label="Renouvellement" value={`${RENEWAL_LABEL[data.renewalType]}${data.noticePeriodDays ? ` · préavis ${data.noticePeriodDays}j` : ""}`} />
-      <Row label="Montant" value={data.amount ? `${data.amount} ${data.currency ?? ""}` : "—"} />
-      <Row label="Droit applicable" value={data.governingLaw} />
-    </div>
-  );
-}
+/**
+ * Suivi interne du contrat : ce qui ne vient pas du document mais de
+ * l'organisation (statut du cycle de vie, personne responsable).
+ */
+function TrackingCard({ contract, onUpdated }: { contract: Detail; onUpdated: () => void }) {
+  const [status, setStatus] = useState<ContractStatus>(contract.status);
+  const [responsible, setResponsible] = useState(contract.responsibleName ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  async function save(patch: Record<string, unknown>) {
+    setSaving(true);
+    setError("");
+    try {
+      await contractApi.update(contract.id, patch);
+      onUpdated();
+    } catch {
+      setError("Modification non enregistrée.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] text-gray-400">{label}</span>
-      <span className="text-xs font-medium text-gray-700 text-right truncate">{value || "—"}</span>
+    <div className="bg-white rounded-card border border-line shadow-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">Suivi</p>
+        {saving && <Loader2 className="w-3.5 h-3.5 animate-spin text-ink-subtle" />}
+      </div>
+
+      {error && (
+        <p role="alert" className="text-xs text-danger-dark bg-danger-light border border-danger/20 px-3 py-2 rounded-lg">{error}</p>
+      )}
+
+      <div className="space-y-1.5">
+        <label htmlFor="suivi-statut" className="block text-xs text-ink-muted">Statut</label>
+        <select
+          id="suivi-statut"
+          value={status}
+          onChange={(event) => {
+            const nouveauStatut = event.target.value as ContractStatus;
+            setStatus(nouveauStatut);
+            void save({ status: nouveauStatut });
+          }}
+          className="w-full bg-white border border-line px-2.5 py-1.5 rounded-lg text-sm text-ink-secondary outline-none focus:border-brand/40 cursor-pointer"
+        >
+          {(Object.keys(STATUS_LABEL) as ContractStatus[]).map((value) => (
+            <option key={value} value={value}>{STATUS_LABEL[value]}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="suivi-responsable" className="block text-xs text-ink-muted">Responsable</label>
+        <input
+          id="suivi-responsable"
+          value={responsible}
+          onChange={(event) => setResponsible(event.target.value)}
+          onBlur={() => {
+            const valeur = responsible.trim();
+            if (valeur === (contract.responsibleName ?? "")) return;
+            void save({ responsibleName: valeur || null });
+          }}
+          placeholder="Personne en charge du contrat"
+          className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-line text-ink outline-none focus:border-brand/40 placeholder:text-ink-placeholder"
+        />
+      </div>
     </div>
   );
 }

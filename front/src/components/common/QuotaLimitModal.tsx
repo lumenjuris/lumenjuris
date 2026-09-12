@@ -1,4 +1,4 @@
-import { X, Sparkles, Lock } from "lucide-react";
+import { X, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/Button";
 
@@ -61,7 +61,6 @@ export function QuotaLimitModal({
               onClick={() => navigate("/souscription")}
               className="w-full gap-2 bg-brand text-white shadow-sm hover:bg-brand-hover"
             >
-              <Sparkles className="h-4 w-4" />
               Voir les formules
             </Button>
             <Button

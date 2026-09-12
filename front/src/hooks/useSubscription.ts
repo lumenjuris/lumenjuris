@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fetchProxy } from "../utils/fetchProxy";
 
+
 export function useSubscriptionPortal() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);

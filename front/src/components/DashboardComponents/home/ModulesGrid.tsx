@@ -9,6 +9,16 @@ interface Props {
 }
 
 /**
+ * Indice chiffré d'une carte de module.
+ *
+ * `empty` est la formulation courte utilisée quand il n'y a rien : elle garde
+ * la même mise en forme que le compteur, en simplement plus discret.
+ */
+function buildHint(count: number, label: string, empty: string) {
+  return count > 0 ? { text: `${count} ${label}`, isEmpty: false } : { text: empty, isEmpty: true };
+}
+
+/**
  * Grille « Vos modules » : raccourci vers les six outils de l'application, avec
  * un indice chiffré quand la donnée est disponible.
  */
@@ -19,7 +29,7 @@ export function ModulesGrid({ counts }: Props) {
       description: "Centralisez et suivez le cycle de vie de tous vos contrats.",
       icon: Library,
       iconClassName: "text-success",
-      hint: counts.contracts > 0 ? `${counts.contracts} contrats` : "Vide",
+      hint: buildHint(counts.contracts, counts.contracts > 1 ? "contrats" : "contrat", "Aucun"),
       to: "/contratheque",
     },
     {
@@ -27,7 +37,7 @@ export function ModulesGrid({ counts }: Props) {
       description: "Créez des contrats conformes depuis vos modèles et clauses.",
       icon: FileText,
       iconClassName: "text-[#354F99]",
-      hint: "",
+      hint: null,
       to: "/generateur",
     },
     {
@@ -35,7 +45,7 @@ export function ModulesGrid({ counts }: Props) {
       description: "Annotez, échangez les redlines et validez la version finale.",
       icon: Handshake,
       iconClassName: "text-[#7c3aed]",
-      hint: counts.negotiations > 0 ? `${counts.negotiations} en cours` : "Aucune",
+      hint: buildHint(counts.negotiations, "en cours", "Aucune"),
       to: "/negociations",
     },
     {
@@ -43,7 +53,7 @@ export function ModulesGrid({ counts }: Props) {
       description: "Détectez les clauses déséquilibrées avant de signer.",
       icon: ShieldCheck,
       iconClassName: "text-warning",
-      hint: counts.alerts > 0 ? `${counts.alerts} alertes` : "Prêt",
+      hint: buildHint(counts.alerts, counts.alerts > 1 ? "alertes" : "alerte", "Aucune"),
       to: "/conformite",
     },
     {
@@ -51,7 +61,7 @@ export function ModulesGrid({ counts }: Props) {
       description: "Réutilisez vos clauses validées juridiquement.",
       icon: ScrollText,
       iconClassName: "text-cyan-600",
-      hint: "",
+      hint: null,
       to: "/clauses",
     },
     {
@@ -59,19 +69,14 @@ export function ModulesGrid({ counts }: Props) {
       description: "Faites signer en ligne, avec valeur probante.",
       icon: PenTool,
       iconClassName: "text-info",
-      hint: counts.signatures > 0 ? `${counts.signatures} en attente` : "Prêt",
+      hint: buildHint(counts.signatures, "en attente", "Aucune"),
       to: "/signature",
     },
   ];
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="font-serif text-[19px] font-normal text-ink">Vos modules</h2>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-subtle">
-          {modules.length} outils
-        </span>
-      </div>
+      <h2 className="font-serif text-[19px] font-normal text-ink">Vos modules</h2>
 
       <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#e8eaf0] bg-[#e8eaf0] sm:grid-cols-2 lg:grid-cols-3">
         {modules.map((module) => {
@@ -85,8 +90,12 @@ export function ModulesGrid({ counts }: Props) {
               <div className="flex items-center justify-between">
                 <Icon className={`h-[17px] w-[17px] ${module.iconClassName}`} />
                 {module.hint && (
-                  <span className="whitespace-nowrap text-2xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                    {module.hint}
+                  <span
+                    className={`whitespace-nowrap text-2xs font-semibold uppercase tracking-[0.06em] ${
+                      module.hint.isEmpty ? "text-ink-subtle" : "text-ink-muted"
+                    }`}
+                  >
+                    {module.hint.text}
                   </span>
                 )}
               </div>

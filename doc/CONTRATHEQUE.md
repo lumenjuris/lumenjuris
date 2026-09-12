@@ -147,12 +147,42 @@ Module `front/src/components/DashboardComponents/contratheque/` :
   dossiers + tags colorés (`Sidebar`), recherche full-text, filtres (statut,
   B2B/B2C), tableau triable avec badges de statut et indicateur d'urgence
   d'échéance (`ContractTable`), pagination, boutons Importer / Exporter CSV.
-- **Écran 2 — fiche** (`ContractDetail`) : 3 colonnes (viewer PDF + panneau
-  métadonnées + résumé), chaque champ affiche **score de confiance** et **état
-  de validation** avec actions valider/corriger (`MetadataPanel`), chronologie
-  avenants + versions + journal d'audit, actions archiver / supprimer (admin).
-- **Wizard d'import** (`ImportWizard`) 4 étapes : upload masse → extraction IA →
-  **revue humaine obligatoire** (champs éditables + scores) → confirmation.
+- **Écran 2 — fiche** (`ContractDetail`) : le contenu du contrat à gauche
+  (lecture ou édition par clause), à droite les **informations du contrat**
+  (`ContractFieldsPanel`) qui réutilisent la même liste que l'import
+  (`FieldReviewList`) : mêmes états à compléter / à vérifier / validé, mêmes
+  saisies typées, action « Absent », et **enregistrement à la sortie du champ**
+  (jamais à chaque frappe). Viennent ensuite le **suivi** (statut du cycle de
+  vie et responsable, modifiables), les avenants et la comparaison de versions.
+  Après chaque enregistrement la fiche se recharge en arrière-plan, sans écran
+  de chargement.
+- **Import** (`ImportWizard`) en un seul écran : le contrat à gauche (texte
+  mis en page, ou PDF original), les informations extraites à droite
+  (`ImportReviewPanel`). Les champs sont rangés par statut, calculé
+  automatiquement (`importReview.ts`, code visuel partagé `FieldStatus.tsx`) :
+  - **À compléter** : champ essentiel vide ;
+  - **À vérifier** : score IA < 0,8, ou valeur calculée (échéance = effet +
+    durée, durée = écart entre les dates) ;
+  - **Validé** : score ≥ 0,8, ou saisi/confirmé par l'utilisateur (groupe replié) ;
+  - **Facultatif** : devise, droit applicable, clauses sensibles — toujours à part,
+    remplis ou non, et hors progression.
+
+  Un champ peut aussi être déclaré **« Absent »** du contrat : il est alors traité
+  (valeur nulle, `HUMAN_VALIDATED`), sinon un contrat sans montant ni date de
+  signature n'atteindrait jamais l'état « Prêt ». En import multiple, chaque
+  document a un onglet avec son état et peut être retiré du lot ; un document
+  dont l'analyse a échoué est signalé avant l'enregistrement.
+
+  Accessibilité : chaque libellé est relié à sa saisie, les groupes de choix
+  portent un `role="group"`, la progression est un `role="progressbar"` et une
+  zone `aria-live` annonce ce qu'il reste à faire. Sur mobile, la colonne du
+  contrat est bornée à 55 % de la hauteur d'écran et le défilement vers un
+  passage surligné n'entraîne que cette colonne.
+
+  Saisies typées (dates, choix, nombres). Le champ regardé est surligné dans le
+  contrat. L'enregistrement n'est jamais bloqué ; il ramène directement à la
+  liste (toast + ligne surlignée). En base, un champ non touché reste
+  `AI_SUGGESTED` ; confirmé → `HUMAN_VALIDATED` ; modifié → `HUMAN_CORRECTED`.
 
 Accès via les routes `/contratheque` et `/contratheque/:externalId`.
 
@@ -192,5 +222,5 @@ front/src/components/DashboardComponents/contratheque/          ← module UI (�
   ├── types.ts / api.ts
   ├── ContrathequeList.tsx / KpiBar / Sidebar / ContractTable / StatusBadge
   ├── ContractDetail.tsx / MetadataPanel
-  └── ImportWizard.tsx
+  └── ImportWizard.tsx / ImportReviewPanel / ContractTextPreview / importReview.ts / FieldStatus
 ```

@@ -11,17 +11,21 @@ import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
 import { Plan, PlanName } from "@prisma/client"
+import fs from "fs/promises"
+import path from "path"
+import crypto from "crypto"
+import { fileURLToPath } from "url"
 
 const router: Router = express.Router()
 
 const VALID_ROLES = new Set(["ADMIN", "JURISTE", "USER", "LECTEUR"])
-const VALID_PLANS = new Set(["Freemium", "Betatesteur", "Starter_mensuel", "Starter_annuel",  "Pro_mensuel" ,"Pro_annuel"]);
+const VALID_PLANS = new Set(["Freemium", "Betatesteur", "Starter_mensuel", "Starter_annuel", "Pro_mensuel", "Pro_annuel"]);
 
 /** GET /admin/users — liste tous les utilisateurs (mono-entreprise). */
 router.get("/users", authMiddleware, requireAdmin, async (_req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
-            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true, subscription: {select: {plan: {select: {name: true}} } } },
+            select: { idUser: true, email: true, nom: true, prenom: true, role: true, isVerified: true, isBanned: true, subscription: { select: { plan: { select: { name: true } } } } },
             orderBy: { idUser: "asc" },
         })
         const formattedUsers = users.map((u) => ({
@@ -67,39 +71,39 @@ router.patch("/users/:idUser/role", authMiddleware, requireAdmin, async (req: Re
 router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Request, res: Response) => {
     try {
         const targetId = Number(req.params["idUser"]);
-        const {plan: planName} = req.body as {plan?: string}
+        const { plan: planName } = req.body as { plan?: string }
 
         if (!planName || !VALID_PLANS.has(planName)) {
-            return res.status(400).json({success: false, message: "Plan invalide"});
+            return res.status(400).json({ success: false, message: "Plan invalide" });
         }
 
         if (targetId === Number(req.idUser)) {
-            return res.status(400).json({success : false, message: "Vous ne pouvez pas modifier votre propre plan"});
+            return res.status(400).json({ success: false, message: "Vous ne pouvez pas modifier votre propre plan" });
         }
 
-        const newPlan = await prisma.plan.findFirst({ where: {name: planName as PlanName }});
+        const newPlan = await prisma.plan.findFirst({ where: { name: planName as PlanName } });
 
         if (!newPlan) {
-            return res.status(400).json({success: false, message: "Le plan spécifié n'existe pas."})
+            return res.status(400).json({ success: false, message: "Le plan spécifié n'existe pas." })
         }
 
         const targetUser = await prisma.user.findUnique({
-            where: {idUser: targetId},
-            include: { subscription: true},
+            where: { idUser: targetId },
+            include: { subscription: true },
         });
 
         if (!targetUser) {
-            return res.status(400).json({success: false, message: "Utilisateur introuvable."})
+            return res.status(400).json({ success: false, message: "Utilisateur introuvable." })
         }
 
         const now = new Date();
-        let expiresAt= new Date();
+        let expiresAt = new Date();
 
         if (planName === "Freemium" || planName === "Betatesteur") {
             expiresAt = new Date("2099-12-31T23:59:59.999Z");
         } else if (planName.endsWith("_annuel")) {
             expiresAt = new Date(now);
-            expiresAt.setDate(expiresAt.getDate() +365);
+            expiresAt.setDate(expiresAt.getDate() + 365);
         } else if (planName.endsWith("_mensuel")) {
             expiresAt = new Date(now);
             expiresAt.setDate(expiresAt.getDate() + 30);
@@ -107,7 +111,7 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
 
         await prisma.$transaction([
             prisma.subscription.upsert({
-                where: {userId: targetId},
+                where: { userId: targetId },
                 create: {
                     userId: targetId,
                     planId: newPlan.idPlan,
@@ -128,7 +132,7 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
             }),
 
             prisma.userCredit.upsert({
-                where: {userId: targetId},
+                where: { userId: targetId },
                 create: {
                     userId: targetId,
                     quotas: (newPlan.creditsIncluded ?? {}),
@@ -136,12 +140,12 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
                 update: {
                     quotas: (newPlan.creditsIncluded ?? {}),
                 },
-            }),        
+            }),
         ]);
-        return res.json({success: true, data: {plan: newPlan.name, expiresAt,}});
+        return res.json({ success: true, data: { plan: newPlan.name, expiresAt, } });
     } catch (err) {
         console.error("[admin] update plan error", err);
-        return res.status(500).json({ success: false, message: "Erreur serveur"})
+        return res.status(500).json({ success: false, message: "Erreur serveur" })
     }
 })
 
@@ -818,6 +822,201 @@ router.get("/fiscalite/factures-zip", authMiddleware, requireAdmin, async (req: 
             return res.status(500).json({ success: false, message: "Erreur serveur." })
         }
         return res.end()
+    }
+})
+
+
+
+
+const __bannerFilename = fileURLToPath(import.meta.url)
+const __bannerDirname = path.dirname(__bannerFilename)
+const BANNER_FILE = path.resolve(__bannerDirname, "../../message-banner.json")
+
+
+const VALID_BANNER_TYPES = new Set(["information", "nouveaute", "update", "maintenance", "alerte"])
+
+
+
+interface DataBanner {
+    id: string;
+    messageType: string;
+    title: string;
+    content: string;
+    link: boolean | string;
+    startAt: string;
+    endAt: string;
+}
+
+/** lecture du fichier, un fichier absent ou vide renvoie "aucun message" */
+async function readBannerFile(): Promise<DataBanner[]> {
+    try {
+        const file = await fs.readFile(BANNER_FILE, "utf-8")
+        const parsed = file.trim() ? JSON.parse(file) : []
+        return Array.isArray(parsed) ? parsed : []
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return []
+        throw err
+    }
+}
+
+async function writeBannerFile(messages: DataBanner[]): Promise<void> {
+    await fs.writeFile(BANNER_FILE, JSON.stringify(messages, null, 2), "utf-8")
+}
+
+
+async function readBannerMessages(): Promise<DataBanner[]> {
+    const messages = await readBannerFile()
+    if (messages.every((message) => message.id)) return messages
+
+    const repaired = messages.map((message) =>
+        message.id ? message : { ...message, id: crypto.randomUUID() }
+    )
+    await writeBannerFile(repaired)
+    return repaired
+}
+
+// Convertit une date reçue en ISO, ou `null` si elle n'est pas exploitable 
+function toIsoDate(value: unknown): string | null {
+    if (typeof value !== "string" && !(value instanceof Date)) return null
+    const date = new Date(value as string)
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+//Route Admin pour set un nouveau message banner dans la page d'accueil
+router.post("/message-banner", authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { messageType, title, content, link, startAt, endAt } = req.body;
+
+        const startAtIso = toIsoDate(startAt)
+        const endAtIso = toIsoDate(endAt)
+
+        if (!VALID_BANNER_TYPES.has(messageType)) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: `Type de message inconnu : ${messageType}`
+                })
+        }
+        if (typeof title !== "string" || !title.trim() || typeof content !== "string" || !content.trim()) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "Le titre et le contenu du message sont obligatoires."
+                })
+        }
+        if (!startAtIso || !endAtIso) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "Les dates de début et de fin de diffusion sont obligatoires et doivent être valides."
+                })
+        }
+        if (endAtIso < startAtIso) {
+            return res
+                .status(400)
+                .json({
+                    success: false,
+                    message: "La date de fin de diffusion doit être postérieure à la date de début."
+                })
+        }
+
+        const data: DataBanner = {
+            id: crypto.randomUUID(),
+            messageType,
+            title: title.trim(),
+            content: content.trim(),
+            // Un lien vide vaut « pas de bouton En savoir plus ».
+            link: typeof link === "string" && link.trim() ? link.trim() : false,
+            startAt: startAtIso,
+            endAt: endAtIso
+        }
+
+        const messages = await readBannerMessages();
+        messages.push(data);
+        await writeBannerFile(messages);
+
+        return res
+            .status(201)
+            .json({
+                success: true,
+                message: "Le message banner de l'accueil à été mis à jour avec succès.",
+                data: [data]
+            });
+    } catch (err) {
+        console.error(err);
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la mise à jour du message banner de l'accueil",
+                error: err
+            });
+    }
+})
+
+
+// Route publique pour obtenir la bannière des messages d'informations de Lumen Juris
+router.get("/message-banner", async (_req, res) => {
+    try {
+        const data = await readBannerMessages()
+
+        return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Le message banner de l'accueil a été récupéré avec succès.",
+                data
+            })
+    } catch (err) {
+        console.error(err);
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la récupération du message banner de l'accueil",
+                error: err
+            })
+    }
+})
+
+
+// Route Admin pour supprimer un message du bandeau d'accueil
+router.delete("/message-banner/:id", authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params
+        const messages = await readBannerMessages()
+        const remaining = messages.filter((message) => message.id !== id)
+
+        if (remaining.length === messages.length) {
+            return res
+                .status(404)
+                .json({
+                    success: false,
+                    message: "Aucun message du bandeau d'accueil ne correspond à cet identifiant."
+                })
+        }
+
+        await writeBannerFile(remaining)
+
+        return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Le message du bandeau d'accueil a été supprimé avec succès.",
+                data: remaining
+            })
+    } catch (err) {
+        console.error(err);
+        return res
+            .status(500)
+            .json({
+                success: false,
+                message: "Une erreur serveur est survenue lors de la suppression du message du bandeau d'accueil",
+                error: err
+            })
     }
 })
 

@@ -1,242 +1,325 @@
-import { useState, useRef, useCallback } from "react";
-import {
-  UploadCloud, FileText, Loader2, ChevronLeft, ChevronRight, Check,
-  Sparkles, AlertCircle, ShieldCheck, X,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, Check, ExternalLink, Loader2, X } from "lucide-react";
 import { contractApi } from "./api";
-import { FIELD_LABEL } from "./types";
 import type { ExtractedField } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
+import { ContractTextPreview } from "./ContractTextPreview";
+import { ImportReviewPanel } from "./ImportReviewPanel";
+import type { FieldChanges } from "./FieldReviewList";
+import {
+  applyDeductions, buildReviewFields, buildSearchTerms, countFieldsToHandle,
+  suggestTitle, titleFromFileName, toContractColumns, toMetadataPayload,
+} from "./importReview";
+import type { ReviewField } from "./importReview";
 
 interface Props {
-  onDone: () => void;
+  /** Fichiers déjà choisis par l'utilisateur ; la lecture démarre dessus. */
+  files: File[];
+  /** Appelé après l'enregistrement, avec les identifiants des contrats créés. */
+  onDone: (savedContractIds: string[]) => void;
   onCancel: () => void;
 }
 
-type WizardStep = "upload" | "extract" | "review" | "done";
-
-/** Un fichier en cours d'import + son extraction + sa revue. */
+/**
+ * Un fichier en cours d'import. L'import se fait en deux temps : le texte
+ * arrive vite et s'affiche aussitôt, l'analyse IA arrive après et remplit les
+ * champs.
+ */
 interface ImportItem {
+  /**
+   * Identifiant stable : l'utilisateur peut retirer un document du lot, donc la
+   * position dans la liste ne permet pas de retrouver un document de façon sûre.
+   */
+  id: string;
   file: File;
-  status: "pending" | "extracting" | "extracted" | "error";
+  textStatus: "waiting" | "loading" | "ready" | "error";
+  aiStatus: "waiting" | "running" | "ready" | "error";
+  /** Message de l'étape qui a échoué. */
   error?: string;
-  fields: ExtractedField[];
   ocrText: string;
   title: string;
-  // champs marqués validés par l'humain (clé → true)
-  validated: Record<string, boolean>;
+  /** L'utilisateur a modifié l'intitulé : on ne le remplace plus automatiquement. */
+  titleEditedByUser: boolean;
+  fields: ReviewField[];
+  /** Contrat existant portant déjà ce nom (simple avertissement, non bloquant). */
+  duplicate: { id: string; title: string } | null;
+  /** Rempli dès l'enregistrement : évite de créer un doublon si on relance après une erreur. */
+  savedContractId: string | null;
 }
 
 /**
- * Wizard d'import en 4 étapes. La revue humaine (étape 3) est OBLIGATOIRE :
- * aucune écriture en base avant que l'utilisateur ait confirmé.
+ * Import d'un ou plusieurs contrats, en un seul écran :
+ *   - à gauche le contrat, cœur de l'écran, affiché dès la lecture du texte ;
+ *   - à droite les informations extraites, rangées par ce qu'il reste à faire.
+ *
+ * Règle produit : tout ce qui peut être déduit sans décision de l'utilisateur
+ * est fait automatiquement (intitulé proposé, dates calculées, passage au
+ * document suivant, retour à la contrathèque après l'enregistrement).
+ * Rien n'est écrit en base avant le clic sur « Enregistrer ».
  */
-export function ImportWizard({ onDone, onCancel }: Props) {
-  const [step, setStep] = useState<WizardStep>("upload");
-  const [items, setItems] = useState<ImportItem[]>([]);
-  const [active, setActive] = useState(0);
+export function ImportWizard({ files, onDone, onCancel }: Props) {
+  const [items, setItems] = useState<ImportItem[]>(() => files.map(toImportItem));
+  const [activeId, setActiveId] = useState<string>(() => items[0]?.id ?? "");
+  const [highlightTerms, setHighlightTerms] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
-  const [existingContractTitle, setExistingContractTitle] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [saveError, setSaveError] = useState("");
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
-  // ── Étape 1 : sélection des fichiers ──────────────────────────────────────
-  const addFiles = useCallback((files: FileList | File[]) => {
-    const arr = Array.from(files).filter((f) => f.type === "application/pdf" || /\.(pdf|docx?|)$/i.test(f.name));
-    if (!arr.length) return;
-    setItems((prev) => [
-      ...prev,
-      ...arr.map((file) => ({ file, status: "pending" as const, fields: [], ocrText: "", title: file.name.replace(/\.[^.]+$/, ""), validated: {} })),
-    ]);
+  // Copie toujours à jour des items, lisible depuis les fonctions asynchrones.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  // Évite de lancer l'import deux fois (React StrictMode monte le composant
+  // deux fois en développement).
+  const importStarted = useRef(false);
+  useEffect(() => {
+    if (importStarted.current) return;
+    importStarted.current = true;
+    void startImport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Étape 2 : extraction IA séquentielle ──────────────────────────────────
-  async function runExtraction() {
-    // Vérifie si le contrat existe déjà avant de lancer l'analyse, demande à l'utilisateur si il souhaite tout de même continuer via une modale
-    const existingContracts = await contractApi.list({pageSize: 1000});
-
-      const duplicate = items.find((item) => 
-        existingContracts.items.some(
-          (c) => c.title.trim().toLowerCase() === item.title.trim().toLowerCase()
-        )
-      );
-
-      if (duplicate && !duplicateModalOpen) {
-        setExistingContractTitle(duplicate.title);
-        setDuplicateModalOpen(true);
-        setSaving(false);
-        return;
-      }
-    setStep("extract");
-    setError("");
-    const next = [...items];
-    for (let i = 0; i < next.length; i++) {
-      next[i] = { ...next[i], status: "extracting" };
-      setItems([...next]);
-      try {
-        const r = await contractApi.extract(next[i].file);
-        next[i] = { ...next[i], status: "extracted", fields: r.fields, ocrText: r.ocr_text };
-      } catch (e) {
-        next[i] = { ...next[i], status: "error", error: e instanceof Error ? e.message : "Échec" };
-      }
-      setItems([...next]);
-    }
-    setActive(0);
-    setStep("review");
+  /**
+   * Modifie un seul document, retrouvé par son identifiant. Un document retiré
+   * du lot pendant sa lecture ou son analyse n'est simplement plus modifié.
+   */
+  function patchItem(itemId: string, patch: Partial<ImportItem>) {
+    setItems((previous) => previous.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
   }
 
-  // ── Étape 4 : persistance après revue ─────────────────────────────────────
-  async function confirmAll() {
-    setSaving(true);
-    setError("");
-    try {
-      
-      for (const it of items) {
-        if (it.status === "error") continue;
-        const fileBase64 = await fileToBase64(it.file);
-        const metadataFields = it.fields.map((f) => ({
-          fieldKey: f.field_key,
-          value: f.value,
-          confidenceScore: f.confidence_score,
-          validationStatus: it.validated[f.field_key] ? ("HUMAN_VALIDATED" as const) : ("AI_SUGGESTED" as const),
-        }));
-        await contractApi.create({
-          title: it.title,
-          ocrText: it.ocrText,
-          fileBase64,
-          metadataFields,
-          // colonnes structurées dérivées des champs validés
-          ...deriveColumns(it.fields),
-        });
+  // ── Lecture puis analyse ──────────────────────────────────────────────────
+  async function startImport() {
+    const readItems = await readAllTexts(itemsRef.current);
+    for (const item of readItems) {
+      if (item.textStatus === "ready") void checkDuplicate(item.id, item.title);
+    }
+    for (const item of readItems) {
+      if (item.textStatus !== "ready") continue;
+      // Document retiré du lot entre-temps : inutile de l'analyser.
+      if (!itemsRef.current.some((current) => current.id === item.id)) continue;
+      await analyseOne(item.id, item.ocrText);
+    }
+  }
+
+  /** Étape 1 : texte de chaque document (rapide). */
+  async function readAllTexts(list: ImportItem[]): Promise<ImportItem[]> {
+    const result = [...list];
+    for (let index = 0; index < result.length; index++) {
+      const itemId = result[index].id;
+      patchItem(itemId, { textStatus: "loading" });
+      try {
+        const response = await contractApi.extractText(result[index].file);
+        result[index] = { ...result[index], textStatus: "ready", ocrText: response.ocr_text };
+        patchItem(itemId, { textStatus: "ready", ocrText: response.ocr_text });
+      } catch (err) {
+        const message = errorMessage(err);
+        result[index] = { ...result[index], textStatus: "error", aiStatus: "error", error: message };
+        patchItem(itemId, { textStatus: "error", aiStatus: "error", error: message });
       }
-      setStep("done");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec de l'enregistrement");
-    } finally {
+    }
+    return result;
+  }
+
+  /** Étape 2 : analyse IA d'un document (lente), avec un nouvel essai automatique. */
+  async function analyseOne(itemId: string, ocrText: string) {
+    patchItem(itemId, { aiStatus: "running", error: undefined });
+    let extractedFields: ExtractedField[];
+    try {
+      extractedFields = await extractMetadataWithRetry(ocrText);
+    } catch (err) {
+      patchItem(itemId, { aiStatus: "error", error: errorMessage(err) });
+      return;
+    }
+
+    const fields = buildReviewFields(extractedFields);
+    const currentItem = itemsRef.current.find((item) => item.id === itemId);
+    if (!currentItem) return;
+    const newTitle = currentItem.titleEditedByUser ? currentItem.title : suggestTitle(fields) ?? currentItem.title;
+    patchItem(itemId, { aiStatus: "ready", fields, title: newTitle });
+    if (newTitle !== currentItem.title) void checkDuplicate(itemId, newTitle);
+  }
+
+  /** Cherche un contrat existant portant exactement le même nom. */
+  async function checkDuplicate(itemId: string, title: string) {
+    const normalizedTitle = title.trim().toLowerCase();
+    if (!normalizedTitle) return;
+    try {
+      const result = await contractApi.list({ q: title.trim(), pageSize: 20 });
+      const existing = result.items.find((contract) => contract.title.trim().toLowerCase() === normalizedTitle);
+      patchItem(itemId, { duplicate: existing ? { id: existing.id, title: existing.title } : null });
+    } catch (err) {
+      // Mieux vaut un doublon possible qu'un import bloqué.
+      console.error("Vérification des doublons impossible :", err);
+    }
+  }
+
+  // ── Actions de l'utilisateur ──────────────────────────────────────────────
+  function updateField(itemId: string, key: string, changes: FieldChanges) {
+    setItems((previous) => previous.map((item) => {
+      if (item.id !== itemId) return item;
+      const updatedFields = item.fields.map((field) => (field.key === key ? { ...field, ...changes } : field));
+      // Une nouvelle valeur peut permettre d'en déduire une autre (ex. durée → échéance).
+      return { ...item, fields: applyDeductions(updatedFields) };
+    }));
+  }
+
+  function selectItem(itemId: string) {
+    setActiveId(itemId);
+    setHighlightTerms([]);
+  }
+
+  /** Retire un document du lot (mauvais fichier glissé dans la sélection). */
+  function removeItem(itemId: string) {
+    const remainingItems = items.filter((item) => item.id !== itemId);
+    if (remainingItems.length === 0) {
+      onCancel();
+      return;
+    }
+    setItems(remainingItems);
+    if (itemId === activeId) selectItem(remainingItems[0].id);
+  }
+
+  /**
+   * Document affiché. On retombe sur le premier document si l'identifiant actif
+   * ne correspond à rien : c'est le cas au tout premier rendu en mode strict,
+   * où React initialise l'état deux fois.
+   */
+  function currentItem(): ImportItem | undefined {
+    const list = itemsRef.current;
+    return list.find((item) => item.id === activeId) ?? list[0];
+  }
+
+  /**
+   * Surligne dans le contrat la valeur du champ où l'utilisateur vient d'entrer.
+   * Les termes sont figés à cet instant : les recalculer à chaque frappe ferait
+   * défiler le contrat sans arrêt et redessinerait tout le document.
+   */
+  function showFieldInContract(key: string | null) {
+    const field = key ? currentItem()?.fields.find((candidate) => candidate.key === key) : undefined;
+    setHighlightTerms(field ? buildSearchTerms(field) : []);
+  }
+
+  /** Document terminé : on passe tout seul au suivant qui demande encore une action. */
+  const goToNextItemNeedingAction = useCallback(() => {
+    window.setTimeout(() => {
+      const list = itemsRef.current;
+      const currentIndex = Math.max(0, list.findIndex((item) => item.id === currentItem()?.id));
+      for (let step = 1; step < list.length; step++) {
+        const candidate = list[(currentIndex + step) % list.length];
+        if (candidate.aiStatus === "ready" && countFieldsToHandle(candidate.fields) > 0) {
+          setActiveId(candidate.id);
+          setHighlightTerms([]);
+          return;
+        }
+      }
+    }, 600);
+  }, [activeId]);
+
+  function requestCancel() {
+    const hasUserChanges = items.some((item) =>
+      item.titleEditedByUser || item.fields.some((field) => field.confirmedByUser),
+    );
+    // Rien n'a été modifié : inutile de demander confirmation.
+    if (hasUserChanges) setCancelModalOpen(true);
+    else onCancel();
+  }
+
+  // ── Enregistrement ────────────────────────────────────────────────────────
+  async function saveAll() {
+    setSaving(true);
+    setSaveError("");
+    const savedContractIds: string[] = [];
+    try {
+      for (const item of items) {
+        if (item.textStatus === "error") continue;
+        if (item.savedContractId) {
+          savedContractIds.push(item.savedContractId);
+          continue;
+        }
+        const fileBase64 = await fileToBase64(item.file);
+        const created = await contractApi.create({
+          title: item.title.trim() || titleFromFileName(item.file.name),
+          ocrText: item.ocrText,
+          fileBase64,
+          metadataFields: toMetadataPayload(item.fields),
+          ...toContractColumns(item.fields),
+        });
+        savedContractIds.push(created.id);
+        patchItem(item.id, { savedContractId: created.id });
+      }
+      onDone(savedContractIds);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
       setSaving(false);
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Valeurs dérivées pour l'affichage ─────────────────────────────────────
+  const activeItem = items.find((item) => item.id === activeId) ?? items[0];
+  const savableItems = items.filter((item) => item.textStatus !== "error");
+  const analysisInProgress = savableItems.some((item) => item.aiStatus === "waiting" || item.aiStatus === "running");
+  const fieldsToHandleCount = savableItems.reduce((total, item) => total + countFieldsToHandle(item.fields), 0);
+  const notAnalysedItems = savableItems.filter((item) => item.aiStatus === "error");
+  const hasSeveralFiles = items.length > 1;
+
+  const saveLabel = savableItems.length > 1 ? `Enregistrer les ${savableItems.length} contrats` : "Enregistrer";
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <ConfirmationModal
-          open={duplicateModalOpen}
-          title="Contrat déjà existant"
-          description={`Un contrat nommé "${existingContractTitle}" existe déjà dans votre contrathèque. Souhaitez-vous quand même l'enregistrer (doublon) ?`}
-          confirmLabel="Enregistrer quand même"
-          onConfirm={() => {
-            setDuplicateModalOpen(false);
-            void runExtraction();
-          }}
-          onCancel={() => {
-            setDuplicateModalOpen(false);
-          }}
-        />
-        <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Importer un contrat</h1>
-          <p className="text-sm text-ink-muted mt-1">Upload → extraction IA → revue humaine → enregistrement.</p>
-        </div>
-        <button onClick={onCancel} className="shrink-0 p-1.5 rounded-lg text-ink-subtle hover:text-ink-secondary hover:bg-surface-muted transition-colors" title="Annuler">
-          <X className="w-5 h-5" />
+    <div className="space-y-3 max-w-[1600px] mx-auto w-full">
+      {/* En-tête : retour, intitulé modifiable, état, enregistrement */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={requestCancel}
+          disabled={saving}
+          className="shrink-0 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-colors disabled:opacity-40"
+          title="Retour à la contrathèque"
+        >
+          <ArrowLeft className="w-5 h-5" />
         </button>
-      </div>
-
-      <Stepper step={step} />
-
-      {error && (
-        <div className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
-          <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-        </div>
-      )}
-
-      {step === "upload" && (
-        <UploadStep
-          items={items} fileRef={fileRef} onAdd={addFiles}
-          onRemove={(i) => setItems((p) => p.filter((_, idx) => idx !== i))}
-          onNext={runExtraction}
+        <input
+          value={activeItem.title}
+          onChange={(event) => patchItem(activeItem.id, { title: event.target.value, titleEditedByUser: true })}
+          onBlur={() => void checkDuplicate(activeItem.id, activeItem.title)}
+          aria-label="Intitulé du contrat"
+          className="flex-1 min-w-[200px] text-xl font-bold text-ink tracking-tight bg-transparent border border-transparent hover:border-line focus:border-brand/40 rounded-lg px-2 py-1 outline-none transition-colors"
         />
-      )}
-
-      {step === "extract" && (
-        <div className="bg-white rounded-card border border-line shadow-card p-8 space-y-3">
-          {items.map((it, i) => (
-            <div key={i} className="flex items-center gap-3 text-sm">
-              {it.status === "extracted" ? <Check className="w-4 h-4 text-success" />
-                : it.status === "error" ? <AlertCircle className="w-4 h-4 text-danger" />
-                : <Loader2 className="w-4 h-4 animate-spin text-ink-subtle" />}
-              <span className="text-ink-secondary truncate">{it.file.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {step === "review" && items.length > 0 && (
-        <ReviewStep
-          items={items} active={active} setActive={setActive} saving={saving}
-          onToggleValidate={(key) => setItems((prev) => prev.map((it, i) => i === active ? { ...it, validated: { ...it.validated, [key]: !it.validated[key] } } : it))}
-          onEditField={(key, value) => setItems((prev) => prev.map((it, i) => i === active ? { ...it, fields: it.fields.map((f) => f.field_key === key ? { ...f, value } : f), validated: { ...it.validated, [key]: true } } : it))}
-          onEditTitle={(title) => setItems((prev) => prev.map((it, i) => i === active ? { ...it, title } : it))}
-          onConfirm={confirmAll}
-        />
-      )}
-
-      {step === "done" && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-          <div className="w-20 h-20 rounded-card bg-success-light flex items-center justify-center">
-            <ShieldCheck className="w-10 h-10 text-success-dark stroke-[1.5]" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold text-ink">{items.filter((i) => i.status !== "error").length} contrat(s) enregistré(s)</h3>
-            <p className="text-sm text-ink-muted">Ils apparaissent maintenant dans votre contrathèque.</p>
-          </div>
-          <button onClick={onDone} className="px-5 py-2.5 text-sm font-semibold text-white bg-brand rounded-xl hover:bg-brand-hover transition-all shadow-card">
-            Retour à la contrathèque
+        <div className="flex items-center gap-3 shrink-0">
+          <SaveStatus analysisInProgress={analysisInProgress} fieldsToHandleCount={fieldsToHandleCount} />
+          <button
+            onClick={() => void saveAll()}
+            disabled={saving || analysisInProgress || savableItems.length === 0}
+            title={fieldsToHandleCount > 0 ? "Les champs restants pourront être complétés depuis la fiche du contrat." : undefined}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover disabled:opacity-50 transition-all shadow-card"
+          >
+            {saving || analysisInProgress ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {saving ? "Enregistrement…" : saveLabel}
           </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Étape 1 ───
-function UploadStep({
-  items, fileRef, onAdd, onRemove, onNext,
-}: {
-  items: ImportItem[];
-  fileRef: React.RefObject<HTMLInputElement>;
-  onAdd: (f: FileList | File[]) => void;
-  onRemove: (i: number) => void;
-  onNext: () => void;
-}) {
-  const [drag, setDrag] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => { e.preventDefault(); setDrag(false); onAdd(e.dataTransfer.files); }}
-        onClick={() => fileRef.current?.click()}
-        className={`border-2 border-dashed rounded-card p-10 text-center cursor-pointer transition-all ${drag ? "border-brand bg-brand-light" : "border-line hover:border-brand/40 hover:bg-surface-subtle"}`}
-      >
-        <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" multiple className="hidden" onChange={(e) => { if (e.target.files) onAdd(e.target.files); e.target.value = ""; }} />
-        <div className="w-14 h-14 mx-auto bg-white rounded-panel flex items-center justify-center text-brand shadow-card border border-line mb-3">
-          <UploadCloud className="w-7 h-7 stroke-[1.5]" />
-        </div>
-        <p className="text-sm font-semibold text-ink">Glissez-déposez vos contrats (PDF / Word)</p>
-        <p className="text-xs text-ink-subtle mt-1">Import en masse supporté — plusieurs fichiers à la fois.</p>
       </div>
 
-      {items.length > 0 && (
-        <div className="bg-white rounded-card border border-line shadow-card divide-y divide-line-subtle">
-          {items.map((it, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-              <FileText className="w-4 h-4 text-ink-subtle shrink-0" />
-              <span className="flex-1 text-sm text-ink-secondary truncate">{it.file.name}</span>
-              <button onClick={() => onRemove(i)} className="p-1 rounded-md text-ink-subtle hover:text-danger hover:bg-danger-light transition-all">
+      {hasSeveralFiles && (
+        <div role="group" aria-label="Documents à importer" className="flex gap-1.5 overflow-x-auto pb-1">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className={`shrink-0 flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-lg border text-xs transition-colors ${
+                item.id === activeItem.id ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
+              }`}
+            >
+              <button
+                onClick={() => selectItem(item.id)}
+                aria-current={item.id === activeItem.id ? "true" : undefined}
+                className="flex items-center gap-2 min-w-0 py-1"
+              >
+                <span className="max-w-[180px] truncate font-medium">{item.title}</span>
+                <ItemStatusChip item={item} />
+              </button>
+              <button
+                onClick={() => removeItem(item.id)}
+                title="Retirer ce document de l'import"
+                aria-label={`Retirer ${item.title} de l'import`}
+                className="shrink-0 p-1 rounded text-ink-subtle hover:text-danger hover:bg-danger-light transition-colors"
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -244,184 +327,150 @@ function UploadStep({
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button
-          onClick={onNext}
-          disabled={items.length === 0}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover disabled:opacity-40 transition-all shadow-card"
-        >
-          <Sparkles className="w-4 h-4" /> Lancer l'extraction IA <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Étape 3 ───
-function ReviewStep({
-  items, active, setActive, saving, onToggleValidate, onEditField, onEditTitle, onConfirm,
-}: {
-  items: ImportItem[];
-  active: number;
-  setActive: (i: number) => void;
-  saving: boolean;
-  onToggleValidate: (key: string) => void;
-  onEditField: (key: string, value: string) => void;
-  onEditTitle: (title: string) => void;
-  onConfirm: () => void;
-}) {
-  const it = items[active];
-  const allValidated = it.fields.every((f) => it.validated[f.field_key] || !f.value);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 text-xs text-info-dark bg-info-light border border-info/20 rounded-xl px-4 py-2.5">
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        Revue obligatoire : validez (✓) ou corrigez chaque champ avant l'enregistrement.
-      </div>
-
-      {/* Navigation entre fichiers */}
-      {items.length > 1 && (
-        <div className="flex items-center justify-between">
-          <button onClick={() => setActive(Math.max(0, active - 1))} disabled={active === 0} className="p-1.5 rounded-lg border border-line disabled:opacity-30 hover:bg-surface-subtle transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs text-ink-muted">Document {active + 1} / {items.length}</span>
-          <button onClick={() => setActive(Math.min(items.length - 1, active + 1))} disabled={active === items.length - 1} className="p-1.5 rounded-lg border border-line disabled:opacity-30 hover:bg-surface-subtle transition-all">
-            <ChevronRight className="w-4 h-4" />
-          </button>
+      {notAnalysedItems.length > 0 && (
+        <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            {notAnalysedItems.length > 1
+              ? `${notAnalysedItems.length} documents n'ont pas pu être analysés : leur texte sera enregistré, sans aucune information extraite.`
+              : `« ${notAnalysedItems[0].title} » n'a pas pu être analysé : son texte sera enregistré, sans aucune information extraite.`}
+          </span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Aperçu texte du contrat */}
-        <div className="bg-white rounded-card border border-line shadow-card p-5 overflow-y-auto" style={{ height: 560 }}>
-          <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest mb-3">Aperçu du contrat</p>
-          {it.ocrText ? (
-            <pre className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans">{it.ocrText}</pre>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-              <FileText className="w-8 h-8 text-ink-placeholder" />
-              <p className="text-sm text-ink-subtle">Aucun texte extrait.</p>
-            </div>
-          )}
+      {activeItem.duplicate && (
+        <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>Un contrat nommé « {activeItem.duplicate.title} » existe déjà dans votre contrathèque.</span>
+          <a
+            href={`/contratheque/${activeItem.duplicate.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
+          >
+            Voir le contrat existant <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
+      )}
 
-        {/* Champs */}
-        <div className="space-y-2">
-          {it.status === "error" ? (
-            <div className="text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">{it.error}</div>
-          ) : (
-            <>
-              <div className="bg-white rounded-panel border border-line shadow-card p-3">
-                <label className="text-[10px] font-bold text-ink-subtle uppercase tracking-wide">Intitulé du contrat</label>
-                <input value={it.title} onChange={(e) => onEditTitle(e.target.value)} className="w-full mt-1 text-sm px-2 py-1.5 rounded-md border border-line text-ink outline-none focus:border-brand/40 transition-all" />
-              </div>
-              {it.fields.map((f) => (
-                <ReviewField key={f.field_key} field={f} validated={!!it.validated[f.field_key]} onToggle={() => onToggleValidate(f.field_key)} onEdit={(v) => onEditField(f.field_key, v)} />
-              ))}
-            </>
-          )}
+      {saveError && (
+        <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" /> {saveError}
         </div>
-      </div>
+      )}
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-ink-subtle">{allValidated ? "Tous les champs sont validés ✓" : "Validez les champs restants"}</p>
-        <button onClick={onConfirm} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-success text-white text-sm font-semibold rounded-xl hover:bg-success-dark disabled:opacity-40 transition-all shadow-card">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          {saving ? "Enregistrement…" : `Enregistrer ${items.filter((i) => i.status !== "error").length} contrat(s)`}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ReviewField({
-  field, validated, onToggle, onEdit,
-}: {
-  field: ExtractedField;
-  validated: boolean;
-  onToggle: () => void;
-  onEdit: (v: string) => void;
-}) {
-  const conf = field.confidence_score;
-  return (
-    <div className={`bg-white rounded-panel border shadow-card p-3 transition-colors ${validated ? "border-success/40" : "border-line"}`}>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-ink-subtle uppercase tracking-wide">{FIELD_LABEL[field.field_key] ?? field.field_key}</span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] text-ink-subtle tabular-nums">{Math.round(conf * 100)}%</span>
-          <button onClick={onToggle} className={`p-0.5 rounded transition-all ${validated ? "text-success bg-success-light" : "text-ink-subtle hover:text-success"}`} title="Valider">
-            <Check className="w-3.5 h-3.5" />
-          </button>
+      {/* Contrat (colonne large) + informations extraites. Chaque colonne défile seule. */}
+      <div
+        className={`grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4 ${
+          hasSeveralFiles ? "lg:h-[calc(100vh-15rem)]" : "lg:h-[calc(100vh-12rem)]"
+        } lg:min-h-[520px]`}
+      >
+        <ContractTextPreview
+          key={`preview-${activeItem.id}`}
+          text={activeItem.ocrText}
+          loading={activeItem.textStatus === "waiting" || activeItem.textStatus === "loading"}
+          file={activeItem.file}
+          highlightTerms={highlightTerms}
+        />
+        <div className="lg:overflow-y-auto lg:pr-1 pb-4">
+          <ImportReviewPanel
+            key={`review-${activeItem.id}`}
+            fields={activeItem.fields}
+            textStatus={activeItem.textStatus}
+            aiStatus={activeItem.aiStatus}
+            error={activeItem.error}
+            onChangeField={(key, changes) => updateField(activeItem.id, key, changes)}
+            onRetryAi={() => void analyseOne(activeItem.id, activeItem.ocrText)}
+            onFocusField={showFieldInContract}
+            onAllFieldsHandled={goToNextItemNeedingAction}
+          />
         </div>
       </div>
-      <input
-        value={field.value ?? ""}
-        onChange={(e) => onEdit(e.target.value)}
-        placeholder="non détecté"
-        className="w-full mt-1 text-sm px-2 py-1 rounded-md border border-line text-ink outline-none focus:border-brand/40 placeholder:text-ink-placeholder transition-all"
+
+      <ConfirmationModal
+        open={cancelModalOpen}
+        title="Abandonner l'import ?"
+        description="Les corrections apportées seront perdues et aucun contrat ne sera enregistré."
+        confirmLabel="Abandonner"
+        confirmClassName="bg-danger text-white hover:bg-danger-dark"
+        onConfirm={() => { setCancelModalOpen(false); onCancel(); }}
+        onCancel={() => setCancelModalOpen(false)}
       />
-      {!validated && (
-        <div className="h-1 rounded-full bg-surface-muted overflow-hidden mt-2">
-          <div className="h-full rounded-full" style={{ width: `${Math.round(conf * 100)}%`, backgroundColor: conf >= 0.8 ? "#059669" : conf >= 0.5 ? "#d97706" : "#dc2626" }} />
-        </div>
-      )}
     </div>
   );
 }
 
-// ─── Stepper ───
-function Stepper({ step }: { step: WizardStep }) {
-  const steps: Array<{ key: WizardStep; label: string }> = [
-    { key: "upload", label: "Upload" },
-    { key: "extract", label: "Extraction IA" },
-    { key: "review", label: "Revue humaine" },
-    { key: "done", label: "Confirmation" },
-  ];
-  const idx = steps.findIndex((s) => s.key === step);
+// ─── Sous-composants ─────────────────────────────────────────────────────────
+
+function SaveStatus({ analysisInProgress, fieldsToHandleCount }: { analysisInProgress: boolean; fieldsToHandleCount: number }) {
+  if (analysisInProgress) {
+    return <span className="text-xs text-ink-muted">Analyse en cours…</span>;
+  }
+  if (fieldsToHandleCount > 0) {
+    return (
+      <span className="text-xs font-medium text-warning">
+        {fieldsToHandleCount} champ{fieldsToHandleCount > 1 ? "s" : ""} à traiter
+      </span>
+    );
+  }
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${i <= idx ? "bg-brand text-white" : "bg-surface-muted text-ink-subtle"}`}>
-            <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">{i + 1}</span>
-            {s.label}
-          </div>
-          {i < steps.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-ink-placeholder" />}
-        </div>
-      ))}
-    </div>
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success-dark">
+      <Check className="w-3.5 h-3.5" /> Prêt
+    </span>
   );
 }
 
-// ─── Helpers ───
+/** État d'un document dans la barre d'onglets (import de plusieurs fichiers). */
+function ItemStatusChip({ item }: { item: ImportItem }) {
+  if (item.textStatus === "error") return <span className="text-danger font-semibold">Illisible</span>;
+  if (item.textStatus !== "ready") return <span className="text-ink-subtle">Lecture…</span>;
+  if (item.aiStatus === "error") return <span className="text-danger font-semibold">Erreur</span>;
+  if (item.aiStatus !== "ready") return <span className="text-ink-subtle">Analyse…</span>;
+
+  const fieldsToHandle = countFieldsToHandle(item.fields);
+  if (fieldsToHandle > 0) return <span className="text-warning font-semibold">{fieldsToHandle} à traiter</span>;
+  return <span className="inline-flex items-center gap-0.5 text-success-dark font-semibold"><Check className="w-3 h-3" /> Prêt</span>;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toImportItem(file: File): ImportItem {
+  return {
+    id: crypto.randomUUID(),
+    file,
+    textStatus: "waiting",
+    aiStatus: "waiting",
+    ocrText: "",
+    title: titleFromFileName(file.name),
+    titleEditedByUser: false,
+    fields: [],
+    duplicate: null,
+    savedContractId: null,
+  };
+}
+
+/** Un échec ponctuel de l'IA est fréquent : on retente une fois avant d'afficher l'erreur. */
+async function extractMetadataWithRetry(ocrText: string): Promise<ExtractedField[]> {
+  try {
+    return await contractApi.extractMetadata(ocrText);
+  } catch (firstError) {
+    console.warn("Analyse IA échouée, nouvel essai :", firstError);
+    return await contractApi.extractMetadata(ocrText);
+  }
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Échec";
+}
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => { const res = r.result as string; resolve(res.split(",")[1] ?? res); };
-    r.onerror = reject;
-    r.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",")[1] ?? dataUrl);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
-}
-
-/** Dérive les colonnes structurées Contract depuis les champs extraits. */
-function deriveColumns(fields: ExtractedField[]): Record<string, unknown> {
-  const get = (k: string) => fields.find((f) => f.field_key === k)?.value ?? null;
-  const renewalRaw = (get("renewal_type") ?? "").toLowerCase();
-  return {
-    contractType: get("contract_type"),
-    counterpartyName: get("counterparty_name"),
-    signatureDate: get("signature_date"),
-    effectiveDate: get("effective_date"),
-    endDate: get("end_date"),
-    durationMonths: get("duration_months") ? Number(get("duration_months")) : null,
-    noticePeriodDays: get("notice_period_days") ? Number(get("notice_period_days")) : null,
-    governingLaw: get("governing_law"),
-    isB2C: get("is_b2c") === "true" || get("is_b2c") === "oui",
-    amount: get("amount") ? Number(String(get("amount")).replace(/[^\d.]/g, "")) : null,
-    currency: get("currency") ?? "EUR",
-    renewalType: renewalRaw.includes("tacit") ? "TACIT" : renewalRaw.includes("express") ? "EXPRESS" : "NONE",
-    status: "ACTIVE",
-  };
 }
