@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, ExternalLink, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ExternalLink, Loader2, X } from "lucide-react";
 import { contractApi } from "./api";
 import type { ExtractedField } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
@@ -26,6 +26,11 @@ interface Props {
  * champs.
  */
 interface ImportItem {
+  /**
+   * Identifiant stable : l'utilisateur peut retirer un document du lot, donc la
+   * position dans la liste ne permet pas de retrouver un document de façon sûre.
+   */
+  id: string;
   file: File;
   textStatus: "waiting" | "loading" | "ready" | "error";
   aiStatus: "waiting" | "running" | "ready" | "error";
@@ -54,8 +59,8 @@ interface ImportItem {
  */
 export function ImportWizard({ files, onDone, onCancel }: Props) {
   const [items, setItems] = useState<ImportItem[]>(() => files.map(toImportItem));
-  const [active, setActive] = useState(0);
-  const [focusedFieldKey, setFocusedFieldKey] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string>(() => items[0]?.id ?? "");
+  const [highlightTerms, setHighlightTerms] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -74,20 +79,25 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** Modifie un seul item sans écraser ce que l'utilisateur est en train d'éditer. */
-  function patchItem(index: number, patch: Partial<ImportItem>) {
-    setItems((previous) => previous.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  /**
+   * Modifie un seul document, retrouvé par son identifiant. Un document retiré
+   * du lot pendant sa lecture ou son analyse n'est simplement plus modifié.
+   */
+  function patchItem(itemId: string, patch: Partial<ImportItem>) {
+    setItems((previous) => previous.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
   }
 
   // ── Lecture puis analyse ──────────────────────────────────────────────────
   async function startImport() {
     const readItems = await readAllTexts(itemsRef.current);
-    readItems.forEach((item, index) => {
-      if (item.textStatus === "ready") void checkDuplicate(index, item.title);
-    });
-    for (let index = 0; index < readItems.length; index++) {
-      if (readItems[index].textStatus !== "ready") continue;
-      await analyseOne(index, readItems[index].ocrText);
+    for (const item of readItems) {
+      if (item.textStatus === "ready") void checkDuplicate(item.id, item.title);
+    }
+    for (const item of readItems) {
+      if (item.textStatus !== "ready") continue;
+      // Document retiré du lot entre-temps : inutile de l'analyser.
+      if (!itemsRef.current.some((current) => current.id === item.id)) continue;
+      await analyseOne(item.id, item.ocrText);
     }
   }
 
@@ -95,44 +105,48 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   async function readAllTexts(list: ImportItem[]): Promise<ImportItem[]> {
     const result = [...list];
     for (let index = 0; index < result.length; index++) {
-      patchItem(index, { textStatus: "loading" });
+      const itemId = result[index].id;
+      patchItem(itemId, { textStatus: "loading" });
       try {
         const response = await contractApi.extractText(result[index].file);
         result[index] = { ...result[index], textStatus: "ready", ocrText: response.ocr_text };
+        patchItem(itemId, { textStatus: "ready", ocrText: response.ocr_text });
       } catch (err) {
-        result[index] = { ...result[index], textStatus: "error", aiStatus: "error", error: errorMessage(err) };
+        const message = errorMessage(err);
+        result[index] = { ...result[index], textStatus: "error", aiStatus: "error", error: message };
+        patchItem(itemId, { textStatus: "error", aiStatus: "error", error: message });
       }
-      patchItem(index, result[index]);
     }
     return result;
   }
 
   /** Étape 2 : analyse IA d'un document (lente), avec un nouvel essai automatique. */
-  async function analyseOne(index: number, ocrText: string) {
-    patchItem(index, { aiStatus: "running", error: undefined });
+  async function analyseOne(itemId: string, ocrText: string) {
+    patchItem(itemId, { aiStatus: "running", error: undefined });
     let extractedFields: ExtractedField[];
     try {
       extractedFields = await extractMetadataWithRetry(ocrText);
     } catch (err) {
-      patchItem(index, { aiStatus: "error", error: errorMessage(err) });
+      patchItem(itemId, { aiStatus: "error", error: errorMessage(err) });
       return;
     }
 
     const fields = buildReviewFields(extractedFields);
-    const currentItem = itemsRef.current[index];
+    const currentItem = itemsRef.current.find((item) => item.id === itemId);
+    if (!currentItem) return;
     const newTitle = currentItem.titleEditedByUser ? currentItem.title : suggestTitle(fields) ?? currentItem.title;
-    patchItem(index, { aiStatus: "ready", fields, title: newTitle });
-    if (newTitle !== currentItem.title) void checkDuplicate(index, newTitle);
+    patchItem(itemId, { aiStatus: "ready", fields, title: newTitle });
+    if (newTitle !== currentItem.title) void checkDuplicate(itemId, newTitle);
   }
 
   /** Cherche un contrat existant portant exactement le même nom. */
-  async function checkDuplicate(index: number, title: string) {
+  async function checkDuplicate(itemId: string, title: string) {
     const normalizedTitle = title.trim().toLowerCase();
     if (!normalizedTitle) return;
     try {
       const result = await contractApi.list({ q: title.trim(), pageSize: 20 });
       const existing = result.items.find((contract) => contract.title.trim().toLowerCase() === normalizedTitle);
-      patchItem(index, { duplicate: existing ? { id: existing.id, title: existing.title } : null });
+      patchItem(itemId, { duplicate: existing ? { id: existing.id, title: existing.title } : null });
     } catch (err) {
       // Mieux vaut un doublon possible qu'un import bloqué.
       console.error("Vérification des doublons impossible :", err);
@@ -140,34 +154,57 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   }
 
   // ── Actions de l'utilisateur ──────────────────────────────────────────────
-  function updateField(index: number, key: string, changes: FieldChanges) {
-    setItems((previous) => previous.map((item, i) => {
-      if (i !== index) return item;
+  function updateField(itemId: string, key: string, changes: FieldChanges) {
+    setItems((previous) => previous.map((item) => {
+      if (item.id !== itemId) return item;
       const updatedFields = item.fields.map((field) => (field.key === key ? { ...field, ...changes } : field));
       // Une nouvelle valeur peut permettre d'en déduire une autre (ex. durée → échéance).
       return { ...item, fields: applyDeductions(updatedFields) };
     }));
   }
 
-  function selectItem(index: number) {
-    setActive(index);
-    setFocusedFieldKey(null);
+  function selectItem(itemId: string) {
+    setActiveId(itemId);
+    setHighlightTerms([]);
+  }
+
+  /** Retire un document du lot (mauvais fichier glissé dans la sélection). */
+  function removeItem(itemId: string) {
+    const remainingItems = items.filter((item) => item.id !== itemId);
+    if (remainingItems.length === 0) {
+      onCancel();
+      return;
+    }
+    setItems(remainingItems);
+    if (itemId === activeId) selectItem(remainingItems[0].id);
+  }
+
+  /**
+   * Surligne dans le contrat la valeur du champ où l'utilisateur vient d'entrer.
+   * Les termes sont figés à cet instant : les recalculer à chaque frappe ferait
+   * défiler le contrat sans arrêt et redessinerait tout le document.
+   */
+  function showFieldInContract(key: string | null) {
+    const item = itemsRef.current.find((candidate) => candidate.id === activeId);
+    const field = key ? item?.fields.find((candidate) => candidate.key === key) : undefined;
+    setHighlightTerms(field ? buildSearchTerms(field) : []);
   }
 
   /** Document terminé : on passe tout seul au suivant qui demande encore une action. */
   const goToNextItemNeedingAction = useCallback(() => {
     window.setTimeout(() => {
       const list = itemsRef.current;
+      const currentIndex = list.findIndex((item) => item.id === activeId);
       for (let step = 1; step < list.length; step++) {
-        const candidateIndex = (active + step) % list.length;
-        const candidate = list[candidateIndex];
+        const candidate = list[(currentIndex + step) % list.length];
         if (candidate.aiStatus === "ready" && countFieldsToHandle(candidate.fields) > 0) {
-          selectItem(candidateIndex);
+          setActiveId(candidate.id);
+          setHighlightTerms([]);
           return;
         }
       }
     }, 600);
-  }, [active]);
+  }, [activeId]);
 
   function requestCancel() {
     const hasUserChanges = items.some((item) =>
@@ -184,8 +221,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
     setSaveError("");
     const savedContractIds: string[] = [];
     try {
-      for (let index = 0; index < items.length; index++) {
-        const item = items[index];
+      for (const item of items) {
         if (item.textStatus === "error") continue;
         if (item.savedContractId) {
           savedContractIds.push(item.savedContractId);
@@ -200,7 +236,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
           ...toContractColumns(item.fields),
         });
         savedContractIds.push(created.id);
-        patchItem(index, { savedContractId: created.id });
+        patchItem(item.id, { savedContractId: created.id });
       }
       onDone(savedContractIds);
     } catch (err) {
@@ -210,14 +246,12 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   }
 
   // ── Valeurs dérivées pour l'affichage ─────────────────────────────────────
-  const activeItem = items[active];
+  const activeItem = items.find((item) => item.id === activeId) ?? items[0];
   const savableItems = items.filter((item) => item.textStatus !== "error");
   const analysisInProgress = savableItems.some((item) => item.aiStatus === "waiting" || item.aiStatus === "running");
   const fieldsToHandleCount = savableItems.reduce((total, item) => total + countFieldsToHandle(item.fields), 0);
+  const notAnalysedItems = savableItems.filter((item) => item.aiStatus === "error");
   const hasSeveralFiles = items.length > 1;
-
-  const focusedField = activeItem.fields.find((field) => field.key === focusedFieldKey);
-  const highlightTerms = focusedField ? buildSearchTerms(focusedField) : [];
 
   const saveLabel = savableItems.length > 1 ? `Enregistrer les ${savableItems.length} contrats` : "Enregistrer";
 
@@ -235,8 +269,8 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
         </button>
         <input
           value={activeItem.title}
-          onChange={(event) => patchItem(active, { title: event.target.value, titleEditedByUser: true })}
-          onBlur={() => void checkDuplicate(active, activeItem.title)}
+          onChange={(event) => patchItem(activeItem.id, { title: event.target.value, titleEditedByUser: true })}
+          onBlur={() => void checkDuplicate(activeItem.id, activeItem.title)}
           aria-label="Intitulé du contrat"
           className="flex-1 min-w-[200px] text-xl font-bold text-ink tracking-tight bg-transparent border border-transparent hover:border-line focus:border-brand/40 rounded-lg px-2 py-1 outline-none transition-colors"
         />
@@ -256,18 +290,38 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
 
       {hasSeveralFiles && (
         <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {items.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => selectItem(index)}
-              className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
-                index === active ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className={`shrink-0 flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-lg border text-xs transition-colors ${
+                item.id === activeItem.id ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
               }`}
             >
-              <span className="max-w-[200px] truncate font-medium">{item.title}</span>
-              <ItemStatusChip item={item} />
-            </button>
+              <button onClick={() => selectItem(item.id)} className="flex items-center gap-2 min-w-0 py-0.5">
+                <span className="max-w-[180px] truncate font-medium">{item.title}</span>
+                <ItemStatusChip item={item} />
+              </button>
+              <button
+                onClick={() => removeItem(item.id)}
+                title="Retirer ce document de l'import"
+                aria-label={`Retirer ${item.title} de l'import`}
+                className="shrink-0 p-1 rounded text-ink-subtle hover:text-danger hover:bg-danger-light transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
+        </div>
+      )}
+
+      {notAnalysedItems.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            {notAnalysedItems.length > 1
+              ? `${notAnalysedItems.length} documents n'ont pas pu être analysés : leur texte sera enregistré, sans aucune information extraite.`
+              : `« ${notAnalysedItems[0].title} » n'a pas pu être analysé : son texte sera enregistré, sans aucune information extraite.`}
+          </span>
         </div>
       )}
 
@@ -299,7 +353,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
         } lg:min-h-[520px]`}
       >
         <ContractTextPreview
-          key={`preview-${active}`}
+          key={`preview-${activeItem.id}`}
           text={activeItem.ocrText}
           loading={activeItem.textStatus === "waiting" || activeItem.textStatus === "loading"}
           file={activeItem.file}
@@ -307,14 +361,14 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
         />
         <div className="lg:overflow-y-auto lg:pr-1 pb-4">
           <ImportReviewPanel
-            key={`review-${active}`}
+            key={`review-${activeItem.id}`}
             fields={activeItem.fields}
             textStatus={activeItem.textStatus}
             aiStatus={activeItem.aiStatus}
             error={activeItem.error}
-            onChangeField={(key, changes) => updateField(active, key, changes)}
-            onRetryAi={() => void analyseOne(active, activeItem.ocrText)}
-            onFocusField={setFocusedFieldKey}
+            onChangeField={(key, changes) => updateField(activeItem.id, key, changes)}
+            onRetryAi={() => void analyseOne(activeItem.id, activeItem.ocrText)}
+            onFocusField={showFieldInContract}
             onAllFieldsHandled={goToNextItemNeedingAction}
           />
         </div>
@@ -369,6 +423,7 @@ function ItemStatusChip({ item }: { item: ImportItem }) {
 
 function toImportItem(file: File): ImportItem {
   return {
+    id: crypto.randomUUID(),
     file,
     textStatus: "waiting",
     aiStatus: "waiting",

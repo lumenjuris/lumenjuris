@@ -79,6 +79,11 @@ export interface ReviewField {
   origin: FieldOrigin;
   /** L'utilisateur a saisi, corrigé ou confirmé ce champ. */
   confirmedByUser: boolean;
+  /**
+   * L'utilisateur a déclaré que l'information ne figure pas dans le contrat.
+   * Le champ est alors traité, même s'il reste vide.
+   */
+  markedAbsent: boolean;
 }
 
 export type FieldStatus = "to_complete" | "to_verify" | "validated" | "optional";
@@ -95,7 +100,11 @@ export function computeFieldStatus(field: ReviewField): FieldStatus {
   const config = getFieldConfig(field.key);
   const isEmpty = isEmptyValue(field.value);
 
-  if (config.optional) return isEmpty ? "optional" : "validated";
+  // Un champ facultatif ne demande jamais d'action et ne compte pas dans la
+  // progression : il reste dans son groupe, qu'il soit rempli ou non.
+  if (config.optional) return "optional";
+  // Information déclarée absente du contrat : il n'y a plus rien à faire.
+  if (field.markedAbsent) return "validated";
   if (isEmpty) return "to_complete";
   if (field.confirmedByUser) return "validated";
   if (field.origin === "calculated") return "to_verify";
@@ -128,6 +137,7 @@ export function buildReviewFields(extractedFields: ExtractedField[]): ReviewFiel
       confidence: extracted?.confidence_score ?? 0,
       origin: "ai" as const,
       confirmedByUser: false,
+      markedAbsent: false,
     };
   });
 
@@ -245,7 +255,7 @@ function findField(fields: ReviewField[], key: string): ReviewField | undefined 
 
 /** Le champ peut recevoir une valeur calculée (vide, ou déjà calculé, et pas confirmé). */
 function canBeCalculated(field: ReviewField | undefined): field is ReviewField {
-  if (!field || field.confirmedByUser) return false;
+  if (!field || field.confirmedByUser || field.markedAbsent) return false;
   return isEmptyValue(field.value) || field.origin === "calculated";
 }
 
@@ -375,6 +385,7 @@ const MONTH_NAMES = [
 
 /** Valeur lisible pour la liste compacte des champs validés. */
 export function formatFieldValue(field: ReviewField): string {
+  if (field.markedAbsent) return "Non mentionné";
   if (isEmptyValue(field.value)) return "—";
   const value = field.value as string;
   const config = getFieldConfig(field.key);

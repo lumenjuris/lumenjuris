@@ -159,7 +159,14 @@ Module `front/src/components/DashboardComponents/contratheque/` :
   - **À vérifier** : score IA < 0,8, ou valeur calculée (échéance = effet +
     durée, durée = écart entre les dates) ;
   - **Validé** : score ≥ 0,8, ou saisi/confirmé par l'utilisateur (groupe replié) ;
-  - **Facultatif** : devise, droit applicable, clauses sensibles (vides = aucune action).
+  - **Facultatif** : devise, droit applicable, clauses sensibles — toujours à part,
+    remplis ou non, et hors progression.
+
+  Un champ peut aussi être déclaré **« Absent »** du contrat : il est alors traité
+  (valeur nulle, `HUMAN_VALIDATED`), sinon un contrat sans montant ni date de
+  signature n'atteindrait jamais l'état « Prêt ». En import multiple, chaque
+  document a un onglet avec son état et peut être retiré du lot ; un document
+  dont l'analyse a échoué est signalé avant l'enregistrement.
 
   Saisies typées (dates, choix, nombres). Le champ regardé est surligné dans le
   contrat. L'enregistrement n'est jamais bloqué ; il ramène directement à la

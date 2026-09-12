@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { FileText } from "lucide-react";
 
 interface Props {
@@ -6,7 +6,11 @@ interface Props {
   /** Le texte du document est encore en cours de lecture. */
   loading: boolean;
   file: File;
-  /** Passages à surligner (valeur du champ que l'utilisateur est en train de regarder). */
+  /**
+   * Passages à surligner (valeur du champ que l'utilisateur regarde). Le parent
+   * ne les change qu'au changement de champ : le contrat n'est donc pas
+   * redessiné pendant la frappe.
+   */
   highlightTerms: string[];
 }
 
@@ -16,8 +20,11 @@ type PreviewMode = "text" | "original";
  * Colonne principale de l'import : le contrat, présenté comme une page.
  * Pour un PDF, on peut aussi afficher le document original (fichier local,
  * aucun appel serveur).
+ *
+ * Mémoïsé : un contrat peut faire plusieurs milliers de lignes, il ne doit pas
+ * être redessiné à chaque caractère saisi dans le panneau de droite.
  */
-export function ContractTextPreview({ text, loading, file, highlightTerms }: Props) {
+export const ContractTextPreview = memo(function ContractTextPreview({ text, loading, file, highlightTerms }: Props) {
   const [mode, setMode] = useState<PreviewMode>("text");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -31,14 +38,18 @@ export function ContractTextPreview({ text, loading, file, highlightTerms }: Pro
     return () => URL.revokeObjectURL(url);
   }, [file, isPdf]);
 
-  const highlightRegex = useMemo(() => buildHighlightRegex(highlightTerms), [highlightTerms]);
+  // Clé stable des termes : évite de reconstruire la regex (et de refaire
+  // défiler le contrat) alors que les passages cherchés n'ont pas changé.
+  const highlightKey = highlightTerms.join("|");
+  const highlightRegex = useMemo(() => buildHighlightRegex(highlightTerms), [highlightKey]);
 
-  // Amène le premier passage surligné au centre de la colonne.
+  // Amène le premier passage surligné au centre de la colonne, uniquement
+  // quand l'utilisateur change de champ.
   useEffect(() => {
     if (!highlightRegex || mode !== "text") return;
     const firstMark = scrollContainerRef.current?.querySelector("mark");
     firstMark?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [highlightRegex, mode]);
+  }, [highlightKey, mode]);
 
   const lines = useMemo(() => text.split("\n"), [text]);
 
@@ -73,7 +84,7 @@ export function ContractTextPreview({ text, loading, file, highlightTerms }: Pro
       )}
     </div>
   );
-}
+});
 
 function ContractLine({ line, highlightRegex }: { line: string; highlightRegex: RegExp | null }) {
   if (line.trim() === "") return <div className="h-3" />;

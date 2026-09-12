@@ -10,6 +10,7 @@ import { FIELD_STATUS_STYLE, FieldStatusHeading } from "./FieldStatus";
 export interface FieldChanges {
   value?: string | null;
   confirmedByUser?: boolean;
+  markedAbsent?: boolean;
 }
 
 interface Props {
@@ -116,11 +117,21 @@ export function ImportReviewPanel({
   }
 
   function changeValue(field: ReviewField, value: string | null) {
-    onChangeField(field.key, { value, confirmedByUser: true });
+    // Saisir une valeur annule une éventuelle déclaration d'absence.
+    onChangeField(field.key, { value, confirmedByUser: true, markedAbsent: false });
   }
 
   function confirmField(field: ReviewField) {
     onChangeField(field.key, { confirmedByUser: true });
+    goToNextField(field.key);
+  }
+
+  /**
+   * L'information ne figure pas dans le contrat : le champ est traité et rejoint
+   * les champs validés, sinon la revue ne pourrait jamais arriver à son terme.
+   */
+  function markAbsent(field: ReviewField) {
+    onChangeField(field.key, { value: null, confirmedByUser: true, markedAbsent: true });
     goToNextField(field.key);
   }
 
@@ -176,7 +187,7 @@ export function ImportReviewPanel({
   }
 
   if (aiStatus !== "ready") {
-    return <PendingFields />;
+    return <PendingFields reading={textStatus !== "ready"} />;
   }
 
   // ── Revue ────────────────────────────────────────────────────────────────
@@ -194,6 +205,7 @@ export function ImportReviewPanel({
               group="to_complete"
               containerProps={containerProps(field)}
               control={renderControl(field)}
+              onMarkAbsent={() => markAbsent(field)}
             />
           ))}
         </section>
@@ -292,7 +304,7 @@ function CollapsibleHeading({ open, onToggle, children }: { open: boolean; onTog
 
 /** Carte d'un champ qui demande une action (à compléter ou à vérifier). */
 function ActionFieldCard({
-  field, group, containerProps, control, onConfirm,
+  field, group, containerProps, control, onConfirm, onMarkAbsent,
 }: {
   field: ReviewField;
   group: "to_complete" | "to_verify";
@@ -303,6 +315,7 @@ function ActionFieldCard({
   };
   control: React.ReactNode;
   onConfirm?: () => void;
+  onMarkAbsent?: () => void;
 }) {
   const config = getFieldConfig(field.key);
   // Le champ est traité mais garde sa place tant que l'utilisateur est dedans.
@@ -327,6 +340,15 @@ function ActionFieldCard({
             className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-info-dark bg-info-light rounded-lg hover:bg-info/20 transition-colors"
           >
             <Check className="w-3.5 h-3.5" /> Confirmer
+          </button>
+        )}
+        {onMarkAbsent && !alreadyHandled && (
+          <button
+            onClick={onMarkAbsent}
+            title="Cette information ne figure pas dans le contrat"
+            className="shrink-0 px-2.5 py-1.5 text-xs font-medium text-ink-muted border border-line rounded-lg hover:bg-surface-subtle hover:text-ink-secondary transition-colors"
+          >
+            Absent
           </button>
         )}
       </div>
@@ -410,13 +432,14 @@ function FieldControl({
   );
 }
 
-/** Squelette affiché pendant l'analyse : les vrais libellés, sans valeur. */
-function PendingFields() {
+/** Squelette affiché pendant la lecture puis l'analyse : les vrais libellés, sans valeur. */
+function PendingFields({ reading }: { reading: boolean }) {
   const essentialFields = IMPORT_FIELDS.filter((field) => !field.optional);
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-2 text-xs font-semibold text-brand">
-        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyse du contrat…
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        {reading ? "Lecture du document…" : "Analyse du contrat…"}
       </p>
       {essentialFields.map((field) => (
         <div key={field.key} className="bg-white rounded-panel border border-line p-3 animate-pulse">

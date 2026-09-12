@@ -96,17 +96,19 @@ export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen,
   if (loading) {
     return (
       <div className="bg-white rounded-card border border-line shadow-card overflow-hidden">
-        <TableHeader
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onSort={onSort}
-          visibleColumns={visibleColumns}
-        />
-        <div className="divide-y divide-line-subtle">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonRow key={i} visibleColumns={visibleColumns} />
-          ))}
-        </div>
+        <table className="w-full min-w-[720px] text-left border-collapse">
+          <TableHeader
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSort={onSort}
+            visibleColumns={visibleColumns}
+          />
+          <tbody className="divide-y divide-line-subtle">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonRow key={i} visibleColumns={visibleColumns} />
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
