@@ -4,7 +4,7 @@ import {
   IMPORT_FIELDS, RELATION_OPTIONS, RENEWAL_OPTIONS,
   computeFieldStatus, formatFieldValue, getFieldConfig,
 } from "./importReview";
-import type { FieldStatus, ReviewField } from "./importReview";
+import type { FieldInputKind, FieldStatus, ReviewField } from "./importReview";
 import { FIELD_STATUS_STYLE, FieldStatusHeading } from "./FieldStatus";
 
 export interface FieldChanges {
@@ -43,6 +43,7 @@ export function ImportReviewPanel({
   const [showOptional, setShowOptional] = useState(false);
   const [editingValidatedKey, setEditingValidatedKey] = useState<string | null>(null);
   const fieldContainers = useRef<Record<string, HTMLDivElement | null>>({});
+  const panelRef = useRef<HTMLDivElement>(null);
 
   function displayedStatus(field: ReviewField): FieldStatus {
     if (focusedField?.key === field.key) return focusedField.statusAtFocus;
@@ -83,6 +84,9 @@ export function ImportReviewPanel({
   function focusField(key: string) {
     const firstControl = fieldContainers.current[key]?.querySelector<HTMLElement>("input, button");
     firstControl?.focus();
+    // Le focus posé par le code ne remonte pas toujours jusqu'au conteneur :
+    // on signale nous-mêmes le champ regardé, pour le surlignage.
+    onFocusField(key);
   }
 
   /** Passe au champ suivant qui demande une action ; s'il n'y en a plus, quitte le champ. */
@@ -112,8 +116,14 @@ export function ImportReviewPanel({
   function handleBlur(event: React.FocusEvent<HTMLDivElement>) {
     // On passe d'un bouton à l'autre DANS le même champ : on n'a pas quitté le champ.
     if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-    setFocusedField(null);
-    onFocusField(null);
+    // Un champ qui change de groupe disparaît puis réapparaît ailleurs, ce qui
+    // déclenche aussi un blur. On ne considère la sortie comme réelle que si le
+    // focus a quitté tout le panneau, vérifié au tour de boucle suivant.
+    window.setTimeout(() => {
+      if (panelRef.current?.contains(document.activeElement)) return;
+      setFocusedField(null);
+      onFocusField(null);
+    }, 0);
   }
 
   function changeValue(field: ReviewField, value: string | null) {
@@ -165,7 +175,7 @@ export function ImportReviewPanel({
   // ── États de chargement / erreur ──────────────────────────────────────────
   if (textStatus === "error") {
     return (
-      <div className="flex items-start gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-panel">
+      <div role="alert" className="flex items-start gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-panel">
         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
         <span>{error ?? "Ce document n'a pas pu être lu."} Il ne sera pas enregistré.</span>
       </div>
@@ -174,7 +184,7 @@ export function ImportReviewPanel({
 
   if (aiStatus === "error") {
     return (
-      <div className="bg-white rounded-panel border border-danger/30 shadow-card p-4 space-y-3">
+      <div role="alert" className="bg-white rounded-panel border border-danger/30 shadow-card p-4 space-y-3">
         <div className="flex items-start gap-2 text-sm text-danger-dark">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error ?? "L'analyse du contrat a échoué."}</span>
@@ -192,8 +202,14 @@ export function ImportReviewPanel({
 
   // ── Revue ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5">
+    <div ref={panelRef} className="space-y-5">
       <Progress readyCount={readyCount} totalCount={essentialFields.length} />
+      {/* Annonce aux lecteurs d'écran ce qu'il reste à faire, sans rien afficher. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {fieldsNeedingAction.length === 0
+          ? "Toutes les informations sont prêtes"
+          : `${fieldsNeedingAction.length} champs à traiter`}
+      </p>
 
       {fieldsToComplete.length > 0 && (
         <section className="space-y-2">
@@ -229,21 +245,22 @@ export function ImportReviewPanel({
 
       {validatedFields.length > 0 && (
         <section className="space-y-2">
-          <CollapsibleHeading open={showValidated} onToggle={() => setShowValidated(!showValidated)}>
+          <CollapsibleHeading open={showValidated} onToggle={() => setShowValidated(!showValidated)} controls="champs-valides">
             <FieldStatusHeading status="validated" count={validatedFields.length} />
           </CollapsibleHeading>
           {showValidated && (
-            <div className="bg-white rounded-panel border border-line divide-y divide-line-subtle">
+            <div id="champs-valides" className="bg-white rounded-panel border border-line divide-y divide-line-subtle">
               {validatedFields.map((field) => (
                 <div key={field.key} {...containerProps(field)} className="px-3 py-2">
                   {editingValidatedKey === field.key ? (
                     <div className="space-y-1.5">
-                      <p className="text-xs text-ink-muted">{getFieldConfig(field.key).label}</p>
+                      <FieldLabel fieldKey={field.key} className="block text-xs text-ink-muted" />
                       {renderControl(field, true)}
                     </div>
                   ) : (
                     <button
-                      onClick={() => setEditingValidatedKey(field.key)}
+                      onClick={() => { setEditingValidatedKey(field.key); onFocusField(field.key); }}
+                      aria-label={`Modifier ${getFieldConfig(field.key).label}`}
                       className="w-full flex items-center justify-between gap-3 text-left group"
                       title="Modifier"
                     >
@@ -260,15 +277,19 @@ export function ImportReviewPanel({
 
       {optionalFields.length > 0 && (
         <section className="space-y-2">
-          <CollapsibleHeading open={showOptional} onToggle={() => setShowOptional(!showOptional)}>
+          <CollapsibleHeading open={showOptional} onToggle={() => setShowOptional(!showOptional)} controls="champs-facultatifs">
             <span className="text-xs font-semibold text-ink-muted">Facultatif · {optionalFields.length}</span>
           </CollapsibleHeading>
-          {showOptional && optionalFields.map((field) => (
-            <div key={field.key} {...containerProps(field)} className="bg-white rounded-panel border border-line p-3 space-y-1.5">
-              <p className="text-xs text-ink-muted">{getFieldConfig(field.key).label}</p>
-              {renderControl(field)}
+          {showOptional && (
+            <div id="champs-facultatifs" className="space-y-2">
+              {optionalFields.map((field) => (
+                <div key={field.key} {...containerProps(field)} className="bg-white rounded-panel border border-line p-3 space-y-1.5">
+                  <FieldLabel fieldKey={field.key} className="block text-xs text-ink-muted" />
+                  {renderControl(field)}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </section>
       )}
     </div>
@@ -277,12 +298,49 @@ export function ImportReviewPanel({
 
 // ─── Sous-composants ─────────────────────────────────────────────────────────
 
+// Identifiants stables reliant le libellé, la saisie et son unité : sans eux,
+// un lecteur d'écran annonce « champ de saisie » sans dire de quoi il s'agit.
+function fieldLabelId(key: string) { return `champ-libelle-${key}`; }
+function fieldControlId(key: string) { return `champ-saisie-${key}`; }
+function fieldUnitId(key: string) { return `champ-unite-${key}`; }
+
+function isChoiceField(kind: FieldInputKind): boolean {
+  return kind === "renewal" || kind === "relation";
+}
+
+/** Libellé d'un champ, relié à sa saisie. */
+function FieldLabel({
+  fieldKey, className = "text-xs font-medium text-ink-secondary",
+}: {
+  fieldKey: string;
+  className?: string;
+}) {
+  const config = getFieldConfig(fieldKey);
+  // Un champ à choix n'a pas de saisie unique à cibler : c'est le groupe de
+  // boutons qui porte le libellé, via aria-labelledby.
+  if (isChoiceField(config.kind)) {
+    return <span id={fieldLabelId(fieldKey)} className={className}>{config.label}</span>;
+  }
+  return (
+    <label id={fieldLabelId(fieldKey)} htmlFor={fieldControlId(fieldKey)} className={className}>
+      {config.label}
+    </label>
+  );
+}
+
 function Progress({ readyCount, totalCount }: { readyCount: number; totalCount: number }) {
   const percent = totalCount === 0 ? 100 : Math.round((readyCount / totalCount) * 100);
   const allReady = readyCount === totalCount;
   return (
     <div className="space-y-1.5">
-      <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+      <div
+        role="progressbar"
+        aria-label="Informations prêtes"
+        aria-valuemin={0}
+        aria-valuemax={totalCount}
+        aria-valuenow={readyCount}
+        className="h-1.5 rounded-full bg-surface-muted overflow-hidden"
+      >
         <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${percent}%` }} />
       </div>
       <p className={`text-xs ${allReady ? "text-success-dark font-semibold" : "text-ink-muted"}`}>
@@ -292,10 +350,23 @@ function Progress({ readyCount, totalCount }: { readyCount: number; totalCount: 
   );
 }
 
-function CollapsibleHeading({ open, onToggle, children }: { open: boolean; onToggle: () => void; children: React.ReactNode }) {
+function CollapsibleHeading({
+  open, onToggle, controls, children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  /** Identifiant du bloc ouvert ou fermé par ce titre. */
+  controls: string;
+  children: React.ReactNode;
+}) {
   const Chevron = open ? ChevronDown : ChevronRight;
   return (
-    <button onClick={onToggle} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+    <button
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+    >
       {children}
       <Chevron className="w-3.5 h-3.5 text-ink-subtle" />
     </button>
@@ -325,7 +396,7 @@ function ActionFieldCard({
   return (
     <div {...containerProps} className={`bg-white rounded-panel border shadow-card p-3 transition-colors ${borderClass}`}>
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className="text-xs font-medium text-ink-secondary">{config.label}</span>
+        <FieldLabel fieldKey={field.key} />
         {alreadyHandled ? (
           <Check className="w-3.5 h-3.5 text-success" />
         ) : field.origin === "calculated" ? (
@@ -337,6 +408,7 @@ function ActionFieldCard({
         {onConfirm && !alreadyHandled && (
           <button
             onClick={onConfirm}
+            aria-label={`Confirmer ${config.label}`}
             className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-info-dark bg-info-light rounded-lg hover:bg-info/20 transition-colors"
           >
             <Check className="w-3.5 h-3.5" /> Confirmer
@@ -345,6 +417,7 @@ function ActionFieldCard({
         {onMarkAbsent && !alreadyHandled && (
           <button
             onClick={onMarkAbsent}
+            aria-label={`${config.label} : information absente du contrat`}
             title="Cette information ne figure pas dans le contrat"
             className="shrink-0 px-2.5 py-1.5 text-xs font-medium text-ink-muted border border-line rounded-lg hover:bg-surface-subtle hover:text-ink-secondary transition-colors"
           >
@@ -380,13 +453,14 @@ function FieldControl({
   if (config.kind === "renewal" || config.kind === "relation") {
     const options = config.kind === "renewal" ? RENEWAL_OPTIONS : RELATION_OPTIONS;
     return (
-      <div className="flex gap-1.5">
+      <div role="group" aria-labelledby={fieldLabelId(field.key)} className="flex gap-1.5">
         {options.map((option) => {
           const selected = field.value === option.value;
           return (
             <button
               key={option.value}
               autoFocus={autoFocus && selected}
+              aria-pressed={selected}
               onClick={() => onChoose(option.value)}
               className={`flex-1 px-2 py-1.5 text-sm rounded-lg border transition-colors ${
                 selected ? "border-brand bg-brand-light text-brand font-semibold" : "border-line text-ink-secondary hover:bg-surface-subtle"
@@ -404,6 +478,7 @@ function FieldControl({
     return (
       <input
         type="date"
+        id={fieldControlId(field.key)}
         autoFocus={autoFocus}
         value={field.value ?? ""}
         onChange={(event) => onValueChange(event.target.value || null)}
@@ -419,15 +494,17 @@ function FieldControl({
     <div className="flex items-center gap-2">
       <input
         type="text"
+        id={fieldControlId(field.key)}
         autoFocus={autoFocus}
         inputMode={isNumeric ? "decimal" : undefined}
+        aria-describedby={config.unit ? fieldUnitId(field.key) : undefined}
         value={field.value ?? ""}
         onChange={(event) => onValueChange(event.target.value || null)}
         onKeyDown={handleKeyDown}
         placeholder="À remplir"
         className={inputClass}
       />
-      {config.unit && <span className="text-xs text-ink-muted shrink-0">{config.unit}</span>}
+      {config.unit && <span id={fieldUnitId(field.key)} className="text-xs text-ink-muted shrink-0">{config.unit}</span>}
     </div>
   );
 }
@@ -437,7 +514,7 @@ function PendingFields({ reading }: { reading: boolean }) {
   const essentialFields = IMPORT_FIELDS.filter((field) => !field.optional);
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-2 text-xs font-semibold text-brand">
+      <p role="status" className="flex items-center gap-2 text-xs font-semibold text-brand">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
         {reading ? "Lecture du document…" : "Analyse du contrat…"}
       </p>

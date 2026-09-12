@@ -47,14 +47,21 @@ export const ContractTextPreview = memo(function ContractTextPreview({ text, loa
   // quand l'utilisateur change de champ.
   useEffect(() => {
     if (!highlightRegex || mode !== "text") return;
-    const firstMark = scrollContainerRef.current?.querySelector("mark");
-    firstMark?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const container = scrollContainerRef.current;
+    const firstMark = container?.querySelector("mark");
+    if (!container || !firstMark) return;
+    // On fait défiler la colonne elle-même plutôt que d'utiliser scrollIntoView,
+    // qui entraîne aussi la page entière : très visible sur mobile, où le contrat
+    // et les champs sont empilés.
+    const positionDuPassage = container.scrollTop
+      + (firstMark.getBoundingClientRect().top - container.getBoundingClientRect().top);
+    container.scrollTo({ top: Math.max(0, positionDuPassage - container.clientHeight / 2), behavior: "smooth" });
   }, [highlightKey, mode]);
 
   const lines = useMemo(() => text.split("\n"), [text]);
 
   return (
-    <div className="flex flex-col min-h-0 h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
+    <div className="flex flex-col min-h-0 h-[55vh] lg:h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
       {isPdf && (
         <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-line-subtle shrink-0">
           <ModeButton active={mode === "text"} onClick={() => setMode("text")}>Texte</ModeButton>
@@ -63,13 +70,13 @@ export const ContractTextPreview = memo(function ContractTextPreview({ text, loa
       )}
 
       {mode === "original" && pdfUrl ? (
-        <iframe src={pdfUrl} title={file.name} className="flex-1 w-full min-h-[480px]" />
+        <iframe src={pdfUrl} title={file.name} className="flex-1 w-full min-h-[320px]" />
       ) : (
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 sm:px-10 py-8">
           {loading ? (
             <TextSkeleton />
           ) : text.trim() ? (
-            <article className="max-w-3xl mx-auto font-serif text-[15px] leading-7 text-ink-secondary">
+            <article aria-label="Texte du contrat" className="max-w-3xl mx-auto font-serif text-[15px] leading-7 text-ink-secondary">
               {lines.map((line, index) => (
                 <ContractLine key={index} line={line} highlightRegex={highlightRegex} />
               ))}
@@ -114,7 +121,13 @@ function buildHighlightRegex(terms: string[]): RegExp | null {
 
   const patterns = usableTerms.map((term) => {
     const escaped = term.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return escaped.replace(/\s+/g, "\\s+");
+    // Le contrat écrit souvent « d’apporteur » avec une apostrophe
+    // typographique, un tiret long ou une espace insécable, là où l'IA renvoie
+    // les caractères simples : sans ça, la valeur ne serait jamais retrouvée.
+    return escaped
+      .replace(/\s+/g, "\\s+")
+      .replace(/['’]/g, "['’]")
+      .replace(/-/g, "[-–—]");
   });
   return new RegExp(`(${patterns.join("|")})`, "gi");
 }
@@ -148,6 +161,7 @@ function ModeButton({ active, onClick, children }: { active: boolean; onClick: (
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
         active ? "bg-surface-muted text-ink" : "text-ink-muted hover:text-ink"
       }`}

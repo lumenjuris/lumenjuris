@@ -168,6 +168,12 @@ Module `front/src/components/DashboardComponents/contratheque/` :
   document a un onglet avec son état et peut être retiré du lot ; un document
   dont l'analyse a échoué est signalé avant l'enregistrement.
 
+  Accessibilité : chaque libellé est relié à sa saisie, les groupes de choix
+  portent un `role="group"`, la progression est un `role="progressbar"` et une
+  zone `aria-live` annonce ce qu'il reste à faire. Sur mobile, la colonne du
+  contrat est bornée à 55 % de la hauteur d'écran et le défilement vers un
+  passage surligné n'entraîne que cette colonne.
+
   Saisies typées (dates, choix, nombres). Le champ regardé est surligné dans le
   contrat. L'enregistrement n'est jamais bloqué ; il ramène directement à la
   liste (toast + ligne surlignée). En base, un champ non touché reste

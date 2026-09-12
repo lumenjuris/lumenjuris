@@ -180,13 +180,22 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   }
 
   /**
+   * Document affiché. On retombe sur le premier document si l'identifiant actif
+   * ne correspond à rien : c'est le cas au tout premier rendu en mode strict,
+   * où React initialise l'état deux fois.
+   */
+  function currentItem(): ImportItem | undefined {
+    const list = itemsRef.current;
+    return list.find((item) => item.id === activeId) ?? list[0];
+  }
+
+  /**
    * Surligne dans le contrat la valeur du champ où l'utilisateur vient d'entrer.
    * Les termes sont figés à cet instant : les recalculer à chaque frappe ferait
    * défiler le contrat sans arrêt et redessinerait tout le document.
    */
   function showFieldInContract(key: string | null) {
-    const item = itemsRef.current.find((candidate) => candidate.id === activeId);
-    const field = key ? item?.fields.find((candidate) => candidate.key === key) : undefined;
+    const field = key ? currentItem()?.fields.find((candidate) => candidate.key === key) : undefined;
     setHighlightTerms(field ? buildSearchTerms(field) : []);
   }
 
@@ -194,7 +203,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   const goToNextItemNeedingAction = useCallback(() => {
     window.setTimeout(() => {
       const list = itemsRef.current;
-      const currentIndex = list.findIndex((item) => item.id === activeId);
+      const currentIndex = Math.max(0, list.findIndex((item) => item.id === currentItem()?.id));
       for (let step = 1; step < list.length; step++) {
         const candidate = list[(currentIndex + step) % list.length];
         if (candidate.aiStatus === "ready" && countFieldsToHandle(candidate.fields) > 0) {
@@ -289,7 +298,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
       </div>
 
       {hasSeveralFiles && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div role="group" aria-label="Documents à importer" className="flex gap-1.5 overflow-x-auto pb-1">
           {items.map((item) => (
             <div
               key={item.id}
@@ -297,7 +306,11 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
                 item.id === activeItem.id ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
               }`}
             >
-              <button onClick={() => selectItem(item.id)} className="flex items-center gap-2 min-w-0 py-0.5">
+              <button
+                onClick={() => selectItem(item.id)}
+                aria-current={item.id === activeItem.id ? "true" : undefined}
+                className="flex items-center gap-2 min-w-0 py-1"
+              >
                 <span className="max-w-[180px] truncate font-medium">{item.title}</span>
                 <ItemStatusChip item={item} />
               </button>
@@ -315,7 +328,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
       )}
 
       {notAnalysedItems.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+        <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>
             {notAnalysedItems.length > 1
@@ -326,7 +339,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
       )}
 
       {activeItem.duplicate && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+        <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>Un contrat nommé « {activeItem.duplicate.title} » existe déjà dans votre contrathèque.</span>
           <a
@@ -341,7 +354,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
       )}
 
       {saveError && (
-        <div className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
+        <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
           <AlertCircle className="w-4 h-4 shrink-0" /> {saveError}
         </div>
       )}
