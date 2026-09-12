@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
 import { contractApi } from "../components/DashboardComponents/contratheque/api";
 import { QuotaLimitModal } from "../components/common/QuotaLimitModal";
 import { ContrathequeList } from "../components/DashboardComponents/contratheque/ContrathequeList";
@@ -38,6 +39,23 @@ export function Contratheque() {
   const [refreshKey, setRefreshKey] = useState(0);
   // Message de plafond atteint (null = carte fermée).
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
+  // Contrats tout juste importés : surlignés quelques secondes dans la liste.
+  const [justImportedIds, setJustImportedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (justImportedIds.length === 0) return;
+    const timer = window.setTimeout(() => setJustImportedIds([]), 4000);
+    return () => window.clearTimeout(timer);
+  }, [justImportedIds]);
+
+  // Après l'enregistrement : retour direct à la liste, avec une confirmation discrète.
+  const handleImportDone = (savedContractIds: string[]) => {
+    setFilesToImport([]);
+    setRefreshKey((k) => k + 1);
+    setJustImportedIds(savedContractIds);
+    const count = savedContractIds.length;
+    toast.success(count > 1 ? `${count} contrats ajoutés à la contrathèque` : "Contrat ajouté à la contrathèque");
+  };
 
   // Le clic ouvre directement la fenêtre système : pas d'`await` avant le
   // `.click()`, sinon le navigateur ne le voit plus comme un geste utilisateur
@@ -74,7 +92,7 @@ export function Contratheque() {
       <ImportWizard
         files={filesToImport}
         onCancel={() => setFilesToImport([])}
-        onDone={() => { setFilesToImport([]); setRefreshKey((k) => k + 1); }}
+        onDone={handleImportDone}
       />
     );
   }
@@ -110,6 +128,7 @@ export function Contratheque() {
     <>
       <ContrathequeList
         refreshKey={refreshKey}
+        highlightedIds={justImportedIds}
         tab={tab}
         onTab={setTab}
         canDelete={canDelete}
@@ -125,6 +144,7 @@ export function Contratheque() {
         className="hidden"
         onChange={(e) => { void handleFilesSelected(Array.from(e.target.files ?? [])); e.target.value = ""; }}
       />
+      <Toaster position="top-right" />
       {limitMessage && (
         <QuotaLimitModal
           title="Limite de la contrathèque atteinte"

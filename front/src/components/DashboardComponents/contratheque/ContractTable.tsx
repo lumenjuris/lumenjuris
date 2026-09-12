@@ -24,6 +24,8 @@ interface Props {
   onOpen: (id: string) => void;
   canDelete?: boolean;
   onDelete?: (id: string, title: string) => void;
+  /** Lignes à surligner (ex. contrats tout juste importés). */
+  highlightedIds?: string[];
 }
 
 interface ColumnConfig {
@@ -48,7 +50,7 @@ const COLUMN_LIST: ColumnConfig[] = [
 ];
 
 /** Tableau principal de la liste des contrats. */
-export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen, canDelete, onDelete }: Props) {
+export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen, canDelete, onDelete, highlightedIds = [] }: Props) {
 
    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -156,11 +158,12 @@ export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen,
               {items.map((c) => {
                 const d = daysUntil(c.endDate);
                 const urgent = d !== null && d >= 0 && d <= 90;
+                const isHighlighted = highlightedIds.includes(c.id);
                 return (
                   <tr
                     key={c.id}
                     onClick={() => onOpen(c.id)}
-                    className="hover:bg-slate-100 transition-colors cursor-pointer group"
+                    className={`${isHighlighted ? "bg-success-light" : ""} hover:bg-slate-100 transition-colors duration-700 cursor-pointer group`}
                   >
                     {/* Intitulé */}
                     {visibleColumns.includes("title") && (

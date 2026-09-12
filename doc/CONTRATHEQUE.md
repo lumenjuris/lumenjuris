@@ -151,8 +151,20 @@ Module `front/src/components/DashboardComponents/contratheque/` :
   métadonnées + résumé), chaque champ affiche **score de confiance** et **état
   de validation** avec actions valider/corriger (`MetadataPanel`), chronologie
   avenants + versions + journal d'audit, actions archiver / supprimer (admin).
-- **Wizard d'import** (`ImportWizard`) 4 étapes : upload masse → extraction IA →
-  **revue humaine obligatoire** (champs éditables + scores) → confirmation.
+- **Import** (`ImportWizard`) en un seul écran : le contrat à gauche (texte
+  mis en page, ou PDF original), les informations extraites à droite
+  (`ImportReviewPanel`). Les champs sont rangés par statut, calculé
+  automatiquement (`importReview.ts`, code visuel partagé `FieldStatus.tsx`) :
+  - **À compléter** : champ essentiel vide ;
+  - **À vérifier** : score IA < 0,8, ou valeur calculée (échéance = effet +
+    durée, durée = écart entre les dates) ;
+  - **Validé** : score ≥ 0,8, ou saisi/confirmé par l'utilisateur (groupe replié) ;
+  - **Facultatif** : devise, droit applicable, clauses sensibles (vides = aucune action).
+
+  Saisies typées (dates, choix, nombres). Le champ regardé est surligné dans le
+  contrat. L'enregistrement n'est jamais bloqué ; il ramène directement à la
+  liste (toast + ligne surlignée). En base, un champ non touché reste
+  `AI_SUGGESTED` ; confirmé → `HUMAN_VALIDATED` ; modifié → `HUMAN_CORRECTED`.
 
 Accès via les routes `/contratheque` et `/contratheque/:externalId`.
 
@@ -192,5 +204,5 @@ front/src/components/DashboardComponents/contratheque/          ← module UI (�
   ├── types.ts / api.ts
   ├── ContrathequeList.tsx / KpiBar / Sidebar / ContractTable / StatusBadge
   ├── ContractDetail.tsx / MetadataPanel
-  └── ImportWizard.tsx
+  └── ImportWizard.tsx / ImportReviewPanel / ContractTextPreview / importReview.ts / FieldStatus
 ```

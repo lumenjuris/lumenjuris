@@ -17,12 +17,14 @@ interface Props {
   onTab: (t: ContrathequeTab) => void;
   canDelete?: boolean;
   refreshKey?: number;
+  /** Contrats à surligner (ex. tout juste importés). */
+  highlightedIds?: string[];
 }
 
 const PAGE_SIZE = 25;
 
 /** Écran 1 — vue contrathèque (KPI + filtres + dossiers/tags + tableau). */
-export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refreshKey }: Props) {
+export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refreshKey, highlightedIds }: Props) {
   const [stats, setStats] = useState<ContractStats | null>(null);
   const [items, setItems] = useState<ContractListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -213,6 +215,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
             onOpen={onOpen}
             canDelete={canDelete}
             onDelete={handleDelete}
+            highlightedIds={highlightedIds}
           />
 
           {/* Pagination */}
