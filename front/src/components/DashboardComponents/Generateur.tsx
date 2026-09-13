@@ -867,9 +867,9 @@ function CustomTemplateEditor({ templateId, onBack }: { templateId: string; onBa
 
 /**
  * Écran d'entrée « Créer de zéro » : un champ (le contrat souhaité) et, en
- * dessous, les étapes. La génération réutilise le questionnaire de la
- * bibliothèque de modèles (ScratchWizard : questions fermées une à une,
- * puis rédaction IA et ouverture dans l'éditeur).
+ * dessous, les étapes. Vient ensuite ScratchWizard : générer tout de suite, ou
+ * personnaliser par quelques questions simples, puis rédaction IA et
+ * ouverture dans l'éditeur.
  */
 function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: () => void }) {
   const [title, setTitle] = useState("");
@@ -909,7 +909,7 @@ function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: (
           </li>
           <li className="flex items-start gap-2.5">
             <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-            Décrivez votre besoin — ou cadrez par questions
+            Générez-le tout de suite — ou répondez à quelques questions simples
           </li>
           <li className="flex items-start gap-2.5">
             <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>

@@ -11,6 +11,8 @@ export interface WizardQuestion {
   question: string;
   type: "choice" | "text";
   options?: string[];
+  /** Exemple de réponse (question "text") ou explication courte (question "choice"). */
+  hint?: string;
 }
 
 export interface DraftVariable {
@@ -60,51 +62,55 @@ const EXIGENCE_LICEITE =
   `Le contrat doit être conforme au droit français en vigueur : n'insère aucune clause illicite, ` +
   `réputée non écrite ou contraire à une règle d'ordre public. `;
 
-/** Questions de cadrage fermées qu'un juriste poserait pour ce contrat. */
+/**
+ * Questions simples pour compléter les informations manquantes, posées à un
+ * professionnel qui n'est pas juriste : les données pratiques (parties, prix,
+ * durée…) puis les quelques points propres à ce type de contrat.
+ */
 export async function generateContractQuestions(title: string): Promise<WizardQuestion[]> {
   const prompt =
-    `Tu es un juriste français spécialisé, expérimenté sur le contrat de type « ${title.trim()} ». ` +
-    `Avant de rédiger, identifie d'abord silencieusement : (a) le domaine juridique précis de ce contrat, ` +
-    `(b) les 4 à 7 points qui font le plus souvent l'objet d'un désaccord ou d'un arbitrage dans CE type de ` +
-    `contrat spécifique en pratique française. ` +
-    `Transforme UNIQUEMENT ces points en questions de CADRAGE fermées — celles qui changent la structure, ` +
-    `les clauses ou le régime juridique du contrat. ` +
-    `INTERDIT : questions génériques qui s'appliqueraient à n'importe quel contrat (ex. « Quelle est la durée ? », ` +
-    `« Y a-t-il une clause de confidentialité ? ») sauf si ce point est spécifiquement structurant pour CE type ` +
-    `de contrat précis. ` +
-    `TON PUBLIC : des professionnels du droit et des opérationnels habitués aux contrats (juristes, RH, ` +
-    `dirigeants). Emploie le terme juridique exact quand c'est le mot juste — sans le vulgariser inutilement — ` +
-    `mais reste direct : une seule idée par question, formulation courte. Chaque option doit donner la portée ` +
-    `PRATIQUE du choix (un chiffre, une conséquence, un usage de place) plutôt qu'un intitulé abstrait — et ` +
-    `n'explique une notion entre parenthèses que si elle est réellement ambiguë. ` +
+    `Tu aides un professionnel à préparer un contrat de type « ${title.trim()} ». Il n'est PAS juriste : ` +
+    `dirigeant, commerçant, indépendant, responsable RH… ` +
+    `Pose-lui les 5 à 7 questions qui manquent le plus pour rédiger CE contrat correctement. Par ordre de ` +
+    `priorité, quand elles ont un sens pour ce contrat : les parties (qui s'engage envers qui), ce qui est ` +
+    `fourni ou fait exactement, le prix ou le montant, la façon de payer, la date de début, la durée, la ` +
+    `façon d'y mettre fin ; puis 1 ou 2 points propres à CE type de contrat. N'en pose aucune qui n'aurait ` +
+    `pas de sens ici (ex. pas de prix pour un contrat gratuit). ` +
+    `LANGAGE : des mots de tous les jours, des phrases courtes, une seule idée par question, vouvoiement. ` +
+    `Aucun jargon juridique ; si un terme juridique est vraiment indispensable, explique-le en quelques mots ` +
+    `entre parenthèses. ` +
+    `FORMAT : "type":"text" pour une information à saisir (un nom, un montant, une date, une durée précise), ` +
+    `avec un "hint" donnant un exemple concret commençant par « Ex. : ». "type":"choice" pour un choix, avec ` +
+    `2 à 4 options courtes, concrètes et mutuellement exclusives qui disent la conséquence pratique ; le ` +
+    `"hint" explique alors en une phrase simple à quoi sert la question (ou reste vide si c'est évident). ` +
     `RÈGLE ABSOLUE SUR LES OPTIONS : chaque option proposée doit être LICITE en droit français. Ne propose JAMAIS ` +
     `une option contraire à une règle d'ordre public ou manifestement illégale (par exemple : durée ou renouvellement ` +
     `d'essai au-delà des maxima légaux, clause de non-concurrence sans contrepartie financière, délai de paiement ` +
     `au-delà du plafond légal, renonciation à un droit auquel on ne peut pas renoncer). Quand la loi fixe un plafond ` +
     `ou un plancher, toutes les options restent dans les limites légales et la plus proche de la limite le rappelle ` +
-    `(ex. « 2 mois — maximum légal »). ` +
-    `Ignore les informations factuelles (noms, adresses, dates, montants) : ce seront des variables à remplir. ` +
-    `Réponds UNIQUEMENT en JSON : un tableau de 4 à 7 objets ` +
-    `{"question": string, "type": "choice", "options": [string, …]} avec 2 à 4 options courtes, concrètes et ` +
-    `mutuellement exclusives (pas de simples « Oui »/« Non » sauf si le choix est réellement binaire). ` +
-    `N'emploie "type":"text" que si un choix fermé est vraiment impossible. Aucun texte hors JSON. ` +
-    `Exemple de forme attendue (le contenu doit être adapté au contrat demandé, pas recopié) : ` +
-    `{"question":"Quel régime de responsabilité en cas de manquement du prestataire ?","type":"choice","options":["Plafonnée au montant annuel du contrat — l'usage en prestation de services","Limitée aux seuls dommages directs, sans plafond","Responsabilité intégrale, préjudices indirects compris — protecteur pour le client"]}.`;
+    `(ex. « 2 mois — le maximum autorisé »). ` +
+    `Réponds UNIQUEMENT en JSON : un tableau de 5 à 7 objets ` +
+    `{"question": string, "type": "text" | "choice", "hint": string, "options": [string, …]} ` +
+    `("options" seulement pour "choice"). Aucun texte hors JSON. ` +
+    `Exemples de forme (le contenu doit être adapté au contrat demandé, pas recopié) : ` +
+    `{"question":"Qui est votre client ?","type":"text","hint":"Ex. : Boulangerie Martin SARL"} ` +
+    `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin de la mission","Un acompte au départ, le reste à la fin"]}.`;
   const out = await callOpenAi52(prompt, "high", "low", "gpt-5.4-nano");
   let arr: unknown;
   try { arr = JSON.parse(extractJson(out)); } catch { arr = null; }
   if (!Array.isArray(arr)) throw new Error("Questions illisibles");
   const questions = (arr as unknown[])
     .map((raw): WizardQuestion | null => {
-      const o = raw as { question?: unknown; type?: unknown; options?: unknown };
+      const o = raw as { question?: unknown; type?: unknown; options?: unknown; hint?: unknown };
       const question = typeof o.question === "string" ? o.question.trim() : "";
       if (!question) return null;
       const options = Array.isArray(o.options)
         ? o.options.map((x) => String(x).trim()).filter(Boolean)
         : [];
       const type: "choice" | "text" = o.type === "text" || options.length === 0 ? "text" : "choice";
+      const hint = typeof o.hint === "string" && o.hint.trim() ? o.hint.trim() : undefined;
       qCounter += 1;
-      return { id: `q${qCounter}`, question, type, options: type === "choice" ? options.slice(0, 4) : undefined };
+      return { id: `q${qCounter}`, question, type, hint, options: type === "choice" ? options.slice(0, 4) : undefined };
     })
     .filter((q): q is WizardQuestion => q !== null)
     .slice(0, 8);
@@ -209,16 +215,20 @@ const FORMAT_JSON_CONTRAT =
   `Inclure un préambule (heading « Préambule ») et une dernière section « Signatures ». ` +
   `Chaque variable utilisée dans un content DOIT figurer dans "variables". Aucun texte hors JSON.`;
 
-/** Rédige le contrat structuré, avec variables {{…}}, à partir des choix de cadrage. */
+/** Rédige le contrat structuré, avec variables {{…}}, à partir des réponses au questionnaire. */
 export async function generateContractDraft(
   title: string,
   answers: { question: string; answer: string }[],
   parties: PartyIdentity[] = [],
 ): Promise<ContractDraft> {
-  const choices = answers.map((a) => `- ${a.question} → ${a.answer || "(indifférent)"}`).join("\n");
+  const choices = answers.map((a) => `- ${a.question} → ${a.answer.trim() || "(non renseigné)"}`).join("\n");
   const prompt =
     `Tu es un juriste français. Rédige un contrat de type « ${title.trim()} » conforme et structuré, ` +
-    `en tenant compte des choix de cadrage suivants :\n${choices}\n\n` +
+    `en tenant compte des réponses suivantes du client :\n${choices}\n\n` +
+    `Exception à la règle des variables ci-dessous : écris EN CLAIR dans le contrat les informations ` +
+    `factuelles données dans ces réponses (noms, montants, dates, durées). Seules les réponses ` +
+    `« (non renseigné) » et les données absentes deviennent des variables {{…}} à compléter. Pour un ` +
+    `choix non renseigné, retiens l'option la plus usuelle et la plus équilibrée.\n\n` +
     blocParties(parties) +
     EXIGENCE_LICEITE + EXIGENCE_RGPD + FORMAT_JSON_CONTRAT;
   const out = await callOpenAi52(prompt, "medium", "medium", "gpt-5.2");
