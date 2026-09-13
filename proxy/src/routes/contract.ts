@@ -85,44 +85,36 @@ contractRouter.post("/:externalId/validate-field", auth, (req, res) =>
   relayToNode(req, res, `/contract/${eid(req)}/validate-field`),
 );
 contractRouter.post("/:externalId/amendment", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/amendment`),
+  relayToNode(req, res, `/contract/${eid(req)}/amendment`)
 );
 contractRouter.post("/:externalId/version", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/version`),
+  relayToNode(req, res, `/contract/${eid(req)}/version`)
 );
 contractRouter.post("/:externalId/snapshot", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/snapshot`),
+  relayToNode(req, res, `/contract/${eid(req)}/snapshot`)
 );
 contractRouter.post("/:externalId/archive", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/archive`),
+  relayToNode(req, res, `/contract/${eid(req)}/archive`)
 );
 // Négociation — commentaires + approbation (/comments/ avant /:externalId)
 contractRouter.post("/:externalId/comments", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/comments`),
+  relayToNode(req, res, `/contract/${eid(req)}/comments`)
 );
 contractRouter.post("/:externalId/approval", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}/approval`),
+  relayToNode(req, res, `/contract/${eid(req)}/approval`)
 );
 contractRouter.delete("/comments/:commentId", auth, (req, res) =>
-  relayToNode(
-    req,
-    res,
-    `/contract/comments/${encodeURIComponent(req.params.commentId as string)}`,
-  ),
+  relayToNode( req, res,`/contract/comments/${encodeURIComponent(req.params.commentId as string)}`)
 );
 contractRouter.patch("/comments/:commentId/resolve", auth, (req, res) =>
-  relayToNode(
-    req,
-    res,
-    `/contract/comments/${encodeURIComponent(req.params.commentId as string)}/resolve`,
-  ),
+  relayToNode( req, res, `/contract/comments/${encodeURIComponent(req.params.commentId as string)}/resolve`)
 );
 contractRouter.get("/:externalId", auth, (req, res) =>
   relayToNode(req, res, `/contract/${eid(req)}`),
 );
 contractRouter.patch("/:externalId", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}`),
+  relayToNode(req, res, `/contract/${eid(req)}`)
 );
 contractRouter.delete("/:externalId", auth, (req, res) =>
-  relayToNode(req, res, `/contract/${eid(req)}`),
+  relayToNode(req, res, `/contract/${eid(req)}`)
 );

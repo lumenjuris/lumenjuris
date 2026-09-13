@@ -43,6 +43,8 @@ export interface TemplateStructure {
     }>;
   }>;
   detectedVariables: string[];
+  /** Libellé et type de chaque variable (renseignés par l'import IA). */
+  variableDefs?: Array<{ name: string; label: string; type: string }>;
   rawText?: string;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import {
@@ -38,6 +38,8 @@ interface ImportedSection {
 interface TemplateStructure {
   sections: ImportedSection[];
   detectedVariables: string[];
+  /** Libellé et type de chaque variable (renseignés par l'import IA). */
+  variableDefs?: Array<{ name: string; label: string; type: string }>;
   rawText?: string;
 }
 interface ContractTemplateDTO {
@@ -345,6 +347,17 @@ function humanizeVar(name: string): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
+/** Libellé d'une variable : celui proposé par l'IA à l'import, sinon le nom humanisé. */
+function getVariableLabel(structure: TemplateStructure, name: string): string {
+  const definition = structure.variableDefs?.find((def) => def.name === name);
+  return definition?.label || humanizeVar(name);
+}
+
+/** Vrai si le texte d'origine est un emplacement vide d'un modèle vierge ("....", "…", "____", "[à compléter]"). */
+function isBlankPlaceholder(text: string): boolean {
+  return /…|\.\s?\.\s?\.|_{3,}|^\[.*\]$/.test(text.trim());
+}
+
 /** Extrait toutes les variables présentes (deduped). */
 function extractAllVariables(structure: TemplateStructure): string[] {
   const set = new Set<string>();
@@ -367,59 +380,234 @@ function filterMarkersInContent(content: string, essential: Set<string>): string
   });
 }
 
+// ─── Relecture des variables : contrat à gauche, liste des champs à droite ────
+
+/** Résumé d'une variable, affiché dans la liste de droite. */
+interface VariableSummary {
+  name: string;
+  label: string;
+  /** Premier texte d'origine rencontré dans le contrat (ex : "Alpha Conseil SAS"). */
+  originalText: string;
+  /** Vrai si le texte d'origine est un emplacement vide ("....", "____"). */
+  isBlank: boolean;
+  /** Nombre d'apparitions dans le contrat. */
+  occurrences: number;
+}
+
+/** Liste les variables dans leur ordre d'apparition, avec leur nombre d'occurrences. */
+function listVariableSummaries(structure: TemplateStructure): VariableSummary[] {
+  const summariesByName = new Map<string, VariableSummary>();
+  for (const section of structure.sections ?? []) {
+    for (const clause of section.clauses ?? []) {
+      for (const token of tokenizeContent(clause.content)) {
+        if (token.type !== "var") continue;
+        const existing = summariesByName.get(token.name);
+        if (existing) {
+          existing.occurrences += 1;
+        } else {
+          summariesByName.set(token.name, {
+            name: token.name,
+            label: getVariableLabel(structure, token.name),
+            originalText: token.text,
+            isBlank: isBlankPlaceholder(token.text),
+            occurrences: 1,
+          });
+        }
+      }
+    }
+  }
+  return Array.from(summariesByName.values());
+}
+
+/**
+ * Fait défiler un conteneur pour centrer l'un de ses éléments.
+ * On évite scrollIntoView, qui fait aussi défiler la page entière.
+ */
+function scrollElementToCenter(container: HTMLElement, element: HTMLElement) {
+  const elementPosition = container.scrollTop + (element.getBoundingClientRect().top - container.getBoundingClientRect().top);
+  container.scrollTo({ top: Math.max(0, elementPosition - container.clientHeight / 2), behavior: "smooth" });
+}
+
+/** Vrai si l'élément est entièrement visible dans la zone affichée du conteneur. */
+function isElementVisibleIn(container: HTMLElement, element: HTMLElement): boolean {
+  const containerBox = container.getBoundingClientRect();
+  const elementBox = element.getBoundingClientRect();
+  return elementBox.top >= containerBox.top && elementBox.bottom <= containerBox.bottom;
+}
+
+/** Texte du contrat avec les variables surlignées et cliquables. */
 function VariableSelector({
   structure,
   essentialVars,
-  onToggleVar,
+  highlightedVar,
+  onVariableClick,
+  onVariableHover,
 }: {
   structure: TemplateStructure;
   essentialVars: Set<string>;
-  onToggleVar: (name: string) => void;
+  highlightedVar: string | null;
+  onVariableClick: (name: string) => void;
+  onVariableHover: (name: string | null) => void;
 }) {
+  // Le découpage du texte ne dépend que de la structure : on ne le refait pas
+  // à chaque survol (important pour les contrats longs).
+  const tokenizedSections = useMemo(
+    () =>
+      (structure.sections ?? []).map((section) => ({
+        title: section.title,
+        clauses: (section.clauses ?? []).map((clause) => ({
+          id: clause.id,
+          title: clause.title,
+          tokens: tokenizeContent(clause.content),
+        })),
+      })),
+    [structure],
+  );
+
   return (
-    <div className="bg-white border border-line rounded-card px-8 py-7 shadow-card">
-      <div className="space-y-6">
-        {(structure.sections ?? []).map((sec, si) => (
-          <section key={si} className="space-y-3">
-            <h4 className="text-[13px] font-bold text-ink tracking-tight">{sec.title}</h4>
-            <div className="space-y-3">
-              {(sec.clauses ?? []).map((cl) => {
-                const tokens = tokenizeContent(cl.content);
-                return (
-                  <div key={cl.id} className="space-y-1.5">
-                    {cl.title && (
-                      <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wide">{cl.title}</p>
-                    )}
-                    <p className="text-[13px] text-ink-secondary leading-relaxed">
-                      {tokens.map((t, i) => {
-                        if (t.type === "text") return <span key={i}>{t.value}</span>;
-                        const isEssential = essentialVars.has(t.name);
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => onToggleVar(t.name)}
-                            title={isEssential ? `Variable « ${humanizeVar(t.name)} » — cliquez pour la désélectionner` : `Variable « ${humanizeVar(t.name)} » désélectionnée — cliquez pour la sélectionner`}
-                            className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${
-                              isEssential
-                                ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
-                                : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
-                            }`}
-                          >
-                            {t.text}
-                          </button>
-                        );
-                      })}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-            {si < (structure.sections ?? []).length - 1 && (
-              <div className="pt-2 border-b border-line-subtle" />
-            )}
-          </section>
-        ))}
+    <div className="space-y-6">
+      {tokenizedSections.map((sec, si) => (
+        <section key={si} className="space-y-3">
+          <h4 className="text-[13px] font-bold text-ink tracking-tight">{sec.title}</h4>
+          <div className="space-y-3">
+            {sec.clauses.map((cl) => (
+              <div key={cl.id} className="space-y-1.5">
+                {cl.title && (
+                  <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wide">{cl.title}</p>
+                )}
+                <p className="whitespace-pre-line text-[13px] text-ink-secondary leading-relaxed">
+                  {cl.tokens.map((t, i) => {
+                    if (t.type === "text") return <span key={i}>{t.value}</span>;
+                    const isEssential = essentialVars.has(t.name);
+                    const isHighlighted = highlightedVar === t.name;
+                    const variableLabel = getVariableLabel(structure, t.name);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        data-variable={t.name}
+                        onClick={() => onVariableClick(t.name)}
+                        onMouseEnter={() => onVariableHover(t.name)}
+                        onMouseLeave={() => onVariableHover(null)}
+                        title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
+                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${
+                          isEssential
+                            ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
+                            : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
+                        } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                      >
+                        {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
+                        {isBlankPlaceholder(t.text) ? variableLabel : t.text}
+                      </button>
+                    );
+                  })}
+                </p>
+              </div>
+            ))}
+          </div>
+          {si < tokenizedSections.length - 1 && (
+            <div className="pt-2 border-b border-line-subtle" />
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/** Liste des champs détectés (colonne de droite) : conserver / retirer, retrouver dans le contrat. */
+function VariableListPanel({
+  variables,
+  essentialVars,
+  highlightedVar,
+  variableToReveal,
+  onToggleVar,
+  onShowVar,
+  onHoverVar,
+}: {
+  variables: VariableSummary[];
+  essentialVars: Set<string>;
+  highlightedVar: string | null;
+  /** Champ cliqué dans le contrat, à faire apparaître dans la liste s'il est caché. */
+  variableToReveal: { name: string } | null;
+  onToggleVar: (name: string) => void;
+  onShowVar: (name: string) => void;
+  onHoverVar: (name: string | null) => void;
+}) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const keptCount = variables.filter((variable) => essentialVars.has(variable.name)).length;
+
+  // Uniquement sur un clic dans le contrat : si l'effet suivait le surlignage,
+  // la liste sauterait dès que la souris la quitte (le surlignage revient alors
+  // sur le dernier champ cliqué, parfois hors de vue).
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list || !variableToReveal) return;
+    const row = list.querySelector<HTMLElement>(`[data-variable-row="${variableToReveal.name}"]`);
+    if (row && !isElementVisibleIn(list, row)) scrollElementToCenter(list, row);
+  }, [variableToReveal]);
+
+  return (
+    <div className="flex flex-col min-h-0 lg:h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
+      <div className="shrink-0 space-y-2.5 border-b border-line-subtle px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-ink">Champs détectés</h3>
+          <span className="text-xs text-ink-subtle">
+            <span className="font-semibold text-success-dark">{keptCount}</span> / {variables.length} conservé{keptCount > 1 ? "s" : ""}
+          </span>
+        </div>
+
       </div>
+
+      <ul ref={listRef} className="flex-1 space-y-0.5 overflow-y-auto p-2 max-h-[55vh] lg:max-h-none">
+        {variables.map((variable) => {
+          const isKept = essentialVars.has(variable.name);
+          const isHighlighted = highlightedVar === variable.name;
+          return (
+            <li
+              key={variable.name}
+              data-variable-row={variable.name}
+              onMouseEnter={() => onHoverVar(variable.name)}
+              onMouseLeave={() => onHoverVar(null)}
+              className={`flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${
+                isHighlighted ? "bg-brand-light" : "hover:bg-surface-subtle"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isKept}
+                onChange={() => onToggleVar(variable.name)}
+                aria-label={`Conserver le champ « ${variable.label} »`}
+                className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
+              />
+              <button
+                type="button"
+                onClick={() => onShowVar(variable.name)}
+                title={variable.occurrences > 1 ? "Voir dans le contrat (cliquez à nouveau pour l'occurrence suivante)" : "Voir dans le contrat"}
+                className="min-w-0 flex-1 text-left"
+              >
+                <span className={`block truncate text-[13px] font-medium ${isKept ? "text-ink" : "text-ink-subtle line-through"}`}>
+                  {variable.label}
+                </span>
+
+              </button>
+              {variable.occurrences > 1 && (
+                <span
+                  title={`${variable.occurrences} occurrences dans le contrat`}
+                  className="shrink-0 rounded-chip bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-ink-muted"
+                >
+                  {variable.occurrences}×
+                </span>
+              )}
+            </li>
+          );
+        })}
+
+        {variables.length === 0 && (
+          <li className="px-3 py-8 text-center text-xs text-ink-subtle">
+            Aucun champ détecté dans ce contrat.
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
@@ -428,7 +616,18 @@ function VariableSelector({
 
 type ImportStep = "form" | "processing" | "review";
 
-function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue: boolean) => void } = {}) {
+/** Style des boutons d'action de la relecture (Annuler, Enregistrer, Enregistrer et générer). */
+const REVIEW_ACTION_BUTTON =
+  "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-primary rounded-xl shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85 disabled:opacity-50";
+
+function ImportSection({
+  onSaved,
+  onReviewDisplayed,
+}: {
+  onSaved?: (templateId: string, andContinue: boolean) => void;
+  /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
+  onReviewDisplayed?: (isDisplayed: boolean) => void;
+} = {}) {
   const [file, setFile]         = useState<File | null>(null);
   const [name, setName]         = useState("");
   const [aiHints, setAiHints]   = useState("");
@@ -439,6 +638,20 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
   const [essentialVars, setEssentialVars] = useState<Set<string>>(new Set());
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  // Relecture : champ choisi (clic) et champ survolé, surlignés dans les deux colonnes.
+  const [activeVar, setActiveVar]   = useState<string | null>(null);
+  const [hoveredVar, setHoveredVar] = useState<string | null>(null);
+  const highlightedVar = hoveredVar ?? activeVar;
+  const documentScrollRef = useRef<HTMLDivElement>(null);
+  // Dernière occurrence montrée, pour passer à la suivante à chaque clic sur le même champ.
+  const lastShownOccurrenceRef = useRef<{ name: string; index: number }>({ name: "", index: -1 });
+
+  const variableSummaries = useMemo(
+    () => (structure ? listVariableSummaries(structure) : []),
+    [structure],
+  );
 
   function toggleEssentialVar(name: string) {
     setEssentialVars((prev) => {
@@ -447,6 +660,45 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
       else next.add(name);
       return next;
     });
+  }
+
+  // Champ cliqué dans le contrat, à faire apparaître dans la liste de droite.
+  // Un nouvel objet à chaque clic, pour que la liste réagisse même si c'est le même champ.
+  const [variableToReveal, setVariableToReveal] = useState<{ name: string } | null>(null);
+
+  // La page s'élargit pendant la relecture (même largeur que la contrathèque).
+  const isReviewDisplayed = step === "review" && !saved;
+  useEffect(() => {
+    onReviewDisplayed?.(isReviewDisplayed);
+  }, [isReviewDisplayed]);
+  // En quittant la section, la page reprend sa largeur normale.
+  useEffect(() => () => onReviewDisplayed?.(false), []);
+
+  /** Clic sur un champ dans le contrat : on le conserve / retire et on le désigne dans la liste. */
+  function handleDocumentVariableClick(name: string) {
+    toggleEssentialVar(name);
+    setActiveVar(name);
+    setVariableToReveal({ name });
+  }
+
+  /** Clic sur un champ dans la liste : on fait défiler le contrat jusqu'à lui (occurrence suivante si on reclique). */
+  function showVariableInDocument(name: string) {
+    setActiveVar(name);
+    const container = documentScrollRef.current;
+    if (!container) return;
+    const occurrences = container.querySelectorAll<HTMLElement>(`[data-variable="${name}"]`);
+    if (occurrences.length === 0) return;
+
+    const lastShown = lastShownOccurrenceRef.current;
+    const nextIndex = lastShown.name === name ? (lastShown.index + 1) % occurrences.length : 0;
+    lastShownOccurrenceRef.current = { name, index: nextIndex };
+    scrollElementToCenter(container, occurrences[nextIndex]);
+  }
+
+  function resetImport() {
+    setStep("form"); setFile(null); setName(""); setAiHints("");
+    setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
+    setSaveError(""); setActiveVar(null); setHoveredVar(null);
   }
 
   const onDropAccepted = useCallback((files: File[]) => { if (files[0]) setFile(files[0]); }, []);
@@ -504,6 +756,7 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
   async function handleSaveStructure(andContinue: boolean) {
     if (!savedMeta || !structure) return;
     setSaving(true);
+    setSaveError("");
     try {
       // Filtre les variables non-essentielles avant sauvegarde.
       // Les marqueurs <<NAME|original>> des variables non-essentielles sont strippés
@@ -521,15 +774,18 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
           })),
         })),
       };
-      await fetchProxy(`/api/template/${savedMeta.id}`, {
+      const res = await fetchProxy(`/api/template/${savedMeta.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ structure: filteredStructure }),
       });
+      if (!res.ok) throw new Error("save failed");
       setSaved(true);
       onSaved?.(savedMeta.id, andContinue);
-    } catch { /* silent */ }
+    } catch {
+      setSaveError("L'enregistrement du modèle a échoué. Réessayez.");
+    }
     finally { setSaving(false); }
   }
 
@@ -554,8 +810,7 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
 
   if (step === "review" && structure && savedMeta) {
     const allVars = extractAllVariables(structure);
-    const totalVars = allVars.length;
-    const essentialCount = essentialVars.size;
+
 
     if (saved) {
       return (
@@ -571,10 +826,7 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                setStep("form"); setFile(null); setName("");
-                setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
-              }}
+              onClick={resetImport}
               className="px-5 py-2.5 text-sm font-semibold text-brand bg-white border border-line rounded-xl hover:bg-surface-subtle transition-colors shadow-card"
             >
               Importer un autre modèle
@@ -585,61 +837,52 @@ function ImportSection({ onSaved }: { onSaved?: (templateId: string, andContinue
     }
 
     return (
-      <div className="space-y-5 max-w-4xl">
-        {/* Compteur + aide */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 text-sm">
-            <span className="text-ink-muted">
-              <span className="font-bold text-ink">{totalVars}</span> variables détectées
-            </span>
-            <span className="text-ink-placeholder">·</span>
-            <span className="text-success-dark">
-              <span className="font-bold">{essentialCount}</span> sélectionnée{essentialCount > 1 ? "s" : ""}
-            </span>
-          </div>
-          <p className="text-xs text-ink-subtle">
-            Cliquez sur une variable pour la retirer du modèle.
-          </p>
+      <div className="w-full space-y-4 pr-4">
+        {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+              Annuler
+            </button>
+            {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
+            <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+              Enregistrer
+            </button>
+            {/* Enregistrer + poursuivre le tunnel de génération */}
+            <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+              {saving ? "Enregistrement…" : "Enregistrer et générer"}
+            </button>
         </div>
 
-        <VariableSelector
-          structure={structure}
-          essentialVars={essentialVars}
-          onToggleVar={toggleEssentialVar}
-        />
-
-        {/* Actions en bas */}
-        <div className="flex items-center justify-between gap-4 pt-2">
-          <button
-            onClick={() => {
-              setStep("form"); setFile(null); setName(""); setAiHints("");
-              setSavedMeta(null); setStructure(null); setEssentialVars(new Set());
-            }}
-            className="text-xs text-ink-subtle hover:text-ink-secondary transition-colors underline underline-offset-2"
-          >
-            Annuler
-          </button>
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Secondaire : enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
-            <button
-              onClick={() => void handleSaveStructure(false)}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-brand bg-white border border-line rounded-xl hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-card"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Enregistrer le modèle
-            </button>
-            {/* Primaire : enregistrer + poursuivre le tunnel de génération */}
-            <button
-              onClick={() => void handleSaveStructure(true)}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand text-white text-sm font-semibold rounded-xl hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-card"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              Enregistrer et générer un contrat
-              <ChevronRight className="w-4 h-4" />
-            </button>
+        {saveError && (
+          <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
+            <AlertCircle className="w-4 h-4 shrink-0" /> {saveError}
           </div>
+        )}
+
+        {/* Contrat (toute la largeur restante) + champs détectés (largeur fixe). Chaque colonne défile seule. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:h-[calc(100vh-17rem)] lg:min-h-[520px]">
+          <div
+            ref={documentScrollRef}
+            className="h-[55vh] lg:h-full overflow-y-auto rounded-card border border-line bg-white px-6 py-6 shadow-card sm:px-8"
+          >
+            <VariableSelector
+              structure={structure}
+              essentialVars={essentialVars}
+              highlightedVar={highlightedVar}
+              onVariableClick={handleDocumentVariableClick}
+              onVariableHover={setHoveredVar}
+            />
+          </div>
+          <VariableListPanel
+            variables={variableSummaries}
+            essentialVars={essentialVars}
+            highlightedVar={highlightedVar}
+            variableToReveal={variableToReveal}
+            onToggleVar={toggleEssentialVar}
+            onShowVar={showVariableInDocument}
+            onHoverVar={setHoveredVar}
+          />
         </div>
       </div>
     );
@@ -770,9 +1013,11 @@ function convertTemplateMarkers(content: string): string {
  * les variables restantes devenant des {{variables}} surlignées dans l'éditeur.
  */
 function templateToModel(meta: ContractTemplateDTO, structure: TemplateStructure): ContractModel {
+  // Type "text" volontairement : les valeurs d'origine ("15 000 euros", "3 mois")
+  // ne passeraient pas la validation numérique des types money/number/duration.
   const variables: VariableDef[] = extractAllVariables(structure).map((name) => ({
     id: name,
-    label: humanizeVar(name),
+    label: getVariableLabel(structure, name),
     type: "text",
   }));
   const blocks: BlockDef[] = [
@@ -930,6 +1175,8 @@ export function Generateur() {
   const [useTemplateId, setUseTemplateId] = useState<string | null>(null);
   const [blankEditor, setBlankEditor] = useState<{ model: ContractModel; fileBase: string } | null>(null);
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
+  // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
+  const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1094,7 +1341,7 @@ export function Generateur() {
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto border border-gray rounded-2xl pb-4 pl-4">
+    <div className={`space-y-4 mx-auto border border-gray rounded-2xl pb-4 pl-4 ${section === "import" && isImportReviewDisplayed ? "max-w-[1600px]" : "max-w-5xl"}`}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-t-2xl -ml-4">
 
       {/* En-tête — masqué pour l'éditeur document-first (chaque éditeur a son propre retour) */}
@@ -1123,7 +1370,7 @@ export function Generateur() {
 
       {/* Hub — 3 cartes */}
       {!section && (
-        <div className="flex flex-col gap-5 max-w-4xl">
+        <div className="flex flex-col max-w-4xl">
           {/* Créer de zéro */}
           <button
             onClick={() => setSearchParams({ section: "scratch" })}
@@ -1196,8 +1443,8 @@ export function Generateur() {
       {/* Sous-sections */}
       {section === "library"   && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
       {section === "import"    && (
-        <div className="w-full flex justify-center py-4">
-          <ImportSection onSaved={handleTemplateSaved} />
+        <div className="w-full flex justify-center">
+          <ImportSection onSaved={handleTemplateSaved} onReviewDisplayed={setIsImportReviewDisplayed} />
         </div>
         )}
       {section === "form"      && (
