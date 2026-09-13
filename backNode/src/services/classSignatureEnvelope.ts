@@ -283,17 +283,46 @@ export class SignatureEnvelopeService {
   ): Promise<{ documentName: string; buffer: Buffer } | null> {
     const envelope = await this.get(userId, externalId);
     if (!envelope || !envelope.documentFilePath) return null;
+    return this.buildSignedPdf(
+      envelope.meta.documentName,
+      envelope.documentFilePath,
+      envelope.fields,
+    );
+  }
 
+  /**
+   * Même génération, mais depuis le token public de signature : utilisée pour
+   * la pièce jointe de l'e-mail de confirmation, envoyé juste après la
+   * signature du cocontractant (aucun utilisateur authentifié à ce moment-là).
+   */
+  async generateSignedPdfByToken(
+    signingToken: string,
+  ): Promise<{ documentName: string; buffer: Buffer } | null> {
+    const envelope = await this.getByToken(signingToken);
+    if (!envelope || !envelope.documentFilePath) return null;
+    return this.buildSignedPdf(
+      envelope.meta.documentName,
+      envelope.documentFilePath,
+      envelope.fields,
+    );
+  }
+
+  /** Lit le PDF source sur disque et y incruste les signatures. */
+  private async buildSignedPdf(
+    documentName: string,
+    documentFilePath: string,
+    fields: EnvelopeFieldsPayload,
+  ): Promise<{ documentName: string; buffer: Buffer } | null> {
     let pdfBytes: Buffer;
     try {
-      pdfBytes = await fs.readFile(envelope.documentFilePath);
+      pdfBytes = await fs.readFile(documentFilePath);
     } catch (err) {
-      console.warn("[signature] PDF source introuvable:", envelope.documentFilePath, err);
+      console.warn("[signature] PDF source introuvable:", documentFilePath, err);
       return null;
     }
 
-    const buffer = await flattenSignaturesIntoPdf(pdfBytes, envelope.fields);
-    return { documentName: envelope.meta.documentName, buffer };
+    const buffer = await flattenSignaturesIntoPdf(pdfBytes, fields);
+    return { documentName, buffer };
   }
 
   /** Supprime définitivement une enveloppe. */

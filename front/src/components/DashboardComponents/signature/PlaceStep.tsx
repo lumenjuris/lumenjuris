@@ -1,12 +1,18 @@
-import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick } from "lucide-react";
+import { ChevronRight, CheckCircle2, RotateCcw } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
+import { GuidePanel } from "./GuidePanel";
+import { getGuideContent } from "./guide";
+import type { GuidePhase } from "./guide";
+import { DEFAULT_FIELD_SIZE } from "./types";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
 
 interface Props {
   file: File | null;
   fields: Field[];
   signers: Signer[];
+  /** Nombre de pages du PDF (0 tant que le document n'est pas chargé). */
+  numPages: number;
   activeSignerRole: SignerRole;
   /** Type de champ "armé" pour le prochain clic. null = mode placement désactivé. */
   armedFieldType: FieldType | null;
@@ -23,16 +29,25 @@ interface Props {
   canGoNext: boolean;
 }
 
+/** Couleur de marque, utilisée quand l'étape ne concerne aucun signataire précis. */
+const BRAND_HEX = "#354F99";
+
 /**
- * Étape 2 du wizard : placer les zones de signature sur le PDF.
+ * Étape 1 du parcours visible : placer les zones de signature sur le PDF.
  *
- * Layout : toolbar à gauche + viewer à droite. Le mode placement est "armé"
- * par la toolbar et désactivé après chaque dépôt (le composant parent doit
- * appeler `onArmFieldType(null)` après chaque `onFieldAdd`).
+ * Layout : colonne de gauche = guide contextuel sticky (étape en cours, action
+ * attendue, étape suivante) + checklist des zones ; colonne de droite = le
+ * document, remonté tout en haut de l'écran puisque toutes les consignes
+ * vivent à gauche.
+ *
+ * Le document s'ouvre sur sa dernière page et une zone de signature est
+ * suggérée en bas de celle-ci : c'est là que se trouve la signature dans la
+ * quasi-totalité des contrats. Rien n'est imposé — l'utilisateur peut cliquer
+ * ailleurs, déplacer ou supprimer les zones.
  */
 export function PlaceStep(props: Props) {
   const {
-    file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
+    file, fields, signers, numPages, activeSignerRole, armedFieldType, replicateAllPages,
     onSignerChange, onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onBack, onNext, canGoNext,
@@ -43,105 +58,135 @@ export function PlaceStep(props: Props) {
   const selfSigner = signers.find((s) => s.role === "self");
   const counterSigner = signers.find((s) => s.role === "counterparty");
 
-  // Sous-étape courante du guidage : 1 = votre zone, 2 = zone du cocontractant, 3 = prêt.
-  const phase = !hasSelfField ? 1 : !hasCounterpartyField ? 2 : 3;
+  // Phase du guidage : elle suit l'avancement réel du placement.
+  const phase: GuidePhase = !hasSelfField
+    ? "place-self"
+    : !hasCounterpartyField
+    ? "place-counterparty"
+    : "place-ready";
+  const guide = getGuideContent(phase);
+  const accentHex =
+    guide.signer === "counterparty"
+      ? counterSigner?.hex ?? "#10b981"
+      : guide.signer === "self"
+      ? selfSigner?.hex ?? "#4f46e5"
+      : BRAND_HEX;
+
+  const suggestedField = buildSuggestedField(activeSignerRole, fields, numPages, replicateAllPages);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-1 space-y-4">
-        {/* Checklist de progression — on comprend d'un coup d'œil où on en est */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
-          <ChecklistItem
-            done={hasSelfField}
-            active={activeSignerRole === "self"}
-            hex={selfSigner?.hex ?? "#4f46e5"}
-            label="1. Votre signature"
-            onClick={() => onSignerChange("self")}
-          />
-          <ChecklistItem
-            done={hasCounterpartyField}
-            active={activeSignerRole === "counterparty"}
-            hex={counterSigner?.hex ?? "#10b981"}
-            label="2. Signature du cocontractant"
-            onClick={() => onSignerChange("counterparty")}
-          />
-          <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
-            Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
-          </p>
-        </div>
-
-        <PlaceToolbar
-          armedFieldType={armedFieldType}
-          replicateAllPages={replicateAllPages}
-          onArmFieldType={onArmFieldType}
-          onReplicateAllPagesChange={onReplicateAllPagesChange}
-        />
-      </div>
-
-      <div className="lg:col-span-3 space-y-3">
-        {/* Bandeau de guidage : une seule consigne à la fois, impossible à rater */}
-        {phase === 1 && (
-          <GuidBanner hex={selfSigner?.hex ?? "#4f46e5"}>
-            <strong>Étape 1/2 — Votre signature :</strong>&nbsp;cliquez sur le contrat à
-            l'endroit où <strong>vous</strong> signerez.
-          </GuidBanner>
-        )}
-        {phase === 2 && (
-          <GuidBanner hex={counterSigner?.hex ?? "#10b981"}>
-            <strong>Étape 2/2 — Signature du cocontractant :</strong>&nbsp;cliquez maintenant à
-            l'endroit où <strong>votre cocontractant</strong> signera.
-          </GuidBanner>
-        )}
-        {phase === 3 && (
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            Les deux zones sont placées. Vous pouvez les déplacer, en ajouter, ou passer à
-            l'étape suivante pour signer puis envoyer l'e-mail au cocontractant.
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      {/* Colonne de gauche : sticky, elle accompagne l'utilisateur pendant le scroll */}
+      <div className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
+        <GuidePanel content={guide} accentHex={accentHex} documentName={file?.name}>
+          {/* Checklist des zones — sous le bandeau d'étape, jamais au-dessus */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
+            <ChecklistItem
+              done={hasSelfField}
+              active={activeSignerRole === "self"}
+              hex={selfSigner?.hex ?? "#4f46e5"}
+              label="1. Votre signature"
+              onClick={() => onSignerChange("self")}
+            />
+            <ChecklistItem
+              done={hasCounterpartyField}
+              active={activeSignerRole === "counterparty"}
+              hex={counterSigner?.hex ?? "#10b981"}
+              label="2. Signature du cocontractant"
+              onClick={() => onSignerChange("counterparty")}
+            />
+            <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
+              Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
+            </p>
           </div>
-        )}
-        <div className="bg-gray-50 rounded-xl p-4">
-        <PdfViewer
-          file={file}
-          fields={fields}
-          signers={signers}
-          mode="place"
-          activeFieldType={armedFieldType}
-          activeSignerRole={activeSignerRole}
-          replicateAllPages={replicateAllPages}
-          onFieldAdd={onFieldAdd}
-          onFieldMove={onFieldMove}
-          onFieldRemove={onFieldRemove}
-          onLoaded={onNumPagesLoaded}
-        />
-        </div>
+
+          <PlaceToolbar
+            armedFieldType={armedFieldType}
+            replicateAllPages={replicateAllPages}
+            onArmFieldType={onArmFieldType}
+            onReplicateAllPagesChange={onReplicateAllPagesChange}
+          />
+
+          {/* Actions : au même endroit qu'à l'étape suivante, toujours visibles */}
+          <div className="space-y-2">
+            <button
+              onClick={onNext}
+              disabled={!canGoNext}
+              className={`w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
+                phase === "place-ready" ? "ring-2 ring-[#354F99]/30 ring-offset-2" : ""
+              }`}
+            >
+              Signer et envoyer <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onBack}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Changer de document
+            </button>
+          </div>
+        </GuidePanel>
       </div>
 
-      <div className="lg:col-span-4 flex justify-between items-center pt-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" /> Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!canGoNext}
-          className={`flex items-center gap-2 px-5 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
-            phase === 3 ? "ring-2 ring-[#354F99]/30 ring-offset-2" : ""
-          }`}
-        >
-          Suivant — Signer et envoyer <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* Colonne de droite : le document, en haut de l'écran */}
+      <div className="lg:col-span-3">
+        <div className="bg-gray-50 rounded-xl p-4">
+          <PdfViewer
+            file={file}
+            fields={fields}
+            signers={signers}
+            mode="place"
+            activeFieldType={armedFieldType}
+            activeSignerRole={activeSignerRole}
+            replicateAllPages={replicateAllPages}
+            initialPage="last"
+            suggestedField={suggestedField}
+            onFieldAdd={onFieldAdd}
+            onFieldMove={onFieldMove}
+            onFieldRemove={onFieldRemove}
+            onLoaded={onNumPagesLoaded}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Zone suggérée pour le signataire actif : en bas de la dernière page, à
+ * gauche pour l'émetteur et à droite pour le cocontractant (disposition
+ * classique des blocs de signature d'un contrat).
+ *
+ * Retourne null dès que ce signataire a déjà une zone : la suggestion ne sert
+ * qu'à démarrer, elle ne réapparaît pas ensuite.
+ */
+function buildSuggestedField(
+  signerRole: SignerRole,
+  fields: Field[],
+  numPages: number,
+  replicateAllPages: boolean,
+): Omit<Field, "id"> | null {
+  if (numPages < 1) return null;
+  if (fields.some((f) => f.signer === signerRole)) return null;
+  return {
+    type: "signature",
+    signer: signerRole,
+    page: numPages - 1,
+    xPct: signerRole === "self" ? 0.1 : 0.6,
+    yPct: 0.78,
+    widthPct: DEFAULT_FIELD_SIZE.widthPct,
+    heightPct: DEFAULT_FIELD_SIZE.heightPct,
+    replicateAllPages,
+  };
+}
+
 /**
  * Ligne de checklist (zone placée / en cours / à venir) — cliquable : elle
  * fait à la fois office d'indicateur de progression ET de sélecteur du
- * signataire actif (fusion des deux blocs qui se chevauchaient auparavant).
+ * signataire actif.
  */
 function ChecklistItem({
   done, active, hex, label, onClick,
@@ -177,18 +222,5 @@ function ChecklistItem({
         </span>
       )}
     </button>
-  );
-}
-
-/** Bandeau de consigne coloré selon le signataire concerné. */
-function GuidBanner({ hex, children }: { hex: string; children: React.ReactNode }) {
-  return (
-    <div
-      className="flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm"
-      style={{ borderColor: hex + "55", backgroundColor: hex + "10", color: "#1f2937" }}
-    >
-      <MousePointerClick className="w-4 h-4 shrink-0" style={{ color: hex }} />
-      <span>{children}</span>
-    </div>
   );
 }

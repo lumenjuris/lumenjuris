@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, FileText, Send, Clock, CheckCircle2, Loader2, Trash2, AlertCircle, Filter } from "lucide-react";
+import { Plus, FileText, Send, Clock, CheckCircle2, Loader2, Trash2, AlertCircle, Filter, MailPlus } from "lucide-react";
 import { fetchProxy } from "../../../utils/fetchProxy";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
@@ -59,6 +59,10 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
   const [error, setError] = useState("");
   const [validateModalOpen, setValidateModalOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // Relance : enveloppe en attente de confirmation + état par enveloppe.
+  // Une relance envoie un e-mail : elle passe toujours par une confirmation.
+  const [pendingResend, setPendingResend] = useState<EnvelopeDTO | null>(null);
+  const [resendStates, setResendStates] = useState<Record<string, ResendState>>({});
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -101,6 +105,33 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
       setPendingDeleteId(null);
     }
   } 
+
+  /** Ouvre la confirmation de relance pour une enveloppe. */
+  function handleResend(envelope: EnvelopeDTO) {
+    setPendingResend(envelope);
+  }
+
+  /** Renvoie l'e-mail d'invitation à signer, après confirmation. */
+  async function resendConfirmed() {
+    const envelope = pendingResend;
+    setPendingResend(null);
+    if (!envelope) return;
+    setResendStates((prev) => ({ ...prev, [envelope.id]: "sending" }));
+    try {
+      const res = await fetchProxy("/api/signature-envelope/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ externalId: envelope.id }),
+      });
+      const data = await res.json() as { success?: boolean; message?: string };
+      if (!res.ok || !data.success) throw new Error(data.message ?? "Échec de la relance.");
+      setResendStates((prev) => ({ ...prev, [envelope.id]: "done" }));
+    } catch (e: unknown) {
+      setResendStates((prev) => ({ ...prev, [envelope.id]: "error" }));
+      setError(e instanceof Error ? e.message : "Échec de la relance.");
+    }
+  }
 
   return (
     <div className="space-y-5 mx-auto w-full max-w-7xl">
@@ -149,7 +180,13 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
       <StatusFilters current={filter} onChange={setFilter} />
 
       {/* Liste */}
-      <EnvelopeList list={list} loading={loading} onDelete={handleDelete} />
+      <EnvelopeList
+        list={list}
+        loading={loading}
+        onDelete={handleDelete}
+        onResend={handleResend}
+        resendStates={resendStates}
+      />
         <ConfirmationModal
           open={validateModalOpen}
           title="Supprimer l'enveloppe"
@@ -157,6 +194,16 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
           confirmLabel="Valider"
           onConfirm={validateConfirmed}
           onCancel={() => { setValidateModalOpen(false); setPendingDeleteId(null); }}
+        />
+        <ConfirmationModal
+          open={!!pendingResend}
+          title="Relancer la signature"
+          description={pendingResend
+            ? `Un nouvel e-mail d'invitation à signer va être envoyé à ${pendingResend.counterpartyName} (${pendingResend.counterpartyEmail}). Le lien de signature reste le même.`
+            : ""}
+          confirmLabel="Envoyer la relance"
+          onConfirm={() => void resendConfirmed()}
+          onCancel={() => setPendingResend(null)}
         />
     </div>
   );
@@ -247,11 +294,13 @@ function StatusFilters({
 
 /** Liste des enveloppes. */
 function EnvelopeList({
-  list, loading, onDelete,
+  list, loading, onDelete, onResend, resendStates,
 }: {
   list: EnvelopeDTO[];
   loading: boolean;
   onDelete: (id: string) => void;
+  onResend: (envelope: EnvelopeDTO) => void;
+  resendStates: Record<string, ResendState>;
 }) {
   if (loading) {
     return (
@@ -279,14 +328,28 @@ function EnvelopeList({
   return (
     <div className="bg-white rounded-card border border-line shadow-card divide-y divide-line-subtle overflow-hidden">
       {list.map((env) => (
-        <EnvelopeRow key={env.id} env={env} onDelete={() => onDelete(env.id)} />
+        <EnvelopeRow
+          key={env.id}
+          env={env}
+          onDelete={() => onDelete(env.id)}
+          onResend={() => onResend(env)}
+          resendState={resendStates[env.id] ?? "idle"}
+        />
       ))}
     </div>
   );
 }
 
 /** Une ligne d'enveloppe dans la liste. */
-function EnvelopeRow({ env, onDelete }: { env: EnvelopeDTO; onDelete: () => void }) {
+function EnvelopeRow({
+  env, onDelete, onResend, resendState,
+}: {
+  env: EnvelopeDTO;
+  onDelete: () => void;
+  onResend: () => void;
+  resendState: ResendState;
+}) {
+  const waitingDays = daysSince(env.sentAt ?? env.createdAt);
   return (
     <div className="group flex items-center gap-4 px-5 py-3 hover:bg-surface-subtle/60 transition-colors">
       <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center shrink-0">
@@ -300,8 +363,17 @@ function EnvelopeRow({ env, onDelete }: { env: EnvelopeDTO; onDelete: () => void
       </div>
       <div className="hidden md:block text-[11px] text-ink-subtle shrink-0 min-w-[120px] text-right">
         {formatDate(env.sentAt ?? env.createdAt)}
+        {/* Une attente qui s'allonge est le signal qui justifie une relance. */}
+        {isPending(env.status) && waitingDays !== null && (
+          <span className={`block ${waitingDays >= 7 ? "text-warning-dark font-semibold" : ""}`}>
+            en attente depuis {waitingDays} j
+          </span>
+        )}
       </div>
       <StatusBadge status={env.status} />
+      {isPending(env.status) && (
+        <ResendButton state={resendState} onClick={onResend} />
+      )}
       <button
         onClick={onDelete}
         className="p-1.5 rounded-lg text-ink-subtle hover:text-danger hover:bg-danger-light transition-all opacity-0 group-hover:opacity-100"
@@ -311,6 +383,43 @@ function EnvelopeRow({ env, onDelete }: { env: EnvelopeDTO; onDelete: () => void
       </button>
     </div>
   );
+}
+
+/** État d'une relance déclenchée depuis la liste. */
+type ResendState = "idle" | "sending" | "done" | "error";
+
+/**
+ * Bouton de relance manuelle : renvoie l'e-mail d'invitation à signer au
+ * cocontractant. Affiché uniquement sur les enveloppes encore en attente, et
+ * toujours visible (contrairement à la corbeille qui n'apparaît qu'au survol) :
+ * c'est l'action attendue quand une signature tarde.
+ */
+function ResendButton({ state, onClick }: { state: ResendState; onClick: () => void }) {
+  if (state === "done") {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-semibold text-success-dark shrink-0 whitespace-nowrap">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Relance envoyée
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={state === "sending"}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-brand border border-line hover:bg-surface-subtle disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
+      title="Renvoyer l'e-mail d'invitation à signer"
+    >
+      {state === "sending"
+        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        : <MailPlus className="w-3.5 h-3.5" />}
+      Relancer
+    </button>
+  );
+}
+
+/** Vrai quand l'enveloppe attend encore la signature du cocontractant. */
+function isPending(status: EnvelopeStatus): boolean {
+  return status === "SENT" || status === "PARTIALLY_SIGNED" || status === "EXPIRED";
 }
 
 /** Badge coloré selon le statut de l'enveloppe. */
@@ -334,6 +443,14 @@ const STATUS_CONFIG: Record<EnvelopeStatus, { label: string; bg: string; fg: str
   DECLINED:          { label: "Refusé",         bg: "#fee2e2", fg: "#991b1b" },
   EXPIRED:           { label: "Expiré",         bg: "#f3f4f6", fg: "#6b7280" },
 };
+
+/** Nombre de jours entiers écoulés depuis une date ISO (null si absente). */
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  const elapsedMs = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(elapsedMs) || elapsedMs < 0) return null;
+  return Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+}
 
 /** "JJ/MM/AAAA" à partir d'un ISO ou d'un timestamp. */
 function formatDate(iso: string | null): string {

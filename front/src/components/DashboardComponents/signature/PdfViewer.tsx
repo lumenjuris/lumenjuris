@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { FieldOverlay } from "./FieldOverlay";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
+import { DEFAULT_FIELD_SIZE } from "./types";
 
 // Configure le worker pdf.js via le CDN cloudflare (évite la config Vite custom).
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -28,12 +29,27 @@ interface Props {
   onFieldClick?: (field: Field) => void;
   /** Notifie le parent du nombre de pages dès le chargement du PDF. */
   onLoaded?: (numPages: number) => void;
+  /**
+   * Page affichée à l'ouverture du document : un index (0-based) ou "last"
+   * pour la dernière page. Par défaut la première page.
+   *
+   * Les signatures se trouvent quasi toujours en fin de contrat : ouvrir
+   * directement sur la dernière page évite à l'utilisateur de scroller pour
+   * trouver l'endroit où intervenir.
+   */
+  initialPage?: number | "last";
+  /**
+   * Zone de signature proposée à l'utilisateur (mode "place") : affichée en
+   * pointillés, elle n'est posée que s'il clique dessus. Rien n'est imposé —
+   * il peut toujours cliquer ailleurs dans le document.
+   */
+  suggestedField?: Omit<Field, "id"> | null;
 }
 
 // Dimensions par défaut des champs (en pourcentage de la page)
 // (le paraphe « initial » a été retiré du produit — seul « signature » subsiste)
 const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
-  signature: { width: 0.22, height: 0.06 },
+  signature: { width: DEFAULT_FIELD_SIZE.widthPct, height: DEFAULT_FIELD_SIZE.heightPct },
 };
 
 /**
@@ -51,7 +67,8 @@ const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
  */
 export function PdfViewer(props: Props) {
   const { file, fields, signers, mode, activeFieldType, activeSignerRole, replicateAllPages,
-          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded } = props;
+          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded,
+          initialPage, suggestedField } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -87,7 +104,7 @@ export function PdfViewer(props: Props) {
 
   function handleDocumentLoad({ numPages }: { numPages: number }) {
     setNumPages(numPages);
-    setCurrentPage(0);
+    setCurrentPage(resolveInitialPage(initialPage, numPages));
     onLoaded?.(numPages);
   }
 
@@ -100,6 +117,9 @@ export function PdfViewer(props: Props) {
   }
 
   const visibleFields = filterFieldsForPage(fields, currentPage);
+  // La suggestion n'est affichée que sur sa page et seulement en placement.
+  const visibleSuggestion =
+    isArmed && suggestedField && suggestedField.page === currentPage ? suggestedField : null;
 
   return (
     <div className="flex flex-col items-center" ref={containerRef}>
@@ -127,6 +147,14 @@ export function PdfViewer(props: Props) {
             renderAnnotationLayer={false}
           />
         </Document>
+
+        {visibleSuggestion && (
+          <SuggestedZone
+            field={visibleSuggestion}
+            hex={(signers.find((s) => s.role === visibleSuggestion.signer) ?? signers[0])?.hex ?? "#4f46e5"}
+            onAccept={() => onFieldAdd?.(visibleSuggestion)}
+          />
+        )}
 
         {visibleFields.map((f) => {
           const signer = signers.find((s) => s.role === f.signer) ?? signers[0];
@@ -180,6 +208,40 @@ function PageNavigator({
   );
 }
 
+/**
+ * Emplacement suggéré pour une zone de signature. Purement indicatif : un clic
+ * dessus pose la zone, un clic ailleurs dans la page fonctionne toujours.
+ */
+function SuggestedZone({
+  field, hex, onAccept,
+}: {
+  field: Omit<Field, "id">;
+  hex: string;
+  onAccept: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onAccept(); }}
+      className="absolute flex flex-col items-center justify-center gap-0.5 rounded animate-pulse hover:animate-none transition-colors"
+      style={{
+        left: `${field.xPct * 100}%`,
+        top: `${field.yPct * 100}%`,
+        width: `${field.widthPct * 100}%`,
+        height: `${field.heightPct * 100}%`,
+        border: `1.5px dashed ${hex}`,
+        backgroundColor: hex + "0D",
+      }}
+      title="Placer la zone de signature ici"
+    >
+      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: hex }}>
+        Emplacement suggéré
+      </span>
+      <span className="text-[8px] text-gray-500">Cliquez pour placer ici</span>
+    </button>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -224,6 +286,16 @@ function usePageWidthObserver(
  */
 function filterFieldsForPage(fields: Field[], pageIndex: number): Field[] {
   return fields.filter((f) => f.page === pageIndex || !!f.replicateAllPages);
+}
+
+/**
+ * Page à afficher à l'ouverture du document. "last" = dernière page (là où se
+ * trouve la signature dans la très grande majorité des contrats).
+ */
+function resolveInitialPage(initialPage: number | "last" | undefined, numPages: number): number {
+  if (initialPage === "last") return Math.max(0, numPages - 1);
+  if (typeof initialPage === "number") return clamp(initialPage, 0, Math.max(0, numPages - 1));
+  return 0;
 }
 
 function clamp(value: number, min: number, max: number): number {

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Stepper } from "./Stepper";
+import { FileText } from "lucide-react";
 import { PrepareStep } from "./PrepareStep";
 import { PlaceStep } from "./PlaceStep";
 import { SignStep } from "./SignStep";
 import { SignatureModal } from "./SignatureModal";
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { useUserStore } from "../../../store/userStore";
 import type {
   Field, FieldType, Signer, SignerRole, WizardStep, CapturedSignature,
 } from "./types";
@@ -68,6 +69,11 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
 
+  // E-mail du compte connecté : c'est cette adresse (celle du créateur du
+  // compte, pas une adresse d'administration) qui porte la procédure côté
+  // serveur. On l'affiche à l'utilisateur avant l'envoi.
+  const senderEmail = useUserStore((state) => state.userData?.profile.email);
+
   // ─── Helpers de mutation ─────────────────────────────────────────────────
 
   /** Ajoute un champ — reste armé sur "signature" pour permettre de placer plusieurs champs. */
@@ -111,6 +117,22 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
      else {
       setModalOpenFor({ field, signer });
     } 
+  }
+
+  /**
+   * Passage à l'étape « Signer et envoyer ».
+   *
+   * Une fois les zones placées, la seule action attendue est d'apposer sa
+   * signature : on ouvre donc directement la modale de saisie sur la première
+   * zone non signée, sans demander à l'utilisateur de cliquer d'abord dessus.
+   * S'il ferme la modale, le clic sur la zone reste évidemment possible.
+   */
+  function goToSignStep() {
+    setStep("sign");
+    const firstUnsignedSelfField = fields.find((f) => f.signer === "self" && !f.value);
+    if (!firstUnsignedSelfField) return;
+    const selfSigner = signers.find((s) => s.role === "self")!;
+    setModalOpenFor({ field: firstUnsignedSelfField, signer: selfSigner });
   }
 
   /**
@@ -220,15 +242,22 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Signature électronique</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Préparez, placez les zones de signature et envoyez à votre cocontractant.
-        </p>
+    <div className="space-y-4 max-w-6xl">
+      {/* En-tête volontairement compact : la priorité de l'écran est le
+          document et l'action en cours, pas le titre de la page. Le repère
+          « Étape X sur 2 » vit en haut de la colonne de gauche. */}
+      <header className="flex items-center gap-2 min-w-0">
+        <h1 className="text-lg font-bold text-gray-900 tracking-tight shrink-0">
+          Signature électronique
+        </h1>
+        {file && (
+          <>
+            <span className="text-gray-300">·</span>
+            <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span className="text-xs text-gray-500 truncate">{file.name}</span>
+          </>
+        )}
       </header>
-
-      <Stepper current={step} />
 
       {step === "prepare" && (
         <PrepareStep
@@ -246,6 +275,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           file={file}
           fields={fields}
           signers={signers}
+          numPages={numPages}
           activeSignerRole={activeSignerRole}
           armedFieldType={armedFieldType}
           replicateAllPages={replicateAllPages}
@@ -257,7 +287,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           onFieldRemove={removeField}
           onNumPagesLoaded={setNumPages}
           onBack={() => setStep("prepare")}
-          onNext={() => setStep("sign")}
+          onNext={goToSignStep}
           canGoNext={canGoToSign}
         />
       )}
@@ -273,6 +303,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           canSend={canSend}
           sending={sending}
           sendError={sendError}
+          senderEmail={senderEmail}
           counterpartyName={counterpartyName}
           counterpartyEmail={counterpartyEmail}
           onCounterpartyNameChange={setCounterpartyName}

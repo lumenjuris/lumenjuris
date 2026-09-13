@@ -41,7 +41,7 @@ export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }:
       onClick={(e) => {
         e.stopPropagation();
         if (mode === "place") return;
-        console.log("FieldOverlay clicked", field.id); // ← ajouter
+        
 
         onClick?.();
       }}
