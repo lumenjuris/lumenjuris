@@ -1095,10 +1095,10 @@ export function Generateur() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto border border-gray rounded-2xl pb-4 pl-4">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-t-2xl -ml-4">
-
-      {/* En-tête — masqué pour l'éditeur document-first (chaque éditeur a son propre retour) */}
+      {/* En-tête — masqué, bandeau compris, pour l'éditeur document-first (chaque
+          éditeur a son propre retour) : sinon un bandeau bleu vide surplombe le contrat. */}
       {section !== "form" && section !== "blank" && section !== "useCustom" && (
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-t-2xl -ml-4">
         <div>
           {section && (
             <button
@@ -1118,8 +1118,8 @@ export function Generateur() {
             </p>
           )}
         </div>
-      )}
       </div>
+      )}
 
       {/* Hub — 3 cartes */}
       {!section && (
