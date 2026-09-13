@@ -58,6 +58,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  // Article RGPD dans le contrat : proposé par défaut, décochable.
+  const [includeRgpd, setIncludeRgpd] = useState(true);
 
   const opId = useRef(0);
   // Écran d'où la génération a été lancée : on y revient en cas d'échec ou de retour.
@@ -154,8 +156,10 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
         ? await generateContractDraft(
             title,
             questions.map((q) => ({ question: q.question, answer: finalAnswers[q.id] ?? "" })),
+            [],
+            includeRgpd,
           )
-        : await generateContractDraftFromBrief(title, initialBrief?.trim() || title);
+        : await generateContractDraftFromBrief(title, initialBrief?.trim() || title, [], [], includeRgpd);
       if (opId.current !== id) return;
       onReady({ model: buildModel(title, draft), fileBase: slug(title) });
     } catch {
@@ -233,10 +237,16 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               </span>
             </button>
             {error && <p className="text-xs text-danger">{error}</p>}
-            <p className="flex items-center gap-1.5 pt-1 text-[11px] text-ink-subtle">
+            <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-ink-secondary">
+              <input
+                type="checkbox"
+                checked={includeRgpd}
+                onChange={(e) => setIncludeRgpd(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-line text-brand focus:ring-brand/30"
+              />
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-brand" />
-              Article RGPD inclus dans chaque contrat.
-            </p>
+              Inclure un article RGPD (protection des données personnelles)
+            </label>
           </div>
         )}
 
@@ -251,7 +261,7 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
             <p className="text-sm text-ink-muted">Rédaction du contrat…</p>
-            <p className="text-xs text-ink-subtle">Article RGPD inclus.</p>
+            {includeRgpd && <p className="text-xs text-ink-subtle">Article RGPD inclus.</p>}
           </div>
         )}
 

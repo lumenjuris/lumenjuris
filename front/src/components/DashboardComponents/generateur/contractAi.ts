@@ -222,6 +222,7 @@ export async function generateContractDraft(
   title: string,
   answers: { question: string; answer: string }[],
   parties: PartyIdentity[] = [],
+  includeRgpd = true,
 ): Promise<ContractDraft> {
   const choices = answers.map((a) => `- ${a.question} → ${a.answer.trim() || "(non renseigné)"}`).join("\n");
   const prompt =
@@ -232,7 +233,7 @@ export async function generateContractDraft(
     `« (non renseigné) » et les données absentes deviennent des variables {{…}} à compléter. Pour un ` +
     `choix non renseigné, retiens l'option la plus usuelle et la plus équilibrée.\n\n` +
     blocParties(parties) +
-    EXIGENCE_LICEITE + EXIGENCE_RGPD + FORMAT_JSON_CONTRAT;
+    EXIGENCE_LICEITE + (includeRgpd ? EXIGENCE_RGPD : "") + FORMAT_JSON_CONTRAT;
   const out = await callOpenAi52(prompt, "medium", "medium", "gpt-5.2");
   return parseDraft(out, title);
 }
@@ -253,6 +254,7 @@ export async function generateContractDraftFromBrief(
   brief: string,
   attachments: BriefAttachment[] = [],
   parties: PartyIdentity[] = [],
+  includeRgpd = true,
 ): Promise<ContractDraft> {
   const docs = attachments
     .filter((a) => a.text.trim())
@@ -275,7 +277,7 @@ export async function generateContractDraftFromBrief(
         `fournissent pas :\n${docs}\n\n`
       : "") +
     blocParties(parties) +
-    EXIGENCE_LICEITE + EXIGENCE_RGPD + FORMAT_JSON_CONTRAT;
+    EXIGENCE_LICEITE + (includeRgpd ? EXIGENCE_RGPD : "") + FORMAT_JSON_CONTRAT;
   // Profondeur "medium" et non "high" : la redaction depuis une consigne libre
   // attendait nettement plus longtemps que le parcours par questions, pour un
   // resultat comparable — ce dernier redige deja en "medium". Le gain de temps
