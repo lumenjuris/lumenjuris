@@ -83,21 +83,25 @@ export function PlaceStep(props: Props) {
           </GuideCard>
         )}
 
-        <button
-          onClick={onNext}
-          disabled={!canGoNext}
-          className={`w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
-            ready ? "ring-4 ring-[#354F99]/25 animate-pulse" : ""
-          }`}
-        >
-          Suivant <ChevronRight className="w-4 h-4" />
-        </button>
-        <button
-          onClick={onBack}
-          className="w-full flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" /> Précédent
-        </button>
+        {/* Précédent et Suivant sur une seule ligne */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            title="Précédent"
+            className="flex shrink-0 items-center gap-1 px-3 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" /> Précédent
+          </button>
+          <button
+            onClick={onNext}
+            disabled={!canGoNext}
+            className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
+              ready ? "ring-4 ring-[#354F99]/25 animate-pulse" : ""
+            }`}
+          >
+            Suivant <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
         <PlaceToolbar
           armedFieldType={armedFieldType}

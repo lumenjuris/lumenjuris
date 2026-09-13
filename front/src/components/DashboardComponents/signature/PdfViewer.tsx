@@ -115,6 +115,16 @@ export function PdfViewer(props: Props) {
         className={`relative shadow-lg ring-1 ring-gray-200 rounded-md overflow-hidden bg-white ${isArmed ? "cursor-crosshair" : ""}`}
         onClick={handlePageClick}
       >
+        {/* Pagination en pastille sur le coin de la page : toujours visible, sans décaler le document. */}
+        {numPages > 1 && (
+          <div className="absolute right-2 top-2 z-20" onClick={(e) => e.stopPropagation()}>
+            <PageNavigator
+              current={currentPage}
+              total={numPages}
+              onChange={setCurrentPage}
+            />
+          </div>
+        )}
         <Document
           file={fileUrl}
           onLoadSuccess={handleDocumentLoad}
@@ -146,14 +156,6 @@ export function PdfViewer(props: Props) {
         })}
       </div>
 
-      {/* Pagination sous la page : le document commence tout en haut de la zone. */}
-      {numPages > 1 && (
-        <PageNavigator
-          current={currentPage}
-          total={numPages}
-          onChange={setCurrentPage}
-        />
-      )}
     </div>
   );
 }
@@ -169,7 +171,7 @@ function PageNavigator({
   onChange: (page: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 mt-2">
+    <div className="flex items-center gap-1 rounded-full bg-white/95 px-1 py-0.5 shadow-md ring-1 ring-gray-200">
       <button
         onClick={() => onChange(Math.max(0, current - 1))}
         disabled={current === 0}
