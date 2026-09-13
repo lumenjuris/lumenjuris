@@ -17,6 +17,7 @@ import { avenantModel } from "../../contractEngine/models/avenant";
 import { lettreDisciplinaireModel } from "../../contractEngine/models/lettreDisciplinaire";
 import { ruptureConventionnelleModel } from "../../contractEngine/models/ruptureConventionnelle";
 import { ScratchWizard } from "./generateur/ScratchFlow";
+import { TemplateTable } from "./generateur/TemplateTable";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
   type CreatedContract,
@@ -69,21 +70,21 @@ type Section = "library" | "import" | "form" | "useCustom" | "scratch" | "blank"
 // ─── Données ─────────────────────────────────────────────────────────────────
 
 const DOC_TYPES = [
-  { id: "cdi",           Icon: Briefcase,     short: "CDI",  label: "Contrat à durée indéterminée" },
-  { id: "cdd",           Icon: ClipboardList, short: "CDD",  label: "Contrat à durée déterminée" },
-  { id: "avenant",       Icon: FileText,      short: "AVN",  label: "Avenant au contrat de travail" },
-  { id: "disciplinaire", Icon: BookOpen,      short: "DISC", label: "Lettre disciplinaire" },
-  { id: "rupture",       Icon: Shield,        short: "RC",   label: "Rupture conventionnelle" },
+  { id: "cdi", Icon: Briefcase, short: "CDI", label: "Contrat à durée indéterminée" },
+  { id: "cdd", Icon: ClipboardList, short: "CDD", label: "Contrat à durée déterminée" },
+  { id: "avenant", Icon: FileText, short: "AVN", label: "Avenant au contrat de travail" },
+  { id: "disciplinaire", Icon: BookOpen, short: "DISC", label: "Lettre disciplinaire" },
+  { id: "rupture", Icon: Shield, short: "RC", label: "Rupture conventionnelle" },
 ] as const;
 type DocId = typeof DOC_TYPES[number]["id"];
 
 /** Modèle + nom de fichier d'export pour l'éditeur document-first, par type de contrat. */
 const GENERIC_EDITORS: Record<DocId, { model: ContractModel; fileBase: string }> = {
-  cdi:           { model: cdiModel, fileBase: "CDI" },
-  cdd:           { model: cddAccroissementModel, fileBase: "CDD-accroissement" },
-  avenant:       { model: avenantModel, fileBase: "Avenant" },
+  cdi: { model: cdiModel, fileBase: "CDI" },
+  cdd: { model: cddAccroissementModel, fileBase: "CDD-accroissement" },
+  avenant: { model: avenantModel, fileBase: "Avenant" },
   disciplinaire: { model: lettreDisciplinaireModel, fileBase: "Lettre-disciplinaire" },
-  rupture:       { model: ruptureConventionnelleModel, fileBase: "Rupture-conventionnelle" },
+  rupture: { model: ruptureConventionnelleModel, fileBase: "Rupture-conventionnelle" },
 };
 
 /** Normalise (minuscules + sans accents) pour une recherche tolérante. */
@@ -157,7 +158,7 @@ function LibrarySection({
   async function handleDelete(t: ContractTemplateDTO) {
     setContractDelete(t);
     setValidateModalOpen(true);
-    
+
   }
 
   async function validateConfirmed() {
@@ -178,7 +179,7 @@ function LibrarySection({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-6 ">
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle" />
         <input
@@ -200,72 +201,55 @@ function LibrarySection({
         )}
       </div>
 
-      {(loading || genericMatches.length > 0 || customMatches.length > 0) && (
-      <div className="overflow-hidden rounded-card border border-line bg-white shadow-card divide-y divide-line-subtle">
-        {loading && (
-          <div className="flex items-center gap-2 px-4 py-3 text-[12px] text-ink-subtle">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Chargement…
-          </div>
-        )}
-
-        {genericMatches.length > 0 && (
-          <div className="py-1">
-            <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
-              Modèles prêts à l'emploi
-            </p>
-            {genericMatches.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => onUse(d.id)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-subtle"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-panel bg-brand-light">
-                  <d.Icon className="h-4 w-4 text-brand" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{d.label}</span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {customMatches.length > 0 && (
-          <div className="py-1">
-            <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
-              Vos modèles enregistrés
-            </p>
-            {customMatches.map((t) => (
-              <div
-                key={t.id}
-                className="group flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-subtle"
-              >
-                <button onClick={() => onUseCustom(t.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-panel bg-surface-muted">
-                    <FileText className="h-4 w-4 text-ink-subtle" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{t.name}</span>
-                </button>
+      {genericMatches.length > 0 && (
+        <div className="overflow-hidden rounded-card border border-line bg-white shadow-card divide-y divide-line-subtle">
+          {genericMatches.length > 0 && (
+            <div className="py-1">
+              <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
+                Modèles prêts à l'emploi
+              </p>
+              {genericMatches.map((d) => (
                 <button
-                  onClick={() => handleDelete(t)}
-                  title="Supprimer ce modèle"
-                  className="shrink-0 rounded-lg p-1.5 text-ink-subtle opacity-0 transition-all hover:bg-danger-light hover:text-danger group-hover:opacity-100"
+                  key={d.id}
+                  onClick={() => onUse(d.id)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-subtle"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-panel bg-brand-light">
+                    <d.Icon className="h-4 w-4 text-brand" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{d.label}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" />
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <ConfirmationModal
-          open={validateModalOpen}
-          title="Supprimer le modèle"
-          description={`Souhaitez-vous supprimer le modèle ?`}
-          confirmLabel="Valider"
-          onConfirm={validateConfirmed}
-          onCancel={() => { setValidateModalOpen(false); setContractDelete(null); }}
-        />
-      </div>
+              ))}
+            </div>
+          )}
+
+        </div>
       )}
+
+      {/* Modèles enregistrés : tableau comme dans la contrathèque (colonnes au choix, tri) */}
+      {(loading || customMatches.length > 0) && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
+            Vos modèles enregistrés
+          </p>
+          <TemplateTable
+            items={customMatches}
+            loading={loading}
+            onOpen={onUseCustom}
+            onDelete={handleDelete}
+          />
+        </div>
+      )}
+
+      <ConfirmationModal
+        open={validateModalOpen}
+        title="Supprimer le modèle"
+        description={`Souhaitez-vous supprimer le modèle « ${contractDelete?.name ?? ""} » ?`}
+        confirmLabel="Valider"
+        onConfirm={validateConfirmed}
+        onCancel={() => { setValidateModalOpen(false); setContractDelete(null); }}
+      />
 
       {/* Historique des contrats créés — volontairement discret (sous les modèles) */}
       {createdMatches.length > 0 && (
@@ -490,11 +474,10 @@ function VariableSelector({
                         onMouseEnter={() => onVariableHover(t.name)}
                         onMouseLeave={() => onVariableHover(null)}
                         title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
-                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${
-                          isEssential
-                            ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
-                            : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
-                        } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${isEssential
+                          ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
+                          : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
+                          } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
                       >
                         {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
                         {isBlankPlaceholder(t.text) ? variableLabel : t.text}
@@ -568,9 +551,8 @@ function VariableListPanel({
               data-variable-row={variable.name}
               onMouseEnter={() => onHoverVar(variable.name)}
               onMouseLeave={() => onHoverVar(null)}
-              className={`flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${
-                isHighlighted ? "bg-brand-light" : "hover:bg-surface-subtle"
-              }`}
+              className={`flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isHighlighted ? "bg-brand-light" : "hover:bg-surface-subtle"
+                }`}
             >
               <input
                 type="checkbox"
@@ -628,20 +610,20 @@ function ImportSection({
   /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
 } = {}) {
-  const [file, setFile]         = useState<File | null>(null);
-  const [name, setName]         = useState("");
-  const [aiHints, setAiHints]   = useState("");
-  const [step, setStep]         = useState<ImportStep>("form");
-  const [error, setError]       = useState("");
-  const [savedMeta, setSavedMeta]     = useState<ContractTemplateDTO | null>(null);
-  const [structure, setStructure]     = useState<TemplateStructure | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [aiHints, setAiHints] = useState("");
+  const [step, setStep] = useState<ImportStep>("form");
+  const [error, setError] = useState("");
+  const [savedMeta, setSavedMeta] = useState<ContractTemplateDTO | null>(null);
+  const [structure, setStructure] = useState<TemplateStructure | null>(null);
   const [essentialVars, setEssentialVars] = useState<Set<string>>(new Set());
-  const [saving, setSaving]     = useState(false);
-  const [saved, setSaved]       = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
 
   // Relecture : champ choisi (clic) et champ survolé, surlignés dans les deux colonnes.
-  const [activeVar, setActiveVar]   = useState<string | null>(null);
+  const [activeVar, setActiveVar] = useState<string | null>(null);
   const [hoveredVar, setHoveredVar] = useState<string | null>(null);
   const highlightedVar = hoveredVar ?? activeVar;
   const documentScrollRef = useRef<HTMLDivElement>(null);
@@ -809,8 +791,6 @@ function ImportSection({
   }
 
   if (step === "review" && structure && savedMeta) {
-    const allVars = extractAllVariables(structure);
-
 
     if (saved) {
       return (
@@ -840,18 +820,18 @@ function ImportSection({
       <div className="w-full space-y-4 pr-4">
         {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-              Annuler
-            </button>
-            {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
-            <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-              Enregistrer
-            </button>
-            {/* Enregistrer + poursuivre le tunnel de génération */}
-            <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-              {saving ? "Enregistrement…" : "Enregistrer et générer"}
-            </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+            Annuler
+          </button>
+          {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
+          <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+            Enregistrer
+          </button>
+          {/* Enregistrer + poursuivre le tunnel de génération */}
+          <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
+            {saving ? "Enregistrement…" : "Enregistrer et générer"}
+          </button>
         </div>
 
         {saveError && (
@@ -895,11 +875,10 @@ function ImportSection({
         {/* Zone de dépôt — react-dropzone (clic + drag), compacte */}
         <div
           {...getRootProps()}
-          className={`relative rounded-panel border-2 border-dashed px-6 py-8 text-center transition-all duration-200 cursor-pointer ${
-            isDragActive ? "border-brand bg-brand-light"
+          className={`relative rounded-panel border-2 border-dashed px-6 py-8 text-center transition-all duration-200 cursor-pointer ${isDragActive ? "border-brand bg-brand-light"
             : file ? "border-success/50 bg-success-light/40"
-            : "border-line bg-surface-subtle/40 hover:border-brand/40 hover:bg-surface-subtle"
-          }`}
+              : "border-line bg-surface-subtle/40 hover:border-brand/40 hover:bg-surface-subtle"
+            }`}
         >
           <input {...getInputProps()} />
           {file ? (
@@ -1170,7 +1149,7 @@ export function Generateur() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [section, setSection]     = useState<Section>(null);
+  const [section, setSection] = useState<Section>(null);
   const [formDocId, setFormDocId] = useState<DocId>("cdi");
   const [useTemplateId, setUseTemplateId] = useState<string | null>(null);
   const [blankEditor, setBlankEditor] = useState<{ model: ContractModel; fileBase: string } | null>(null);
@@ -1308,21 +1287,21 @@ export function Generateur() {
   }
 
   const LABELS: Record<Exclude<Section, null>, string> = {
-    library:   "Bibliothèque de modèles",
-    import:    "Importer un modèle",
-    form:      "Remplir le contrat",
+    library: "Bibliothèque de modèles",
+    import: "Importer un modèle",
+    form: "Remplir le contrat",
     useCustom: "Utiliser un modèle personnalisé",
-    scratch:   "Créer de zéro",
-    blank:     "Nouveau contrat",
+    scratch: "Créer de zéro",
+    blank: "Nouveau contrat",
   };
 
   const SUBS: Record<Exclude<Section, null>, string> = {
-    library:   "",
-    import:    "Importez un contrat existant pour le transformer en modèle réutilisable.",
-    form:      "Renseignez les informations pour personnaliser votre contrat.",
+    library: "",
+    import: "Importez un contrat existant pour le transformer en modèle réutilisable.",
+    form: "Renseignez les informations pour personnaliser votre contrat.",
     useCustom: "",
-    scratch:   "Générez un contrat sur-mesure en répondant à quelques questions.",
-    blank:     "",
+    scratch: "Générez un contrat sur-mesure en répondant à quelques questions.",
+    blank: "",
   };
 
   function goHub() {
@@ -1344,33 +1323,33 @@ export function Generateur() {
     <div className={`space-y-4 mx-auto border border-gray rounded-2xl pb-4 pl-4 ${section === "import" && isImportReviewDisplayed ? "max-w-[1600px]" : "max-w-5xl"}`}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-t-2xl -ml-4">
 
-      {/* En-tête — masqué pour l'éditeur document-first (chaque éditeur a son propre retour) */}
-      {section !== "form" && section !== "blank" && section !== "useCustom" && (
-        <div>
-          {section && (
-            <button
-              onClick={goHub}
-              className="flex items-center gap-1.5 text-xs text-ink-subtle hover:text-brand transition-colors mb-2 font-medium"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              Générateur de contrat
-            </button>
-          )}
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            {section ? LABELS[section] : "Générateur de contrat"}
-          </h1>
-          {(section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau.") && (
-            <p className="text-sm text-gray-primary mt-1">
-              {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
-            </p>
-          )}
-        </div>
-      )}
+        {/* En-tête — masqué pour l'éditeur document-first (chaque éditeur a son propre retour) */}
+        {section !== "form" && section !== "blank" && section !== "useCustom" && (
+          <div>
+            {section && (
+              <button
+                onClick={goHub}
+                className="flex items-center gap-1.5 text-xs text-ink-subtle hover:text-brand transition-colors mb-2 font-medium"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Générateur de contrat
+              </button>
+            )}
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              {section ? LABELS[section] : "Générateur de contrat"}
+            </h1>
+            {(section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau.") && (
+              <p className="text-sm text-gray-primary mt-1">
+                {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Hub — 3 cartes */}
       {!section && (
-        <div className="flex flex-col max-w-4xl">
+        <div className="flex flex-col max-w-4xl gap-5">
           {/* Créer de zéro */}
           <button
             onClick={() => setSearchParams({ section: "scratch" })}
@@ -1393,6 +1372,32 @@ export function Generateur() {
             </div>
           </button>
 
+          {/* IMPORTATION D UN MODEL */}
+          <button
+            onClick={() => setSearchParams({ section: "import" })}
+            className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
+          >
+            <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 rounded-t-2xl" />
+
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+              <Upload className="w-5 h-5 text-emerald-600 stroke-[1.5]" />
+            </div>
+
+            <div className="flex flex-col gap-3 flex-1">
+              <div className="space-y-1.5">
+                <p className="text-sm font-bold text-gray-900">Importer un modèle</p>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Importez un document existant (PDF, Word) pour le modifier, personnaliser et réutiliser.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                Importer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </button>
+
+
+          {/* BIBLIOTHEQUE DE MODEL, STATIC + MODEL DEJA UPLOAD*/}
           <button
             onClick={() => setSearchParams({ section: "library" })}
             className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-brand/30 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
@@ -1415,46 +1420,25 @@ export function Generateur() {
             </div>
           </button>
 
-          <button
-            onClick={() => setSearchParams({ section: "import" })}
-            className="group relative flex items-start gap-5 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all duration-200 text-left active:scale-[0.99] overflow-hidden"
-          >
-            <div className="absolute inset-x-0 top-0 h-0.5 bg-emerald-500 rounded-t-2xl" />
-            
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-              <Upload className="w-5 h-5 text-emerald-600 stroke-[1.5]" />
-            </div>
 
-            <div className="flex flex-col gap-3 flex-1">
-              <div className="space-y-1.5">
-                <p className="text-sm font-bold text-gray-900">Importer un modèle</p>
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  Importez un document existant (PDF, Word) pour le modifier, personnaliser et réutiliser.
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-                Importer <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </button>
         </div>
       )}
 
       {/* Sous-sections */}
-      {section === "library"   && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
-      {section === "import"    && (
+      {section === "library" && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
+      {section === "import" && (
         <div className="w-full flex justify-center">
           <ImportSection onSaved={handleTemplateSaved} onReviewDisplayed={setIsImportReviewDisplayed} />
         </div>
-        )}
-      {section === "form"      && (
+      )}
+      {section === "form" && (
         <SmartCddEditor
           model={GENERIC_EDITORS[formDocId].model}
           fileBase={GENERIC_EDITORS[formDocId].fileBase}
           onBack={goLibrary}
         />
       )}
-      {section === "blank"     && blankEditor && (
+      {section === "blank" && blankEditor && (
         <SmartCddEditor
           model={blankEditor.model}
           fileBase={blankEditor.fileBase}
@@ -1468,22 +1452,22 @@ export function Generateur() {
         />
       )}
 
-      {section === "scratch"   && !wizardTitle && (
+      {section === "scratch" && !wizardTitle && (
         <div className="flex justify-center w-full py-4">
-        <ScratchEntry
-          onStart={(title) => setSearchParams({ section: "scratch", titre: title })}
-          onBack={goHub}
-        />
+          <ScratchEntry
+            onStart={(title) => setSearchParams({ section: "scratch", titre: title })}
+            onBack={goHub}
+          />
         </div>
       )}
 
-      {section === "scratch"   && wizardTitle && (
-          <ScratchWizard
-            title={wizardTitle}
-            initialBrief={initialBriefRef.current}
-            onReady={handleScratchReady}
-            onBack={handleScratchBack}
-          />
+      {section === "scratch" && wizardTitle && (
+        <ScratchWizard
+          title={wizardTitle}
+          initialBrief={initialBriefRef.current}
+          onReady={handleScratchReady}
+          onBack={handleScratchBack}
+        />
       )}
     </div>
   );
