@@ -63,38 +63,40 @@ const EXIGENCE_LICEITE =
   `réputée non écrite ou contraire à une règle d'ordre public. `;
 
 /**
- * Questions simples pour compléter les informations manquantes, posées à un
- * professionnel qui n'est pas juriste : les données pratiques (parties, prix,
- * durée…) puis les quelques points propres à ce type de contrat.
+ * Questions sur le CONTENU du contrat (ses règles, ses clauses), posées à un
+ * professionnel qui n'est pas juriste. Les informations factuelles (noms,
+ * dates, montants) n'y figurent pas : ce sont des champs à remplir dans
+ * l'éditeur.
  */
 export async function generateContractQuestions(title: string): Promise<WizardQuestion[]> {
   const prompt =
     `Tu aides un professionnel à préparer un contrat de type « ${title.trim()} ». Il n'est PAS juriste : ` +
     `dirigeant, commerçant, indépendant, responsable RH… ` +
-    `Pose-lui les 5 à 7 questions qui manquent le plus pour rédiger CE contrat correctement. Par ordre de ` +
-    `priorité, quand elles ont un sens pour ce contrat : les parties (qui s'engage envers qui), ce qui est ` +
-    `fourni ou fait exactement, le prix ou le montant, la façon de payer, la date de début, la durée, la ` +
-    `façon d'y mettre fin ; puis 1 ou 2 points propres à CE type de contrat. N'en pose aucune qui n'aurait ` +
-    `pas de sens ici (ex. pas de prix pour un contrat gratuit). ` +
+    `Pose-lui les 4 à 7 questions qui décident du CONTENU de CE contrat : les règles et les clauses qui ` +
+    `changent vraiment d'un contrat de ce type à l'autre (ex. selon le contrat : comment le paiement est ` +
+    `organisé, ce qui se passe en cas de retard, comment et à quelles conditions on peut y mettre fin, qui ` +
+    `est responsable en cas de problème, exclusivité, confidentialité, propriété de ce qui est produit, ` +
+    `renouvellement…). Choisis celles qui comptent le plus pour CE type de contrat précis. ` +
+    `INTERDIT : toute question qui demande une information à saisir — nom ou identité d'une partie, adresse, ` +
+    `date, montant, prix, durée chiffrée, nombre. Ces informations seront des champs à remplir dans l'éditeur ` +
+    `et ne doivent JAMAIS faire l'objet d'une question. ` +
     `LANGAGE : des mots de tous les jours, des phrases courtes, une seule idée par question, vouvoiement. ` +
     `Aucun jargon juridique ; si un terme juridique est vraiment indispensable, explique-le en quelques mots ` +
     `entre parenthèses. ` +
-    `FORMAT : "type":"text" pour une information à saisir (un nom, un montant, une date, une durée précise), ` +
-    `avec un "hint" donnant un exemple concret commençant par « Ex. : ». "type":"choice" pour un choix, avec ` +
-    `2 à 4 options courtes, concrètes et mutuellement exclusives qui disent la conséquence pratique ; le ` +
-    `"hint" explique alors en une phrase simple à quoi sert la question (ou reste vide si c'est évident). ` +
+    `FORMAT : "type":"choice", avec 2 à 4 options courtes, concrètes et mutuellement exclusives qui disent ` +
+    `la conséquence pratique de chaque choix ; le "hint" explique en une phrase simple à quoi sert la ` +
+    `question (ou reste vide si c'est évident). ` +
     `RÈGLE ABSOLUE SUR LES OPTIONS : chaque option proposée doit être LICITE en droit français. Ne propose JAMAIS ` +
     `une option contraire à une règle d'ordre public ou manifestement illégale (par exemple : durée ou renouvellement ` +
     `d'essai au-delà des maxima légaux, clause de non-concurrence sans contrepartie financière, délai de paiement ` +
     `au-delà du plafond légal, renonciation à un droit auquel on ne peut pas renoncer). Quand la loi fixe un plafond ` +
     `ou un plancher, toutes les options restent dans les limites légales et la plus proche de la limite le rappelle ` +
     `(ex. « 2 mois — le maximum autorisé »). ` +
-    `Réponds UNIQUEMENT en JSON : un tableau de 5 à 7 objets ` +
-    `{"question": string, "type": "text" | "choice", "hint": string, "options": [string, …]} ` +
-    `("options" seulement pour "choice"). Aucun texte hors JSON. ` +
+    `Réponds UNIQUEMENT en JSON : un tableau de 4 à 7 objets ` +
+    `{"question": string, "type": "choice", "hint": string, "options": [string, …]}. Aucun texte hors JSON. ` +
     `Exemples de forme (le contenu doit être adapté au contrat demandé, pas recopié) : ` +
-    `{"question":"Qui est votre client ?","type":"text","hint":"Ex. : Boulangerie Martin SARL"} ` +
-    `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin de la mission","Un acompte au départ, le reste à la fin"]}.`;
+    `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin de la mission","Un acompte au départ, le reste à la fin"]} ` +
+    `{"question":"Le client peut-il arrêter le contrat avant la fin ?","type":"choice","hint":"Cela fixe ce qui se passe si l'un de vous veut s'arrêter en cours de route.","options":["Oui, à tout moment, avec un préavis","Oui, mais seulement en cas de faute grave","Non, le contrat va jusqu'à son terme"]}.`;
   const out = await callOpenAi52(prompt, "high", "low", "gpt-5.4-nano");
   let arr: unknown;
   try { arr = JSON.parse(extractJson(out)); } catch { arr = null; }

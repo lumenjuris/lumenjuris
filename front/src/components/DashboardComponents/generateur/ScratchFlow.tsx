@@ -230,8 +230,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
                 <ListChecks className="h-4 w-4 text-brand" /> Personnaliser davantage
               </span>
               <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                Quelques questions simples — parties, montant, durée, paiement… — pour un
-                contrat plus complet. Environ 2 minutes.
+                Quelques questions simples sur le contenu du contrat — paiement, résiliation,
+                responsabilités… — pour un contrat sur mesure. Environ 2 minutes.
               </span>
             </button>
             {error && <p className="text-xs text-danger">{error}</p>}
