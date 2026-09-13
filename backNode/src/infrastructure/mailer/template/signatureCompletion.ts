@@ -3,14 +3,23 @@
  * document signé. Renvoie les lignes `<tr>` injectées dans le gabarit brandé
  * de la classe Mailer (header/footer ajoutés par `createHtmlFullContent`).
  */
-export const templateSignatureCompletion = (
-  recipientName: string,
-  documentName: string,
-  selfLabel: string,
-  counterpartyName: string,
-  signedDate: string,
-  hasPdf: boolean,
-) => {
+export const templateSignatureCompletion = (opts: {
+  recipientName: string;
+  documentName: string;
+  /** Nom (ou e-mail à défaut) du titulaire du compte émetteur. */
+  selfLabel: string;
+  /** E-mail du titulaire du compte à l'origine de la procédure. */
+  selfEmail?: string;
+  counterpartyName: string;
+  counterpartyEmail?: string;
+  signedDate: string;
+  hasPdf: boolean;
+}) => {
+  const {
+    recipientName, documentName, selfLabel, selfEmail,
+    counterpartyName, counterpartyEmail, signedDate, hasPdf,
+  } = opts;
+
   return `
     <tr>
       <td style="padding: 40px 40px 0;">
@@ -42,8 +51,8 @@ export const templateSignatureCompletion = (
               </p>
               <p style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                          font-size:13px; color:#166534; line-height:1.7;">
-                &bull; <strong>${selfLabel}</strong> (émetteur)<br>
-                &bull; <strong>${counterpartyName}</strong> (cocontractant)
+                &bull; <strong>${selfLabel}</strong> (émetteur)${selfEmail ? ` &mdash; ${selfEmail}` : ""}<br>
+                &bull; <strong>${counterpartyName}</strong> (cocontractant)${counterpartyEmail ? ` &mdash; ${counterpartyEmail}` : ""}
               </p>
             </td>
           </tr>

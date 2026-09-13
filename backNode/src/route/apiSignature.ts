@@ -105,13 +105,19 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         const frontUrl = process.env["HOST_FRONT"] ?? "http://localhost:5173"
         const signingLink = `${frontUrl}/signer/${dto.signingToken}`
 
-        // Envoi email fire-and-forget (ne bloque pas la réponse). L'émetteur
-        // reçoit une copie via le CC.
+        // Envoi email fire-and-forget (ne bloque pas la réponse).
+        // `selfEmail`/`selfName` viennent du compte connecté (le titulaire du
+        // compte, jamais une adresse d'administration) : cette adresse est mise
+        // en copie, affichée au cocontractant et utilisée comme adresse de
+        // réponse.
         new Mailer(body.counterpartyEmail.trim())
             .sendSignatureInvite({
                 counterpartyName: body.counterpartyName.trim(),
                 documentName: body.documentName,
                 signingLink,
+                cc: dto.selfEmail,
+                senderName: dto.selfName,
+                senderEmail: dto.selfEmail,
             })
             .catch((err: unknown) => console.error("[signature] échec envoi invitation:", err))
 
@@ -133,6 +139,15 @@ router.delete("/:externalId", authMiddleware, async (req: Request, res: Response
         return res.status(500).json({ success: false, message: "Erreur serveur." })
     }
 })
+
+/**
+ * Nom de fichier propre pour une pièce jointe ou un téléchargement : on retire
+ * l'extension .pdf et les caractères gênants pour un en-tête HTTP / un client
+ * mail.
+ */
+function sanitizeFileName(documentName: string): string {
+    return documentName.replace(/\.pdf$/i, "").replace(/[^\w.\- ]+/g, "_").trim() || "document"
+}
 
 /** Garde-fou : seuls les statuts attendus sont acceptés en filtre. */
 function isValidStatus(s: string | undefined): boolean {
@@ -182,16 +197,16 @@ router.post("/public/:token", async (req: Request, res: Response) => {
         const dto = await svc.signByToken(token, fields)
         if (!dto) return res.status(404).json({ success: false, message: "Lien invalide ou expiré." })
 
-        // Confirmation aux deux parties (fire-and-forget) : on charge le PDF
-        // pour la pièce jointe puis on notifie chaque partie via le Mailer.
-        svc.getByToken(token).then(async (fullData) => {
+        // Confirmation aux deux parties (fire-and-forget). La pièce jointe est
+        // le PDF « aplati » : le fichier sur disque est le contrat d'origine,
+        // les signatures vivent à part (chiffrées) et doivent être incrustées,
+        // sinon les deux parties reçoivent un contrat vierge de signatures.
+        svc.generateSignedPdfByToken(token).then((signedPdf) => {
             let pdf: { filename: string; content: Buffer } | undefined
-            if (fullData?.documentFilePath) {
-                try {
-                    pdf = { filename: `${dto.documentName}.pdf`, content: await fs.readFile(fullData.documentFilePath) }
-                } catch {
-                    console.warn("[signature] PDF introuvable pour la pièce jointe:", fullData.documentFilePath)
-                }
+            if (signedPdf) {
+                pdf = { filename: `${sanitizeFileName(dto.documentName)}_signe.pdf`, content: signedPdf.buffer }
+            } else {
+                console.warn("[signature] PDF signé indisponible pour la pièce jointe, enveloppe:", dto.id)
             }
 
             const selfLabel = dto.selfName || dto.selfEmail
@@ -199,7 +214,9 @@ router.post("/public/:token", async (req: Request, res: Response) => {
             const common = {
                 documentName: dto.documentName,
                 selfLabel,
+                selfEmail: dto.selfEmail,
                 counterpartyName: dto.counterpartyName,
+                counterpartyEmail: dto.counterpartyEmail,
                 signedDate,
                 pdf,
             }
@@ -223,6 +240,41 @@ router.post("/public/:token", async (req: Request, res: Response) => {
 
 
 /**
+ * GET /public/:token/download
+ * Téléchargement du contrat signé par le cocontractant, depuis la page
+ * publique de signature. Pas d'authentification : le token est le secret, et
+ * il donne déjà accès au document via `GET /public/:token`.
+ *
+ * Réservé aux enveloppes complètes : avant la signature des deux parties, il
+ * n'y a pas de « contrat signé » à remettre.
+ */
+router.get("/public/:token/download", async (req: Request, res: Response) => {
+    try {
+        const token = req.params["token"] as string
+        const envelope = await svc.getByToken(token)
+        if (!envelope) {
+            return res.status(404).json({ success: false, message: "Lien invalide ou expiré." })
+        }
+        if (envelope.meta.status !== "SIGNED") {
+            return res.status(409).json({ success: false, message: "Ce document n'est pas encore signé par les deux parties." })
+        }
+
+        const result = await svc.generateSignedPdfByToken(token)
+        if (!result) {
+            return res.status(404).json({ success: false, message: "Document introuvable." })
+        }
+
+        const baseName = sanitizeFileName(result.documentName)
+        res.setHeader("Content-Type", "application/pdf")
+        res.setHeader("Content-Disposition", `attachment; filename="${baseName}_signe.pdf"`)
+        return res.send(result.buffer)
+    } catch (err: unknown) {
+        console.error("[signature/public] download error:", err)
+        return res.status(500).json({ success: false, message: "Erreur serveur." })
+    }
+})
+
+/**
  * GET /download/:externalId
  * Renvoie le contrat « aplati » (PDF original + signatures incrustées) afin que
  * l'utilisateur puisse le télécharger. Le PDF est généré à la volée : les
@@ -238,8 +290,7 @@ router.get("/download/:externalId", authMiddleware, async (req: Request, res: Re
             return res.status(404).json({ success: false, message: "Enveloppe introuvable ou document manquant." })
         }
 
-        // Nom de fichier propre : on retire l'extension et les caractères gênants.
-        const baseName = result.documentName.replace(/\.pdf$/i, "").replace(/[^\w.\- ]+/g, "_").trim() || "document"
+        const baseName = sanitizeFileName(result.documentName)
         res.setHeader("Content-Type", "application/pdf")
         res.setHeader("Content-Disposition", `attachment; filename="${baseName}_signe.pdf"`)
         return res.send(result.buffer)
@@ -284,6 +335,10 @@ router.post("/resend", authMiddleware, async (req: Request, res: Response) => {
                 counterpartyName: meta.counterpartyName,
                 documentName: meta.documentName,
                 signingLink,
+                cc: meta.selfEmail,
+                senderName: meta.selfName,
+                senderEmail: meta.selfEmail,
+                isReminder: true,
             })
             .catch((err: unknown) => console.error("[signature] échec renvoi invitation:", err))
 

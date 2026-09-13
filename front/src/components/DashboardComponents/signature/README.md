@@ -11,6 +11,11 @@ standards DocuSign / Adobe Sign / Yousign.
 - 4 KPIs : Total / En attente / Signés / Brouillons
 - Filtre par statut (Tous, Envoyés, Partiellement signés, Signés, Brouillons)
 - Liste des enveloppes (nom, cocontractant, date, statut, suppression)
+- **Relance manuelle** sur les enveloppes en attente (`SENT`,
+  `PARTIALLY_SIGNED`, `EXPIRED`) : bouton « Relancer » → confirmation →
+  POST `/api/signature-envelope/resend`. La ligne affiche aussi le délai
+  d'attente (« en attente depuis N j », mis en évidence au-delà de 7 jours)
+  pour repérer les signatures qui traînent.
 - Bouton **"Nouveau contrat"** → ouvre le wizard
 
 ### `SignatureWizard` — création d'une enveloppe
@@ -19,51 +24,84 @@ L'utilisateur charge un PDF, place des zones de signature/paraphe pour les
 deux parties (lui + cocontractant), signe ses propres zones et envoie le
 document au cocontractant pour qu'il signe à son tour.
 
-> ℹ️ L'envoi par email n'est pas branché côté serveur — c'est une UI
-> pleinement fonctionnelle côté front, prête à être connectée à un service
-> de e-signature (Yousign API, DocuSign API, etc.).
+L'envoi par e-mail est branché côté serveur (SMTP via `classMailer`) :
+invitation à signer au cocontractant, copie à l'émetteur, confirmation aux
+deux parties avec le PDF signé en pièce jointe.
 
 ---
 
-## Workflow utilisateur (3 étapes)
+## Workflow utilisateur
+
+En interne le wizard a 3 étapes (`prepare` / `place` / `sign`), mais quand le
+PDF vient du bouton « Nouveau contrat » (cas normal) l'étape `prepare` est
+sautée. Le parcours **visible** est celui décrit par `GUIDE_STEP_LABELS`
+(aujourd'hui 3 étapes : placer / signer / envoyer), et c'est ce que
+l'utilisateur lit dans le guide : « Étape 1 sur 3 », « Étape 2 sur 3 »…
+`GUIDE_STEP_TOTAL` est déduit de ces libellés : ajouter une étape au parcours
+se fait en ajoutant un libellé, puis en rattachant les phases concernées à son
+numéro dans `getGuideContent`.
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ 1. Préparer │ →  │  2. Placer  │ →  │  3. Signer  │
-└─────────────┘    └─────────────┘    └─────────────┘
-   Upload PDF        Zones DnD          Sign + Send
+┌─────────────────┐   ┌──────────────────┐   ┌────────────┐   ┌─────────────┐
+│ Document importé│ → │ 1. Placer zones  │ → │ 2. Signer  │ → │ 3. Envoyer  │
+└─────────────────┘   └──────────────────┘   └────────────┘   └─────────────┘
+   file picker          clic sur le PDF        modale de       destinataire
+                                               signature       puis envoi
 ```
 
-### 1. Préparer (`PrepareStep`)
+### Guide contextuel de la colonne de gauche
+
+`guide.ts` traduit l'état réel du wizard en une **phase** (`place-self`,
+`place-counterparty`, `place-ready`, `sign-self`, `sign-recipient`,
+`sign-send`). À chaque phase correspond une seule consigne : étape en cours →
+action attendue maintenant → étape suivante.
+
+`GuidePanel.tsx` affiche cette consigne en haut de la colonne de gauche, avec
+le bandeau « Étape X sur N » tout en haut (premier point de regard), puis les
+blocs secondaires (checklist des zones, options, formulaire destinataire,
+boutons d'action) passés en `children`. La colonne est `sticky` : les
+instructions restent visibles pendant qu'on descend dans le document.
+
+Conséquence sur l'organisation de l'écran : plus aucun bandeau de consigne
+au-dessus du PDF et un en-tête de page réduit à une ligne — le document
+occupe le haut de la colonne de droite.
+
+### Préparer (`PrepareStep`) — sauté quand un PDF est déjà fourni
 
 - Drag & drop d'un fichier PDF unique
 - Preview du document via `PdfViewer` (mode `preview`)
 - Pas de saisie supplémentaire (pas d'email, pas de nom) — focus sur le
   document. Les signataires sont pré-définis ("Vous" + "Cocontractant").
 
-### 2. Placer (`PlaceStep` + `PlaceToolbar`)
+### Étape 1 — Placer (`PlaceStep` + `PlaceToolbar`)
 
-Layout : toolbar à gauche (1/4) + viewer à droite (3/4).
+Layout : guide + checklist à gauche (1/4, sticky) + document à droite (3/4).
 
-**Toolbar** :
-- Choix du signataire (Vous / Cocontractant) → définit la couleur du
-  prochain champ
-- Choix du type de champ : `Signature` ou `Paraphe`
-- Option "Toutes les pages" (réplique le champ à la même position sur
-  chaque page) — utile pour parapher un contrat multi-pages
+**Ouverture sur la dernière page** : `PdfViewer` reçoit `initialPage="last"`.
+La signature se trouve en fin de contrat dans la quasi-totalité des cas —
+l'utilisateur n'a donc rien à chercher.
+
+**Zone suggérée** : `PlaceStep.buildSuggestedField` propose une zone en bas de
+la dernière page pour le signataire actif (à gauche pour l'émetteur, à droite
+pour le cocontractant). Elle est dessinée en pointillés par `PdfViewer` et
+n'est posée que si l'utilisateur clique dessus — rien n'est imposé, il peut
+cliquer ailleurs. Elle disparaît dès que ce signataire a une zone.
 
 **Mécanique de placement** :
-1. L'utilisateur clique sur un type de champ → le mode est **"armé"**
-2. Il clique sur le PDF → un champ est déposé centré sur le clic
-3. Le mode est **automatiquement désarmé** → pas de placement en cascade
+1. Le mode placement est toujours armé sur `signature`
+2. Un clic sur le PDF dépose un champ centré sur le clic
+3. Dès que la zone de l'émetteur est posée, le signataire actif bascule
+   automatiquement sur « Cocontractant » (et la suggestion suit)
 
-Cette désactivation après chaque dépôt évite les ajouts accidentels et
-oblige à un geste explicite pour ajouter un autre champ.
+Les champs déposés restent déplaçables et supprimables.
+
+**Options** (`PlaceToolbar`) : case "Toutes les pages" (réplique le champ à la
+même position sur chaque page) — utile pour parapher un contrat multi-pages.
 
 **Champs déposés** : draggables (mousedown + mousemove global), supprimables
 via une corbeille au survol.
 
-### 3. Signer + Envoyer (`SignStep` + `SignatureModal`)
+### Étapes 2 et 3 — Signer puis Envoyer (`SignStep` + `SignatureModal`)
 
 - Le viewer passe en mode `sign` : seuls les champs "self" sont cliquables
 - Au clic sur un champ vide, la modale `SignatureModal` s'ouvre :
@@ -79,7 +117,17 @@ via une corbeille au survol.
 - Une fois que tous les champs "self" sont signés, un mini-formulaire
   **Destinataires** apparaît : nom + email pour soi-même et pour le
   cocontractant (validation regex permissive `\S+@\S+\.\S+`)
-- Bouton **"Envoyer au cocontractant"** actif uniquement quand :
+- Le document s'ouvre sur la page de la première zone à signer
+- La modale de signature s'ouvre **automatiquement** à l'arrivée sur l'étape :
+  la seule action attendue est de signer, inutile de demander un clic sur la
+  zone au préalable (le clic reste possible si la modale est fermée)
+- Signature validée → `RecipientModal` s'ouvre dans la foulée : le destinataire
+  est la dernière information manquante, elle est demandée au centre de l'écran
+  plutôt que dans un formulaire de la colonne de gauche. Celle-ci n'affiche
+  plus qu'un récapitulatif relisible, avec « Modifier »
+- Le guide de gauche évolue seul : signature apposée → coordonnées du
+  cocontractant → envoi
+- Bouton **"Faire signer et envoyer"** actif uniquement quand :
   - tous les champs self sont signés
   - les 4 champs nom/email sont valides
 - À l'envoi : POST `/api/signature-envelope` qui :
@@ -87,8 +135,9 @@ via une corbeille au survol.
   - chiffre la liste des champs (positions + signatures dataUrl) en
     AES-256-GCM dans `encryptedFields`
   - crée la ligne Prisma `SignatureEnvelope` avec statut `SENT`
-- Écran de confirmation après succès — l'envoi email réel n'est pas
-  branché côté serveur (sera connecté à une API e-signature plus tard)
+  - envoie l'invitation à signer au cocontractant, avec l'émetteur en copie
+- Écran de confirmation après succès, qui rappelle que la relance se fait
+  depuis la liste des contrats
 
 ---
 
@@ -102,11 +151,13 @@ signature/
 ├── SignatureDashboard.tsx     ← vue tableau de bord (KPIs + liste)
 ├── SignatureWizard.tsx        ← wizard 3 étapes (état + appels API)
 │
-├── Stepper.tsx                ← indicateur 3 étapes
-├── PrepareStep.tsx            ← étape 1
-├── PlaceStep.tsx              ← étape 2 (orchestrateur)
-├── PlaceToolbar.tsx           ← sidebar de l'étape 2
-├── SignStep.tsx               ← étape 3 (sign + form emails + send)
+├── guide.ts                   ← phases du parcours + consigne de chaque phase
+├── GuidePanel.tsx             ← colonne de gauche (bandeau d'étape + consignes)
+├── PrepareStep.tsx            ← dépôt du PDF (sauté le plus souvent)
+├── PlaceStep.tsx              ← étape 1 (placement + suggestion)
+├── PlaceToolbar.tsx           ← options de l'étape de placement
+├── SignStep.tsx               ← étapes 2 et 3 (signature, destinataire, envoi)
+├── RecipientModal.tsx         ← modale « À qui envoyer le contrat ? »
 ├── SignProgress.tsx           ← barre de progression "X/Y signés"
 │
 ├── PdfViewer.tsx              ← viewer react-pdf + click-to-place
@@ -127,6 +178,10 @@ Le wizard appelle l'API LumenJuris pour persister les enveloppes :
 | `/api/signature-envelope/stats`             | GET     | KPIs du dashboard + 5 enveloppes récentes |
 | `/api/signature-envelope?status=XXX`        | GET     | Liste filtrée par statut                  |
 | `/api/signature-envelope`                   | POST    | Création (PDF + champs + signataires)     |
+| `/api/signature-envelope/resend`            | POST    | Relance de l'invitation à signer          |
+| `/api/signature-envelope/download/:id`      | GET     | PDF aplati (signatures incrustées)        |
+| `/api/signature-envelope/public/:token`         | GET/POST | Page publique du cocontractant (lecture / signature) |
+| `/api/signature-envelope/public/:token/download`| GET     | PDF signé remis au cocontractant (sans auth) |
 | `/api/signature-envelope/:id`               | DELETE  | Suppression définitive                    |
 
 Côté backend :
@@ -152,7 +207,7 @@ interface Signer {
   hex: string;      // valeur hex pour styles inline
 }
 
-type FieldType = "signature" | "initial";
+type FieldType = "signature";
 
 interface Field {
   id: string;
@@ -227,3 +282,30 @@ worker tout en gardant un déploiement simple.
 - **Touch drag des champs** : drag souris uniquement. Le canvas de la
   modale supporte le touch ; les champs eux-mêmes pourraient bénéficier
   d'un support touch en mode mobile.
+
+### Qui est l'expéditeur d'une procédure
+
+`selfName` / `selfEmail` de l'enveloppe sont lus sur le **compte connecté**
+(`prisma.user` via `req.idUser`) au moment de la création, puis figés en base.
+Toutes les notifications s'appuient dessus :
+
+- le cocontractant voit « envoyé par NOM — email » dans l'invitation ;
+- cette adresse est en **copie** (`cc`) de l'invitation et des relances ;
+- elle sert de **`replyTo`** : une réponse à l'e-mail arrive chez
+  l'utilisateur réel et non sur le `no-reply` de la plateforme ;
+- l'e-mail de confirmation liste les deux signataires avec leur adresse.
+
+L'adresse d'envoi technique (`From`) reste celle de la plateforme
+(`MAILER_FROM`, par défaut `no-reply@lumenjuris.com`) : c'est le domaine
+authentifié SPF/DKIM, on ne peut pas usurper l'adresse de l'utilisateur sans
+dégrader la délivrabilité.
+
+### Fin de parcours du cocontractant (`SignerPage`)
+
+Après sa signature, `SignedConfirmation` affiche le récapitulatif (document,
+les deux signataires, date) et propose **le téléchargement immédiat du contrat
+signé** via `GET /public/:token/download` — le PDF y est aplati à la volée,
+comme pour le téléchargement authentifié. Le cocontractant n'a pas de compte
+sur la plateforme : c'est le seul moment où on peut lui remettre le document
+sans dépendre de l'e-mail de confirmation. La route est réservée aux
+enveloppes au statut `SIGNED` (409 sinon).
