@@ -8,10 +8,27 @@ $backNode = Join-Path $app  "backNode"
 $proxy    = Join-Path $app  "proxy"
 $front    = Join-Path $app  "front"
 $venvPy   = Join-Path $back "venv\Scripts\python.exe"
+$mysqlBin = "C:\xampp\mysql\bin"
 
 function Launch($cmd) {
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd))
     Start-Process powershell -ArgumentList "-NoExit", "-NoProfile", "-EncodedCommand", $encoded -WindowStyle Normal
+}
+
+# Vrai si le fichier temoin manque ou si l'une des sources est plus recente que lui.
+# Sert a ne reinstaller les dependances qu'apres une mise a jour (git pull).
+function Obsolete($temoin, [string[]]$sources) {
+    if (-not (Test-Path $temoin)) { return $true }
+    $date = (Get-Item $temoin).LastWriteTime
+    foreach ($s in $sources) {
+        if ((Test-Path $s) -and ((Get-Item $s).LastWriteTime -gt $date)) { return $true }
+    }
+    return $false
+}
+
+function MysqlRepond {
+    & "$mysqlBin\mysql.exe" -u root -e "SELECT 1;" 2>$null | Out-Null
+    return ($LASTEXITCODE -eq 0)
 }
 
 Write-Host ""
@@ -40,27 +57,37 @@ Start-Sleep 2
 
 # 3. Verifier / demarrer MySQL (XAMPP)
 Write-Host " Verification de MySQL..." -ForegroundColor DarkGray
-$mysqlOk = $false
-try {
-    & "C:\xampp\mysql\bin\mysql.exe" -u root -e "SELECT 1;" 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) { $mysqlOk = $true }
-} catch {}
-
-if (-not $mysqlOk) {
+$mysqlOk = MysqlRepond
+if ($mysqlOk) {
+    Write-Host " MySQL : deja actif" -ForegroundColor Green
+} elseif (Test-Path "$mysqlBin\mysqld.exe") {
     Write-Host " MySQL est arrete. Demarrage..." -ForegroundColor Yellow
-    if (Test-Path "C:\xampp\mysql\bin\mysqld.exe") {
-        Start-Process "C:\xampp\mysql\bin\mysqld.exe" -ArgumentList "--defaults-file=C:\xampp\mysql\bin\my.ini" -WindowStyle Hidden
-        Start-Sleep 6
-        try {
-            & "C:\xampp\mysql\bin\mysql.exe" -u root -e "SELECT 1;" 2>&1 | Out-Null
-            if ($LASTEXITCODE -eq 0) { Write-Host " MySQL : OK" -ForegroundColor Green }
-            else { Write-Host " MySQL : echec demarrage (la base est requise)" -ForegroundColor Red }
-        } catch { Write-Host " MySQL : echec demarrage" -ForegroundColor Red }
+    $journalMysql = Join-Path $env:TEMP "lumenjuris-mysqld.log"
+    Start-Process "$mysqlBin\mysqld.exe" -ArgumentList "--defaults-file=$mysqlBin\my.ini", "--console" -WindowStyle Hidden -RedirectStandardError $journalMysql
+    # Attendre jusqu'a 30 s, en s'arretant tout de suite si mysqld meurt.
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep 1
+        if (MysqlRepond) { $mysqlOk = $true; break }
+        if (-not (Get-Process mysqld -ErrorAction SilentlyContinue)) { break }
+    }
+    if ($mysqlOk) {
+        Write-Host " MySQL : OK" -ForegroundColor Green
     } else {
-        Write-Host " mysqld.exe introuvable dans C:\xampp\mysql\bin\ - lancez XAMPP a la main." -ForegroundColor Red
+        Write-Host " MySQL : echec du demarrage (la base est requise). Dernieres erreurs :" -ForegroundColor Red
+        Get-Content $journalMysql -ErrorAction SilentlyContinue | Select-String "ERROR" | Select-Object -Last 5 |
+            ForEach-Object { Write-Host "   $_" -ForegroundColor Red }
+        Write-Host " Table 'crashed' citee ? Arreter mysqld puis, dans C:\xampp\mysql\data\mysql :" -ForegroundColor Red
+        Write-Host "   C:\xampp\mysql\bin\aria_chk.exe -r <nom_de_la_table>" -ForegroundColor Red
     }
 } else {
-    Write-Host " MySQL : deja actif" -ForegroundColor Green
+    Write-Host " mysqld.exe introuvable dans $mysqlBin - lancez XAMPP a la main." -ForegroundColor Red
+}
+
+# Tables systeme MySQL : un arret brutal de Windows peut les endommager.
+# Verification rapide, reparation automatique si besoin.
+if ($mysqlOk) {
+    & "$mysqlBin\mysqlcheck.exe" -u root --auto-repair --check --silent mysql 2>&1 |
+        ForEach-Object { Write-Host "   $_" -ForegroundColor DarkYellow }
 }
 
 Write-Host ""
@@ -68,31 +95,52 @@ Write-Host ""
 # 4. Verifier l'environnement Python (venv + dependances)
 Write-Host " Verification de l'environnement Python..." -ForegroundColor DarkGray
 if (-not (Test-Path $venvPy)) {
-    Write-Host " venv absent : creation + installation des dependances (peut prendre quelques minutes)..." -ForegroundColor Yellow
+    Write-Host " venv absent : creation (peut prendre quelques minutes)..." -ForegroundColor Yellow
     Push-Location $back
     python -m venv venv
     & $venvPy -m pip install --upgrade pip
-    & $venvPy -m pip install -r requirements.txt
     Pop-Location
-    if (Test-Path $venvPy) { Write-Host " Python : venv pret" -ForegroundColor Green }
-    else { Write-Host " Python : echec creation du venv - lancez l'install a la main." -ForegroundColor Red }
-} else {
-    Write-Host " Python : venv present" -ForegroundColor Green
 }
+$temoinPy = Join-Path $back "venv\.requirements-installe"
+if ((Test-Path $venvPy) -and (Obsolete $temoinPy @(Join-Path $back "requirements.txt"))) {
+    Write-Host " Mise a jour des dependances Python..." -ForegroundColor Yellow
+    & $venvPy -m pip install -r (Join-Path $back "requirements.txt")
+    if ($LASTEXITCODE -eq 0) { Set-Content $temoinPy (Get-Date) }
+}
+if (Test-Path $venvPy) { Write-Host " Python : pret" -ForegroundColor Green }
+else { Write-Host " Python : echec creation du venv - lancez l'install a la main." -ForegroundColor Red }
 
-# 5. Verifier les node_modules de chaque service Node
+# 5. Dependances npm : installees si absentes OU si package.json a change depuis
 foreach ($dir in @($backNode, $proxy, $front)) {
-    if (-not (Test-Path (Join-Path $dir "node_modules"))) {
-        Write-Host " Installation des dependances npm dans $(Split-Path $dir -Leaf)..." -ForegroundColor Yellow
+    $temoin = Join-Path $dir "node_modules\.package-lock.json"
+    if (Obsolete $temoin @((Join-Path $dir "package.json"), (Join-Path $dir "package-lock.json"))) {
+        Write-Host " Mise a jour des dependances npm dans $(Split-Path $dir -Leaf)..." -ForegroundColor Yellow
         Push-Location $dir
         npm install
         Pop-Location
+        if (Test-Path $temoin) { (Get-Item $temoin).LastWriteTime = Get-Date }
     }
+}
+
+# 6. Base de donnees : client Prisma regenere + structure alignee sur schema.prisma.
+# "db push" plutot que "migrate deploy" : l'historique des migrations ne s'applique
+# pas sur une base vide (plusieurs migrations "init" recreent les memes tables).
+# Sans --accept-data-loss, db push refuse tout changement qui supprimerait des donnees.
+if ($mysqlOk) {
+    Write-Host " Synchronisation de la structure de la base..." -ForegroundColor DarkGray
+    Push-Location $backNode
+    npx prisma generate 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Host " Prisma : echec de generation du client" -ForegroundColor Red }
+    npx prisma db push 2>&1 | Select-String "in sync|Your database|Error|P[0-9]{4}|data loss" |
+        ForEach-Object { Write-Host "   $_" -ForegroundColor DarkGray }
+    if ($LASTEXITCODE -eq 0) { Write-Host " Base : structure a jour" -ForegroundColor Green }
+    else { Write-Host " Base : structure non alignee - le backend risque d'echouer (voir ci-dessus)" -ForegroundColor Red }
+    Pop-Location
 }
 
 Write-Host ""
 
-# 6. Lancement des 4 serveurs
+# 7. Lancement des 4 serveurs
 Write-Host " [1/4] Backend Python  (port 5678)..." -ForegroundColor Yellow
 if (Test-Path $venvPy) {
     Launch "Set-Location '$app'; & '$venvPy' -m uvicorn back.app.main:app --host 0.0.0.0 --port 5678"
