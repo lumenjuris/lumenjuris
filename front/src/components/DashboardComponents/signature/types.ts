@@ -99,3 +99,12 @@ export function formatSignedDate(iso?: string): string {
  * automatiquement en bas de la dernière page (PlaceStep).
  */
 export const DEFAULT_FIELD_SIZE = { widthPct: 0.22, heightPct: 0.06 };
+
+/**
+ * Validation très permissive d'un e-mail (`x@y.z`). Volontairement laxiste :
+ * on cherche à attraper la faute de frappe évidente, pas à refuser une adresse
+ * exotique mais valide.
+ */
+export function isValidEmail(email: string): boolean {
+  return /\S+@\S+\.\S+/.test(email.trim());
+}

@@ -3,10 +3,11 @@ import type { SignerRole } from "./types";
 /**
  * Contenu du guide de la colonne de gauche du wizard de signature.
  *
- * Le parcours visible par l'utilisateur compte 2 étapes (le document est déjà
+ * Le parcours visible par l'utilisateur compte 3 étapes (le document est déjà
  * importé quand le wizard s'ouvre) :
  *   1. Placer les zones de signature
- *   2. Signer et envoyer
+ *   2. Signer
+ *   3. Envoyer
  *
  * Chaque état réel du wizard est traduit en une "phase". À chaque phase
  * correspond une seule consigne : ce qu'il faut faire maintenant, et ce qui
@@ -22,14 +23,14 @@ export type GuidePhase =
   | "place-ready"
   /** Étape 2 — l'émetteur n'a pas encore apposé sa signature. */
   | "sign-self"
-  /** Étape 2 — signé, il reste les coordonnées du cocontractant à saisir. */
+  /** Étape 3 — signé, il reste les coordonnées du cocontractant à saisir. */
   | "sign-recipient"
-  /** Étape 2 — tout est prêt, il ne reste que l'envoi. */
+  /** Étape 3 — tout est prêt, il ne reste que l'envoi. */
   | "sign-send";
 
 export interface GuideContent {
-  /** Numéro d'étape affiché dans le bandeau ("Étape 1 sur 2"). */
-  stepNumber: 1 | 2;
+  /** Numéro d'étape affiché dans le bandeau ("Étape 1 sur 3"). */
+  stepNumber: GuideStepNumber;
   /** Titre de l'étape en cours. */
   title: string;
   /** Action attendue maintenant — une seule phrase, à l'impératif. */
@@ -42,14 +43,21 @@ export interface GuideContent {
   pointsToDocument: boolean;
 }
 
-/** Nombre d'étapes visibles du parcours (le document est déjà importé). */
-export const GUIDE_STEP_TOTAL = 2;
-
-/** Libellés des 2 étapes visibles, affichés dans le fil de progression. */
+/** Libellés des étapes visibles, affichés dans le fil de progression. */
 export const GUIDE_STEP_LABELS = [
-  "Placer les zones de signature",
-  "Signer et envoyer",
+  "Placez les zones de signature",
+  "Signez",
+  "Envoyez",
 ];
+
+/**
+ * Nombre d'étapes visibles (le document est déjà importé). Déduit des libellés
+ * pour qu'ajouter ou retirer une étape ne demande qu'une seule modification.
+ */
+export const GUIDE_STEP_TOTAL = GUIDE_STEP_LABELS.length;
+
+/** Index d'étape, 1-based : 1 = premier libellé de `GUIDE_STEP_LABELS`. */
+export type GuideStepNumber = 1 | 2 | 3;
 
 /** Traduit l'état du wizard en consigne unique à afficher à gauche. */
 export function getGuideContent(phase: GuidePhase): GuideContent {
@@ -68,7 +76,7 @@ export function getGuideContent(phase: GuidePhase): GuideContent {
         stepNumber: 1,
         title: "Placez la zone du cocontractant",
         action: "Cliquez à l'endroit où votre cocontractant signera.",
-        next: "Signer et envoyer le contrat",
+        next: "Apposer votre signature",
         signer: "counterparty",
         pointsToDocument: true,
       };
@@ -77,7 +85,7 @@ export function getGuideContent(phase: GuidePhase): GuideContent {
         stepNumber: 1,
         title: "Les deux zones sont placées",
         action:
-          "Déplacez-les si besoin, puis cliquez sur « Signer et envoyer ».",
+          "Déplacez-les si besoin, puis cliquez sur « Signer ».",
         next: "Apposer votre signature",
         signer: null,
         pointsToDocument: false,
@@ -94,20 +102,20 @@ export function getGuideContent(phase: GuidePhase): GuideContent {
       };
     case "sign-recipient":
       return {
-        stepNumber: 2,
+        stepNumber: 3,
         title: "Indiquez à qui envoyer le contrat",
         action:
-          "Saisissez le nom et l'e-mail de votre cocontractant ci-dessous.",
+          "Renseignez le nom et l'e-mail de votre cocontractant dans la fenêtre qui s'ouvre. Si vous l'avez fermée, utilisez « Indiquer le destinataire » ci-dessous.",
         next: "Envoyer le contrat pour signature",
         signer: "counterparty",
         pointsToDocument: false,
       };
     case "sign-send":
       return {
-        stepNumber: 2,
+        stepNumber: 3,
         title: "Tout est prêt",
         action:
-          "Cliquez sur « Faire signer et envoyer » : votre cocontractant recevra un e-mail pour signer à son tour.",
+          "Cliquez sur « Envoyer » : votre cocontractant recevra un e-mail pour signer à son tour.",
         next: null,
         signer: null,
         pointsToDocument: false,

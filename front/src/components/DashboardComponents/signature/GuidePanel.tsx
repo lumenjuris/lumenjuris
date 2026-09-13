@@ -17,7 +17,7 @@ interface Props {
  * Colonne de gauche du wizard : guide contextuel permanent.
  *
  * Affiche, dans cet ordre et toujours au même endroit :
- *   1. le bandeau « Étape X sur 2 » (repère de position dans le parcours)
+ *   1. le bandeau « Étape X sur N » (repère de position dans le parcours)
  *   2. l'action attendue maintenant
  *   3. ce qu'il restera à faire ensuite
  *   4. le fil des étapes (import déjà fait → placement → envoi)
@@ -80,9 +80,9 @@ export function GuidePanel({ content, accentHex, documentName, children }: Props
 }
 
 /**
- * Fil des étapes du parcours : le document importé (déjà fait), puis les deux
- * étapes visibles. Donne le contexte complet sans que l'utilisateur ait à le
- * mémoriser.
+ * Fil des étapes du parcours : le document importé (déjà fait), puis les
+ * étapes de `GUIDE_STEP_LABELS`. Donne le contexte complet sans que
+ * l'utilisateur ait à le mémoriser.
  */
 function StepTrail({
   currentStep, documentName,

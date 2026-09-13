@@ -1,4 +1,4 @@
-import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, Clock, AtSign } from "lucide-react";
+import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, Clock, AtSign, UserRound, Pencil } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { SignProgress } from "./SignProgress";
 import { GuidePanel } from "./GuidePanel";
@@ -32,8 +32,8 @@ interface Props {
   // Coordonnées signataires (uniquement cocontractant — l'émetteur reçoit en CC)
   counterpartyName: string;
   counterpartyEmail: string;
-  onCounterpartyNameChange: (v: string) => void;
-  onCounterpartyEmailChange: (v: string) => void;
+  /** Ouvre la modale de saisie du destinataire (la saisie ne vit plus ici). */
+  onEditRecipient: () => void;
 
   onFieldClick: (field: Field) => void;
   onNumPagesLoaded: (n: number) => void;
@@ -92,15 +92,14 @@ export function SignStep(props: Props) {
             counterColor={counterColor}
           />
 
-          {/* Formulaire coordonnées : visible uniquement quand l'émetteur a signé */}
+          {/* Destinataire : saisi dans une modale, rappelé ici pour relecture */}
           {allSelfSigned && (
-            <RecipientForm
+            <RecipientCard
               counterpartyName={props.counterpartyName}
               counterpartyEmail={props.counterpartyEmail}
-              onCounterpartyNameChange={props.onCounterpartyNameChange}
-              onCounterpartyEmailChange={props.onCounterpartyEmailChange}
               isValid={recipientFormValid}
               senderEmail={props.senderEmail}
+              onEdit={props.onEditRecipient}
             />
           )}
 
@@ -118,7 +117,7 @@ export function SignStep(props: Props) {
               className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {sending ? "Envoi en cours…" : "Faire signer et envoyer"}
+              {sending ? "Envoi en cours…" : "Envoyer"}
             </button>
 
             <button
@@ -178,18 +177,22 @@ function ProgressCard({
   );
 }
 
-/** Mini-formulaire — coordonnées du cocontractant + rappel de l'expéditeur. */
-function RecipientForm({
-  counterpartyName, counterpartyEmail,
-  onCounterpartyNameChange, onCounterpartyEmailChange,
-  isValid, senderEmail,
+/**
+ * Rappel du destinataire choisi + rappel de l'expéditeur.
+ *
+ * La saisie elle-même se fait dans `RecipientModal` : ici on relit simplement
+ * à qui part le contrat avant de cliquer sur envoyer, avec un accès direct
+ * pour corriger. Tant que rien n'est renseigné, la carte devient le bouton qui
+ * rouvre la modale (cas où l'utilisateur l'avait fermée).
+ */
+function RecipientCard({
+  counterpartyName, counterpartyEmail, isValid, senderEmail, onEdit,
 }: {
   counterpartyName: string;
   counterpartyEmail: string;
-  onCounterpartyNameChange: (v: string) => void;
-  onCounterpartyEmailChange: (v: string) => void;
   isValid: boolean;
   senderEmail?: string;
+  onEdit: () => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
@@ -197,23 +200,32 @@ function RecipientForm({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
           Envoyer à
         </p>
-        {isValid && <span className="text-[10px] text-emerald-600 font-semibold">✓ prêt</span>}
+        {isValid && (
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Pencil className="w-3 h-3" /> Modifier
+          </button>
+        )}
       </div>
-      <div className="space-y-1.5">
-        <input
-          value={counterpartyName}
-          onChange={(e) => onCounterpartyNameChange(e.target.value)}
-          placeholder="Nom du cocontractant"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-        <input
-          value={counterpartyEmail}
-          onChange={(e) => onCounterpartyEmailChange(e.target.value)}
-          placeholder="email@cocontractant.com"
-          type="email"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-      </div>
+
+      {isValid ? (
+        <div className="flex items-start gap-2">
+          <UserRound className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-800 truncate">{counterpartyName}</p>
+            <p className="text-[11px] text-gray-500 break-all">{counterpartyEmail}</p>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={onEdit}
+          className="w-full rounded-lg border border-dashed border-gray-300 px-3 py-2.5 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+        >
+          Indiquer le destinataire
+        </button>
+      )}
 
       {/* L'utilisateur voit noir sur blanc quelle adresse est utilisée. */}
       {senderEmail && (

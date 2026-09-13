@@ -117,7 +117,7 @@ export function PlaceStep(props: Props) {
                 phase === "place-ready" ? "ring-2 ring-[#354F99]/30 ring-offset-2" : ""
               }`}
             >
-              Signer et envoyer <ChevronRight className="w-4 h-4" />
+              Signer <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={onBack}
@@ -201,8 +201,8 @@ function ChecklistItem({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 -mx-2 transition-colors ${
-        active ? "bg-gray-50" : "hover:bg-gray-50"
+      className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 -mx-2 transition-colors bg-gray-50 hover:bg-gray-200 ${
+        active ? "bg-gray-500/20" : ""
       }`}
     >
       {done ? (
@@ -216,11 +216,11 @@ function ChecklistItem({
       <span className={`text-xs text-left ${done ? "text-gray-400 line-through" : active ? "font-semibold text-gray-800" : "text-gray-500"}`}>
         {label}
       </span>
-      {active && (
+{/*       {active && (
         <span className="ml-auto text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: hex }}>
           {done ? "prochain clic" : "en cours"}
         </span>
-      )}
+      )} */}
     </button>
   );
 }

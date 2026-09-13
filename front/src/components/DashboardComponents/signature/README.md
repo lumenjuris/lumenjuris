@@ -34,14 +34,19 @@ deux parties avec le PDF signé en pièce jointe.
 
 En interne le wizard a 3 étapes (`prepare` / `place` / `sign`), mais quand le
 PDF vient du bouton « Nouveau contrat » (cas normal) l'étape `prepare` est
-sautée. Le parcours **visible** compte donc 2 étapes, et c'est ce que
-l'utilisateur lit dans le guide : « Étape 1 sur 2 » / « Étape 2 sur 2 ».
+sautée. Le parcours **visible** est celui décrit par `GUIDE_STEP_LABELS`
+(aujourd'hui 3 étapes : placer / signer / envoyer), et c'est ce que
+l'utilisateur lit dans le guide : « Étape 1 sur 3 », « Étape 2 sur 3 »…
+`GUIDE_STEP_TOTAL` est déduit de ces libellés : ajouter une étape au parcours
+se fait en ajoutant un libellé, puis en rattachant les phases concernées à son
+numéro dans `getGuideContent`.
 
 ```
-┌─────────────────┐    ┌────────────────────┐    ┌──────────────────────┐
-│ Document importé│ →  │ 1. Placer les zones│ →  │ 2. Signer et envoyer │
-└─────────────────┘    └────────────────────┘    └──────────────────────┘
-   file picker           clic sur le PDF           signer + destinataire
+┌─────────────────┐   ┌──────────────────┐   ┌────────────┐   ┌─────────────┐
+│ Document importé│ → │ 1. Placer zones  │ → │ 2. Signer  │ → │ 3. Envoyer  │
+└─────────────────┘   └──────────────────┘   └────────────┘   └─────────────┘
+   file picker          clic sur le PDF        modale de       destinataire
+                                               signature       puis envoi
 ```
 
 ### Guide contextuel de la colonne de gauche
@@ -52,7 +57,7 @@ l'utilisateur lit dans le guide : « Étape 1 sur 2 » / « Étape 2 sur 2 ».
 action attendue maintenant → étape suivante.
 
 `GuidePanel.tsx` affiche cette consigne en haut de la colonne de gauche, avec
-le bandeau « Étape X sur 2 » tout en haut (premier point de regard), puis les
+le bandeau « Étape X sur N » tout en haut (premier point de regard), puis les
 blocs secondaires (checklist des zones, options, formulaire destinataire,
 boutons d'action) passés en `children`. La colonne est `sticky` : les
 instructions restent visibles pendant qu'on descend dans le document.
@@ -96,7 +101,7 @@ même position sur chaque page) — utile pour parapher un contrat multi-pages.
 **Champs déposés** : draggables (mousedown + mousemove global), supprimables
 via une corbeille au survol.
 
-### Étape 2 — Signer + Envoyer (`SignStep` + `SignatureModal`)
+### Étapes 2 et 3 — Signer puis Envoyer (`SignStep` + `SignatureModal`)
 
 - Le viewer passe en mode `sign` : seuls les champs "self" sont cliquables
 - Au clic sur un champ vide, la modale `SignatureModal` s'ouvre :
@@ -113,6 +118,13 @@ via une corbeille au survol.
   **Destinataires** apparaît : nom + email pour soi-même et pour le
   cocontractant (validation regex permissive `\S+@\S+\.\S+`)
 - Le document s'ouvre sur la page de la première zone à signer
+- La modale de signature s'ouvre **automatiquement** à l'arrivée sur l'étape :
+  la seule action attendue est de signer, inutile de demander un clic sur la
+  zone au préalable (le clic reste possible si la modale est fermée)
+- Signature validée → `RecipientModal` s'ouvre dans la foulée : le destinataire
+  est la dernière information manquante, elle est demandée au centre de l'écran
+  plutôt que dans un formulaire de la colonne de gauche. Celle-ci n'affiche
+  plus qu'un récapitulatif relisible, avec « Modifier »
 - Le guide de gauche évolue seul : signature apposée → coordonnées du
   cocontractant → envoi
 - Bouton **"Faire signer et envoyer"** actif uniquement quand :
@@ -142,9 +154,10 @@ signature/
 ├── guide.ts                   ← phases du parcours + consigne de chaque phase
 ├── GuidePanel.tsx             ← colonne de gauche (bandeau d'étape + consignes)
 ├── PrepareStep.tsx            ← dépôt du PDF (sauté le plus souvent)
-├── PlaceStep.tsx              ← étape visible 1 (placement + suggestion)
+├── PlaceStep.tsx              ← étape 1 (placement + suggestion)
 ├── PlaceToolbar.tsx           ← options de l'étape de placement
-├── SignStep.tsx               ← étape visible 2 (sign + destinataire + envoi)
+├── SignStep.tsx               ← étapes 2 et 3 (signature, destinataire, envoi)
+├── RecipientModal.tsx         ← modale « À qui envoyer le contrat ? »
 ├── SignProgress.tsx           ← barre de progression "X/Y signés"
 │
 ├── PdfViewer.tsx              ← viewer react-pdf + click-to-place
