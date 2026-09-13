@@ -18,8 +18,10 @@ function VariableView({ node, updateAttributes }: NodeViewProps) {
         title={label}
         data-var-name={node.attrs.name as string}
         onChange={(e) => updateAttributes({ value: e.target.value })}
-        size={Math.max(6, (value || label).length)}
-        className={`mx-0.5 inline rounded-chip px-1.5 py-[1px] text-[13px] font-medium outline-none transition focus:ring-2 focus:ring-brand/25 ${
+        // Largeur calée sur le contenu, mais plafonnée : un libellé long ne doit
+        // jamais faire déborder le champ du cadre du contrat (il est alors tronqué).
+        size={Math.min(28, Math.max(6, (value || label).length))}
+        className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium outline-none transition focus:ring-2 focus:ring-brand/25 ${
           value
             ? "bg-brand-light text-brand ring-1 ring-brand/15 hover:bg-brand-light/70"
             : "bg-amber-100 text-amber-800 ring-1 ring-amber-300/80 hover:bg-amber-200/80"

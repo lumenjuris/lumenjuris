@@ -54,7 +54,7 @@ export function SignStep(props: Props) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
-      <aside className="space-y-4 self-start lg:sticky lg:top-20">
+      <aside className="space-y-4 self-start lg:sticky lg:top-16">
         {/* Guidage : une consigne à la fois, selon l'avancement */}
         {!allSelfSigned && (
           <GuideCard hex={selfColor} icon={MousePointerClick} title="Signez le contrat">

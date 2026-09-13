@@ -139,7 +139,7 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
     <>
       {/* Sidebar — always w-12 on mobile, expandable on desktop */}
       <aside
-        className={`fixed left-0 top-16 bottom-0 z-20 flex flex-col bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ease-in-out w-12 rounded-r-2xl ${
+        className={`fixed left-0 top-12 bottom-0 z-20 flex flex-col bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ease-in-out w-12 rounded-r-2xl ${
           !isCollapsed ? "md:w-72 md:rounded-r-none" : ""
         }`}
       >
@@ -205,7 +205,7 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
       {/* Mobile drawer overlay — always mounted for smooth enter/exit animation */}
       <>
         <div
-          className={`fixed inset-x-0 top-16 bottom-0 z-30 bg-black/30 md:hidden transition-opacity duration-200 ${
+          className={`fixed inset-x-0 top-12 bottom-0 z-30 bg-black/30 md:hidden transition-opacity duration-200 ${
             isMobileDrawerOpen
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
@@ -213,7 +213,7 @@ export const DocumentHistorySidebar: React.FC<DocumentHistorySidebarProps> = ({
           onClick={() => setIsMobileDrawerOpen(false)}
         />
         <div
-          className={`fixed left-0 top-16 bottom-0 z-40 w-72 flex flex-col bg-white border-r border-gray-200 shadow-lg md:hidden transition-transform duration-300 ease-out ${
+          className={`fixed left-0 top-12 bottom-0 z-40 w-72 flex flex-col bg-white border-r border-gray-200 shadow-lg md:hidden transition-transform duration-300 ease-out ${
             isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

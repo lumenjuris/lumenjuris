@@ -266,7 +266,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         `}
       >
         {/* Logo + bouton fermeture */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+        <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
             <LumenJurisLogo variant="dark" height={30} />
           </Link>
@@ -309,7 +309,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
       </aside>
       {/* ── Zone principale ── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ${sidebarOpen ? "md:ml-64" : "md:ml-0"}`}>
-        <header className="h-16 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 border-b border-line">
+        <header className="h-12 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 border-b border-line">
           <button
             onClick={() => setSidebarOpen((o) => !o)}
             title={sidebarOpen ? "Masquer le menu" : "Afficher le menu"}

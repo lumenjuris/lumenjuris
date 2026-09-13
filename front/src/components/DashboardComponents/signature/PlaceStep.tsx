@@ -61,7 +61,7 @@ export function PlaceStep(props: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
       {/* Colonne de gauche : reste à l'écran pendant le défilement du document */}
-      <div className="space-y-3 self-start lg:sticky lg:top-20">
+      <div className="space-y-3 self-start lg:sticky lg:top-16">
         {phase === 1 && (
           <GuideCard hex={selfSigner?.hex ?? "#4f46e5"} icon={MousePointerClick} title="Votre signature">
             Cliquez sur le document pour la placer.

@@ -1,7 +1,7 @@
 // Éditeur de contrat « document d'abord » — générique (piloté par un ContractModel).
 // Intégré dans la mise en page de l'app (menu latéral + header conservés). Le fil
 // d'ariane est déposé dans le header partagé via un portail (#page-header-slot) ;
-// un bandeau (barre d'outils + « Générer le contrat ») surplombe la zone de contenu,
+// un bandeau (barre d'outils + icônes des fonctionnalités) surplombe la zone de contenu,
 // puis les deux blocs (« Champs à compléter » + document éditable) côte à côte.
 // Utilisé pour tous les types de contrat (CDD, CDI, avenant, disciplinaire, rupture).
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,7 +12,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { jsPDF } from "jspdf";
 import {
   Download, FileText, FileSignature, Bold, Italic, List, Quote,
-  Sparkles, X, Loader2, ShieldCheck, ShieldAlert, MessagesSquare, Check, ChevronDown, Share2,
+  Sparkles, X, Loader2, ShieldCheck, ShieldAlert, MessagesSquare, Check, Share2,
 } from "lucide-react";
 import { cddAccroissementModel } from "../../../../contractEngine/models/cddAccroissement";
 import type { ContractModel } from "../../../../contractEngine/types";
@@ -359,7 +359,6 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     }
   };
 
-  const [genOpen, setGenOpen] = useState(false);
   const [ccPanel, setCcPanel] = useState(false);
   const [ccFinderMsg, setCcFinderMsg] = useState<string | null>(null);
   const [negoLoading, setNegoLoading] = useState(false);
@@ -416,12 +415,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       return { ...m, [id]: next };
     });
   };
-  // Accès direct à la barre « Modifier avec l'IA » depuis la barre d'outils.
   const globalAiInputRef = useRef<HTMLInputElement>(null);
-  const focusGlobalAi = () => {
-    globalAiInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    globalAiInputRef.current?.focus({ preventScroll: true });
-  };
 
   // ── Modification globale par l'IA (barre sticky sous le contrat) ─────────
   const [globalAi, setGlobalAi] = useState<{
@@ -693,30 +687,6 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   const tbtn = (active: boolean) =>
     `rounded-lg p-1.5 transition-colors ${active ? "bg-brand text-white" : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"}`;
 
-  /** Élément du menu « Générer le contrat ». */
-  const MenuItem = ({ icon: Icon, label, onClick, tone = "default", disabled = false, buttonInfo }: {
-    icon: React.ElementType; label: string; onClick: () => void; tone?: "default" | "brand"; disabled?: boolean; buttonInfo? : string
-  }) => (
-    <div title={disabled ? buttonInfo : undefined} className="w-full">
-    <button
-      type="button"
-      disabled={Boolean(disabled)}
-      onClick={(e) => { if (disabled) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }  
-      setGenOpen(false); onClick(); }}
-      className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-surface-subtle ${
-        disabled ?  "opacity-50 cursor-not-allowed pointer-events-none text-ink-muted"
-        : tone === "brand" ? "font-medium text-brand" : "text-ink-secondary"
-      }`}
-    >
-      <Icon className="h-4 w-4 shrink-0" /> {label}
-    </button>
-    </div>
-  );
-
   return (
     <div className={`mx-auto ${shareOpen ? "max-w-7xl" : "max-w-6xl"}`}>
       {/* Fil d'ariane cliquable (sans flèche) déposé dans le header de l'app. */}
@@ -749,8 +719,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       {/* Corps : panneau latéral + éditeur. En mode partage, la colonne
           s'élargit pour accueillir le panneau (on reste sur le contrat). */}
       <div className={`grid grid-cols-1 items-start gap-6 ${shareOpen ? "lg:grid-cols-[19rem_minmax(0,1fr)]" : "lg:grid-cols-[16rem_minmax(0,1fr)]"}`}>
-        {shareOpen && <div aria-hidden className="fixed inset-x-0 top-16 bottom-0 z-[25] bg-ink/[0.03] pointer-events-none" />}
-        <aside className={`space-y-4 self-start lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
+        {shareOpen && <div aria-hidden className="fixed inset-x-0 top-12 bottom-0 z-[25] bg-ink/[0.03] pointer-events-none" />}
+        <aside className={`space-y-4 self-start lg:sticky lg:top-[3.5rem] lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
           {shareOpen && (
             <ShareContractPanel
               onClose={() => setShareOpen(false)}
@@ -803,7 +773,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         <div className="min-w-0 space-y-3">
           {/* Le contrat — entièrement éditable, avec sa barre de fonctions en en-tête */}
           <div className="rounded-2xl border border-line bg-white shadow-card">
-            <div className="sticky top-16 z-20 -mx-px -mt-px flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-line border-b-line-subtle bg-white px-4 py-2.5">
+            <div className="sticky top-12 z-20 -mx-px -mt-px flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-line border-b-line-subtle bg-white px-4 py-2.5">
               {editor && (
                 <div className="flex shrink-0 items-center gap-1">
                   <button type="button" className={tbtn(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></button>
@@ -813,40 +783,23 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 </div>
               )}
 
-              <div className="flex shrink-0 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={focusGlobalAi}
-                  title="Demander une modification du contrat en langage naturel"
-                  className="hidden items-center gap-1.5 rounded-full border border-brand/30 bg-brand-light/50 px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand-light sm:inline-flex"
-                >
-                  <Sparkles className="h-3.5 w-3.5" /> Modifier avec l&apos;IA
-                </button>
-                <div className="relative">
-                  <button
-                    onClick={() => setGenOpen((o) => !o)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card transition hover:bg-brand-hover"
-                  >
-                    Générer le contrat <ChevronDown className={`h-3.5 w-3.5 transition-transform ${genOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {genOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setGenOpen(false)} />
-                      <div className="absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-card-md">
-                        <MenuItem icon={Share2} label="Partager à l'autre partie" onClick={openShare} tone="brand" />
-                        <MenuItem icon={FileSignature} label="Envoyer en signature" onClick={goSignature} />
-                        <MenuItem icon={MessagesSquare} label="Ouvrir la négociation" onClick={() => void goNegotiation()} />
-                        <MenuItem icon={ShieldAlert} label="Réviser (risques)" onClick={goReview} />
-                        {hasConvention && (
-                          <MenuItem icon={ShieldCheck} label="Convention collective" onClick={() => setCcPanel(true)} />
-                        )}
-                        <div className="my-1 border-t border-line-subtle" />
-                        <MenuItem icon={Download} label="Télécharger en PDF" onClick={exportPdf} /> 
-                        <MenuItem icon={FileText} label="Télécharger en Word" buttonInfo="Nécessite un plan supérieur" disabled={!!isFreemium} onClick={() => void exportDocx()} />               
-                      </div>
-                    </>
-                  )}
-                </div>
+              {/* Fonctionnalités du contrat : une icône chacune, libellé au survol */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <ToolbarAction icon={Share2} label="Partager à l'autre partie" onClick={openShare} highlight />
+                <ToolbarAction icon={FileSignature} label="Envoyer en signature" onClick={goSignature} />
+                <ToolbarAction icon={MessagesSquare} label="Ouvrir la négociation" onClick={() => void goNegotiation()} />
+                <ToolbarAction icon={ShieldAlert} label="Réviser les risques" onClick={goReview} />
+                {hasConvention && (
+                  <ToolbarAction icon={ShieldCheck} label="Convention collective" onClick={() => setCcPanel(true)} />
+                )}
+                <span aria-hidden className="mx-1.5 h-5 w-px bg-line" />
+                <ToolbarAction icon={Download} label="Télécharger en PDF" onClick={exportPdf} />
+                <ToolbarAction
+                  icon={FileText}
+                  label={isFreemium ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
+                  onClick={() => void exportDocx()}
+                  disabled={!!isFreemium}
+                />
               </div>
             </div>
 
@@ -1021,5 +974,31 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       )}
 
     </div>
+  );
+}
+
+/** Icône d'action de la barre d'outils de l'éditeur : libellé en infobulle au survol. */
+function ToolbarAction({ icon: Icon, label, onClick, disabled = false, highlight = false }: {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        highlight
+          ? "text-brand hover:bg-brand-light"
+          : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+    </button>
   );
 }
