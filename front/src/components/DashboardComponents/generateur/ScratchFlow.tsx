@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Loader2, AlertCircle, ChevronLeft, ChevronRight,
-  Sparkles, ListChecks, ShieldCheck, Pencil,
+  Sparkles, ListChecks, ShieldCheck,
 } from "lucide-react";
 import type { BlockDef, ContractModel, VariableDef } from "../../../contractEngine/types";
 import {
@@ -40,9 +40,9 @@ function buildModel(title: string, draft: ContractDraft): ContractModel {
  * Parcours « de zéro » :
  *  mode      — deux choix : générer tout de suite, ou personnaliser ;
  *  asking    — questions simples, une par écran, chacune peut être passée ;
- *  review    — récapitulatif des réponses et bouton « Générer mon contrat ».
+ *              la réponse à la dernière lance directement la rédaction.
  */
-type Step = "mode" | "loading" | "asking" | "review" | "generating" | "error";
+type Step = "mode" | "loading" | "asking" | "generating" | "error";
 
 export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   title: string;
@@ -61,7 +61,7 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
 
   const opId = useRef(0);
   // Écran d'où la génération a été lancée : on y revient en cas d'échec ou de retour.
-  const origin = useRef<"mode" | "review">("mode");
+  const origin = useRef<"mode" | "asking">("mode");
   const lastUrl = useRef("");
 
   const initialStep = (searchParams.get("step") as Step) || "mode";
@@ -81,9 +81,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     }, options);
   };
 
-  const goMode   = () => { setStep("mode"); setError(""); writeUrl({ step: null, q: null }); };
-  const goAsk    = (n: number) => { setStep("asking"); setIdx(n); setError(""); writeUrl({ step: "asking", q: n + 1 }); };
-  const goReview = () => { setStep("review"); setError(""); writeUrl({ step: "review", q: null }); };
+  const goMode = () => { setStep("mode"); setError(""); writeUrl({ step: null, q: null }); };
+  const goAsk  = (n: number) => { setStep("asking"); setIdx(n); setError(""); writeUrl({ step: "asking", q: n + 1 }); };
 
   useEffect(() => {
     setStep("mode");
@@ -100,14 +99,12 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
 
     const s = searchParams.get("step") as Step | null;
 
-    if (s === "asking" || s === "review") {
+    if (s === "asking") {
       const currentQuestions = questionsRef.current;
       if (currentQuestions.length > 0) {
-        if (s === "asking") {
-          const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
-          setIdx(Math.min(qn - 1, currentQuestions.length - 1));
-        }
-        setStep(s);
+        const qn = Math.max(1, Number(searchParams.get("q") ?? "1"));
+        setIdx(Math.min(qn - 1, currentQuestions.length - 1));
+        setStep("asking");
         setError("");
       } else {
         writeUrl({ step: null, q: null }, { replace: true });
@@ -143,7 +140,9 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     }
   };
 
-  async function generate(from: "mode" | "review") {
+  // finalAnswers est passé explicitement : juste après la dernière réponse,
+  // l'état `answers` n'est pas encore mis à jour.
+  async function generate(from: "mode" | "asking", finalAnswers: Record<string, string> = answers) {
     const id = ++opId.current;
     origin.current = from;
     setStep("generating");
@@ -151,10 +150,10 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     writeUrl({ step: "generating", q: null });
 
     try {
-      const draft = from === "review"
+      const draft = from === "asking"
         ? await generateContractDraft(
             title,
-            questions.map((q) => ({ question: q.question, answer: answers[q.id] ?? "" })),
+            questions.map((q) => ({ question: q.question, answer: finalAnswers[q.id] ?? "" })),
           )
         : await generateContractDraftFromBrief(title, initialBrief?.trim() || title);
       if (opId.current !== id) return;
@@ -163,28 +162,27 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
       if (opId.current !== id) return;
       setError("Échec de la rédaction. Réessayez.");
       setStep(from);
-      writeUrl({ step: from === "review" ? "review" : null, q: null });
+      writeUrl(from === "asking" ? { step: "asking", q: idx + 1 } : { step: null, q: null });
     }
   }
 
   function answer(value: string) {
     const q = questions[idx];
-    setAnswers((prev) => ({ ...prev, [q.id]: value }));
+    const next = { ...answers, [q.id]: value };
+    setAnswers(next);
     if (idx < questions.length - 1) goAsk(idx + 1);
-    else goReview();
+    else void generate("asking", next);
   }
 
   const q = questions[idx];
   const total = questions.length;
+  const isLast = idx === total - 1;
 
   const backTarget = () => {
     opId.current += 1;
     if (step === "generating") {
-      setStep(origin.current);
-      setError("");
-      writeUrl({ step: origin.current === "review" ? "review" : null, q: null });
-    } else if (step === "review") {
-      goAsk(total - 1);
+      if (origin.current === "asking") goAsk(idx);
+      else goMode();
     } else if (step === "asking" && idx > 0) {
       goAsk(idx - 1);
     } else if (step === "asking" || step === "loading" || step === "error") {
@@ -301,6 +299,13 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               )}
             </div>
 
+            {isLast && (
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand" />
+                Dernière question — votre contrat sera rédigé juste après.
+              </p>
+            )}
+
             {error && <p className="mt-3 text-xs text-danger">{error}</p>}
 
             <div className="mt-4 flex items-center justify-between">
@@ -317,47 +322,6 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
                 className="text-xs font-medium text-ink-muted hover:text-brand"
               >
                 Je ne sais pas encore — passer
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === "review" && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-base font-semibold text-ink">Tout est prêt</p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Vérifiez vos réponses. Ce que vous avez passé restera à compléter dans l’éditeur.
-              </p>
-            </div>
-
-            <ul className="divide-y divide-line rounded-xl border border-line">
-              {questions.map((item, i) => (
-                <li key={item.id}>
-                  <button
-                    onClick={() => goAsk(i)}
-                    className="group flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-brand-light/30"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-xs text-ink-muted">{item.question}</span>
-                      {answers[item.id]?.trim()
-                        ? <span className="mt-0.5 block text-sm font-medium text-ink">{answers[item.id]}</span>
-                        : <span className="mt-0.5 block text-sm italic text-ink-subtle">À compléter plus tard</span>}
-                    </span>
-                    <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-subtle group-hover:text-brand" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {error && <p className="text-xs text-danger">{error}</p>}
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => void generate("review")}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-hover"
-              >
-                <Sparkles className="h-4 w-4" /> Générer mon contrat
               </button>
             </div>
           </div>
