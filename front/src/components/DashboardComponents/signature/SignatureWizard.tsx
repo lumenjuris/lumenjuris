@@ -255,7 +255,17 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           onFieldAdd={addField}
           onFieldMove={moveField}
           onFieldRemove={removeField}
-          onNumPagesLoaded={setNumPages}
+          onNumPagesLoaded={(n) => {
+            setNumPages(n);
+            // Première ouverture : les deux zones sont suggérées d'emblée en bas
+            // de la dernière page (où l'on signe habituellement) — il ne reste
+            // qu'à les glisser si besoin. Jamais si des zones existent déjà.
+            const last = Math.max(0, n - 1);
+            setFields((prev) => (prev.length > 0 ? prev : [
+              { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
+              { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
+            ]));
+          }}
           onBack={() => setStep("prepare")}
           onNext={() => setStep("sign")}
           canGoNext={canGoToSign}

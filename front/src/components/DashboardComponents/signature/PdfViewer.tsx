@@ -28,6 +28,8 @@ interface Props {
   onFieldClick?: (field: Field) => void;
   /** Notifie le parent du nombre de pages dès le chargement du PDF. */
   onLoaded?: (numPages: number) => void;
+  /** Ouvre le document sur sa dernière page (là où l'on signe) plutôt que sur la première. */
+  startOnLastPage?: boolean;
 }
 
 // Dimensions par défaut des champs (en pourcentage de la page)
@@ -51,7 +53,7 @@ const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
  */
 export function PdfViewer(props: Props) {
   const { file, fields, signers, mode, activeFieldType, activeSignerRole, replicateAllPages,
-          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded } = props;
+          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, startOnLastPage } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -87,7 +89,7 @@ export function PdfViewer(props: Props) {
 
   function handleDocumentLoad({ numPages }: { numPages: number }) {
     setNumPages(numPages);
-    setCurrentPage(0);
+    setCurrentPage(startOnLastPage ? Math.max(0, numPages - 1) : 0);
     onLoaded?.(numPages);
   }
 

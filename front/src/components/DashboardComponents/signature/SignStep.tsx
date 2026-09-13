@@ -130,6 +130,7 @@ export function SignStep(props: Props) {
             mode="sign"
             onFieldClick={props.onFieldClick}
             onLoaded={props.onNumPagesLoaded}
+            startOnLastPage
           />
         </div>
       </div>

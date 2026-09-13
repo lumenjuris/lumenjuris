@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick, Move } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
@@ -26,9 +26,9 @@ interface Props {
 /**
  * Étape 2 du wizard : placer les zones de signature sur le PDF.
  *
- * Layout : toolbar à gauche + viewer à droite. Le mode placement est "armé"
- * par la toolbar et désactivé après chaque dépôt (le composant parent doit
- * appeler `onArmFieldType(null)` après chaque `onFieldAdd`).
+ * Layout : consigne + checklist + toolbar à gauche, viewer à droite. Le
+ * document s'ouvre sur sa dernière page, où les deux zones de signature sont
+ * déjà suggérées (voir SignatureWizard) : il ne reste qu'à les glisser.
  */
 export function PlaceStep(props: Props) {
   const {
@@ -49,6 +49,25 @@ export function PlaceStep(props: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="lg:col-span-1 space-y-4">
+        {/* Consigne : une seule à la fois, en tête de colonne pour être vue en premier */}
+        {phase === 1 && (
+          <GuideCard hex={selfSigner?.hex ?? "#4f46e5"} icon={MousePointerClick} title="Votre signature">
+            Cliquez sur le contrat à l'endroit où <strong>vous</strong> signerez.
+          </GuideCard>
+        )}
+        {phase === 2 && (
+          <GuideCard hex={counterSigner?.hex ?? "#10b981"} icon={MousePointerClick} title="Signature du cocontractant">
+            Cliquez maintenant à l'endroit où <strong>votre cocontractant</strong> signera.
+          </GuideCard>
+        )}
+        {phase === 3 && (
+          <GuideCard hex="#354F99" icon={Move} title="Vos zones de signature sont prêtes">
+            Nous les avons placées en bas de la dernière page, là où l'on signe
+            habituellement. <strong>Glissez-les</strong> pour les déplacer si besoin,
+            puis cliquez sur « Suivant ».
+          </GuideCard>
+        )}
+
         {/* Checklist de progression — on comprend d'un coup d'œil où on en est */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
@@ -79,27 +98,7 @@ export function PlaceStep(props: Props) {
         />
       </div>
 
-      <div className="lg:col-span-3 space-y-3">
-        {/* Bandeau de guidage : une seule consigne à la fois, impossible à rater */}
-        {phase === 1 && (
-          <GuidBanner hex={selfSigner?.hex ?? "#4f46e5"}>
-            <strong>Étape 1/2 — Votre signature :</strong>&nbsp;cliquez sur le contrat à
-            l'endroit où <strong>vous</strong> signerez.
-          </GuidBanner>
-        )}
-        {phase === 2 && (
-          <GuidBanner hex={counterSigner?.hex ?? "#10b981"}>
-            <strong>Étape 2/2 — Signature du cocontractant :</strong>&nbsp;cliquez maintenant à
-            l'endroit où <strong>votre cocontractant</strong> signera.
-          </GuidBanner>
-        )}
-        {phase === 3 && (
-          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            Les deux zones sont placées. Vous pouvez les déplacer, en ajouter, ou passer à
-            l'étape suivante pour signer puis envoyer l'e-mail au cocontractant.
-          </div>
-        )}
+      <div className="lg:col-span-3">
         <div className="bg-gray-50 rounded-xl p-4">
         <PdfViewer
           file={file}
@@ -113,6 +112,7 @@ export function PlaceStep(props: Props) {
           onFieldMove={onFieldMove}
           onFieldRemove={onFieldRemove}
           onLoaded={onNumPagesLoaded}
+          startOnLastPage
         />
         </div>
       </div>
@@ -180,15 +180,25 @@ function ChecklistItem({
   );
 }
 
-/** Bandeau de consigne coloré selon le signataire concerné. */
-function GuidBanner({ hex, children }: { hex: string; children: React.ReactNode }) {
+/** Carte de consigne, colorée selon le signataire concerné, en tête de la colonne de gauche. */
+function GuideCard({ hex, icon: Icon, title, children }: {
+  hex: string;
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm"
-      style={{ borderColor: hex + "55", backgroundColor: hex + "10", color: "#1f2937" }}
+      className="rounded-xl border-2 p-4 shadow-sm"
+      style={{ borderColor: hex + "66", backgroundColor: hex + "0d" }}
     >
-      <MousePointerClick className="w-4 h-4 shrink-0" style={{ color: hex }} />
-      <span>{children}</span>
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: hex }}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <p className="text-sm font-bold text-gray-900">{title}</p>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-gray-700">{children}</p>
     </div>
   );
 }
