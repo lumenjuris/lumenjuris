@@ -34,8 +34,15 @@
       "name": "Back Python (FastAPI)",
       "cwd": "lumenjuris",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "back.app.main:app", "--reload", "--port", "8000"],
-      "port": 8000
+      "runtimeArgs": ["-m", "uvicorn", "back.app.main:app", "--reload", "--port", "5678"],
+      "port": 5678
+    },
+    {
+      "name": "Aperçus savons Purisève (statique)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8123", "--directory",
+        "C:/Users/geoff/Documents/Purisève/wp-pipeline/savons"],
+      "port": 8123
     }
   ]
 }
