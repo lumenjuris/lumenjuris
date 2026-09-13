@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, MousePointerClick, Move } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick, Move } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
@@ -27,10 +28,11 @@ interface Props {
 /**
  * Étape 2 du wizard : placer les zones de signature sur le PDF.
  *
- * Colonne de gauche réduite à l'essentiel : la consigne et la case « Toutes
- * les pages ». Le document s'ouvre sur sa dernière page, où les deux zones de
- * signature sont déjà suggérées (voir SignatureWizard) : il ne reste qu'à les
- * glisser.
+ * La colonne de gauche reste visible au défilement : une consigne courte, le
+ * bouton « Suivant » juste en dessous, puis la case « Toutes les pages ». Dès
+ * qu'une zone a été glissée, la consigne passe au vert et invite à continuer.
+ * Le document s'ouvre sur sa dernière page, où les deux zones sont déjà
+ * suggérées (voir SignatureWizard).
  */
 export function PlaceStep(props: Props) {
   const {
@@ -40,6 +42,13 @@ export function PlaceStep(props: Props) {
     onBack, onNext, canGoNext,
   } = props;
 
+  // Une zone a-t-elle déjà été glissée ? Sert à dire clairement « c'est bon, continuez ».
+  const [moved, setMoved] = useState(false);
+  const handleMove = (id: string, xPct: number, yPct: number) => {
+    setMoved(true);
+    onFieldMove(id, xPct, yPct);
+  };
+
   const hasSelfField = fields.some((f) => f.signer === "self");
   const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
   const selfSigner = signers.find((s) => s.role === "self");
@@ -47,28 +56,48 @@ export function PlaceStep(props: Props) {
 
   // Sous-étape courante du guidage : 1 = votre zone, 2 = zone du cocontractant, 3 = prêt.
   const phase = !hasSelfField ? 1 : !hasCounterpartyField ? 2 : 3;
+  const ready = phase === 3 && moved;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
-      <div className="space-y-4">
-        {/* Consigne : une seule à la fois, en tête de colonne pour être vue en premier */}
+      {/* Colonne de gauche : reste à l'écran pendant le défilement du document */}
+      <div className="space-y-3 self-start lg:sticky lg:top-20">
         {phase === 1 && (
           <GuideCard hex={selfSigner?.hex ?? "#4f46e5"} icon={MousePointerClick} title="Votre signature">
-            Cliquez sur le contrat à l'endroit où <strong>vous</strong> signerez.
+            Cliquez sur le document pour la placer.
           </GuideCard>
         )}
         {phase === 2 && (
           <GuideCard hex={counterSigner?.hex ?? "#10b981"} icon={MousePointerClick} title="Signature du cocontractant">
-            Cliquez maintenant à l'endroit où <strong>votre cocontractant</strong> signera.
+            Cliquez sur le document pour la placer.
           </GuideCard>
         )}
-        {phase === 3 && (
-          <GuideCard hex="#354F99" icon={Move} title="Vos zones de signature sont prêtes">
-            Nous les avons placées en bas de la dernière page, là où l'on signe
-            habituellement. <strong>Glissez-les</strong> pour les déplacer si besoin,
-            puis cliquez sur « Suivant ».
+        {phase === 3 && !moved && (
+          <GuideCard hex="#354F99" icon={Move} title="Placez les signatures">
+            Glissez les zones à l'endroit voulu.
           </GuideCard>
         )}
+        {ready && (
+          <GuideCard hex="#059669" icon={CheckCircle2} title="C'est placé">
+            Cliquez sur « Suivant ».
+          </GuideCard>
+        )}
+
+        <button
+          onClick={onNext}
+          disabled={!canGoNext}
+          className={`w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
+            ready ? "ring-4 ring-[#354F99]/25 animate-pulse" : ""
+          }`}
+        >
+          Suivant <ChevronRight className="w-4 h-4" />
+        </button>
+        <button
+          onClick={onBack}
+          className="w-full flex items-center justify-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" /> Précédent
+        </button>
 
         <PlaceToolbar
           armedFieldType={armedFieldType}
@@ -89,38 +118,20 @@ export function PlaceStep(props: Props) {
           activeSignerRole={activeSignerRole}
           replicateAllPages={replicateAllPages}
           onFieldAdd={onFieldAdd}
-          onFieldMove={onFieldMove}
+          onFieldMove={handleMove}
           onFieldRemove={onFieldRemove}
           onLoaded={onNumPagesLoaded}
           startOnLastPage
-          spotlight={() => true}
+          spotlight={() => !moved}
           spotlightLabel="Glissez pour déplacer"
         />
         </div>
-      </div>
-
-      <div className="lg:col-span-2 flex justify-between items-center pt-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" /> Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!canGoNext}
-          className={`flex items-center gap-2 px-5 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
-            phase === 3 ? "ring-2 ring-[#354F99]/30 ring-offset-2" : ""
-          }`}
-        >
-          Suivant — Signer et envoyer <ChevronRight className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
 }
 
-/** Carte de consigne, colorée selon le signataire concerné, en tête de la colonne de gauche. */
+/** Carte de consigne courte, colorée selon le signataire ou l'état, en tête de la colonne de gauche. */
 function GuideCard({ hex, icon: Icon, title, children }: {
   hex: string;
   icon: React.ElementType;
@@ -129,7 +140,7 @@ function GuideCard({ hex, icon: Icon, title, children }: {
 }) {
   return (
     <div
-      className="rounded-xl border-2 p-4 shadow-sm"
+      className="rounded-xl border-2 p-3.5 shadow-sm"
       style={{ borderColor: hex + "66", backgroundColor: hex + "0d" }}
     >
       <div className="flex items-center gap-2">
@@ -138,7 +149,7 @@ function GuideCard({ hex, icon: Icon, title, children }: {
         </span>
         <p className="text-sm font-bold text-gray-900">{title}</p>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-gray-700">{children}</p>
+      <p className="mt-1.5 text-sm text-gray-700">{children}</p>
     </div>
   );
 }
