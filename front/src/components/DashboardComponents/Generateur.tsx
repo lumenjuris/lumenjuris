@@ -612,7 +612,6 @@ function ImportSection({
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
-  const [aiHints, setAiHints] = useState("");
   const [step, setStep] = useState<ImportStep>("form");
   const [error, setError] = useState("");
   const [savedMeta, setSavedMeta] = useState<ContractTemplateDTO | null>(null);
@@ -678,7 +677,7 @@ function ImportSection({
   }
 
   function resetImport() {
-    setStep("form"); setFile(null); setName(""); setAiHints("");
+    setStep("form"); setFile(null); setName("");
     setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
     setSaveError(""); setActiveVar(null); setHoveredVar(null);
   }
@@ -709,7 +708,6 @@ function ImportSection({
           mimeType: file.type,
           filename: file.name,
           name: name.trim(),
-          aiHints: aiHints.trim() || undefined,
         }),
       });
       const data = await res.json() as { success: boolean; message?: string; data?: ContractTemplateDTO };
@@ -921,25 +919,6 @@ function ImportSection({
             placeholder="ex. NDA Inserm Transfert"
             className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder"
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-widest">
-              Indications pour l'analyse <span className="text-ink-placeholder normal-case">(optionnel)</span>
-            </label>
-            <span className="text-[10px] text-ink-subtle">{aiHints.length}/500</span>
-          </div>
-          <textarea
-            value={aiHints}
-            onChange={(e) => setAiHints(e.target.value.slice(0, 500))}
-            rows={3}
-            placeholder="ex. Ce contrat concerne une cession de droits de propriété intellectuelle. Identifie comme variables : les noms des parties, les dates, les montants, la description de l'invention…"
-            className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink-secondary outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all resize-none leading-relaxed placeholder:text-ink-placeholder"
-          />
-          <p className="text-[11px] text-ink-subtle leading-relaxed">
-            Aide l'IA à mieux identifier les variables à détecter (contexte, types d'informations à personnaliser).
-          </p>
         </div>
       </div>
 
@@ -1346,6 +1325,7 @@ export function Generateur() {
           </div>
         )}
       </div>
+
 
       {/* Hub — 3 cartes */}
       {!section && (

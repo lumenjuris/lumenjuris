@@ -676,14 +676,13 @@ async function handleTemplateImport(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const { fileBase64, mimeType, filename, name, contractType, aiHints } =
+  const { fileBase64, mimeType, filename, name, contractType } =
     req.body as {
       fileBase64?: string;
       mimeType?: string;
       filename?: string;
       name?: string;
       contractType?: string;
-      aiHints?: string;
     };
 
   if (!fileBase64 || !filename || !name) {
@@ -734,11 +733,7 @@ async function handleTemplateImport(
       console.warn(`[template/import] document long : seuls les ${MAX_CHARS_SENT_TO_AI} premiers caractères sont analysés par l'IA.`);
     }
 
-    const hintsBlock =
-      aiHints && aiHints.trim()
-        ? `\n\nINDICATIONS DU JURISTE (à prendre en compte en priorité pour identifier les variables) :\n${aiHints.trim()}\n`
-        : "";
-    const fullPrompt = `${EXTRACT_VARIABLES_PROMPT_BASE}${hintsBlock}\n\nTEXTE DU CONTRAT :\n${numberedText}`;
+    const fullPrompt = `${EXTRACT_VARIABLES_PROMPT_BASE}\n\nTEXTE DU CONTRAT :\n${numberedText}`;
 
     console.time("[template/import] analyse IA");
     const aiRes = await fetch(`${BACKEND_URL}/openai-chat-5`, {
