@@ -110,13 +110,6 @@ export function PdfViewer(props: Props) {
 
   return (
     <div className="flex flex-col items-center" ref={containerRef}>
-      {numPages > 1 && (
-        <PageNavigator
-          current={currentPage}
-          total={numPages}
-          onChange={setCurrentPage}
-        />
-      )}
 
       <div
         className={`relative shadow-lg ring-1 ring-gray-200 rounded-md overflow-hidden bg-white ${isArmed ? "cursor-crosshair" : ""}`}
@@ -152,6 +145,15 @@ export function PdfViewer(props: Props) {
           );
         })}
       </div>
+
+      {/* Pagination sous la page : le document commence tout en haut de la zone. */}
+      {numPages > 1 && (
+        <PageNavigator
+          current={currentPage}
+          total={numPages}
+          onChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }
@@ -167,7 +169,7 @@ function PageNavigator({
   onChange: (page: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 mb-3">
+    <div className="flex items-center gap-2 mt-2">
       <button
         onClick={() => onChange(Math.max(0, current - 1))}
         disabled={current === 0}

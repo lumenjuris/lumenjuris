@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick, Move } from "lucide-react";
+import { ChevronLeft, ChevronRight, MousePointerClick, Move } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
@@ -11,6 +11,7 @@ interface Props {
   /** Type de champ "armé" pour le prochain clic. null = mode placement désactivé. */
   armedFieldType: FieldType | null;
   replicateAllPages: boolean;
+  /** Plus utilisé depuis le retrait de la checklist — gardé pour compatibilité avec SignatureWizard. */
   onSignerChange: (role: SignerRole) => void;
   onArmFieldType: (type: FieldType) => void;
   onReplicateAllPagesChange: (value: boolean) => void;
@@ -26,14 +27,15 @@ interface Props {
 /**
  * Étape 2 du wizard : placer les zones de signature sur le PDF.
  *
- * Layout : consigne + checklist + toolbar à gauche, viewer à droite. Le
- * document s'ouvre sur sa dernière page, où les deux zones de signature sont
- * déjà suggérées (voir SignatureWizard) : il ne reste qu'à les glisser.
+ * Colonne de gauche réduite à l'essentiel : la consigne et la case « Toutes
+ * les pages ». Le document s'ouvre sur sa dernière page, où les deux zones de
+ * signature sont déjà suggérées (voir SignatureWizard) : il ne reste qu'à les
+ * glisser.
  */
 export function PlaceStep(props: Props) {
   const {
     file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
-    onSignerChange, onArmFieldType, onReplicateAllPagesChange,
+    onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onBack, onNext, canGoNext,
   } = props;
@@ -47,8 +49,8 @@ export function PlaceStep(props: Props) {
   const phase = !hasSelfField ? 1 : !hasCounterpartyField ? 2 : 3;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-1 space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
+      <div className="space-y-4">
         {/* Consigne : une seule à la fois, en tête de colonne pour être vue en premier */}
         {phase === 1 && (
           <GuideCard hex={selfSigner?.hex ?? "#4f46e5"} icon={MousePointerClick} title="Votre signature">
@@ -68,28 +70,6 @@ export function PlaceStep(props: Props) {
           </GuideCard>
         )}
 
-        {/* Checklist de progression — on comprend d'un coup d'œil où on en est */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
-          <ChecklistItem
-            done={hasSelfField}
-            active={activeSignerRole === "self"}
-            hex={selfSigner?.hex ?? "#4f46e5"}
-            label="1. Votre signature"
-            onClick={() => onSignerChange("self")}
-          />
-          <ChecklistItem
-            done={hasCounterpartyField}
-            active={activeSignerRole === "counterparty"}
-            hex={counterSigner?.hex ?? "#10b981"}
-            label="2. Signature du cocontractant"
-            onClick={() => onSignerChange("counterparty")}
-          />
-          <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
-            Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
-          </p>
-        </div>
-
         <PlaceToolbar
           armedFieldType={armedFieldType}
           replicateAllPages={replicateAllPages}
@@ -98,8 +78,8 @@ export function PlaceStep(props: Props) {
         />
       </div>
 
-      <div className="lg:col-span-3">
-        <div className="bg-gray-50 rounded-xl p-4">
+      <div className="min-w-0">
+        <div className="bg-gray-50 rounded-xl px-4 pb-4">
         <PdfViewer
           file={file}
           fields={fields}
@@ -119,7 +99,7 @@ export function PlaceStep(props: Props) {
         </div>
       </div>
 
-      <div className="lg:col-span-4 flex justify-between items-center pt-2">
+      <div className="lg:col-span-2 flex justify-between items-center pt-2">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
@@ -137,48 +117,6 @@ export function PlaceStep(props: Props) {
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Ligne de checklist (zone placée / en cours / à venir) — cliquable : elle
- * fait à la fois office d'indicateur de progression ET de sélecteur du
- * signataire actif (fusion des deux blocs qui se chevauchaient auparavant).
- */
-function ChecklistItem({
-  done, active, hex, label, onClick,
-}: {
-  done: boolean;
-  active: boolean;
-  hex: string;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 -mx-2 transition-colors ${
-        active ? "bg-gray-50" : "hover:bg-gray-50"
-      }`}
-    >
-      {done ? (
-        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-      ) : (
-        <span
-          className={`w-4 h-4 shrink-0 rounded-full border-2 ${active ? "animate-pulse" : "opacity-40"}`}
-          style={{ borderColor: hex }}
-        />
-      )}
-      <span className={`text-xs text-left ${done ? "text-gray-400 line-through" : active ? "font-semibold text-gray-800" : "text-gray-500"}`}>
-        {label}
-      </span>
-      {active && (
-        <span className="ml-auto text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: hex }}>
-          {done ? "prochain clic" : "en cours"}
-        </span>
-      )}
-    </button>
   );
 }
 

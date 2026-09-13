@@ -58,8 +58,8 @@ export function SignStep(props: Props) {
   const counterColor = signers.find((s) => s.role === "counterparty")?.hex ?? "#10b981";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <aside className="lg:col-span-1 space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
+      <aside className="space-y-4">
         {/* Guidage : une consigne à la fois, selon l'avancement */}
         {!allSelfSigned && (
           <GuideCard hex={selfColor} icon={MousePointerClick} title="Signez le contrat">
@@ -122,8 +122,8 @@ export function SignStep(props: Props) {
         </button>
       </aside>
 
-      <div className="lg:col-span-3">
-        <div className="bg-gray-50 rounded-xl p-4">
+      <div className="min-w-0">
+        <div className="bg-gray-50 rounded-xl px-4 pb-4">
           <PdfViewer
             file={file}
             fields={fields}
