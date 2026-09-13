@@ -219,9 +219,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               <span className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <Sparkles className="h-4 w-4 text-brand" /> Générer maintenant
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                Le contrat est rédigé tout de suite avec ce que vous avez indiqué.
-                Les informations manquantes seront à compléter dans l’éditeur.
+              <span className="mt-0.5 block truncate text-[11px] text-ink-subtle">
+                Rédigé tout de suite, à compléter dans l’éditeur.
               </span>
             </button>
             <button
@@ -231,9 +230,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               <span className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <ListChecks className="h-4 w-4 text-brand" /> Personnaliser davantage
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                Quelques questions simples sur le contenu du contrat — paiement, résiliation,
-                responsabilités… — pour un contrat sur mesure. Environ 2 minutes.
+              <span className="mt-0.5 block truncate text-[11px] text-ink-subtle">
+                Quelques questions simples pour un contrat sur mesure.
               </span>
             </button>
             {error && <p className="text-xs text-danger">{error}</p>}
