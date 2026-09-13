@@ -9,7 +9,6 @@ import {
   Newspaper,
   Library,
   ChevronDown,
-  Droplets,
   BookOpen,
   Upload,
   ScrollText,
