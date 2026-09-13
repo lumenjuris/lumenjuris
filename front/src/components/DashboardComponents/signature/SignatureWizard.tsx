@@ -220,15 +220,12 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Signature électronique</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Préparez, placez les zones de signature et envoyez à votre cocontractant.
-        </p>
+    <div className="mx-auto w-full max-w-6xl space-y-5">
+      {/* Bandeau bleu compact, homogène avec les autres pages : titre + étapes sur une ligne */}
+      <header className="flex flex-col gap-3 rounded-2xl bg-blue-primary px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-white">Signature électronique</h1>
+        <Stepper current={step} />
       </header>
-
-      <Stepper current={step} />
 
       {step === "prepare" && (
         <PrepareStep

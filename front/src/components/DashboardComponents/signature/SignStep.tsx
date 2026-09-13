@@ -37,6 +37,9 @@ interface Props {
  * Étape 3 du wizard — l'émetteur signe ses propres champs, renseigne les
  * coordonnées des deux signataires, puis envoie le contrat. L'envoi persiste
  * l'enveloppe en base via le proxy (voir SignatureWizard.handleSend).
+ *
+ * Toutes les consignes vivent dans la colonne de gauche : le document garde
+ * toute la place, et ses zones à signer y sont mises en avant.
  */
 export function SignStep(props: Props) {
   if (props.sent) {
@@ -57,6 +60,24 @@ export function SignStep(props: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <aside className="lg:col-span-1 space-y-4">
+        {/* Guidage : une consigne à la fois, selon l'avancement */}
+        {!allSelfSigned && (
+          <GuideCard hex={selfColor} icon={MousePointerClick} title="Signez le contrat">
+            Cliquez sur <strong>votre zone de signature</strong>, en clair sur le document.
+          </GuideCard>
+        )}
+        {allSelfSigned && !recipientFormValid && (
+          <GuideCard hex="#059669" icon={CheckCircle2} title="Signé !">
+            Renseignez maintenant le nom et l'e-mail du cocontractant, ci-dessous,
+            pour lui envoyer le contrat.
+          </GuideCard>
+        )}
+        {canSend && (
+          <GuideCard hex="#059669" icon={Send} title="Tout est prêt">
+            Cliquez sur « Envoyer au cocontractant ». Il recevra un e-mail pour signer à son tour.
+          </GuideCard>
+        )}
+
         <ProgressCard
           selfSigned={selfSigned}
           selfTotal={selfFields.length}
@@ -101,27 +122,7 @@ export function SignStep(props: Props) {
         </button>
       </aside>
 
-      <div className="lg:col-span-3 space-y-3">
-        {/* Guidage : une consigne à la fois, selon l'avancement */}
-        {!allSelfSigned && (
-          <div className="flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm text-gray-800"
-            style={{ borderColor: selfColor + "55", backgroundColor: selfColor + "10" }}>
-            <MousePointerClick className="w-4 h-4 shrink-0" style={{ color: selfColor }} />
-            <span><strong>Signez d'abord :</strong>&nbsp;cliquez sur votre zone de signature dans le document.</span>
-          </div>
-        )}
-        {allSelfSigned && !recipientFormValid && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span><strong>Signé !</strong>&nbsp;Renseignez maintenant le nom et l'e-mail du cocontractant (à gauche) pour lui envoyer le contrat.</span>
-          </div>
-        )}
-        {canSend && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <Send className="w-4 h-4 shrink-0" />
-            <span><strong>Tout est prêt :</strong>&nbsp;cliquez sur « Envoyer au cocontractant ». Il recevra un e-mail pour signer à son tour.</span>
-          </div>
-        )}
+      <div className="lg:col-span-3">
         <div className="bg-gray-50 rounded-xl p-4">
           <PdfViewer
             file={file}
@@ -131,6 +132,8 @@ export function SignStep(props: Props) {
             onFieldClick={props.onFieldClick}
             onLoaded={props.onNumPagesLoaded}
             startOnLastPage
+            spotlight={(f) => f.signer === "self" && !f.value}
+            spotlightLabel="Cliquez pour signer"
           />
         </div>
       </div>
@@ -139,6 +142,29 @@ export function SignStep(props: Props) {
 }
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
+
+/** Carte de consigne en tête de la colonne de gauche (même style que l'étape « Placer »). */
+function GuideCard({ hex, icon: Icon, title, children }: {
+  hex: string;
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-xl border-2 p-4 shadow-sm"
+      style={{ borderColor: hex + "66", backgroundColor: hex + "0d" }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: hex }}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <p className="text-sm font-bold text-gray-900">{title}</p>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-gray-700">{children}</p>
+    </div>
+  );
+}
 
 /** Carte "Votre progression" + barres self/cocontractant. */
 function ProgressCard({

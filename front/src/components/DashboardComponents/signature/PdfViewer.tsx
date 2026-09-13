@@ -30,6 +30,10 @@ interface Props {
   onLoaded?: (numPages: number) => void;
   /** Ouvre le document sur sa dernière page (là où l'on signe) plutôt que sur la première. */
   startOnLastPage?: boolean;
+  /** Champs mis en avant : la page est grisée sauf à leur emplacement. */
+  spotlight?: (field: Field) => boolean;
+  /** Étiquette affichée au-dessus de chaque champ mis en avant. */
+  spotlightLabel?: string;
 }
 
 // Dimensions par défaut des champs (en pourcentage de la page)
@@ -53,7 +57,7 @@ const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
  */
 export function PdfViewer(props: Props) {
   const { file, fields, signers, mode, activeFieldType, activeSignerRole, replicateAllPages,
-          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, startOnLastPage } = props;
+          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, startOnLastPage, spotlight, spotlightLabel } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -102,6 +106,7 @@ export function PdfViewer(props: Props) {
   }
 
   const visibleFields = filterFieldsForPage(fields, currentPage);
+  const spotlitFields = spotlight ? visibleFields.filter(spotlight) : [];
 
   return (
     <div className="flex flex-col items-center" ref={containerRef}>
@@ -129,6 +134,8 @@ export function PdfViewer(props: Props) {
             renderAnnotationLayer={false}
           />
         </Document>
+
+        {spotlitFields.length > 0 && <SpotlightLayer fields={spotlitFields} label={spotlightLabel} />}
 
         {visibleFields.map((f) => {
           const signer = signers.find((s) => s.role === f.signer) ?? signers[0];
@@ -179,6 +186,49 @@ function PageNavigator({
         <ChevronRight className="w-4 h-4" />
       </button>
     </div>
+  );
+}
+
+/**
+ * Grise la page sauf à l'emplacement des champs à traiter, qui restent en
+ * clair, et affiche une étiquette animée au-dessus de chacun : on voit tout de
+ * suite où agir. Ne capte aucun clic (placement et signature restent possibles).
+ */
+function SpotlightLayer({ fields, label }: { fields: Field[]; label?: string }) {
+  const pad = 0.012;
+  return (
+    <>
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <mask id="signature-spotlight">
+            <rect x="0" y="0" width="100" height="100" fill="white" />
+            {fields.map((f) => (
+              <rect
+                key={f.id}
+                x={(f.xPct - pad) * 100}
+                y={(f.yPct - pad) * 100}
+                width={(f.widthPct + pad * 2) * 100}
+                height={(f.heightPct + pad * 2) * 100}
+                rx="1"
+                fill="black"
+              />
+            ))}
+          </mask>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" fill="rgba(15, 23, 42, 0.45)" mask="url(#signature-spotlight)" />
+      </svg>
+      {label && fields.map((f) => (
+        <div
+          key={f.id}
+          className="pointer-events-none absolute z-10 -translate-y-full pb-1.5"
+          style={{ left: `${f.xPct * 100}%`, top: `${f.yPct * 100}%`, width: `${f.widthPct * 100}%` }}
+        >
+          <span className="mx-auto flex w-max items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-gray-900 shadow-lg animate-bounce">
+            {label}
+          </span>
+        </div>
+      ))}
+    </>
   );
 }
 

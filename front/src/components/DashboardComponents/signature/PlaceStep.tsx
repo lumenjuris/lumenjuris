@@ -113,6 +113,8 @@ export function PlaceStep(props: Props) {
           onFieldRemove={onFieldRemove}
           onLoaded={onNumPagesLoaded}
           startOnLastPage
+          spotlight={() => true}
+          spotlightLabel="Glissez pour déplacer"
         />
         </div>
       </div>
