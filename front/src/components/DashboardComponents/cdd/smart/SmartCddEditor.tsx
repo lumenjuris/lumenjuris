@@ -28,7 +28,6 @@ import { instructClause, instructContract, verifyConvention } from "./clauseAi";
 import { contractApi } from "../../contratheque/api";
 import { negotiationApi } from "../../negotiation/api";
 import { ShareContractPanel, guessSide, SIDE_CYCLE, type ShareMode } from "../../negotiation/ShareContractPanel";
-import { PipelineStepBar } from "../../negotiation/PipelineStepBar";
 import type { FieldSide } from "../../negotiation/types";
 import { fetchProxy } from "../../../../utils/fetchProxy";
 
@@ -368,7 +367,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMode, setShareMode] = useState<ShareMode>("choice");
   const [shareSides, setShareSides] = useState<Record<string, FieldSide>>({});
-  const [sharedNego, setSharedNego] = useState<{ id: string; mode: "NEGOTIATION" | "COMPLETION" } | null>(null);
+  // Négociation créée par le partage — conservée pour le panneau de partage
+  // (la barre d'étapes qui l'affichait a été retirée de l'éditeur).
+  const [, setSharedNego] = useState<{ id: string; mode: "NEGOTIATION" | "COMPLETION" } | null>(null);
 
 
   /** Ouvre le panneau de partage en (ré)initialisant l'assignation heuristique
@@ -701,26 +702,12 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         headerSlot,
       )}
 
-      {/* Fil de l'expérience : Rédiger → Compléter → Partager → Signer */}
-      <div className="mb-4">
-        <PipelineStepBar
-          state={{
-            filled: model.variables.filter((v) => isFilled(v.id)).length,
-            total: model.variables.length,
-            shared: Boolean(sharedNego),
-            sharedMode: sharedNego?.mode,
-          }}
-          onShare={openShare}
-          onSign={goSignature}
-          onFollow={() => sharedNego && navigate(`/negociation/${sharedNego.id}`)}
-        />
-      </div>
 
       {/* Corps : panneau latéral + éditeur. En mode partage, la colonne
           s'élargit pour accueillir le panneau (on reste sur le contrat). */}
       <div className={`grid grid-cols-1 items-start gap-6 ${shareOpen ? "lg:grid-cols-[19rem_minmax(0,1fr)]" : "lg:grid-cols-[16rem_minmax(0,1fr)]"}`}>
         {shareOpen && <div aria-hidden className="fixed inset-x-0 top-12 bottom-0 z-[25] bg-ink/[0.03] pointer-events-none" />}
-        <aside className={`space-y-4 self-start lg:sticky lg:top-[3.5rem] lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
+        <aside className={`space-y-4 self-start lg:sticky lg:top-12 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
           {shareOpen && (
             <ShareContractPanel
               onClose={() => setShareOpen(false)}
