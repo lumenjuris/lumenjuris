@@ -1,6 +1,5 @@
-import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, Clock, AtSign, UserRound, Pencil } from "lucide-react";
+import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, AtSign, UserRound, Pencil } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
-import { SignProgress } from "./SignProgress";
 import { GuidePanel } from "./GuidePanel";
 import { getGuideContent } from "./guide";
 import type { GuidePhase } from "./guide";
@@ -43,13 +42,12 @@ interface Props {
 }
 
 /**
- * Étape 2 du parcours visible — l'émetteur signe ses propres zones, renseigne
- * les coordonnées du cocontractant, puis envoie le contrat.
+ * Étapes 2 et 3 du parcours visible — l'émetteur signe ses propres zones,
+ * renseigne les coordonnées du cocontractant, puis envoie le contrat.
  *
- * Même organisation que l'étape de placement : guide contextuel sticky à
- * gauche (étape en cours → action attendue → étape suivante), document à
- * droite. Le guide évolue seul à chaque action : signature apposée →
- * coordonnées → envoi.
+ * Même organisation que l'étape de placement : repère d'étape sticky à gauche
+ * (bandeau + titre, qui évoluent seuls : signature apposée → destinataire →
+ * envoi), document à droite.
  *
  * Sur le document, les zones restant à signer sont mises en avant (overlay +
  * étiquette « Cliquez pour signer » qui rebondit) : utile si l'utilisateur a
@@ -66,9 +64,7 @@ export function SignStep(props: Props) {
 
   const { file, fields, signers, allSelfSigned, recipientFormValid, canSend, sending, sendError } = props;
   const selfFields = fields.filter((f) => f.signer === "self");
-  const counterFields = fields.filter((f) => f.signer === "counterparty");
-  const selfSigned = selfFields.filter((f) => !!f.value).length;
-  const selfColor = signers.find((s) => s.role === "self")?.hex ?? "#4f46e5";
+  const selfColor = signers.find((s) => s.role === "self")?.hex ?? "bg-blue-primay";
   const counterColor = signers.find((s) => s.role === "counterparty")?.hex ?? "#10b981";
 
   // Phase du guidage : elle suit l'avancement réel de la signature et de l'envoi.
@@ -87,15 +83,7 @@ export function SignStep(props: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
       <aside className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
-        <GuidePanel content={guide} accentHex={accentHex} documentName={file?.name}>
-          <ProgressCard
-            selfSigned={selfSigned}
-            selfTotal={selfFields.length}
-            counterTotal={counterFields.length}
-            selfColor={selfColor}
-            counterColor={counterColor}
-          />
-
+        <GuidePanel content={guide} accentHex={accentHex}>
           {/* Destinataire : saisi dans une modale, rappelé ici pour relecture */}
           {allSelfSigned && (
             <RecipientCard
@@ -155,33 +143,6 @@ export function SignStep(props: Props) {
 }
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
-
-/** Carte "Votre progression" + barres self/cocontractant. */
-function ProgressCard({
-  selfSigned, selfTotal, counterTotal, selfColor, counterColor,
-}: {
-  selfSigned: number;
-  selfTotal: number;
-  counterTotal: number;
-  selfColor: string;
-  counterColor: string;
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Votre progression</p>
-      <SignProgress title="Vous" done={selfSigned} total={selfTotal} color={selfColor} />
-      {/* Le cocontractant ne signe pas ici : il recevra un email après l'envoi. */}
-      <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
-        <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: counterColor }} />
-        <p className="text-[11px] leading-snug text-gray-500">
-          <span className="font-semibold text-gray-700">Cocontractant</span>
-          {counterTotal > 0 ? ` — ${counterTotal} zone${counterTotal > 1 ? "s" : ""} à signer.` : " — "}
-          Il signera de son côté, après réception de l'e-mail.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Rappel du destinataire choisi + rappel de l'expéditeur.

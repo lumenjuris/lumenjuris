@@ -10,9 +10,8 @@ import type { SignerRole } from "./types";
  *   3. Envoyer
  *
  * Chaque état réel du wizard est traduit en une "phase". À chaque phase
- * correspond une seule consigne : ce qu'il faut faire maintenant, et ce qui
- * viendra juste après. Le panneau de gauche suit ainsi la progression réelle
- * au lieu d'afficher une notice statique.
+ * correspond un numéro d'étape et un titre : le panneau de gauche suit ainsi
+ * la progression réelle au lieu d'afficher une notice statique.
  */
 export type GuidePhase =
   /** Étape 1 — aucune zone posée pour l'émetteur. */
@@ -31,19 +30,13 @@ export type GuidePhase =
 export interface GuideContent {
   /** Numéro d'étape affiché dans le bandeau ("Étape 1 sur 3"). */
   stepNumber: GuideStepNumber;
-  /** Titre de l'étape en cours. */
+  /** Titre de ce qu'il y a à faire maintenant. */
   title: string;
-  /** Action attendue maintenant — une seule phrase, à l'impératif. */
-  action: string;
-  /** Ce qu'il restera à faire ensuite (null = dernière action du parcours). */
-  next: string | null;
-  /** Signataire concerné par l'action — sert à colorer le panneau. */
+  /** Signataire concerné — sert à colorer le bandeau d'étape. */
   signer: SignerRole | null;
-  /** Vrai quand l'action attendue est un clic dans le document. */
-  pointsToDocument: boolean;
 }
 
-/** Libellés des étapes visibles, affichés dans le fil de progression. */
+/** Libellés des étapes visibles du parcours, dans l'ordre. */
 export const GUIDE_STEP_LABELS = [
   "Placez les zones de signature",
   "Signez",
@@ -59,66 +52,20 @@ export const GUIDE_STEP_TOTAL = GUIDE_STEP_LABELS.length;
 /** Index d'étape, 1-based : 1 = premier libellé de `GUIDE_STEP_LABELS`. */
 export type GuideStepNumber = 1 | 2 | 3;
 
-/** Traduit l'état du wizard en consigne unique à afficher à gauche. */
+/** Traduit l'état du wizard en étape + titre à afficher à gauche. */
 export function getGuideContent(phase: GuidePhase): GuideContent {
   switch (phase) {
     case "place-self":
-      return {
-        stepNumber: 1,
-        title: "Placez votre zone de signature",
-        action: "Cliquez dans le contrat à l'endroit où vous signerez.",
-        next: "Placer la zone du cocontractant",
-        signer: "self",
-        pointsToDocument: true,
-      };
+      return { stepNumber: 1, title: "Placez votre zone de signature", signer: "self" };
     case "place-counterparty":
-      return {
-        stepNumber: 1,
-        title: "Placez la zone du cocontractant",
-        action: "Cliquez à l'endroit où votre cocontractant signera.",
-        next: "Apposer votre signature",
-        signer: "counterparty",
-        pointsToDocument: true,
-      };
+      return { stepNumber: 1, title: "Placez la zone du cocontractant", signer: "counterparty" };
     case "place-ready":
-      return {
-        stepNumber: 1,
-        title: "Les deux zones sont placées",
-        action:
-          "Déplacez-les si besoin, puis cliquez sur « Signer ».",
-        next: "Apposer votre signature",
-        signer: null,
-        pointsToDocument: false,
-      };
+      return { stepNumber: 1, title: "Les deux zones sont placées", signer: null };
     case "sign-self":
-      return {
-        stepNumber: 2,
-        title: "Apposez votre signature",
-        action:
-          "Dessinez ou saisissez votre signature dans la fenêtre qui s'ouvre. Si vous l'avez fermée, cliquez sur votre zone dans le document.",
-        next: "Indiquer à qui envoyer le contrat",
-        signer: "self",
-        pointsToDocument: true,
-      };
+      return { stepNumber: 2, title: "Apposez votre signature", signer: "self" };
     case "sign-recipient":
-      return {
-        stepNumber: 3,
-        title: "Indiquez à qui envoyer le contrat",
-        action:
-          "Renseignez le nom et l'e-mail de votre cocontractant dans la fenêtre qui s'ouvre. Si vous l'avez fermée, utilisez « Indiquer le destinataire » ci-dessous.",
-        next: "Envoyer le contrat pour signature",
-        signer: "counterparty",
-        pointsToDocument: false,
-      };
+      return { stepNumber: 3, title: "Indiquez à qui envoyer le contrat", signer: "counterparty" };
     case "sign-send":
-      return {
-        stepNumber: 3,
-        title: "Tout est prêt",
-        action:
-          "Cliquez sur « Envoyer » : votre cocontractant recevra un e-mail pour signer à son tour.",
-        next: null,
-        signer: null,
-        pointsToDocument: false,
-      };
+      return { stepNumber: 3, title: "Tout est prêt", signer: null };
   }
 }

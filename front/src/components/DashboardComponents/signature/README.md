@@ -53,14 +53,15 @@ numéro dans `getGuideContent`.
 
 `guide.ts` traduit l'état réel du wizard en une **phase** (`place-self`,
 `place-counterparty`, `place-ready`, `sign-self`, `sign-recipient`,
-`sign-send`). À chaque phase correspond une seule consigne : étape en cours →
-action attendue maintenant → étape suivante.
+`sign-send`). À chaque phase correspondent un numéro d'étape et un titre.
 
-`GuidePanel.tsx` affiche cette consigne en haut de la colonne de gauche, avec
-le bandeau « Étape X sur N » tout en haut (premier point de regard), puis les
-blocs secondaires (checklist des zones, options, formulaire destinataire,
-boutons d'action) passés en `children`. La colonne est `sticky` : les
-instructions restent visibles pendant qu'on descend dans le document.
+`GuidePanel.tsx` les affiche en haut de la colonne de gauche — bandeau
+« Étape X sur N » puis titre, volontairement sans texte d'explication : les
+indications détaillées sont portées par le document (étiquettes animées
+au-dessus des zones) et par les modales qui s'enchaînent. Viennent ensuite les
+blocs secondaires (checklist des zones, options, destinataire, boutons
+d'action) passés en `children`. La colonne est `sticky` : le repère d'étape
+reste visible pendant qu'on descend dans le document.
 
 Conséquence sur l'organisation de l'écran : plus aucun bandeau de consigne
 au-dessus du PDF et un en-tête de page réduit à une ligne — le document
@@ -160,14 +161,13 @@ signature/
 ├── SignatureDashboard.tsx     ← vue tableau de bord (KPIs + liste)
 ├── SignatureWizard.tsx        ← wizard 3 étapes (état + appels API)
 │
-├── guide.ts                   ← phases du parcours + consigne de chaque phase
-├── GuidePanel.tsx             ← colonne de gauche (bandeau d'étape + consignes)
+├── guide.ts                   ← phases du parcours + étape et titre de chacune
+├── GuidePanel.tsx             ← colonne de gauche (bandeau d'étape + titre)
 ├── PrepareStep.tsx            ← dépôt du PDF (sauté le plus souvent)
-├── PlaceStep.tsx              ← étape 1 (placement + suggestion)
+├── PlaceStep.tsx              ← étape 1 (placement + overlay)
 ├── PlaceToolbar.tsx           ← options de l'étape de placement
 ├── SignStep.tsx               ← étapes 2 et 3 (signature, destinataire, envoi)
 ├── RecipientModal.tsx         ← modale « À qui envoyer le contrat ? »
-├── SignProgress.tsx           ← barre de progression "X/Y signés"
 │
 ├── PdfViewer.tsx              ← viewer react-pdf + click-to-place
 ├── FieldOverlay.tsx           ← rendu d'un champ (drag, supprimer, signer)
