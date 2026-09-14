@@ -22,7 +22,8 @@ interface Props {
   onFieldMove: (id: string, xPct: number, yPct: number) => void;
   onFieldRemove: (id: string) => void;
   onNumPagesLoaded: (n: number) => void;
-  onBack: () => void;
+  /** Ouvre le sélecteur de fichier pour remplacer le document en cours. */
+  onChangeDocument: () => void;
   onNext: () => void;
   canGoNext: boolean;
 }
@@ -50,7 +51,7 @@ export function PlaceStep(props: Props) {
     file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
     onSignerChange, onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
-    onBack, onNext, canGoNext,
+    onChangeDocument, onNext, canGoNext,
   } = props;
 
   const hasSelfField = fields.some((f) => f.signer === "self");
@@ -127,7 +128,7 @@ export function PlaceStep(props: Props) {
               Signer <ChevronRight className="w-4 h-4" />
             </button>
             <button
-              onClick={onBack}
+              onClick={onChangeDocument}
               className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Changer de document

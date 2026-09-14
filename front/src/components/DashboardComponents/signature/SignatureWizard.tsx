@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FileText } from "lucide-react";
 import { PrepareStep } from "./PrepareStep";
 import { PlaceStep } from "./PlaceStep";
@@ -54,6 +54,13 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   const [numPages, setNumPages] = useState(0);
   const [signers] = useState<Signer[]>(SIGNERS_DEFAULT);
   const [fields, setFields] = useState<Field[]>([]);
+
+  // « Changer de document » ouvre directement le sélecteur de fichier du
+  // système, sans repasser par la vue de dépôt.
+  const replaceDocumentInputRef = useRef<HTMLInputElement>(null);
+  // Incrémenté à chaque remplacement : sert de `key` à l'étape de placement,
+  // qui repart ainsi de zéro (overlay « Glissez pour déplacer » compris).
+  const [documentVersion, setDocumentVersion] = useState(0);
 
   // Toolbar étape 2 : signataire actif + type de champ armé (null = pas de placement)
   const [activeSignerRole, setActiveSignerRole] = useState<SignerRole>("self");
@@ -114,6 +121,29 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     const removed = fields.find((f) => f.id === id);
     setFields((prev) => prev.filter((f) => f.id !== id));
     if (removed) setActiveSignerRole(removed.signer);
+  }
+
+  /**
+   * Remplace le document en cours par le PDF choisi dans le sélecteur.
+   *
+   * Les zones de l'ancien document n'ont plus de sens (autre mise en page,
+   * autre nombre de pages) : on les vide, et les deux zones par défaut sont
+   * reposées au chargement du nouveau PDF. La signature déjà capturée est
+   * conservée — elle ne dépend pas du document.
+   */
+  function handleReplaceDocument(event: React.ChangeEvent<HTMLInputElement>) {
+    const chosenFile = event.target.files?.[0];
+    // Remis à zéro pour qu'un second choix du même fichier redéclenche l'événement.
+    event.target.value = "";
+    if (!chosenFile) return; // sélecteur fermé sans choix : on ne touche à rien
+    const isPdf = chosenFile.type === "application/pdf" || /\.pdf$/i.test(chosenFile.name);
+    if (!isPdf) return;
+
+    setFile(chosenFile);
+    setFields([]);
+    setNumPages(0);
+    setActiveSignerRole("self");
+    setDocumentVersion((version) => version + 1);
   }
 
   /**
@@ -275,6 +305,14 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
 
   return (
     <div className="space-y-4 max-w-7xl m-auto">
+      <input
+        ref={replaceDocumentInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={handleReplaceDocument}
+      />
+
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
@@ -305,6 +343,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
 
       {step === "place" && (
         <PlaceStep
+          key={documentVersion}
           file={file}
           fields={fields}
           signers={signers}
@@ -328,7 +367,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
               { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
             ]));
           }}
-          onBack={() => setStep("prepare")}
+          onChangeDocument={() => replaceDocumentInputRef.current?.click()}
           onNext={goToSignStep}
           canGoNext={canGoToSign}
         />
