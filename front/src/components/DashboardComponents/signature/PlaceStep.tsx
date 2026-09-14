@@ -22,7 +22,8 @@ interface Props {
   onFieldMove: (id: string, xPct: number, yPct: number) => void;
   onFieldRemove: (id: string) => void;
   onNumPagesLoaded: (n: number) => void;
-  onBack: () => void;
+  /** Ouvre le sélecteur de fichier pour remplacer le document en cours. */
+  onChangeDocument: () => void;
   onNext: () => void;
   canGoNext: boolean;
 }
@@ -50,7 +51,7 @@ export function PlaceStep(props: Props) {
     file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
     onSignerChange, onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
-    onBack, onNext, canGoNext,
+    onChangeDocument, onNext, canGoNext,
   } = props;
 
   const hasSelfField = fields.some((f) => f.signer === "self");
@@ -85,28 +86,32 @@ export function PlaceStep(props: Props) {
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
       {/* Colonne de gauche : sticky, elle accompagne l'utilisateur pendant le scroll */}
       <div className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
-        <GuidePanel content={guide} accentHex={accentHex} documentName={file?.name}>
-          {/* Checklist des zones — sous le bandeau d'étape, jamais au-dessus */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
-            <ChecklistItem
-              done={hasSelfField}
-              active={activeSignerRole === "self"}
-              hex={selfSigner?.hex ?? "#4f46e5"}
-              label="1. Votre signature"
-              onClick={() => onSignerChange("self")}
-            />
-            <ChecklistItem
-              done={hasCounterpartyField}
-              active={activeSignerRole === "counterparty"}
-              hex={counterSigner?.hex ?? "#10b981"}
-              label="2. Signature du cocontractant"
-              onClick={() => onSignerChange("counterparty")}
-            />
-            <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
-              Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
-            </p>
-          </div>
+        <GuidePanel content={guide} accentHex={accentHex}>
+          {/* Checklist des zones — affichée seulement tant qu'il manque une zone :
+              une fois les deux posées, elle n'a plus rien à indiquer. Elle
+              revient d'elle-même si l'utilisateur supprime une zone. */}
+          {phase !== "place-ready" && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
+              <ChecklistItem
+                done={hasSelfField}
+                active={activeSignerRole === "self"}
+                hex={selfSigner?.hex ?? "#4f46e5"}
+                label="1. Votre signature"
+                onClick={() => onSignerChange("self")}
+              />
+              <ChecklistItem
+                done={hasCounterpartyField}
+                active={activeSignerRole === "counterparty"}
+                hex={counterSigner?.hex ?? "#10b981"}
+                label="2. Signature du cocontractant"
+                onClick={() => onSignerChange("counterparty")}
+              />
+              <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
+                Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
+              </p>
+            </div>
+          )}
 
           <PlaceToolbar
             armedFieldType={armedFieldType}
@@ -127,7 +132,7 @@ export function PlaceStep(props: Props) {
               Signer <ChevronRight className="w-4 h-4" />
             </button>
             <button
-              onClick={onBack}
+              onClick={onChangeDocument}
               className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Changer de document
