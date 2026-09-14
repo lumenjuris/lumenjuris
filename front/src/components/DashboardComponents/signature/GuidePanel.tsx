@@ -13,10 +13,12 @@ interface Props {
 /**
  * Colonne de gauche du wizard : repère d'étape permanent.
  *
- * Volontairement réduit à l'essentiel : le bandeau « Étape X sur N » et le
- * titre de ce qu'il y a à faire. Les indications détaillées sont portées par
- * le document lui-même (étiquettes animées au-dessus des zones) et par les
- * modales qui s'enchaînent.
+ * Volontairement réduit à l'essentiel : le bandeau « Étape X sur N », le
+ * titre de ce qu'il y a à faire et une phrase de consigne. Les indications
+ * détaillées restent portées par le document (étiquettes animées au-dessus
+ * des zones) et par les modales — mais ces étiquettes sont souvent hors de
+ * l'écran, en bas de page : sans la consigne, l'utilisateur ne savait pas
+ * quoi faire à l'étape 1.
  *
  * La colonne est rendue `sticky` par l'étape qui l'utilise : le repère reste
  * visible quand l'utilisateur descend dans le document.
@@ -32,7 +34,10 @@ export function GuidePanel({ content, accentHex, children }: Props) {
           </span>
         </div>
 
-        <p className="p-4 text-sm font-bold text-gray-900 leading-snug">{content.title}</p>
+        <div className="p-4 space-y-1.5">
+          <p className="text-sm font-bold text-gray-900 leading-snug">{content.title}</p>
+          <p className="text-xs text-gray-600 leading-relaxed">{content.hint}</p>
+        </div>
       </div>
 
       {children}
