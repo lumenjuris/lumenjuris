@@ -108,7 +108,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
    * Supprime une zone et rebascule le signataire actif sur celui dont la zone
    * vient d'être retirée : après une suppression, le geste suivant est presque
    * toujours d'en reposer une pour cette même partie (on la replace ailleurs).
-   * La checklist et la zone suggérée suivent automatiquement.
+   * La checklist et le guide de gauche suivent automatiquement.
    */
   function removeField(id: string) {
     const removed = fields.find((f) => f.id === id);
@@ -277,7 +277,8 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     <div className="space-y-4 max-w-6xl">
       {/* En-tête volontairement compact : la priorité de l'écran est le
           document et l'action en cours, pas le titre de la page. Le repère
-          « Étape X sur N » vit en haut de la colonne de gauche. */}
+          « Étape X sur N » vit en haut de la colonne de gauche — un second
+          indicateur d'étapes ici afficherait une numérotation concurrente. */}
       <header className="flex items-center gap-2 min-w-0">
         <h1 className="text-lg font-bold text-gray-900 tracking-tight shrink-0">
           Signature électronique
@@ -307,7 +308,6 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           file={file}
           fields={fields}
           signers={signers}
-          numPages={numPages}
           activeSignerRole={activeSignerRole}
           armedFieldType={armedFieldType}
           replicateAllPages={replicateAllPages}
@@ -317,7 +317,17 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           onFieldAdd={addField}
           onFieldMove={moveField}
           onFieldRemove={removeField}
-          onNumPagesLoaded={setNumPages}
+          onNumPagesLoaded={(n) => {
+            setNumPages(n);
+            // Première ouverture : les deux zones sont suggérées d'emblée en bas
+            // de la dernière page (où l'on signe habituellement) — il ne reste
+            // qu'à les glisser si besoin. Jamais si des zones existent déjà.
+            const last = Math.max(0, n - 1);
+            setFields((prev) => (prev.length > 0 ? prev : [
+              { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
+              { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
+            ]));
+          }}
           onBack={() => setStep("prepare")}
           onNext={goToSignStep}
           canGoNext={canGoToSign}

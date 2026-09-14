@@ -81,17 +81,26 @@ Layout : guide + checklist à gauche (1/4, sticky) + document à droite (3/4).
 La signature se trouve en fin de contrat dans la quasi-totalité des cas —
 l'utilisateur n'a donc rien à chercher.
 
-**Zone suggérée** : `PlaceStep.buildSuggestedField` propose une zone en bas de
-la dernière page pour le signataire actif (à gauche pour l'émetteur, à droite
-pour le cocontractant). Elle est dessinée en pointillés par `PdfViewer` et
-n'est posée que si l'utilisateur clique dessus — rien n'est imposé, il peut
-cliquer ailleurs. Elle disparaît dès que ce signataire a une zone.
+**Zones pré-placées** : au chargement du PDF, `SignatureWizard` pose d'emblée
+les deux zones en bas de la dernière page (à gauche pour l'émetteur, à droite
+pour le cocontractant). Ce sont de vraies zones : déplaçables et supprimables.
+Rien n'est imposé, l'utilisateur peut aussi cliquer ailleurs pour en ajouter.
+
+**Overlay de mise en avant** (`PdfViewer`, props `spotlight` / `spotlightLabel`) :
+la page est grisée sauf autour des zones concernées, et une étiquette rebondit
+au-dessus de chacune. Il ne capte aucun clic.
+- placement : toutes les zones, étiquette « Glissez pour déplacer », jusqu'au
+  premier déplacement ;
+- signature : les zones de l'émetteur non signées, étiquette « Cliquez pour
+  signer » — utile si la modale de signature ouverte automatiquement a été
+  fermée.
 
 **Mécanique de placement** :
 1. Le mode placement est toujours armé sur `signature`
 2. Un clic sur le PDF dépose un champ centré sur le clic
 3. Dès que la zone de l'émetteur est posée, le signataire actif bascule
-   automatiquement sur « Cocontractant » (et la suggestion suit)
+   automatiquement sur « Cocontractant »
+4. Supprimer une zone rebascule le signataire actif sur la partie concernée
 
 Les champs déposés restent déplaçables et supprimables.
 

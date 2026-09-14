@@ -50,6 +50,10 @@ interface Props {
  * gauche (étape en cours → action attendue → étape suivante), document à
  * droite. Le guide évolue seul à chaque action : signature apposée →
  * coordonnées → envoi.
+ *
+ * Sur le document, les zones restant à signer sont mises en avant (overlay +
+ * étiquette « Cliquez pour signer » qui rebondit) : utile si l'utilisateur a
+ * fermé la modale de signature ouverte automatiquement à l'arrivée.
  */
 export function SignStep(props: Props) {
   if (props.sent) {
@@ -132,13 +136,15 @@ export function SignStep(props: Props) {
       </aside>
 
       <div className="lg:col-span-3">
-        <div className="bg-gray-50 rounded-xl p-4">
+        <div className="bg-gray-50 rounded-xl px-4 pb-4">
           <PdfViewer
             file={file}
             fields={fields}
             signers={signers}
             mode="sign"
             initialPage={firstUnsignedSelf ? firstUnsignedSelf.page : "last"}
+            spotlight={(f) => f.signer === "self" && !f.value}
+            spotlightLabel="Cliquez pour signer"
             onFieldClick={props.onFieldClick}
             onLoaded={props.onNumPagesLoaded}
           />

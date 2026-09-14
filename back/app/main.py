@@ -191,7 +191,6 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
         t1 = datetime.now()
         try :
             html_formatte = _extract_html_from_pdf_dict(content)
-            print(html_formatte)
             t2 = datetime.now()
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))

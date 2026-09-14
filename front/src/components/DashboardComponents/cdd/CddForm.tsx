@@ -190,7 +190,7 @@ export function CddForm({ onBack }: { onBack: () => void }) {
   const last = STEPS.length - 1;
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full max-w-3xl">
       <button
         onClick={() => (step > 0 ? setStep((s) => s - 1) : onBack())}
         className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#354F99]"

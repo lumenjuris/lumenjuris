@@ -1,18 +1,16 @@
+import { useState } from "react";
 import { ChevronRight, CheckCircle2, RotateCcw } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
 import { GuidePanel } from "./GuidePanel";
 import { getGuideContent } from "./guide";
 import type { GuidePhase } from "./guide";
-import { DEFAULT_FIELD_SIZE } from "./types";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
 
 interface Props {
   file: File | null;
   fields: Field[];
   signers: Signer[];
-  /** Nombre de pages du PDF (0 tant que le document n'est pas chargé). */
-  numPages: number;
   activeSignerRole: SignerRole;
   /** Type de champ "armé" pour le prochain clic. null = mode placement désactivé. */
   armedFieldType: FieldType | null;
@@ -40,14 +38,16 @@ const BRAND_HEX = "#354F99";
  * document, remonté tout en haut de l'écran puisque toutes les consignes
  * vivent à gauche.
  *
- * Le document s'ouvre sur sa dernière page et une zone de signature est
- * suggérée en bas de celle-ci : c'est là que se trouve la signature dans la
- * quasi-totalité des contrats. Rien n'est imposé — l'utilisateur peut cliquer
- * ailleurs, déplacer ou supprimer les zones.
+ * Le document s'ouvre sur sa dernière page, où le wizard pré-place les deux
+ * zones (c'est là que se trouve la signature dans la quasi-totalité des
+ * contrats). Tant qu'aucune n'a été déplacée, un overlay grise la page autour
+ * d'elles et une étiquette « Glissez pour déplacer » rebondit au-dessus de
+ * chacune. Rien n'est imposé : l'utilisateur peut les déplacer, les supprimer
+ * ou cliquer ailleurs pour en poser d'autres.
  */
 export function PlaceStep(props: Props) {
   const {
-    file, fields, signers, numPages, activeSignerRole, armedFieldType, replicateAllPages,
+    file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
     onSignerChange, onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onBack, onNext, canGoNext,
@@ -72,7 +72,14 @@ export function PlaceStep(props: Props) {
       ? selfSigner?.hex ?? "#4f46e5"
       : BRAND_HEX;
 
-  const suggestedField = buildSuggestedField(activeSignerRole, fields, numPages, replicateAllPages);
+  // Tant qu'aucune zone n'a été déplacée, l'overlay met les zones pré-placées
+  // en avant : on voit d'emblée qu'elles sont là et qu'on peut les glisser.
+  // Au premier déplacement il s'efface — le message est passé.
+  const [hasMovedAField, setHasMovedAField] = useState(false);
+  function handleFieldMove(id: string, xPct: number, yPct: number) {
+    setHasMovedAField(true);
+    onFieldMove(id, xPct, yPct);
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
@@ -131,7 +138,7 @@ export function PlaceStep(props: Props) {
 
       {/* Colonne de droite : le document, en haut de l'écran */}
       <div className="lg:col-span-3">
-        <div className="bg-gray-50 rounded-xl p-4">
+        <div className="bg-gray-50 rounded-xl px-4 pb-4">
           <PdfViewer
             file={file}
             fields={fields}
@@ -141,9 +148,10 @@ export function PlaceStep(props: Props) {
             activeSignerRole={activeSignerRole}
             replicateAllPages={replicateAllPages}
             initialPage="last"
-            suggestedField={suggestedField}
+            spotlight={() => !hasMovedAField}
+            spotlightLabel="Glissez pour déplacer"
             onFieldAdd={onFieldAdd}
-            onFieldMove={onFieldMove}
+            onFieldMove={handleFieldMove}
             onFieldRemove={onFieldRemove}
             onLoaded={onNumPagesLoaded}
           />
@@ -153,35 +161,7 @@ export function PlaceStep(props: Props) {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Zone suggérée pour le signataire actif : en bas de la dernière page, à
- * gauche pour l'émetteur et à droite pour le cocontractant (disposition
- * classique des blocs de signature d'un contrat).
- *
- * Retourne null dès que ce signataire a déjà une zone : la suggestion ne sert
- * qu'à démarrer, elle ne réapparaît pas ensuite.
- */
-function buildSuggestedField(
-  signerRole: SignerRole,
-  fields: Field[],
-  numPages: number,
-  replicateAllPages: boolean,
-): Omit<Field, "id"> | null {
-  if (numPages < 1) return null;
-  if (fields.some((f) => f.signer === signerRole)) return null;
-  return {
-    type: "signature",
-    signer: signerRole,
-    page: numPages - 1,
-    xPct: signerRole === "self" ? 0.1 : 0.6,
-    yPct: 0.78,
-    widthPct: DEFAULT_FIELD_SIZE.widthPct,
-    heightPct: DEFAULT_FIELD_SIZE.heightPct,
-    replicateAllPages,
-  };
-}
+// ─── Sous-composants ──────────────────────────────────────────────────────────
 
 /**
  * Ligne de checklist (zone placée / en cours / à venir) — cliquable : elle

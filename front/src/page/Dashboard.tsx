@@ -5,8 +5,6 @@ import { HeroHeader } from "../components/DashboardComponents/home/HeroHeader";
 import { OnboardingSteps } from "../components/DashboardComponents/home/OnboardingSteps";
 import { UpcomingDeadlines } from "../components/DashboardComponents/home/UpcomingDeadlines";
 import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
-import { ModulesGrid } from "../components/DashboardComponents/home/ModulesGrid";
-import { SubscriptionCard } from "../components/DashboardComponents/home/SubscriptionCard";
 
 /**
  * Page d'accueil (`/dashboard`).
@@ -14,8 +12,7 @@ import { SubscriptionCard } from "../components/DashboardComponents/home/Subscri
  * Une seule colonne, lue de haut en bas : les deux points d'entrée de l'outil
  * (générer / importer un contrat), puis la prise en main tant qu'elle n'est pas
  * terminée, puis les deux informations réellement consultées au retour
- * (échéances et file de travail), puis l'accès aux modules et le suivi de
- * l'abonnement.
+ * (échéances et file de travail).
  *
  * Toutes les données viennent d'un seul chargement (`useDashboardData`).
  */
@@ -43,14 +40,6 @@ export function Dashboard() {
       <TodayQueue items={data.queue} loading={data.loading} />
 
       <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
-
-      <ModulesGrid counts={data.moduleCounts} />
-
-      <SubscriptionCard
-        planName={data.planName}
-        quotas={data.quotas}
-        loading={data.loading}
-      />
 
       <p className="font-serif text-sm italic text-ink-muted">
         Lumen Juris — la clarté contractuelle, en continu.

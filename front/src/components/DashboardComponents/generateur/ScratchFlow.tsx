@@ -2,17 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Loader2, AlertCircle, ChevronLeft, ChevronRight,
-  Sparkles, ListChecks, Paperclip, ShieldCheck, X, FileText,
+  Sparkles, ListChecks, ShieldCheck,
 } from "lucide-react";
 import type { BlockDef, ContractModel, VariableDef } from "../../../contractEngine/types";
 import {
   generateContractQuestions, generateContractDraft, generateContractDraftFromBrief,
-  type WizardQuestion, type ContractDraft, type BriefAttachment, type PartyIdentity,
+  type WizardQuestion, type ContractDraft,
 } from "./contractAi";
-import { contractApi } from "../contratheque/api";
-import { extractDocumentContent } from "../../../utils/documentExtractor";
-import { mapCompanyToContractParty } from "../../../utils/companyLookup";
-import type { CompanyResult } from "../../../types/companySearch";
 
 function slug(s: string): string {
   const o = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -40,16 +36,13 @@ function buildModel(title: string, draft: ContractDraft): ContractModel {
   };
 }
 
-type Step = "mode" | "brief" | "loading" | "asking" | "generating" | "error";
-
-interface Attachment {
-  file: File;
-  status: "extracting" | "ready" | "failed";
-  text: string;
-}
-
-const ACCEPTED = ".pdf,.docx";
-const MAX_ATTACHMENTS = 3;
+/**
+ * Parcours « de zéro » :
+ *  mode      — deux choix : générer tout de suite, ou personnaliser ;
+ *  asking    — questions simples, une par écran, chacune peut être passée ;
+ *              la réponse à la dernière lance directement la rédaction.
+ */
+type Step = "mode" | "loading" | "asking" | "generating" | "error";
 
 export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   title: string;
@@ -65,15 +58,14 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [brief, setBrief] = useState(initialBrief ?? "");
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [parties, setParties] = useState<PartyIdentity[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Article RGPD dans le contrat : proposé par défaut, décochable.
+  const [includeRgpd, setIncludeRgpd] = useState(true);
 
   const opId = useRef(0);
-  const origin = useRef<"brief" | "asking">("brief");
+  // Écran d'où la génération a été lancée : on y revient en cas d'échec ou de retour.
+  const origin = useRef<"mode" | "asking">("mode");
   const lastUrl = useRef("");
-  
+
   const initialStep = (searchParams.get("step") as Step) || "mode";
   const [step, setStep] = useState<Step>(initialStep);
 
@@ -91,19 +83,15 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     }, options);
   };
 
-  const goMode  = () => { setStep("mode"); setError(""); writeUrl({ step: null, q: null }); };
-  const goBrief = () => { setStep("brief"); setError(""); writeUrl({ step: "brief", q: null }); };
-  const goAsk   = (n: number) => { setStep("asking"); setIdx(n); setError(""); writeUrl({ step: "asking", q: n + 1 }); };
+  const goMode = () => { setStep("mode"); setError(""); writeUrl({ step: null, q: null }); };
+  const goAsk  = (n: number) => { setStep("asking"); setIdx(n); setError(""); writeUrl({ step: "asking", q: n + 1 }); };
 
   useEffect(() => {
     setStep("mode");
     setError("");
-    setBrief(initialBrief ?? "");
-    setAttachments([]);
     setQuestions([]);
     setIdx(0);
     setAnswers({});
-    setParties([]);
   }, [title, initialBrief]);
 
   useEffect(() => {
@@ -112,12 +100,6 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     lastUrl.current = currentUrl;
 
     const s = searchParams.get("step") as Step | null;
-
-    if (s === "brief") {
-      setStep("brief");
-      setError("");
-      return;
-    }
 
     if (s === "asking") {
       const currentQuestions = questionsRef.current;
@@ -160,89 +142,32 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     }
   };
 
-  const applyParty = (role: string, result: CompanyResult, siret?: string) => {
-    const p = mapCompanyToContractParty(result, siret);
-    setParties((prev) => [...prev.filter((x) => x.role !== role), { role, ...p }]);
-  };
-
-  function finish(finalAnswers: Record<string, string>) {
-    origin.current = "asking";
-    void runGuided(finalAnswers);
-  }
-
-  function finishBrief() {
-    if (!brief.trim()) return;
-    origin.current = "brief";
-    void runBrief();
-  }
-
-  async function runGuided(finalAnswers: Record<string, string>) {
+  // finalAnswers est passé explicitement : juste après la dernière réponse,
+  // l'état `answers` n'est pas encore mis à jour.
+  async function generate(from: "mode" | "asking", finalAnswers: Record<string, string> = answers) {
     const id = ++opId.current;
+    origin.current = from;
     setStep("generating");
     setError("");
     writeUrl({ step: "generating", q: null });
 
     try {
-      const qa = questions.map((q) => ({ question: q.question, answer: finalAnswers[q.id] ?? "" }));
-      const draft = await generateContractDraft(title, qa, parties);
+      const draft = from === "asking"
+        ? await generateContractDraft(
+            title,
+            questions.map((q) => ({ question: q.question, answer: finalAnswers[q.id] ?? "" })),
+            [],
+            includeRgpd,
+          )
+        : await generateContractDraftFromBrief(title, initialBrief?.trim() || title, [], [], includeRgpd);
       if (opId.current !== id) return;
       onReady({ model: buildModel(title, draft), fileBase: slug(title) });
     } catch {
       if (opId.current !== id) return;
       setError("Échec de la rédaction. Réessayez.");
-      setStep("asking");
+      setStep(from);
+      writeUrl(from === "asking" ? { step: "asking", q: idx + 1 } : { step: null, q: null });
     }
-  }
-
-  async function runBrief() {
-    const id = ++opId.current;
-    setStep("generating");
-    setError("");
-    writeUrl({ step: "generating", q: null });
-
-    try {
-      const docs: BriefAttachment[] = attachments
-        .filter((a) => a.status === "ready" && a.text.trim())
-        .map((a) => ({ name: a.file.name, text: a.text }));
-      const draft = await generateContractDraftFromBrief(title, brief, docs, parties);
-      if (opId.current !== id) return;
-      onReady({ model: buildModel(title, draft), fileBase: slug(title) });
-    } catch {
-      if (opId.current !== id) return;
-      setError("Échec de la rédaction. Réessayez.");
-      setStep("brief");
-    }
-  }
-
-  async function extractAttachment(file: File): Promise<string> {
-    if (/\.pdf$/i.test(file.name)) {
-      try {
-        const r = await extractDocumentContent(file);
-        if (r.text?.trim()) return r.text;
-      } catch { /* repli serveur */ }
-    }
-    const r = await contractApi.extract(file);
-    if (r.ocr_text?.trim()) return r.ocr_text;
-    throw new Error("extraction impossible");
-  }
-
-  function addFiles(list: FileList | null) {
-    if (!list) return;
-    const room = MAX_ATTACHMENTS - attachments.length;
-    const files = Array.from(list)
-      .filter((f) => /\.(pdf|docx)$/i.test(f.name))
-      .slice(0, Math.max(0, room));
-    for (const file of files) {
-      setAttachments((prev) => [...prev, { file, status: "extracting", text: "" }]);
-      void extractAttachment(file)
-        .then((text) => {
-          setAttachments((prev) => prev.map((a) => (a.file === file ? { ...a, status: "ready", text } : a)));
-        })
-        .catch(() => {
-          setAttachments((prev) => prev.map((a) => (a.file === file ? { ...a, status: "failed" } : a)));
-        });
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function answer(value: string) {
@@ -250,22 +175,21 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
     const next = { ...answers, [q.id]: value };
     setAnswers(next);
     if (idx < questions.length - 1) goAsk(idx + 1);
-    else void finish(next);
+    else void generate("asking", next);
   }
 
   const q = questions[idx];
   const total = questions.length;
-  const extracting = attachments.some((a) => a.status === "extracting");
+  const isLast = idx === total - 1;
 
   const backTarget = () => {
     opId.current += 1;
     if (step === "generating") {
-      setStep(origin.current);
-      setError("");
-      writeUrl({ step: origin.current, q: origin.current === "asking" ? idx + 1 : null });
+      if (origin.current === "asking") goAsk(idx);
+      else goMode();
     } else if (step === "asking" && idx > 0) {
       goAsk(idx - 1);
-    } else if (step === "brief" || step === "asking" || step === "loading" || step === "error") {
+    } else if (step === "asking" || step === "loading" || step === "error") {
       goMode();
     } else {
       onBack();
@@ -281,15 +205,22 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
       <div className="rounded-card border border-line bg-white p-6 shadow-card">
         {step === "mode" && (
           <div className="space-y-3">
+            <div className="mb-1">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">Votre contrat</p>
+              <p className="mt-1 text-base font-semibold text-ink">{title}</p>
+              {initialBrief?.trim() && initialBrief.trim() !== title && (
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">« {initialBrief.trim()} »</p>
+              )}
+            </div>
             <button
-              onClick={goBrief}
+              onClick={() => void generate("mode")}
               className="w-full rounded-xl border border-line bg-white p-4 text-left transition-all hover:border-brand/50 hover:bg-brand-light/40 group"
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <Sparkles className="h-4 w-4 text-brand" /> Décrire le besoin
+                <Sparkles className="h-4 w-4 text-brand" /> Générer maintenant
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                Une consigne libre, des pièces jointes si utile. L’outil arbitre le reste.
+              <span className="mt-0.5 block truncate text-[11px] text-ink-subtle">
+                Rédigé tout de suite, à compléter dans l’éditeur.
               </span>
             </button>
             <button
@@ -297,95 +228,30 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               className="w-full rounded-xl border border-line bg-white p-4 text-left transition-all hover:border-brand/50 hover:bg-brand-light/40 group"
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <ListChecks className="h-4 w-4 text-brand" /> Cadrer par questions
+                <ListChecks className="h-4 w-4 text-brand" /> Personnaliser davantage
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
-                4 à 7 choix structurants, un par écran. Vous tranchez, l’outil rédige.
+              <span className="mt-0.5 block truncate text-[11px] text-ink-subtle">
+                Quelques questions simples pour un contrat sur mesure.
               </span>
             </button>
-            <p className="flex items-center gap-1.5 pt-1 text-[11px] text-ink-subtle">
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-brand" />
-              Article RGPD inclus dans chaque contrat.
-            </p>
-          </div>
-        )}
-
-        {step === "brief" && (
-          <div className="space-y-4">
-            <p className="text-base font-semibold text-ink">Votre besoin, en quelques phrases</p>
-            <textarea
-              autoFocus
-              aria-label="Votre besoin, en quelques phrases"
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              rows={6}
-              placeholder={`Ex. « Maintenance informatique pour une PME, facturation mensuelle, intervention sous 48 h, accès distant aux serveurs du client, résiliation avec préavis d’un mois. »`}
-              className="w-full resize-y rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition-all focus:border-brand/40 focus:shadow-ring-brand placeholder:text-ink-placeholder"
-            />
-
-            <div className="space-y-2">
-              {attachments.map((a, i) => (
-                <div key={`${a.file.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-surface-subtle px-3 py-2">
-                  <FileText className="h-4 w-4 shrink-0 text-ink-subtle" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink-secondary">{a.file.name}</span>
-                  {a.status === "extracting" && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-ink-subtle"><Loader2 className="h-3 w-3 animate-spin" /> lecture…</span>
-                  )}
-                  {a.status === "ready" && <span className="text-[11px] font-medium text-success-dark">prêt</span>}
-                  {a.status === "failed" && (
-                    <span className="text-[11px] text-danger" title="Le texte n’a pas pu être lu : ce document ne sera pas pris en compte dans la rédaction.">
-                      illisible — sera ignoré
-                    </span>
-                  )}
-                  <button
-                    onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
-                    className="rounded p-0.5 text-ink-subtle hover:bg-surface-muted hover:text-danger"
-                    title="Retirer"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              {attachments.length < MAX_ATTACHMENTS && (
-                <>
-                  <input ref={fileInputRef} type="file" accept={ACCEPTED} multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    title="3 documents au maximum"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
-                  >
-                    <Paperclip className="h-3.5 w-3.5" /> Joindre un document (PDF, Word)
-                  </button>
-                </>
-              )}
-            </div>
-
             {error && <p className="text-xs text-danger">{error}</p>}
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => void finishBrief()}
-                disabled={brief.trim().length < 15 || extracting}
-                title={
-                  extracting
-                    ? "Lecture des pièces jointes en cours…"
-                    : brief.trim().length < 15
-                      ? "Décrivez votre besoin en une phrase au moins"
-                      : undefined
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-hover disabled:opacity-50"
-              >
-                {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Rédiger le contrat
-              </button>
-            </div>
+            <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-ink-secondary">
+              <input
+                type="checkbox"
+                checked={includeRgpd}
+                onChange={(e) => setIncludeRgpd(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-line text-brand focus:ring-brand/30"
+              />
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-brand" />
+              Inclure un article RGPD (protection des données personnelles)
+            </label>
           </div>
         )}
 
         {step === "loading" && (
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
-            <p className="text-sm text-ink-muted">Génération des questions en cours…</p>
+            <p className="text-sm text-ink-muted">Préparation des questions…</p>
           </div>
         )}
 
@@ -393,7 +259,7 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
             <p className="text-sm text-ink-muted">Rédaction du contrat…</p>
-            <p className="text-xs text-ink-subtle">Article RGPD inclus.</p>
+            {includeRgpd && <p className="text-xs text-ink-subtle">Article RGPD inclus.</p>}
           </div>
         )}
 
@@ -414,36 +280,58 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
               </div>
             </div>
 
-            <p className="mb-4 text-base font-semibold text-ink">{q.question}</p>
+            <p className="text-base font-semibold text-ink">{q.question}</p>
+            {q.hint && q.type === "choice" && (
+              <p className="mt-1 text-xs leading-relaxed text-ink-muted">{q.hint}</p>
+            )}
 
-            {q.type === "choice" ? (
-              <div className="flex flex-col gap-2">
-                {(q.options ?? []).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => answer(opt)}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3 text-left text-sm font-medium text-ink transition-all hover:border-brand/40 hover:bg-brand-light/50"
-                  >
-                    {opt}
-                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" />
-                  </button>
-                ))}
-                <FreeAnswer key={q.id} onSubmit={answer} />
-              </div>
-            ) : (
-              <TextAnswer key={q.id} onSubmit={answer} />
+            <div className="mt-4">
+              {q.type === "choice" ? (
+                <div className="flex flex-col gap-2">
+                  {(q.options ?? []).map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => answer(opt)}
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium text-ink transition-all hover:border-brand/40 hover:bg-brand-light/50 ${
+                        answers[q.id] === opt ? "border-brand/50 bg-brand-light/40" : "border-line bg-white"
+                      }`}
+                    >
+                      {opt}
+                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-subtle" />
+                    </button>
+                  ))}
+                  <FreeAnswer key={q.id} onSubmit={answer} />
+                </div>
+              ) : (
+                <TextAnswer key={q.id} initial={answers[q.id] ?? ""} placeholder={q.hint} onSubmit={answer} />
+              )}
+            </div>
+
+            {isLast && (
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand" />
+                Dernière question — votre contrat sera rédigé juste après.
+              </p>
             )}
 
             {error && <p className="mt-3 text-xs text-danger">{error}</p>}
 
-            {idx > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              {idx > 0 ? (
+                <button
+                  onClick={() => goAsk(idx - 1)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-ink-muted hover:text-brand"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Précédent
+                </button>
+              ) : <span />}
               <button
-                onClick={() => goAsk(idx - 1)}
-                className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-ink-muted hover:text-brand"
+                onClick={() => answer("")}
+                className="text-xs font-medium text-ink-muted hover:text-brand"
               >
-                <ChevronLeft className="h-3.5 w-3.5" /> Précédent
+                Je ne sais pas encore — passer
               </button>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -459,7 +347,7 @@ function FreeAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
         value={v}
         onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && v.trim()) onSubmit(v.trim()); }}
-        placeholder="Autre…"
+        placeholder="Autre réponse…"
         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-ink outline-none placeholder:text-ink-placeholder"
       />
       <button
@@ -474,8 +362,12 @@ function FreeAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
   );
 }
 
-function TextAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
-  const [v, setV] = useState("");
+function TextAnswer({ initial, placeholder, onSubmit }: {
+  initial: string;
+  placeholder?: string;
+  onSubmit: (v: string) => void;
+}) {
+  const [v, setV] = useState(initial);
   return (
     <div className="flex flex-col gap-2">
       <input
@@ -483,12 +375,14 @@ function TextAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
         value={v}
         onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && v.trim()) onSubmit(v.trim()); }}
-        className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition-all focus:border-brand/40 focus:shadow-ring-brand"
+        placeholder={placeholder}
+        className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition-all focus:border-brand/40 focus:shadow-ring-brand placeholder:text-ink-placeholder"
       />
       <div className="flex justify-end">
         <button
           onClick={() => onSubmit(v.trim())}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-hover"
+          disabled={!v.trim()}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card transition-all hover:bg-brand-hover disabled:opacity-50"
         >
           Continuer <ChevronRight className="h-4 w-4" />
         </button>

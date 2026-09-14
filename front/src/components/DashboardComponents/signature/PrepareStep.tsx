@@ -30,7 +30,7 @@ export function PrepareStep({ onFileChange }: Props) {
   });
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full max-w-3xl">
       <DropZone
         isDragActive={isDragActive}
         rootProps={getRootProps()}

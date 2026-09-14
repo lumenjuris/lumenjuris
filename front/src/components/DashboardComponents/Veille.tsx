@@ -24,7 +24,7 @@ export function Veille() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="mx-auto w-full space-y-6 max-w-4xl">
       <h1 className="text-2xl font-bold text-ink tracking-tight">Actualité juridique</h1>
 
       {/* Onglets */}

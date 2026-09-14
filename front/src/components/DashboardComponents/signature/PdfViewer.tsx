@@ -34,16 +34,13 @@ interface Props {
    * pour la dernière page. Par défaut la première page.
    *
    * Les signatures se trouvent quasi toujours en fin de contrat : ouvrir
-   * directement sur la dernière page évite à l'utilisateur de scroller pour
-   * trouver l'endroit où intervenir.
+   * directement sur la bonne page évite à l'utilisateur de la chercher.
    */
   initialPage?: number | "last";
-  /**
-   * Zone de signature proposée à l'utilisateur (mode "place") : affichée en
-   * pointillés, elle n'est posée que s'il clique dessus. Rien n'est imposé —
-   * il peut toujours cliquer ailleurs dans le document.
-   */
-  suggestedField?: Omit<Field, "id"> | null;
+  /** Champs mis en avant : la page est grisée sauf à leur emplacement. */
+  spotlight?: (field: Field) => boolean;
+  /** Étiquette affichée au-dessus de chaque champ mis en avant. */
+  spotlightLabel?: string;
 }
 
 // Dimensions par défaut des champs (en pourcentage de la page)
@@ -67,17 +64,12 @@ const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
  */
 export function PdfViewer(props: Props) {
   const { file, fields, signers, mode, activeFieldType, activeSignerRole, replicateAllPages,
-          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded,
-          initialPage, suggestedField } = props;
+          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, initialPage, spotlight, spotlightLabel } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageWidth, setPageWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // Un glisser-déposer de l'emplacement suggéré se termine par un `click` sur
-  // la page (mousedown sur le fantôme, mouseup ailleurs) : sans ce garde-fou,
-  // une seconde zone serait posée au point de relâchement.
-  const ignoreNextPageClick = useRef(false);
   const fileUrl = useObjectUrl(file);
   usePageWidthObserver(containerRef, setPageWidth);
 
@@ -89,10 +81,6 @@ export function PdfViewer(props: Props) {
    * parent qui se charge de désarmer la toolbar.
    */
   const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (ignoreNextPageClick.current) {
-      ignoreNextPageClick.current = false;
-      return;
-    }
     if (!isArmed || !activeFieldType || !activeSignerRole || !onFieldAdd) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const xPct = (e.clientX - rect.left) / rect.width;
@@ -125,24 +113,25 @@ export function PdfViewer(props: Props) {
   }
 
   const visibleFields = filterFieldsForPage(fields, currentPage);
-  // La suggestion n'est affichée que sur sa page et seulement en placement.
-  const visibleSuggestion =
-    isArmed && suggestedField && suggestedField.page === currentPage ? suggestedField : null;
+  const spotlitFields = spotlight ? visibleFields.filter(spotlight) : [];
 
   return (
     <div className="flex flex-col items-center" ref={containerRef}>
-      {numPages > 1 && (
-        <PageNavigator
-          current={currentPage}
-          total={numPages}
-          onChange={setCurrentPage}
-        />
-      )}
 
       <div
         className={`relative shadow-lg ring-1 ring-gray-200 rounded-md overflow-hidden bg-white ${isArmed ? "cursor-crosshair" : ""}`}
         onClick={handlePageClick}
       >
+        {/* Pagination en pastille sur le coin de la page : toujours visible, sans décaler le document. */}
+        {numPages > 1 && (
+          <div className="absolute right-2 top-2 z-20" onClick={(e) => e.stopPropagation()}>
+            <PageNavigator
+              current={currentPage}
+              total={numPages}
+              onChange={setCurrentPage}
+            />
+          </div>
+        )}
         <Document
           file={fileUrl}
           onLoadSuccess={handleDocumentLoad}
@@ -156,20 +145,7 @@ export function PdfViewer(props: Props) {
           />
         </Document>
 
-        {visibleSuggestion && (
-          <SuggestedZone
-            field={visibleSuggestion}
-            hex={(signers.find((s) => s.role === visibleSuggestion.signer) ?? signers[0])?.hex ?? "#4f46e5"}
-            onPlace={(xPct, yPct) => onFieldAdd?.({ ...visibleSuggestion, xPct, yPct })}
-            onDragEnd={() => {
-              // Le `click` qui suit le relâchement part dans la foulée : on
-              // désarme au tour de boucle suivant, pour ne jamais avaler le
-              // clic d'après si le relâchement a eu lieu hors du document.
-              ignoreNextPageClick.current = true;
-              window.setTimeout(() => { ignoreNextPageClick.current = false; }, 0);
-            }}
-          />
-        )}
+        {spotlitFields.length > 0 && <SpotlightLayer fields={spotlitFields} label={spotlightLabel} />}
 
         {visibleFields.map((f) => {
           const signer = signers.find((s) => s.role === f.signer) ?? signers[0];
@@ -186,6 +162,7 @@ export function PdfViewer(props: Props) {
           );
         })}
       </div>
+
     </div>
   );
 }
@@ -201,7 +178,7 @@ function PageNavigator({
   onChange: (page: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 mb-3">
+    <div className="flex items-center gap-1 rounded-full bg-white/95 px-1 py-0.5 shadow-md ring-1 ring-gray-200">
       <button
         onClick={() => onChange(Math.max(0, current - 1))}
         disabled={current === 0}
@@ -224,126 +201,45 @@ function PageNavigator({
 }
 
 /**
- * Emplacement suggéré pour une zone de signature. Purement indicatif : la zone
- * n'est posée que si l'utilisateur agit dessus, et cliquer ailleurs dans la
- * page fonctionne toujours.
- *
- * Deux gestes équivalents :
- *  - un clic → la zone est posée à l'emplacement proposé ;
- *  - un glisser-déposer → le fantôme suit le curseur (l'utilisateur voit où il
- *    l'emmène) et la zone est posée là où il le lâche.
- *
- * Le fantôme se déplace donc exactement comme une zone déjà posée : sans ce
- * retour visuel, tirer dessus ne produisait rien et donnait l'impression d'une
- * image figée.
+ * Grise la page sauf à l'emplacement des champs à traiter, qui restent en
+ * clair, et affiche une étiquette animée au-dessus de chacun : on voit tout de
+ * suite où agir. Ne capte aucun clic (placement et signature restent possibles).
  */
-function SuggestedZone({
-  field, hex, onPlace, onDragEnd,
-}: {
-  field: Omit<Field, "id">;
-  hex: string;
-  /** Pose la zone aux coordonnées finales (en % de la page). */
-  onPlace: (xPct: number, yPct: number) => void;
-  /** Signale un déplacement réel, pour ignorer le clic qui suit le relâchement. */
-  onDragEnd: () => void;
-}) {
-  const elRef = useRef<HTMLDivElement | null>(null);
-  const [position, setPosition] = useState({ xPct: field.xPct, yPct: field.yPct });
-  const [dragging, setDragging] = useState(false);
-  // Position « vivante » : lue au relâchement, où l'état React serait en retard.
-  const positionRef = useRef(position);
-  const dragStartRef = useRef<{ mouseX: number; mouseY: number; xPct: number; yPct: number } | null>(null);
-  const hasMovedRef = useRef(false);
-
-  // La suggestion change de place quand on change de signataire ou de page.
-  useEffect(() => {
-    const next = { xPct: field.xPct, yPct: field.yPct };
-    positionRef.current = next;
-    setPosition(next);
-  }, [field.xPct, field.yPct, field.page, field.signer]);
-
-  function startDrag(e: React.MouseEvent) {
-    e.stopPropagation();
-    e.preventDefault(); // pas de sélection de texte pendant le glisser
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      xPct: positionRef.current.xPct,
-      yPct: positionRef.current.yPct,
-    };
-    setDragging(true);
-  }
-
-  useEffect(() => {
-    if (!dragging) return;
-
-    function handleMouseMove(ev: MouseEvent) {
-      const start = dragStartRef.current;
-      const parent = elRef.current?.parentElement;
-      if (!start || !parent) return;
-      const rect = parent.getBoundingClientRect();
-      // Quelques pixels de tolérance : un clic un peu tremblant reste un clic.
-      if (Math.abs(ev.clientX - start.mouseX) > 3 || Math.abs(ev.clientY - start.mouseY) > 3) {
-        hasMovedRef.current = true;
-      }
-      const next = {
-        xPct: clamp(start.xPct + (ev.clientX - start.mouseX) / rect.width, 0, 1 - field.widthPct),
-        yPct: clamp(start.yPct + (ev.clientY - start.mouseY) / rect.height, 0, 1 - field.heightPct),
-      };
-      positionRef.current = next;
-      setPosition(next);
-    }
-
-    function handleMouseUp() {
-      setDragging(false);
-      dragStartRef.current = null;
-      if (hasMovedRef.current) onDragEnd();
-      onPlace(positionRef.current.xPct, positionRef.current.yPct);
-    }
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragging, field.widthPct, field.heightPct, onPlace, onDragEnd]);
-
+function SpotlightLayer({ fields, label }: { fields: Field[]; label?: string }) {
+  const pad = 0.012;
   return (
-    <div
-      ref={elRef}
-      role="button"
-      tabIndex={0}
-      onMouseDown={startDrag}
-      // Le clic lui-même ne pose rien (c'est le relâchement qui s'en charge) :
-      // on l'arrête seulement pour que la page n'ajoute pas une zone de plus.
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        onPlace(position.xPct, position.yPct);
-      }}
-      className={`absolute flex flex-col items-center justify-center gap-0.5 rounded select-none ${
-        dragging ? "cursor-grabbing shadow-lg" : "cursor-grab animate-pulse hover:animate-none"
-      }`}
-      style={{
-        left: `${position.xPct * 100}%`,
-        top: `${position.yPct * 100}%`,
-        width: `${field.widthPct * 100}%`,
-        height: `${field.heightPct * 100}%`,
-        border: `1.5px ${dragging ? "solid" : "dashed"} ${hex}`,
-        backgroundColor: hex + (dragging ? "26" : "0D"),
-      }}
-      title="Cliquez pour placer ici, ou faites glisser pour choisir l'emplacement"
-    >
-      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: hex }}>
-        Emplacement suggéré
-      </span>
-      <span className="text-[8px] text-gray-500">
-        {dragging ? "Relâchez pour placer" : "Cliquez ou faites glisser"}
-      </span>
-    </div>
+    <>
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <mask id="signature-spotlight">
+            <rect x="0" y="0" width="100" height="100" fill="white" />
+            {fields.map((f) => (
+              <rect
+                key={f.id}
+                x={(f.xPct - pad) * 100}
+                y={(f.yPct - pad) * 100}
+                width={(f.widthPct + pad * 2) * 100}
+                height={(f.heightPct + pad * 2) * 100}
+                rx="1"
+                fill="black"
+              />
+            ))}
+          </mask>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" fill="rgba(15, 23, 42, 0.45)" mask="url(#signature-spotlight)" />
+      </svg>
+      {label && fields.map((f) => (
+        <div
+          key={f.id}
+          className="pointer-events-none absolute z-10 -translate-y-full pb-1.5"
+          style={{ left: `${f.xPct * 100}%`, top: `${f.yPct * 100}%`, width: `${f.widthPct * 100}%` }}
+        >
+          <span className="mx-auto flex w-max items-center rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-gray-900 shadow-lg animate-bounce">
+            {label}
+          </span>
+        </div>
+      ))}
+    </>
   );
 }
 
