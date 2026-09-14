@@ -267,6 +267,16 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   const [showWarningDuplicate, setShowWarningDuplicate] = useState<boolean>(true)
   return (
     <div className="space-y-3 max-w-[1600px] mx-auto w-full">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
+            Ajouter à la contrathèque
+          </h1>
+          <p className="text-sm text-slate-300 mt-1">
+            Renseignez les données du contrat et enregistrer dans votre contrathèque
+          </p>
+        </div>
+      </header>
       {/* En-tête : retour, intitulé modifiable, état, enregistrement */}
       <div className="flex flex-wrap items-center gap-3">
         <button
