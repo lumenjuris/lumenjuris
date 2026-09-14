@@ -741,7 +741,7 @@ async function handleTemplateImport(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt: fullPrompt,
-        reasoning: "low",
+        reasoning: "medium",
         verbosity: "low",
         model: "gpt-5.2",
       }),
