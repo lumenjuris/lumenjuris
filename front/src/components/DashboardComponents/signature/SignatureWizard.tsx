@@ -1,20 +1,26 @@
 import { useState } from "react";
-import { Stepper } from "./Stepper";
+import { FileText } from "lucide-react";
 import { PrepareStep } from "./PrepareStep";
 import { PlaceStep } from "./PlaceStep";
 import { SignStep } from "./SignStep";
 import { SignatureModal } from "./SignatureModal";
+import { RecipientModal } from "./RecipientModal";
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { useUserStore } from "../../../store/userStore";
 import type {
   Field, FieldType, Signer, SignerRole, WizardStep, CapturedSignature,
 } from "./types";
-import { SIGNERS_DEFAULT } from "./types";
+import { SIGNERS_DEFAULT, isValidEmail } from "./types";
 
 interface Props {
   /** Fichier PDF déjà sélectionné (vient du file picker du dashboard). */
   initialFile?: File;
-  /** Callback appelé après l'envoi réussi de l'enveloppe au backend. */
-  onSent?: () => void;
+  /**
+   * Callback appelé après l'envoi réussi de l'enveloppe au backend. Reçoit les
+   * coordonnées du destinataire pour que le parent puisse confirmer l'envoi
+   * (le wizard est démonté juste après).
+   */
+  onSent?: (recipient: { name: string; email: string }) => void;
   /** Callback "Annuler / Retour" pour fermer le wizard. */
   onExit?: () => void;
 }
@@ -60,6 +66,8 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     self: null, counterparty: null,
   });
   const [modalOpenFor, setModalOpenFor] = useState<{ field: Field; signer: Signer } | null>(null);
+  // Modale « À qui envoyer ? », ouverte dès que l'émetteur a signé.
+  const [recipientModalOpen, setRecipientModalOpen] = useState(false);
   const [sent, setSent] = useState(false);
 
   // Coordonnées du cocontractant (l'émetteur reçoit le contrat en CC via son compte)
@@ -67,6 +75,11 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   const [counterpartyEmail, setCounterpartyEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+
+  // E-mail du compte connecté : c'est cette adresse (celle du créateur du
+  // compte, pas une adresse d'administration) qui porte la procédure côté
+  // serveur. On l'affiche à l'utilisateur avant l'envoi.
+  const senderEmail = useUserStore((state) => state.userData?.profile.email);
 
   // ─── Helpers de mutation ─────────────────────────────────────────────────
 
@@ -91,8 +104,16 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, xPct, yPct } : f)));
   }
 
+  /**
+   * Supprime une zone et rebascule le signataire actif sur celui dont la zone
+   * vient d'être retirée : après une suppression, le geste suivant est presque
+   * toujours d'en reposer une pour cette même partie (on la replace ailleurs).
+   * La checklist et le guide de gauche suivent automatiquement.
+   */
   function removeField(id: string) {
+    const removed = fields.find((f) => f.id === id);
     setFields((prev) => prev.filter((f) => f.id !== id));
+    if (removed) setActiveSignerRole(removed.signer);
   }
 
   /**
@@ -114,20 +135,52 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   }
 
   /**
+   * Passage à l'étape « Signer et envoyer ».
+   *
+   * Une fois les zones placées, la seule action attendue est d'apposer sa
+   * signature : on ouvre donc directement la modale de saisie sur la première
+   * zone non signée, sans demander à l'utilisateur de cliquer d'abord dessus.
+   * S'il ferme la modale, le clic sur la zone reste évidemment possible.
+   */
+  function goToSignStep() {
+    setStep("sign");
+    const firstUnsignedSelfField = fields.find((f) => f.signer === "self" && !f.value);
+    if (!firstUnsignedSelfField) return;
+    const selfSigner = signers.find((s) => s.role === "self")!;
+    setModalOpenFor({ field: firstUnsignedSelfField, signer: selfSigner });
+  }
+
+  /**
    * Applique une signature capturée au champ cliqué + propage automatiquement
    * aux autres champs vides du même signataire/même type. La date du jour est
    * enregistrée dans `signedAt` pour affichage sous la signature.
    */
   function applyCapturedSignature(field: Field, sig: CapturedSignature) {
     const signedAt = new Date().toISOString();
-    setFields((prev) => prev.map((f) => {
+    const next = fields.map((f) => {
       if (f.id === field.id) return { ...f, value: sig.dataUrl, signedAt };
       const sameSignerSameType = f.signer === field.signer && f.type === field.type;
       if (sameSignerSameType && !f.value) {
         return { ...f, value: sig.dataUrl, signedAt };
       }
       return f;
-    }));
+    });
+    setFields(next);
+
+    // L'émetteur vient de finir de signer : la seule information encore
+    // manquante est le destinataire. On la demande tout de suite, au centre de
+    // l'écran, plutôt que de laisser l'utilisateur chercher un formulaire.
+    const selfDone = next.filter((f) => f.signer === "self").every((f) => !!f.value);
+    if (selfDone && !isRecipientFilled(counterpartyName, counterpartyEmail)) {
+      setRecipientModalOpen(true);
+    }
+  }
+
+  /** Enregistre le destinataire saisi dans la modale et referme celle-ci. */
+  function handleRecipientConfirm(recipient: { name: string; email: string }) {
+    setCounterpartyName(recipient.name);
+    setCounterpartyEmail(recipient.email);
+    setRecipientModalOpen(false);
   }
 
   function handleModalConfirm(sig: CapturedSignature) {
@@ -147,6 +200,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     setCapturedSigs({ self: null, counterparty: null });
     setArmedFieldType("signature");
     setReplicateAllPages(false);
+    setRecipientModalOpen(false);
   }
 
   // ─── Calculs dérivés ─────────────────────────────────────────────────────
@@ -154,7 +208,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   const selfFields = fields.filter((f) => f.signer === "self");
   const canGoToSign = selfFields.length > 0;
   const allSelfSigned = selfFields.length > 0 && selfFields.every((f) => !!f.value);
-  const recipientFormValid = isValidEmail(counterpartyEmail) && !!counterpartyName.trim();
+  const recipientFormValid = isRecipientFilled(counterpartyName, counterpartyEmail);
   const canSend = allSelfSigned && recipientFormValid;
 
   /**
@@ -209,7 +263,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
         throw new Error(data.message || "Échec de l'envoi");
       }
       setSent(true);
-      onSent?.();
+      onSent?.({ name: counterpartyName.trim(), email: counterpartyEmail.trim() });
     } catch (e: unknown) {
       setSendError(e instanceof Error ? e.message : "Erreur réseau");
     } finally {
@@ -220,11 +274,22 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5">
-      {/* Bandeau bleu compact, homogène avec les autres pages : titre + étapes sur une ligne */}
-      <header className="flex flex-col gap-3 rounded-2xl bg-blue-primary px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold text-white">Signature électronique</h1>
-        <Stepper current={step} />
+    <div className="space-y-4 max-w-6xl">
+      {/* En-tête volontairement compact : la priorité de l'écran est le
+          document et l'action en cours, pas le titre de la page. Le repère
+          « Étape X sur N » vit en haut de la colonne de gauche — un second
+          indicateur d'étapes ici afficherait une numérotation concurrente. */}
+      <header className="flex items-center gap-2 min-w-0">
+        <h1 className="text-lg font-bold text-gray-900 tracking-tight shrink-0">
+          Signature électronique
+        </h1>
+        {file && (
+          <>
+            <span className="text-gray-300">·</span>
+            <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+            <span className="text-xs text-gray-500 truncate">{file.name}</span>
+          </>
+        )}
       </header>
 
       {step === "prepare" && (
@@ -264,7 +329,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
             ]));
           }}
           onBack={() => setStep("prepare")}
-          onNext={() => setStep("sign")}
+          onNext={goToSignStep}
           canGoNext={canGoToSign}
         />
       )}
@@ -280,10 +345,10 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           canSend={canSend}
           sending={sending}
           sendError={sendError}
+          senderEmail={senderEmail}
           counterpartyName={counterpartyName}
           counterpartyEmail={counterpartyEmail}
-          onCounterpartyNameChange={setCounterpartyName}
-          onCounterpartyEmailChange={setCounterpartyEmail}
+          onEditRecipient={() => setRecipientModalOpen(true)}
           onFieldClick={handleFieldClick}
           onNumPagesLoaded={setNumPages}
           onBack={() => setStep("place")}
@@ -291,6 +356,16 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           onReset={() => { resetWizard(); onExit?.(); }}
         />
       )}
+
+      <RecipientModal
+        open={recipientModalOpen}
+        name={counterpartyName}
+        email={counterpartyEmail}
+        accentHex={signers.find((s) => s.role === "counterparty")?.hex ?? "#10b981"}
+        senderEmail={senderEmail}
+        onClose={() => setRecipientModalOpen(false)}
+        onConfirm={handleRecipientConfirm}
+      />
 
       {modalOpenFor && (
         <SignatureModal
@@ -306,7 +381,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   );
 }
 
-/** Validation très permissive d'un email (`x@y.z`). */
-function isValidEmail(email: string): boolean {
-  return /\S+@\S+\.\S+/.test(email.trim());
+/** Vrai quand le destinataire est renseigné et son e-mail plausible. */
+function isRecipientFilled(name: string, email: string): boolean {
+  return !!name.trim() && isValidEmail(email);
 }

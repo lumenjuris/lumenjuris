@@ -40,6 +40,14 @@ signatureRouter.delete("/:externalId", auth, (req, res) =>
 );
 
 // Routes PUBLIQUES — pas d'auth, token dans l'URL
+signatureRouter.get("/public/:token/download", (req, res) =>
+  // Réponse binaire (PDF signé) → passthrough raw, pas d'enveloppe JSON.
+  relayToNodeRaw(
+    req,
+    res,
+    `/signature-envelope/public/${encodeURIComponent(req.params.token as string)}/download`,
+  ),
+);
 signatureRouter.get("/public/:token", (req, res) =>
   relayToNode(
     req,

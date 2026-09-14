@@ -7,7 +7,7 @@ import { Generateur } from "./components/DashboardComponents/Generateur";
 import { Signature } from "./components/DashboardComponents/Signature";
 import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
 import { Calculateur } from "./components/DashboardComponents/Calculateur";
-import { Veille } from "./components/DashboardComponents/Veille";
+//import { Veille } from "./components/DashboardComponents/Veille";
 import { Conformite } from "./components/DashboardComponents/Conformite";
 import { Contratheque } from "./page/Contratheque";
 import { ClausesLibrary } from "./components/DashboardComponents/clauses/ClausesLibrary";
@@ -117,7 +117,9 @@ export function App() {
           <Route path="/negociation/:negotiationId" element={<NegotiationWorkspace />} />
           <Route path="/chatjuridique" element={<ChatJuridique />} />
           <Route path="/calculateur" element={<Calculateur />} />
+          {/* désactiver en attente d'amélioration de cet outil
           <Route path="/veille" element={<Veille />} />
+           */}
           <Route path="/conformite" element={<Conformite />} />
           <Route path="/comprendre-contrat" element={<ComprendreContrat />} />
           <Route path="/mon-compte" element={<ParamCompte />} />

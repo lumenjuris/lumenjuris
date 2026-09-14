@@ -24,6 +24,12 @@ export type MailAttachment = {
 export type MailExtraOptions = {
   /** Adresse(s) en copie. */
   cc?: string;
+  /**
+   * Adresse à laquelle les réponses doivent arriver. L'expéditeur technique
+   * est un no-reply de la plateforme : sans `replyTo`, une réponse du
+   * destinataire se perd. On y met l'e-mail de l'utilisateur concerné.
+   */
+  replyTo?: string;
   /** Pièces jointes. */
   attachments?: MailAttachment[];
 };
@@ -122,6 +128,7 @@ export class Mailer {
       from: MAILER_FROM,
       to: this.email,
       ...(extra.cc ? { cc: extra.cc } : {}),
+      ...(extra.replyTo ? { replyTo: extra.replyTo } : {}),
       subject,
       text: textBrutFallback,
       html,
@@ -416,18 +423,36 @@ export class Mailer {
     documentName: string;
     signingLink: string;
     cc?: string;
+    /** Nom du titulaire du compte à l'origine de la procédure. */
+    senderName?: string;
+    /**
+     * E-mail du titulaire du compte à l'origine de la procédure. Affiché dans
+     * l'e-mail et utilisé comme adresse de réponse : le cocontractant
+     * s'adresse à l'utilisateur réel, jamais à une adresse d'administration.
+     */
+    senderEmail?: string;
+    /** Vrai quand il s'agit d'une relance et non du premier envoi. */
+    isReminder?: boolean;
   }): Promise<MailResult> {
     const html = this.createHtmlFullContent(
-      templateSignatureInvite(
-        opts.counterpartyName,
-        opts.documentName,
-        opts.signingLink,
-      ),
+      templateSignatureInvite({
+        counterpartyName: opts.counterpartyName,
+        documentName: opts.documentName,
+        signingLink: opts.signingLink,
+        ...(opts.senderName ? { senderName: opts.senderName } : {}),
+        ...(opts.senderEmail ? { senderEmail: opts.senderEmail } : {}),
+        ...(opts.isReminder ? { isReminder: true } : {}),
+      }),
     );
 
+    const subject = opts.isReminder
+      ? `Rappel — document à signer : ${opts.documentName}`
+      : `Document à signer — ${opts.documentName}`;
+
     return this.send(
-      this.createOption(html, `Document à signer — ${opts.documentName}`, {
-        cc: opts.cc,
+      this.createOption(html, subject, {
+        ...(opts.cc ? { cc: opts.cc } : {}),
+        ...(opts.senderEmail ? { replyTo: opts.senderEmail } : {}),
       }),
       `Une invitation à signer a été envoyée à ${this.email}.`,
     );
@@ -441,7 +466,10 @@ export class Mailer {
     recipientName: string;
     documentName: string;
     selfLabel: string;
+    /** E-mail du titulaire du compte émetteur (affiché dans le récapitulatif). */
+    selfEmail?: string;
     counterpartyName: string;
+    counterpartyEmail?: string;
     signedDate?: Date;
     pdf?: { filename: string; content: Buffer };
   }): Promise<MailResult> {
@@ -452,14 +480,16 @@ export class Mailer {
     });
 
     const html = this.createHtmlFullContent(
-      templateSignatureCompletion(
-        opts.recipientName,
-        opts.documentName,
-        opts.selfLabel,
-        opts.counterpartyName,
-        dateStr,
-        !!opts.pdf,
-      ),
+      templateSignatureCompletion({
+        recipientName: opts.recipientName,
+        documentName: opts.documentName,
+        selfLabel: opts.selfLabel,
+        ...(opts.selfEmail ? { selfEmail: opts.selfEmail } : {}),
+        counterpartyName: opts.counterpartyName,
+        ...(opts.counterpartyEmail ? { counterpartyEmail: opts.counterpartyEmail } : {}),
+        signedDate: dateStr,
+        hasPdf: !!opts.pdf,
+      }),
     );
 
     const attachments: MailAttachment[] | undefined = opts.pdf
@@ -474,7 +504,8 @@ export class Mailer {
 
     return this.send(
       this.createOption(html, `Document signé — ${opts.documentName}`, {
-        attachments,
+        ...(attachments ? { attachments } : {}),
+        ...(opts.selfEmail ? { replyTo: opts.selfEmail } : {}),
       }),
       `La confirmation de signature a été envoyée à ${this.email}.`,
     );

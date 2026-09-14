@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Scale, Loader2, AlertCircle, CheckCircle2, Send } from "lucide-react";
+import { Scale, Loader2, AlertCircle, CheckCircle2, Send, Download, FileText, ShieldCheck } from "lucide-react";
 import { PdfViewer } from "../components/DashboardComponents/signature/PdfViewer";
 import { SignatureModal } from "../components/DashboardComponents/signature/SignatureModal";
 import { SIGNERS_DEFAULT } from "../components/DashboardComponents/signature/types";
@@ -24,9 +24,11 @@ export function SignerPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [documentName, setDocumentName] = useState("");
+  // Noms des deux parties : affichés dans le récapitulatif de confirmation.
+  const [selfName, setSelfName] = useState("");
+  const [counterpartyName, setCounterpartyName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [fields, setFields] = useState<Field[]>([]);
-  const [numPages, setNumPages] = useState(0);
 
   // ── Signature ─────────────────────────────────────────────────────────────
   const [capturedSig, setCapturedSig] = useState<CapturedSignature | null>(null);
@@ -36,6 +38,10 @@ export function SignerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [done, setDone] = useState(false);
+
+  // ── Téléchargement du contrat signé ───────────────────────────────────────
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   // Signataires (on réutilise SIGNERS_DEFAULT pour les couleurs)
   const signers = SIGNERS_DEFAULT;
@@ -50,7 +56,12 @@ export function SignerPage() {
           success: boolean;
           message?: string;
           data?: {
-            meta: { documentName: string; numPages: number };
+            meta: {
+              documentName: string;
+              numPages: number;
+              selfName?: string;
+              counterpartyName?: string;
+            };
             fields: { fields: Field[] };
             fileBase64: string | null;
           };
@@ -59,7 +70,8 @@ export function SignerPage() {
           throw new Error(data.message ?? "Lien invalide ou expiré.");
         }
         setDocumentName(data.data.meta.documentName);
-        setNumPages(data.data.meta.numPages);
+        setSelfName(data.data.meta.selfName ?? "");
+        setCounterpartyName(data.data.meta.counterpartyName ?? "");
 
         // Convertit base64 → File
         if (data.data.fileBase64) {
@@ -129,6 +141,36 @@ export function SignerPage() {
     }
   }
 
+  /**
+   * Télécharge le contrat signé (PDF original + signatures incrustées) depuis
+   * la route publique. Le token de signature sert d'autorisation : il donne
+   * déjà accès au document.
+   */
+  async function handleDownload() {
+    if (!token) return;
+    setDownloading(true);
+    setDownloadError("");
+    try {
+      const res = await fetchProxy(`/api/signature-envelope/public/${token}/download`);
+      if (!res.ok) throw new Error("Le téléchargement a échoué.");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${documentName.replace(/\.pdf$/i, "")}_signe.pdf`;
+      // Le lien doit être dans le document et l'URL libérée après coup :
+      // certains navigateurs annulent le téléchargement sinon.
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : "Le téléchargement a échoué.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   // ── Renders ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -154,30 +196,20 @@ export function SignerPage() {
 
   if (done) {
     return (
-      <Screen>
-        <div className="w-20 h-20 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-10 h-10 text-emerald-600 stroke-[1.5]" />
-        </div>
-        <h2 className="text-lg font-bold text-gray-800">Document signé ✓</h2>
-        <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">
-          Votre signature a bien été enregistrée sur «&nbsp;{documentName}&nbsp;».
-          Les deux parties ont maintenant signé ce document.
-        </p>
-      </Screen>
+      <SignedConfirmation
+        documentName={documentName}
+        selfName={selfName}
+        counterpartyName={counterpartyName}
+        downloading={downloading}
+        downloadError={downloadError}
+        onDownload={() => void handleDownload()}
+      />
     );
   }
 
   return (
     <div className="min-h-screen bg-[#f8f9fb]" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-      {/* Header public */}
-      <header className="h-14 bg-blue-primary border-b border-gray-200 flex items-center px-6 gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#354F99]">
-          <Scale className="h-4 w-4 text-white" />
-        </div>
-        <span className="text-sm font-bold text-white">Lumen Juris</span>
-        <span className="text-gray-300 mx-1">·</span>
-        <span className="text-sm text-gray-primary truncate max-w-xs">Signature — {documentName}</span>
-      </header>
+      <PublicHeader documentName={documentName} />
 
       <main className="max-w-5xl mx-auto p-4 lg:p-6 space-y-4">
         {/* Barre de progression + bouton envoyer */}
@@ -223,7 +255,6 @@ export function SignerPage() {
             signers={signers}
             mode="sign"
             onFieldClick={handleFieldClick}
-            onLoaded={setNumPages}
           />
         </div>
       </main>
@@ -239,6 +270,145 @@ export function SignerPage() {
           onConfirm={handleModalConfirm}
         />
       )}
+    </div>
+  );
+}
+
+/** Bandeau de marque des pages publiques de signature. */
+function PublicHeader({ documentName }: { documentName: string }) {
+  return (
+    <header className="h-14 bg-blue-primary flex items-center px-6 gap-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-panel bg-brand">
+        <Scale className="h-4 w-4 text-white" />
+      </div>
+      <span className="text-sm font-bold text-white">Lumen Juris</span>
+      <span className="text-white/30 mx-1">·</span>
+      <span className="text-sm text-white/70 truncate max-w-xs">
+        Signature{documentName ? ` — ${documentName}` : ""}
+      </span>
+    </header>
+  );
+}
+
+/**
+ * Écran de fin de parcours du cocontractant : confirmation que le document est
+ * signé par les deux parties, et remise immédiate du contrat signé.
+ *
+ * Le téléchargement est proposé ici parce que c'est le moment où le
+ * cocontractant en a besoin : il vient de signer, il n'a pas de compte sur la
+ * plateforme et l'e-mail de confirmation peut tarder ou finir en indésirables.
+ */
+function SignedConfirmation({
+  documentName, selfName, counterpartyName,
+  downloading, downloadError, onDownload,
+}: {
+  documentName: string;
+  selfName: string;
+  counterpartyName: string;
+  downloading: boolean;
+  downloadError: string;
+  onDownload: () => void;
+}) {
+  const signedOn = new Date().toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div
+      className="min-h-screen bg-surface-subtle flex flex-col"
+      style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}
+    >
+      <PublicHeader documentName={documentName} />
+
+      <main className="flex-1 flex items-start justify-center p-4 lg:p-8">
+        <div className="w-full max-w-lg bg-white rounded-card border border-line shadow-card-md overflow-hidden">
+          {/* Bandeau de réussite */}
+          <div className="bg-success-light px-6 py-7 flex flex-col items-center text-center gap-3 border-b border-line-subtle">
+            <div className="w-14 h-14 rounded-card bg-white flex items-center justify-center shadow-card">
+              <CheckCircle2 className="w-7 h-7 text-success stroke-[1.5]" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold text-ink tracking-tight">Document signé</h1>
+              <p className="text-sm text-success-dark">
+                Signature enregistrée le {signedOn}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Document concerné */}
+            <div className="flex items-start gap-3 rounded-panel bg-surface-subtle border border-line-subtle px-4 py-3">
+              <FileText className="w-4 h-4 text-ink-subtle shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">
+                  Document
+                </p>
+                <p className="text-sm font-semibold text-ink break-words">{documentName}</p>
+              </div>
+            </div>
+
+            {/* Récapitulatif des signataires */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">
+                Signataires
+              </p>
+              <SignerLine label={selfName || "Émetteur"} role="Émetteur" />
+              <SignerLine label={counterpartyName || "Vous"} role="Cocontractant" />
+            </div>
+
+            {/* Remise du contrat signé */}
+            <div className="space-y-2">
+              <button
+                onClick={onDownload}
+                disabled={downloading}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-brand text-white text-sm font-semibold rounded-panel hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-card"
+              >
+                {downloading
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Download className="w-4 h-4" />}
+                {downloading ? "Préparation du PDF…" : "Télécharger le contrat signé"}
+              </button>
+              {downloadError && (
+                <p className="flex items-center gap-1.5 text-xs text-danger-dark">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {downloadError}
+                </p>
+              )}
+              <p className="text-xs text-ink-muted leading-relaxed text-center">
+                Une copie du contrat signé vous est également envoyée par e-mail.
+              </p>
+            </div>
+
+            {/* Valeur probante — rassure sur ce qui vient d'être fait */}
+            <div className="flex items-start gap-2.5 rounded-panel bg-brand-light px-4 py-3">
+              <ShieldCheck className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+              <p className="text-xs text-ink-secondary leading-relaxed">
+                Les signatures et leur date sont incrustées dans le PDF. Conservez ce
+                document : il fait preuve de votre accord.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="py-5 text-center text-xs text-ink-subtle">
+        Signature électronique propulsée par <span className="font-semibold text-ink-muted">Lumen Juris</span>
+      </footer>
+    </div>
+  );
+}
+
+/** Une ligne « nom — rôle » du récapitulatif des signataires. */
+function SignerLine({ label, role }: { label: string; role: string }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-panel border border-line-subtle px-3 py-2">
+      <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+      <span className="text-sm font-medium text-ink truncate">{label}</span>
+      <span className="ml-auto text-[10px] font-semibold text-ink-subtle uppercase tracking-wide shrink-0">
+        {role}
+      </span>
     </div>
   );
 }

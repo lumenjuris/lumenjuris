@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { FieldOverlay } from "./FieldOverlay";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
+import { DEFAULT_FIELD_SIZE } from "./types";
 
 // Configure le worker pdf.js via le CDN cloudflare (évite la config Vite custom).
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -28,8 +29,14 @@ interface Props {
   onFieldClick?: (field: Field) => void;
   /** Notifie le parent du nombre de pages dès le chargement du PDF. */
   onLoaded?: (numPages: number) => void;
-  /** Ouvre le document sur sa dernière page (là où l'on signe) plutôt que sur la première. */
-  startOnLastPage?: boolean;
+  /**
+   * Page affichée à l'ouverture du document : un index (0-based) ou "last"
+   * pour la dernière page. Par défaut la première page.
+   *
+   * Les signatures se trouvent quasi toujours en fin de contrat : ouvrir
+   * directement sur la bonne page évite à l'utilisateur de la chercher.
+   */
+  initialPage?: number | "last";
   /** Champs mis en avant : la page est grisée sauf à leur emplacement. */
   spotlight?: (field: Field) => boolean;
   /** Étiquette affichée au-dessus de chaque champ mis en avant. */
@@ -39,7 +46,7 @@ interface Props {
 // Dimensions par défaut des champs (en pourcentage de la page)
 // (le paraphe « initial » a été retiré du produit — seul « signature » subsiste)
 const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
-  signature: { width: 0.22, height: 0.06 },
+  signature: { width: DEFAULT_FIELD_SIZE.widthPct, height: DEFAULT_FIELD_SIZE.heightPct },
 };
 
 /**
@@ -57,7 +64,7 @@ const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
  */
 export function PdfViewer(props: Props) {
   const { file, fields, signers, mode, activeFieldType, activeSignerRole, replicateAllPages,
-          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, startOnLastPage, spotlight, spotlightLabel } = props;
+          onFieldAdd, onFieldMove, onFieldRemove, onFieldClick, onLoaded, initialPage, spotlight, spotlightLabel } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -93,7 +100,7 @@ export function PdfViewer(props: Props) {
 
   function handleDocumentLoad({ numPages }: { numPages: number }) {
     setNumPages(numPages);
-    setCurrentPage(startOnLastPage ? Math.max(0, numPages - 1) : 0);
+    setCurrentPage(resolveInitialPage(initialPage, numPages));
     onLoaded?.(numPages);
   }
 
@@ -280,6 +287,16 @@ function usePageWidthObserver(
  */
 function filterFieldsForPage(fields: Field[], pageIndex: number): Field[] {
   return fields.filter((f) => f.page === pageIndex || !!f.replicateAllPages);
+}
+
+/**
+ * Page à afficher à l'ouverture du document. "last" = dernière page (là où se
+ * trouve la signature dans la très grande majorité des contrats).
+ */
+function resolveInitialPage(initialPage: number | "last" | undefined, numPages: number): number {
+  if (initialPage === "last") return Math.max(0, numPages - 1);
+  if (typeof initialPage === "number") return clamp(initialPage, 0, Math.max(0, numPages - 1));
+  return 0;
 }
 
 function clamp(value: number, min: number, max: number): number {

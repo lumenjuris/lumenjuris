@@ -1,5 +1,9 @@
-import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, MousePointerClick, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Send, MailPlus, Loader2, AlertCircle, Clock, AtSign, UserRound, Pencil } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
+import { SignProgress } from "./SignProgress";
+import { GuidePanel } from "./GuidePanel";
+import { getGuideContent } from "./guide";
+import type { GuidePhase } from "./guide";
 import type { Field, Signer } from "./types";
 
 interface Props {
@@ -18,12 +22,18 @@ interface Props {
   sending: boolean;
   /** Message d'erreur de l'API (vide si pas d'erreur). */
   sendError: string;
+  /**
+   * E-mail du compte connecté : c'est lui qui figure comme expéditeur de la
+   * procédure et qui reçoit la copie. Affiché pour lever tout doute sur
+   * l'adresse utilisée.
+   */
+  senderEmail?: string;
 
   // Coordonnées signataires (uniquement cocontractant — l'émetteur reçoit en CC)
   counterpartyName: string;
   counterpartyEmail: string;
-  onCounterpartyNameChange: (v: string) => void;
-  onCounterpartyEmailChange: (v: string) => void;
+  /** Ouvre la modale de saisie du destinataire (la saisie ne vit plus ici). */
+  onEditRecipient: () => void;
 
   onFieldClick: (field: Field) => void;
   onNumPagesLoaded: (n: number) => void;
@@ -33,12 +43,17 @@ interface Props {
 }
 
 /**
- * Étape 3 du wizard — l'émetteur signe ses propres champs, renseigne les
- * coordonnées des deux signataires, puis envoie le contrat. L'envoi persiste
- * l'enveloppe en base via le proxy (voir SignatureWizard.handleSend).
+ * Étape 2 du parcours visible — l'émetteur signe ses propres zones, renseigne
+ * les coordonnées du cocontractant, puis envoie le contrat.
  *
- * Toutes les consignes vivent dans la colonne de gauche : le document garde
- * toute la place, et ses zones à signer y sont mises en avant.
+ * Même organisation que l'étape de placement : guide contextuel sticky à
+ * gauche (étape en cours → action attendue → étape suivante), document à
+ * droite. Le guide évolue seul à chaque action : signature apposée →
+ * coordonnées → envoi.
+ *
+ * Sur le document, les zones restant à signer sont mises en avant (overlay +
+ * étiquette « Cliquez pour signer » qui rebondit) : utile si l'utilisateur a
+ * fermé la modale de signature ouverte automatiquement à l'arrivée.
  */
 export function SignStep(props: Props) {
   if (props.sent) {
@@ -50,80 +65,88 @@ export function SignStep(props: Props) {
   }
 
   const { file, fields, signers, allSelfSigned, recipientFormValid, canSend, sending, sendError } = props;
+  const selfFields = fields.filter((f) => f.signer === "self");
+  const counterFields = fields.filter((f) => f.signer === "counterparty");
+  const selfSigned = selfFields.filter((f) => !!f.value).length;
   const selfColor = signers.find((s) => s.role === "self")?.hex ?? "#4f46e5";
+  const counterColor = signers.find((s) => s.role === "counterparty")?.hex ?? "#10b981";
+
+  // Phase du guidage : elle suit l'avancement réel de la signature et de l'envoi.
+  const phase: GuidePhase = !allSelfSigned
+    ? "sign-self"
+    : !recipientFormValid
+    ? "sign-recipient"
+    : "sign-send";
+  const guide = getGuideContent(phase);
+  const accentHex =
+    guide.signer === "counterparty" ? counterColor : guide.signer === "self" ? selfColor : "#059669";
+
+  // On ouvre le document sur la zone que l'utilisateur doit signer.
+  const firstUnsignedSelf = selfFields.find((f) => !f.value);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
-      <aside className="space-y-4 self-start lg:sticky lg:top-16">
-        {/* Guidage : une consigne à la fois, selon l'avancement */}
-        {!allSelfSigned && (
-          <GuideCard hex={selfColor} icon={MousePointerClick} title="Signez le contrat">
-            Cliquez sur <strong>votre zone de signature</strong>, en clair sur le document.
-          </GuideCard>
-        )}
-        {allSelfSigned && !recipientFormValid && (
-          <GuideCard hex="#059669" icon={CheckCircle2} title="Signé !">
-            Renseignez maintenant le nom et l'e-mail du cocontractant, ci-dessous,
-            pour lui envoyer le contrat.
-          </GuideCard>
-        )}
-        {canSend && (
-          <GuideCard hex="#059669" icon={Send} title="Tout est prêt">
-            Cliquez sur « Envoyer ». Votre cocontractant recevra un e-mail pour signer à son tour.
-          </GuideCard>
-        )}
-
-        {/* Formulaire coordonnées : visible uniquement quand l'émetteur a signé */}
-        {allSelfSigned && (
-          <RecipientForm
-            counterpartyName={props.counterpartyName}
-            counterpartyEmail={props.counterpartyEmail}
-            onCounterpartyNameChange={props.onCounterpartyNameChange}
-            onCounterpartyEmailChange={props.onCounterpartyEmailChange}
-            isValid={recipientFormValid}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      <aside className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
+        <GuidePanel content={guide} accentHex={accentHex} documentName={file?.name}>
+          <ProgressCard
+            selfSigned={selfSigned}
+            selfTotal={selfFields.length}
+            counterTotal={counterFields.length}
+            selfColor={selfColor}
+            counterColor={counterColor}
           />
-        )}
 
-        {sendError && (
-          <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            {sendError}
+          {/* Destinataire : saisi dans une modale, rappelé ici pour relecture */}
+          {allSelfSigned && (
+            <RecipientCard
+              counterpartyName={props.counterpartyName}
+              counterpartyEmail={props.counterpartyEmail}
+              isValid={recipientFormValid}
+              senderEmail={props.senderEmail}
+              onEdit={props.onEditRecipient}
+            />
+          )}
+
+          {sendError && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {sendError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <button
+              onClick={props.onSend}
+              disabled={!canSend || sending}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {sending ? "Envoi en cours…" : "Envoyer"}
+            </button>
+
+            <button
+              onClick={props.onBack}
+              disabled={sending}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 disabled:opacity-40 transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Revenir aux zones de signature
+            </button>
           </div>
-        )}
-
-        {/* Retour et Envoyer sur une seule ligne */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={props.onBack}
-            disabled={sending}
-            title="Revenir aux zones de signature"
-            className="flex shrink-0 items-center gap-1 px-3 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" /> Retour
-          </button>
-          <button
-            onClick={props.onSend}
-            disabled={!canSend || sending}
-            className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {sending ? "Envoi…" : "Envoyer"}
-          </button>
-        </div>
+        </GuidePanel>
       </aside>
 
-      <div className="min-w-0">
+      <div className="lg:col-span-3">
         <div className="bg-gray-50 rounded-xl px-4 pb-4">
           <PdfViewer
             file={file}
             fields={fields}
             signers={signers}
             mode="sign"
-            onFieldClick={props.onFieldClick}
-            onLoaded={props.onNumPagesLoaded}
-            startOnLastPage
+            initialPage={firstUnsignedSelf ? firstUnsignedSelf.page : "last"}
             spotlight={(f) => f.signer === "self" && !f.value}
             spotlightLabel="Cliquez pour signer"
+            onFieldClick={props.onFieldClick}
+            onLoaded={props.onNumPagesLoaded}
           />
         </div>
       </div>
@@ -133,40 +156,49 @@ export function SignStep(props: Props) {
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
 
-/** Carte de consigne en tête de la colonne de gauche (même style que l'étape « Placer »). */
-function GuideCard({ hex, icon: Icon, title, children }: {
-  hex: string;
-  icon: React.ElementType;
-  title: string;
-  children: React.ReactNode;
+/** Carte "Votre progression" + barres self/cocontractant. */
+function ProgressCard({
+  selfSigned, selfTotal, counterTotal, selfColor, counterColor,
+}: {
+  selfSigned: number;
+  selfTotal: number;
+  counterTotal: number;
+  selfColor: string;
+  counterColor: string;
 }) {
   return (
-    <div
-      className="rounded-xl border-2 p-4 shadow-sm"
-      style={{ borderColor: hex + "66", backgroundColor: hex + "0d" }}
-    >
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: hex }}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <p className="text-sm font-bold text-gray-900">{title}</p>
+    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Votre progression</p>
+      <SignProgress title="Vous" done={selfSigned} total={selfTotal} color={selfColor} />
+      {/* Le cocontractant ne signe pas ici : il recevra un email après l'envoi. */}
+      <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
+        <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: counterColor }} />
+        <p className="text-[11px] leading-snug text-gray-500">
+          <span className="font-semibold text-gray-700">Cocontractant</span>
+          {counterTotal > 0 ? ` — ${counterTotal} zone${counterTotal > 1 ? "s" : ""} à signer.` : " — "}
+          Il signera de son côté, après réception de l'e-mail.
+        </p>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-gray-700">{children}</p>
     </div>
   );
 }
 
-/** Mini-formulaire — uniquement les coordonnées du cocontractant. */
-function RecipientForm({
-  counterpartyName, counterpartyEmail,
-  onCounterpartyNameChange, onCounterpartyEmailChange,
-  isValid,
+/**
+ * Rappel du destinataire choisi + rappel de l'expéditeur.
+ *
+ * La saisie elle-même se fait dans `RecipientModal` : ici on relit simplement
+ * à qui part le contrat avant de cliquer sur envoyer, avec un accès direct
+ * pour corriger. Tant que rien n'est renseigné, la carte devient le bouton qui
+ * rouvre la modale (cas où l'utilisateur l'avait fermée).
+ */
+function RecipientCard({
+  counterpartyName, counterpartyEmail, isValid, senderEmail, onEdit,
 }: {
   counterpartyName: string;
   counterpartyEmail: string;
-  onCounterpartyNameChange: (v: string) => void;
-  onCounterpartyEmailChange: (v: string) => void;
   isValid: boolean;
+  senderEmail?: string;
+  onEdit: () => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
@@ -174,23 +206,45 @@ function RecipientForm({
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
           Envoyer à
         </p>
-        {isValid && <span className="text-[10px] text-emerald-600 font-semibold">✓ prêt</span>}
+        {isValid && (
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-1 text-[10px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Pencil className="w-3 h-3" /> Modifier
+          </button>
+        )}
       </div>
-      <div className="space-y-1.5">
-        <input
-          value={counterpartyName}
-          onChange={(e) => onCounterpartyNameChange(e.target.value)}
-          placeholder="Nom du cocontractant"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-        <input
-          value={counterpartyEmail}
-          onChange={(e) => onCounterpartyEmailChange(e.target.value)}
-          placeholder="email@cocontractant.com"
-          type="email"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs outline-none focus:bg-white focus:border-gray-300 transition"
-        />
-      </div>
+
+      {isValid ? (
+        <div className="flex items-start gap-2">
+          <UserRound className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-800 truncate">{counterpartyName}</p>
+            <p className="text-[11px] text-gray-500 break-all">{counterpartyEmail}</p>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={onEdit}
+          className="w-full rounded-lg border border-dashed border-gray-300 px-3 py-2.5 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+        >
+          Indiquer le destinataire
+        </button>
+      )}
+
+      {/* L'utilisateur voit noir sur blanc quelle adresse est utilisée. */}
+      {senderEmail && (
+        <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
+          <AtSign className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" />
+          <p className="text-[10px] leading-snug text-gray-500">
+            Procédure envoyée au nom de votre compte{" "}
+            <span className="font-semibold text-gray-700 break-all">{senderEmail}</span>. Vous
+            recevez une copie de l'e-mail et les réponses du cocontractant vous parviennent
+            directement.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +269,9 @@ function SentConfirmation({
           envoyé à{" "}
           <span className="font-semibold text-gray-700">{counterpartyName}</span>
           {" "}({counterpartyEmail}).
+        </p>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Sans réponse de sa part, vous pourrez le relancer depuis la liste des contrats.
         </p>
       </div>
       <button

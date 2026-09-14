@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, CheckCircle2, MousePointerClick, Move } from "lucide-react";
+import { ChevronRight, CheckCircle2, RotateCcw } from "lucide-react";
 import { PdfViewer } from "./PdfViewer";
 import { PlaceToolbar } from "./PlaceToolbar";
+import { GuidePanel } from "./GuidePanel";
+import { getGuideContent } from "./guide";
+import type { GuidePhase } from "./guide";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
 
 interface Props {
@@ -12,7 +15,6 @@ interface Props {
   /** Type de champ "armé" pour le prochain clic. null = mode placement désactivé. */
   armedFieldType: FieldType | null;
   replicateAllPages: boolean;
-  /** Plus utilisé depuis le retrait de la checklist — gardé pour compatibilité avec SignatureWizard. */
   onSignerChange: (role: SignerRole) => void;
   onArmFieldType: (type: FieldType) => void;
   onReplicateAllPagesChange: (value: boolean) => void;
@@ -25,135 +27,180 @@ interface Props {
   canGoNext: boolean;
 }
 
+/** Couleur de marque, utilisée quand l'étape ne concerne aucun signataire précis. */
+const BRAND_HEX = "#354F99";
+
 /**
- * Étape 2 du wizard : placer les zones de signature sur le PDF.
+ * Étape 1 du parcours visible : placer les zones de signature sur le PDF.
  *
- * La colonne de gauche reste visible au défilement : une consigne courte, le
- * bouton « Suivant » juste en dessous, puis la case « Toutes les pages ». Dès
- * qu'une zone a été glissée, la consigne passe au vert et invite à continuer.
- * Le document s'ouvre sur sa dernière page, où les deux zones sont déjà
- * suggérées (voir SignatureWizard).
+ * Layout : colonne de gauche = guide contextuel sticky (étape en cours, action
+ * attendue, étape suivante) + checklist des zones ; colonne de droite = le
+ * document, remonté tout en haut de l'écran puisque toutes les consignes
+ * vivent à gauche.
+ *
+ * Le document s'ouvre sur sa dernière page, où le wizard pré-place les deux
+ * zones (c'est là que se trouve la signature dans la quasi-totalité des
+ * contrats). Tant qu'aucune n'a été déplacée, un overlay grise la page autour
+ * d'elles et une étiquette « Glissez pour déplacer » rebondit au-dessus de
+ * chacune. Rien n'est imposé : l'utilisateur peut les déplacer, les supprimer
+ * ou cliquer ailleurs pour en poser d'autres.
  */
 export function PlaceStep(props: Props) {
   const {
     file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
-    onArmFieldType, onReplicateAllPagesChange,
+    onSignerChange, onArmFieldType, onReplicateAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onBack, onNext, canGoNext,
   } = props;
-
-  // Une zone a-t-elle déjà été glissée ? Sert à dire clairement « c'est bon, continuez ».
-  const [moved, setMoved] = useState(false);
-  const handleMove = (id: string, xPct: number, yPct: number) => {
-    setMoved(true);
-    onFieldMove(id, xPct, yPct);
-  };
 
   const hasSelfField = fields.some((f) => f.signer === "self");
   const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
   const selfSigner = signers.find((s) => s.role === "self");
   const counterSigner = signers.find((s) => s.role === "counterparty");
 
-  // Sous-étape courante du guidage : 1 = votre zone, 2 = zone du cocontractant, 3 = prêt.
-  const phase = !hasSelfField ? 1 : !hasCounterpartyField ? 2 : 3;
-  const ready = phase === 3 && moved;
+  // Phase du guidage : elle suit l'avancement réel du placement.
+  const phase: GuidePhase = !hasSelfField
+    ? "place-self"
+    : !hasCounterpartyField
+    ? "place-counterparty"
+    : "place-ready";
+  const guide = getGuideContent(phase);
+  const accentHex =
+    guide.signer === "counterparty"
+      ? counterSigner?.hex ?? "#10b981"
+      : guide.signer === "self"
+      ? selfSigner?.hex ?? "#4f46e5"
+      : BRAND_HEX;
+
+  // Tant qu'aucune zone n'a été déplacée, l'overlay met les zones pré-placées
+  // en avant : on voit d'emblée qu'elles sont là et qu'on peut les glisser.
+  // Au premier déplacement il s'efface — le message est passé.
+  const [hasMovedAField, setHasMovedAField] = useState(false);
+  function handleFieldMove(id: string, xPct: number, yPct: number) {
+    setHasMovedAField(true);
+    onFieldMove(id, xPct, yPct);
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
-      {/* Colonne de gauche : reste à l'écran pendant le défilement du document */}
-      <div className="space-y-3 self-start lg:sticky lg:top-16">
-        {phase === 1 && (
-          <GuideCard hex={selfSigner?.hex ?? "#4f46e5"} icon={MousePointerClick} title="Votre signature">
-            Cliquez sur le document pour la placer.
-          </GuideCard>
-        )}
-        {phase === 2 && (
-          <GuideCard hex={counterSigner?.hex ?? "#10b981"} icon={MousePointerClick} title="Signature du cocontractant">
-            Cliquez sur le document pour la placer.
-          </GuideCard>
-        )}
-        {phase === 3 && !moved && (
-          <GuideCard hex="#354F99" icon={Move} title="Placez les signatures">
-            Glissez les zones à l'endroit voulu.
-          </GuideCard>
-        )}
-        {ready && (
-          <GuideCard hex="#059669" icon={CheckCircle2} title="C'est placé">
-            Cliquez sur « Suivant ».
-          </GuideCard>
-        )}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+      {/* Colonne de gauche : sticky, elle accompagne l'utilisateur pendant le scroll */}
+      <div className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
+        <GuidePanel content={guide} accentHex={accentHex} documentName={file?.name}>
+          {/* Checklist des zones — sous le bandeau d'étape, jamais au-dessus */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
+            <ChecklistItem
+              done={hasSelfField}
+              active={activeSignerRole === "self"}
+              hex={selfSigner?.hex ?? "#4f46e5"}
+              label="1. Votre signature"
+              onClick={() => onSignerChange("self")}
+            />
+            <ChecklistItem
+              done={hasCounterpartyField}
+              active={activeSignerRole === "counterparty"}
+              hex={counterSigner?.hex ?? "#10b981"}
+              label="2. Signature du cocontractant"
+              onClick={() => onSignerChange("counterparty")}
+            />
+            <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
+              Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
+            </p>
+          </div>
 
-        {/* Précédent et Suivant sur une seule ligne */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onBack}
-            title="Précédent"
-            className="flex shrink-0 items-center gap-1 px-3 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" /> Précédent
-          </button>
-          <button
-            onClick={onNext}
-            disabled={!canGoNext}
-            className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
-              ready ? "ring-4 ring-[#354F99]/25 animate-pulse" : ""
-            }`}
-          >
-            Suivant <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+          <PlaceToolbar
+            armedFieldType={armedFieldType}
+            replicateAllPages={replicateAllPages}
+            onArmFieldType={onArmFieldType}
+            onReplicateAllPagesChange={onReplicateAllPagesChange}
+          />
 
-        <PlaceToolbar
-          armedFieldType={armedFieldType}
-          replicateAllPages={replicateAllPages}
-          onArmFieldType={onArmFieldType}
-          onReplicateAllPagesChange={onReplicateAllPagesChange}
-        />
+          {/* Actions : au même endroit qu'à l'étape suivante, toujours visibles */}
+          <div className="space-y-2">
+            <button
+              onClick={onNext}
+              disabled={!canGoNext}
+              className={`w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#354F99] text-white text-sm font-semibold rounded-xl hover:bg-[#1a2d5a] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm ${
+                phase === "place-ready" ? "ring-2 ring-[#354F99]/30 ring-offset-2" : ""
+              }`}
+            >
+              Signer <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onBack}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Changer de document
+            </button>
+          </div>
+        </GuidePanel>
       </div>
 
-      <div className="min-w-0">
+      {/* Colonne de droite : le document, en haut de l'écran */}
+      <div className="lg:col-span-3">
         <div className="bg-gray-50 rounded-xl px-4 pb-4">
-        <PdfViewer
-          file={file}
-          fields={fields}
-          signers={signers}
-          mode="place"
-          activeFieldType={armedFieldType}
-          activeSignerRole={activeSignerRole}
-          replicateAllPages={replicateAllPages}
-          onFieldAdd={onFieldAdd}
-          onFieldMove={handleMove}
-          onFieldRemove={onFieldRemove}
-          onLoaded={onNumPagesLoaded}
-          startOnLastPage
-          spotlight={() => !moved}
-          spotlightLabel="Glissez pour déplacer"
-        />
+          <PdfViewer
+            file={file}
+            fields={fields}
+            signers={signers}
+            mode="place"
+            activeFieldType={armedFieldType}
+            activeSignerRole={activeSignerRole}
+            replicateAllPages={replicateAllPages}
+            initialPage="last"
+            spotlight={() => !hasMovedAField}
+            spotlightLabel="Glissez pour déplacer"
+            onFieldAdd={onFieldAdd}
+            onFieldMove={handleFieldMove}
+            onFieldRemove={onFieldRemove}
+            onLoaded={onNumPagesLoaded}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-/** Carte de consigne courte, colorée selon le signataire ou l'état, en tête de la colonne de gauche. */
-function GuideCard({ hex, icon: Icon, title, children }: {
+// ─── Sous-composants ──────────────────────────────────────────────────────────
+
+/**
+ * Ligne de checklist (zone placée / en cours / à venir) — cliquable : elle
+ * fait à la fois office d'indicateur de progression ET de sélecteur du
+ * signataire actif.
+ */
+function ChecklistItem({
+  done, active, hex, label, onClick,
+}: {
+  done: boolean;
+  active: boolean;
   hex: string;
-  icon: React.ElementType;
-  title: string;
-  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
 }) {
   return (
-    <div
-      className="rounded-xl border-2 p-3.5 shadow-sm"
-      style={{ borderColor: hex + "66", backgroundColor: hex + "0d" }}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 -mx-2 transition-colors bg-gray-50 hover:bg-gray-200 ${
+        active ? "bg-gray-500/20" : ""
+      }`}
     >
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: hex }}>
-          <Icon className="h-4 w-4" />
+      {done ? (
+        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+      ) : (
+        <span
+          className={`w-4 h-4 shrink-0 rounded-full border-2 ${active ? "animate-pulse" : "opacity-40"}`}
+          style={{ borderColor: hex }}
+        />
+      )}
+      <span className={`text-xs text-left ${done ? "text-gray-400 line-through" : active ? "font-semibold text-gray-800" : "text-gray-500"}`}>
+        {label}
+      </span>
+{/*       {active && (
+        <span className="ml-auto text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: hex }}>
+          {done ? "prochain clic" : "en cours"}
         </span>
-        <p className="text-sm font-bold text-gray-900">{title}</p>
-      </div>
-      <p className="mt-1.5 text-sm text-gray-700">{children}</p>
-    </div>
+      )} */}
+    </button>
   );
 }

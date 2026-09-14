@@ -43,6 +43,8 @@ export interface TemplateStructure {
     }>;
   }>;
   detectedVariables: string[];
+  /** Libellé et type de chaque variable (renseignés par l'import IA). */
+  variableDefs?: Array<{ name: string; label: string; type: string }>;
   rawText?: string;
 }
 
@@ -76,8 +78,24 @@ function toDTO(t: {
   };
 }
 
+/** Élément de la liste des modèles : métadonnées + nombre de champs. */
+export interface ContractTemplateListItemDTO extends ContractTemplateDTO {
+  variableCount: number;
+}
+
+/** Nombre de champs (variables) d'un modèle, lu dans sa structure chiffrée. */
+function countTemplateVariables(encryptedStructure: string): number {
+  try {
+    const structure = decryptJson<TemplateStructure>(encryptedStructure);
+    return structure.detectedVariables?.length ?? 0;
+  } catch {
+    // Structure illisible : on n'empêche pas l'affichage de la liste.
+    return 0;
+  }
+}
+
 export class ContractTemplateService {
-  async list(userId: number): Promise<ContractTemplateDTO[]> {
+  async list(userId: number): Promise<ContractTemplateListItemDTO[]> {
     const rows = await prisma.contractTemplate.findMany({
       where: { userId },
       select: {
@@ -88,10 +106,14 @@ export class ContractTemplateService {
         version: true,
         createdAt: true,
         updatedAt: true,
+        encryptedStructure: true,
       },
       orderBy: { createdAt: "desc" },
     });
-    return rows.map(toDTO);
+    return rows.map((row) => ({
+      ...toDTO(row),
+      variableCount: countTemplateVariables(row.encryptedStructure),
+    }));
   }
 
   async get(

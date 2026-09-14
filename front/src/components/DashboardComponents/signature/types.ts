@@ -92,3 +92,19 @@ export function formatSignedDate(iso?: string): string {
   const yyyy = d.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
+
+/**
+ * Taille par défaut d'une zone de signature, en pourcentage de la page.
+ * Partagée par le placement au clic (PdfViewer) et par la zone suggérée
+ * automatiquement en bas de la dernière page (PlaceStep).
+ */
+export const DEFAULT_FIELD_SIZE = { widthPct: 0.22, heightPct: 0.06 };
+
+/**
+ * Validation très permissive d'un e-mail (`x@y.z`). Volontairement laxiste :
+ * on cherche à attraper la faute de frappe évidente, pas à refuser une adresse
+ * exotique mais valide.
+ */
+export function isValidEmail(email: string): boolean {
+  return /\S+@\S+\.\S+/.test(email.trim());
+}

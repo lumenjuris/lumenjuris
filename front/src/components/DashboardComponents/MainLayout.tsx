@@ -9,7 +9,6 @@ import {
   Newspaper,
   Library,
   ChevronDown,
-  Droplets,
   BookOpen,
   Upload,
   ScrollText,
@@ -84,7 +83,7 @@ const navSections: NavSection[] = [
       { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
       { icon: ShieldCheck, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
-      { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" },
+     /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
   },
 ];
