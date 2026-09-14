@@ -87,27 +87,31 @@ export function PlaceStep(props: Props) {
       {/* Colonne de gauche : sticky, elle accompagne l'utilisateur pendant le scroll */}
       <div className="lg:col-span-1 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
         <GuidePanel content={guide} accentHex={accentHex}>
-          {/* Checklist des zones — sous le bandeau d'étape, jamais au-dessus */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
-            <ChecklistItem
-              done={hasSelfField}
-              active={activeSignerRole === "self"}
-              hex={selfSigner?.hex ?? "#4f46e5"}
-              label="1. Votre signature"
-              onClick={() => onSignerChange("self")}
-            />
-            <ChecklistItem
-              done={hasCounterpartyField}
-              active={activeSignerRole === "counterparty"}
-              hex={counterSigner?.hex ?? "#10b981"}
-              label="2. Signature du cocontractant"
-              onClick={() => onSignerChange("counterparty")}
-            />
-            <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
-              Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
-            </p>
-          </div>
+          {/* Checklist des zones — affichée seulement tant qu'il manque une zone :
+              une fois les deux posées, elle n'a plus rien à indiquer. Elle
+              revient d'elle-même si l'utilisateur supprime une zone. */}
+          {phase !== "place-ready" && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2.5">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Zones à placer</p>
+              <ChecklistItem
+                done={hasSelfField}
+                active={activeSignerRole === "self"}
+                hex={selfSigner?.hex ?? "#4f46e5"}
+                label="1. Votre signature"
+                onClick={() => onSignerChange("self")}
+              />
+              <ChecklistItem
+                done={hasCounterpartyField}
+                active={activeSignerRole === "counterparty"}
+                hex={counterSigner?.hex ?? "#10b981"}
+                label="2. Signature du cocontractant"
+                onClick={() => onSignerChange("counterparty")}
+              />
+              <p className="text-[10px] text-gray-400 leading-tight pt-0.5">
+                Cliquez sur une ligne pour placer une zone supplémentaire pour ce signataire.
+              </p>
+            </div>
+          )}
 
           <PlaceToolbar
             armedFieldType={armedFieldType}
