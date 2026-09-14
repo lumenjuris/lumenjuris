@@ -10,7 +10,7 @@ import { useUserStore } from "../../../store/userStore";
 import type {
   Field, FieldType, Signer, SignerRole, WizardStep, CapturedSignature,
 } from "./types";
-import { SIGNERS_DEFAULT, isValidEmail } from "./types";
+import { SIGNERS_DEFAULT, DEFAULT_FIELD_SIZE, isValidEmail } from "./types";
 
 interface Props {
   /** Fichier PDF déjà sélectionné (vient du file picker du dashboard). */
@@ -129,9 +129,9 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     if (existing) {
       applyCapturedSignature(field, existing);
     }
-     else {
+    else {
       setModalOpenFor({ field, signer });
-    } 
+    }
   }
 
   /**
@@ -238,8 +238,8 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
             page: lastPage,
             xPct: 0.55,
             yPct: 0.82,
-            widthPct: 0.35,
-            heightPct: 0.07,
+            widthPct: DEFAULT_FIELD_SIZE.widthPct,
+            heightPct: DEFAULT_FIELD_SIZE.heightPct,
           },
         ];
       }
@@ -274,22 +274,22 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 max-w-6xl">
-      {/* En-tête volontairement compact : la priorité de l'écran est le
-          document et l'action en cours, pas le titre de la page. Le repère
-          « Étape X sur N » vit en haut de la colonne de gauche — un second
-          indicateur d'étapes ici afficherait une numérotation concurrente. */}
-      <header className="flex items-center gap-2 min-w-0">
-        <h1 className="text-lg font-bold text-gray-900 tracking-tight shrink-0">
-          Signature électronique
-        </h1>
-        {file && (
-          <>
-            <span className="text-gray-300">·</span>
-            <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <span className="text-xs text-gray-500 truncate">{file.name}</span>
-          </>
-        )}
+    <div className="space-y-4 max-w-7xl m-auto">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
+            Signature électronique
+          </h1>
+          <p className="text-sm text-slate-300 mt-1">
+            {file && (
+                <div className="flex gap-1">
+                  <FileText className="w-3.5 h-3.5 text-white/75 shrink-0" />
+                  <span className="text-white/75">·</span>
+                  <span className="text-xs text-white/75 truncate">{file.name}</span>
+                </div>
+            )}
+          </p>
+        </div>
       </header>
 
       {step === "prepare" && (
@@ -324,8 +324,8 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
             // qu'à les glisser si besoin. Jamais si des zones existent déjà.
             const last = Math.max(0, n - 1);
             setFields((prev) => (prev.length > 0 ? prev : [
-              { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
-              { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: 0.3, heightPct: 0.07 },
+              { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
+              { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
             ]));
           }}
           onBack={() => setStep("prepare")}

@@ -95,8 +95,8 @@ export function formatSignedDate(iso?: string): string {
 
 /**
  * Taille par défaut d'une zone de signature, en pourcentage de la page.
- * Partagée par le placement au clic (PdfViewer) et par la zone suggérée
- * automatiquement en bas de la dernière page (PlaceStep).
+ * Source unique pour toutes les zones : placement au clic (PdfViewer), zones
+ * pré-placées et zone cocontractant ajoutée d'office à l'envoi (SignatureWizard).
  */
 export const DEFAULT_FIELD_SIZE = { widthPct: 0.22, heightPct: 0.06 };
 
