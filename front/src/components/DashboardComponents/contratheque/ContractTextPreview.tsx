@@ -62,12 +62,12 @@ export const ContractTextPreview = memo(function ContractTextPreview({ text, loa
 
   return (
     <div className="flex flex-col min-h-0 h-[55vh] lg:h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
-      {isPdf && (
+{/*       {isPdf && (
         <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-line-subtle shrink-0">
           <ModeButton active={mode === "text"} onClick={() => setMode("text")}>Texte</ModeButton>
           <ModeButton active={mode === "original"} onClick={() => setMode("original")}>Document original</ModeButton>
         </div>
-      )}
+      )} */}
 
       {mode === "original" && pdfUrl ? (
         <iframe src={pdfUrl} title={file.name} className="flex-1 w-full min-h-[320px]" />

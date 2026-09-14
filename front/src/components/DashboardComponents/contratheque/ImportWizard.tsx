@@ -264,6 +264,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
 
   const saveLabel = savableItems.length > 1 ? `Enregistrer les ${savableItems.length} contrats` : "Enregistrer";
 
+  const [showWarningDuplicate, setShowWarningDuplicate] = useState<boolean>(true)
   return (
     <div className="space-y-3 max-w-[1600px] mx-auto w-full">
       {/* En-tête : retour, intitulé modifiable, état, enregistrement */}
@@ -302,9 +303,8 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
           {items.map((item) => (
             <div
               key={item.id}
-              className={`shrink-0 flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-lg border text-xs transition-colors ${
-                item.id === activeItem.id ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
-              }`}
+              className={`shrink-0 flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-lg border text-xs transition-colors ${item.id === activeItem.id ? "border-brand/40 bg-brand-light text-ink" : "border-line text-ink-secondary hover:bg-surface-subtle"
+                }`}
             >
               <button
                 onClick={() => selectItem(item.id)}
@@ -338,18 +338,26 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
         </div>
       )}
 
-      {activeItem.duplicate && (
-        <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Un contrat nommé « {activeItem.duplicate.title} » existe déjà dans votre contrathèque.</span>
-          <a
-            href={`/contratheque/${activeItem.duplicate.id}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
+      {activeItem.duplicate && showWarningDuplicate && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-2.5 rounded-xl">
+          <div role="status" className="flex gap-2 items-center">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Un contrat nommé « {activeItem.duplicate.title} » existe déjà dans votre contrathèque.</span>
+            <a
+              href={`/contratheque/${activeItem.duplicate.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
+            >
+              Voir le contrat existant <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <button
+            onClick={() => setShowWarningDuplicate(false)}
           >
-            Voir le contrat existant <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+            <X />
+          </button>
         </div>
       )}
 
@@ -361,9 +369,8 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
 
       {/* Contrat (colonne large) + informations extraites. Chaque colonne défile seule. */}
       <div
-        className={`grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4 ${
-          hasSeveralFiles ? "lg:h-[calc(100vh-15rem)]" : "lg:h-[calc(100vh-12rem)]"
-        } lg:min-h-[520px]`}
+        className={`grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4 ${hasSeveralFiles ? "lg:h-[calc(100vh-15rem)]" : "lg:h-[calc(100vh-12rem)]"
+          } lg:min-h-[520px]`}
       >
         <ContractTextPreview
           key={`preview-${activeItem.id}`}

@@ -200,8 +200,10 @@ export function FieldReviewList({
 
   return (
     <div ref={listRef} className="space-y-5">
-      <Progress readyCount={readyCount} totalCount={essentialFields.length} />
-      {/* Annonce aux lecteurs d'écran ce qu'il reste à faire, sans rien afficher. */}
+      {/*       <Progress readyCount={readyCount} totalCount={essentialFields.length} />
+ */}      
+ 
+ {/* Annonce aux lecteurs d'écran ce qu'il reste à faire, sans rien afficher. */}
       <p className="sr-only" role="status" aria-live="polite">
         {fieldsNeedingAction.length === 0
           ? "Toutes les informations sont prêtes"
@@ -334,7 +336,7 @@ function FieldLabel({
   );
 }
 
-function Progress({ readyCount, totalCount }: { readyCount: number; totalCount: number }) {
+/* function Progress({ readyCount, totalCount }: { readyCount: number; totalCount: number }) {
   const percent = totalCount === 0 ? 100 : Math.round((readyCount / totalCount) * 100);
   const allReady = readyCount === totalCount;
   return (
@@ -354,7 +356,7 @@ function Progress({ readyCount, totalCount }: { readyCount: number; totalCount: 
       </p>
     </div>
   );
-}
+} */
 
 function CollapsibleHeading({
   open, onToggle, controls, children,
@@ -430,7 +432,7 @@ function ActionFieldCard({
             title="Cette information ne figure pas dans le contrat"
             className="shrink-0 px-2.5 py-1.5 text-xs font-medium text-ink-muted border border-line rounded-lg hover:bg-surface-subtle hover:text-ink-secondary transition-colors"
           >
-            Absent
+            Retirer
           </button>
         )}
       </div>
@@ -471,9 +473,8 @@ function FieldControl({
               autoFocus={autoFocus && selected}
               aria-pressed={selected}
               onClick={() => onChoose(option.value)}
-              className={`flex-1 px-2 py-1.5 text-sm rounded-lg border transition-colors ${
-                selected ? "border-brand bg-brand-light text-brand font-semibold" : "border-line text-ink-secondary hover:bg-surface-subtle"
-              }`}
+              className={`flex-1 px-2 py-1.5 text-sm rounded-lg border transition-colors ${selected ? "border-brand bg-brand-light text-brand font-semibold" : "border-line text-ink-secondary hover:bg-surface-subtle"
+                }`}
             >
               {option.label}
             </button>
