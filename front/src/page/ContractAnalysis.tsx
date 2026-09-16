@@ -91,6 +91,11 @@ export default function ContractAnalysis() {
   const [reviewedClauses, setReviewedClauses] = useState<Set<string>>(new Set());
   const [showMarketAnalysis, setShowMarketAnalysis] = useState(false);
   const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
+  // Vrai quand on arrive avec une analyse déjà faite à rouvrir (ex. depuis la page
+  // "Analyse des risques") : on affiche un chargement au lieu de la zone d'import
+  // le temps de récupérer l'analyse, pour aller directement sur la vue du document.
+  const historyIdToOpenOnArrival = (location.state as { historyId?: string } | null)?.historyId;
+  const [isOpeningHistoryItem, setIsOpeningHistoryItem] = useState(Boolean(historyIdToOpenOnArrival));
   const currentHistoryIdRef = useRef<string | null>(null);
   const sidebarCollapsed = false;
   const [showShare, setShowShare] = useState<Boolean>(false);
@@ -563,9 +568,13 @@ export default function ContractAnalysis() {
     } | null;
     if (state?.historyId) {
       // Ouverture d'une analyse depuis la liste d'historique (page Conformité).
-      const historyId = state.historyId;
+      const navigationHistoryKey = `${location.key}:history:${state.historyId}`;
+      if (consumedNavigationUploadKeys.has(navigationHistoryKey)) return;
+      consumedNavigationUploadKeys.add(navigationHistoryKey);
       navigate(".", { replace: true, state: null });
-      void handleOpenHistoryItem(historyId);
+      void handleOpenHistoryItem(state.historyId).finally(() => {
+        setIsOpeningHistoryItem(false);
+      });
     } else if (state?.file) {
       const navigationUploadKey = `${location.key}:${getFileUploadKey(state.file)}`;
       if (consumedNavigationUploadKeys.has(navigationUploadKey)) return;
@@ -579,12 +588,6 @@ export default function ContractAnalysis() {
       consumedNavigationUploadKeys.add(navigationTextKey);
       navigate(".", { replace: true, state: null });
       void onTextSubmit(state.text, fileName);
-    } else if (state?.historyId) {
-      const navigationHistoryKey = `${location.key}:history:${state.historyId}`;
-      if (consumedNavigationUploadKeys.has(navigationHistoryKey)) return;
-      consumedNavigationUploadKeys.add(navigationHistoryKey);
-      navigate(".", { replace: true, state: null });
-      void handleOpenHistoryItem(state.historyId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -830,7 +833,14 @@ export default function ContractAnalysis() {
     <>
       <div className="-m-5 lg:-m-7 p-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
-          {!contract && (
+          {!contract && isOpeningHistoryItem && (
+            <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-500">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-primary" />
+              Ouverture de l'analyse…
+            </div>
+          )}
+
+          {!contract && !isOpeningHistoryItem && (
             <div className="max-w-5xl mx-auto space-y-8">
               <div className="mx-auto max-w-2xl text-center">
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900">
