@@ -226,7 +226,7 @@ export function SignerPage() {
           <button
             onClick={() => void handleSubmit()}
             disabled={!allSigned || submitting}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="flex w-full sm:w-auto justify-center items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {submitting ? "Envoi…" : "Valider ma signature"}
@@ -248,7 +248,7 @@ export function SignerPage() {
         )}
 
         {/* PDF viewer */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-2 sm:p-4">
           <PdfViewer
             file={pdfFile}
             fields={fields}
@@ -277,13 +277,13 @@ export function SignerPage() {
 /** Bandeau de marque des pages publiques de signature. */
 function PublicHeader({ documentName }: { documentName: string }) {
   return (
-    <header className="h-14 bg-blue-primary flex items-center px-6 gap-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-panel bg-brand">
+    <header className="h-14 bg-blue-primary flex items-center px-4 sm:px-6 gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-panel bg-brand">
         <Scale className="h-4 w-4 text-white" />
       </div>
-      <span className="text-sm font-bold text-white">Lumen Juris</span>
+      <span className="text-sm font-bold text-white shrink-0">Lumen Juris</span>
       <span className="text-white/30 mx-1">·</span>
-      <span className="text-sm text-white/70 truncate max-w-xs">
+      <span className="text-sm text-white/70 truncate min-w-0 max-w-xs">
         Signature{documentName ? ` — ${documentName}` : ""}
       </span>
     </header>

@@ -105,10 +105,10 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
       <BackBtn onBack={onBack} />
 
       {/* En-tête : identité du contrat et actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-primary py-6 px-8 rounded-2xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-blue-primary py-5 px-4 sm:py-6 sm:px-8 rounded-2xl">
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{data.title}</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight break-words">{data.title}</h1>
             <StatusBadge status={data.status} />
             {urgent && (
               <span className="text-[10px] font-bold text-amber-200 bg-amber-500/20 border border-amber-300/30 px-2 py-0.5 rounded-md">
@@ -171,10 +171,10 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
       {/* Contenu du contrat (gauche) + informations et suivi (droite) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div
-          className={`lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 ${editing ? "" : "overflow-y-auto"}`}
+          className={`lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 ${editing ? "" : "overflow-y-auto"}`}
           style={editing ? undefined : { maxHeight: 620 }}
         >
-          <div className="flex items-center justify-between gap-2 mb-3 bg-blue-primary -mx-5 -mt-5 px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 bg-blue-primary -mx-4 -mt-4 sm:-mx-5 sm:-mt-5 px-4 sm:px-6 py-3 sm:py-4">
             <p className="text-[10px] font-bold text-white uppercase tracking-widest">Contenu du contrat</p>
             {!editing && (
               <button

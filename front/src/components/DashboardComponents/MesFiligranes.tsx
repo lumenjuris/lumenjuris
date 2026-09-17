@@ -157,7 +157,7 @@ export function MesFiligranes() {
   return (
     <div className=" space-y-6 max-w-5xl mx-auto">
       <div className="border border-gray-300 rounded-2xl">
-      <div className=" bg-blue-primary px-8 py-8 rounded-t-2xl">
+      <div className=" bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-t-2xl">
         <h1 className="text-2xl font-bold text-white tracking-tight">Mes filigranes</h1>
         <p className="text-sm text-gray-primary mt-1">
           Importez vos images pour les utiliser comme filigranes sur vos documents générés.

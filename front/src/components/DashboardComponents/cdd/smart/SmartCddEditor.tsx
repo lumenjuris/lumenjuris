@@ -727,7 +727,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">
               Champs à compléter
             </p>
-            <ul className="space-y-1">
+            <ul className="max-h-60 space-y-1 overflow-y-auto lg:max-h-none lg:overflow-visible">
               {fieldGroups.map((g) => {
                 const complete = g.varIds.every(isFilled);
                 return (
@@ -738,7 +738,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                         complete ? "bg-brand-light" : "hover:bg-surface-subtle"
                       }`}
                     >
-                      <span className={`min-w-0 flex-1 truncate text-sm ${complete ? "font-medium text-ink" : "text-ink-secondary"}`}>
+                      <span className={`min-w-0 flex-1 text-sm leading-snug lg:truncate ${complete ? "font-medium text-ink" : "text-ink-secondary"}`}>
                         {g.label}
                       </span>
                       {complete && <Check className="h-4 w-4 shrink-0 text-brand" />}

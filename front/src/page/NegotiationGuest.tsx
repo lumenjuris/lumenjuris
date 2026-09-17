@@ -40,19 +40,22 @@ export function NegotiationGuest() {
 
   return (
     <div className="min-h-screen bg-surface-subtle">
-      <header className="h-14 bg-blue-primary flex items-center px-6">
-        <LumenJurisLogo variant="dark" height={36} />
-        <span className="ml-3 text-xs text-white/40">
+      <header className="h-14 bg-blue-primary flex items-center gap-3 px-4 sm:px-6">
+        <div className="shrink-0">
+          <LumenJurisLogo variant="dark" height={36} />
+        </div>
+        {/* Sous-titre masqué sur mobile : pas la place à côté du logo */}
+        <span className="hidden md:inline text-xs text-white/40">
           · {completion ? "Complétion du document — espace invité" : "Négociation — espace invité"}
         </span>
         {data?.guest && (
-          <span className="ml-auto text-xs text-white/60">
+          <span className="ml-auto min-w-0 truncate text-xs text-white/60">
             {data.guest.name ? `${data.guest.name} · ` : ""}{ROLE_LABEL[data.guest.role]}
           </span>
         )}
       </header>
 
-      <main className="max-w-6xl mx-auto p-5 lg:p-8">
+      <main className="max-w-6xl mx-auto p-3 sm:p-5 lg:p-8">
         {loading ? (
           <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-ink-subtle" /></div>
         ) : error || !data ? (
@@ -64,7 +67,7 @@ export function NegotiationGuest() {
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col bg-blue-primary p-4 gap-2 rounded-2xl">
-              <h1 className="text-2xl font-bold text-white tracking-tight">{data.title}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{data.title}</h1>
               <p className="text-sm text-gray-primary mt-1 inline-flex items-center gap-1.5">
                 {completion
                   ? "Complétez les champs surlignés qui vous sont assignés, puis validez : le reste du document est en lecture seule."

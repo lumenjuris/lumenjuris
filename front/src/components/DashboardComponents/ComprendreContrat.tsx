@@ -196,8 +196,8 @@ export function ComprendreContrat() {
   return (
 
     <div className="flex flex-col lg:flex-row gap-6 mx-auto w-full max-w-7xl">
-      <div className="w-full lg:w-64 lg:shrink-0">
-        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-white shadow-card max-h-[calc(100vh-9rem)]">
+      <div className="order-2 w-full lg:order-1 lg:w-64 lg:shrink-0">
+        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-white shadow-card max-h-[60vh] lg:max-h-[calc(100vh-9rem)]">
           {/* En-tête */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
             <p className="text-sm font-semibold text-gray-900">Historique</p>
@@ -264,10 +264,10 @@ export function ComprendreContrat() {
           )}
         </div>
       </div>
-      <div className="flex-1 min-w-0 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 bg-blue-primary p-8 rounded-2xl">
+      <div className="order-1 flex-1 min-w-0 space-y-6 lg:order-2">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-blue-primary p-5 sm:p-8 rounded-2xl">
           <div className="space-y-4 max-w-lg">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
+            <h2 className="text-xl sm:text-3xl font-semibold text-white leading-tight">
               Analyse et compréhension de contrat
             </h2>
             <p className="text-sm text-gray-primary leading-relaxed">

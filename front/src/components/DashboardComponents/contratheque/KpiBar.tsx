@@ -4,7 +4,7 @@ import type { ContractStats } from "./types";
 /** Bandeau des 4 KPI de la contrathèque. */
 export function KpiBar({ stats, loading }: { stats: ContractStats | null; loading: boolean }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <Kpi
         label="Total contrats"
         value={stats?.total}
@@ -54,9 +54,9 @@ function Kpi({
   alert?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-card border border-line shadow-card p-4 flex items-center gap-4">
+    <div className="bg-white rounded-card border border-line shadow-card p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
       <div
-        className="w-10 h-10 rounded-panel flex items-center justify-center shrink-0"
+        className="h-9 w-9 sm:h-10 sm:w-10 rounded-panel flex items-center justify-center shrink-0"
         style={{ backgroundColor: accent + "18" }}
       >
         <Icon className="w-5 h-5" style={{ color: accent }} />
@@ -69,10 +69,10 @@ function Kpi({
           </>
         ) : (
           <>
-            <p className={`text-2xl font-bold tracking-tight ${alert && value ? "text-amber-600" : "text-ink"}`}>
+            <p className={`text-xl sm:text-2xl font-bold tracking-tight ${alert && value ? "text-amber-600" : "text-ink"}`}>
               {value ?? 0}
             </p>
-            <p className="text-xs font-medium text-slate-600 leading-tight mt-0.5 truncate">
+            <p className="text-[11px] sm:text-xs font-medium text-slate-600 leading-tight mt-0.5">
               {label}
             </p>
           </>

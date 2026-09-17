@@ -69,7 +69,7 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
   const general = useMemo(() => comments.filter((c) => c.anchorStart == null && c.parentCommentId == null), [comments]);
   const segments = useMemo(() => buildSegments(text, anchored), [text, anchored]);
 
-  function onMouseUp() {
+  function handleSelectionEnd() {
     if (!canAnnotate || !docRef.current) return;
     const off = selectionOffsets(docRef.current);
     if (off) { setPending(off); setSelected(null); }
@@ -89,8 +89,10 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
         {text ? (
           <div
             ref={docRef}
-            onMouseUp={onMouseUp}
-            className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans selection:bg-brand/20 p-5"
+            onMouseUp={handleSelectionEnd}
+            // Sur mobile, la sélection n'est finalisée qu'un instant après la fin du toucher
+            onTouchEnd={() => setTimeout(handleSelectionEnd, 300)}
+            className="text-sm text-ink-secondary whitespace-pre-wrap break-words leading-relaxed font-sans selection:bg-brand/20 p-4 sm:p-5"
           >
             {segments.map((seg, i) =>
               seg.ann ? (
@@ -119,7 +121,10 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
 
       {/* Rail annotations */}
       <div className="lg:col-span-2 space-y-3">
-        {/* Formulaire d'annotation sur sélection */}
+        {/* Sur mobile, formulaire et détail s'affichent en panneau fixe en bas de l'écran
+            (sinon ils apparaîtraient sous le document, hors de la vue) */}
+        {((pending && canAnnotate) || (selectedAnn && !pending)) && (
+          <div className="max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-40 max-lg:max-h-[70vh] max-lg:overflow-y-auto max-lg:p-3 max-lg:bg-black/10">
         {pending && canAnnotate && (
           <AnnotationForm
             quote={pending.text}
@@ -140,6 +145,8 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
             onClose={() => setSelected(null)}
             onResolve={onResolve}
           />
+        )}
+          </div>
         )}
 
         {/* Liste des annotations */}

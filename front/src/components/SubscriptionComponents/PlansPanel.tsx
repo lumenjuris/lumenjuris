@@ -209,7 +209,7 @@ export function PlansPanel() {
         <p className="mt-1 text-sm text-ink-muted">Tarification adaptée à votre organisation</p>
       </div>
       {/* ── En-tête + toggle mensuel/annuel ── */}
-      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end bg-blue-primary py-4 px-8 rounded-2xl">
+      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end bg-blue-primary py-4 px-5 sm:px-8 rounded-2xl">
         <div className="max-w-xl">
           
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">

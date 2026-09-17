@@ -127,7 +127,7 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           label="Total"
           value={stats?.total ?? 0}
@@ -196,16 +196,16 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
 /** Titre de la page + bouton "Nouveau contrat". */
 function Header({ onNewContract }: { onNewContract: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-4 bg-blue-primary px-4 py-8 rounded-2xl">
+    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Signature électronique</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Signature électronique</h1>
         <p className="text-sm text-gray-primary mt-1">
           Suivez l'avancement de vos contrats à signer.
         </p>
       </div>
       <button
         onClick={onNewContract}
-        className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-card"
+        className="shrink-0 flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-card"
       >
         <Plus className="w-4 h-4" /> Envoyer pour signature
       </button>
@@ -224,15 +224,15 @@ function KpiCard({
   loading?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-card border border-line shadow-card p-4 flex items-center gap-4">
-      <div className="w-10 h-10 rounded-panel flex items-center justify-center shrink-0" style={{ backgroundColor: accent + "18" }}>
+    <div className="bg-white rounded-card border border-line shadow-card p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+      <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-panel flex items-center justify-center shrink-0" style={{ backgroundColor: accent + "18" }}>
         <Icon className="w-5 h-5 stroke-[1.5]" style={{ color: accent }} />
       </div>
       <div className="min-w-0">
         {loading ? (
           <div className="h-7 w-8 rounded-md bg-surface-muted animate-pulse mb-1" />
         ) : (
-          <p className="text-2xl font-bold tracking-tight text-ink">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold tracking-tight text-ink">{value}</p>
         )}
         <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-widest leading-tight mt-0.5">{label}</p>
       </div>

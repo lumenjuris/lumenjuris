@@ -165,7 +165,7 @@ export function Conformite() {
     <>
     <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
       {/* Title + CTA */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
         <div className="text-left">
           <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
             Analyse de conformité

@@ -842,7 +842,7 @@ export default function ContractAnalysis() {
     */
   return (
     <>
-      <div className="-m-5 lg:-m-7 p-4 overflow-x-hidden">
+      <div className="-m-4 sm:-m-5 lg:-m-7 p-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
           {!contract && isOpeningHistoryItem && (
             <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-500">
@@ -900,7 +900,7 @@ export default function ContractAnalysis() {
           {contract?.processed && !displayedIsProcessing && (
             <div className="max-w-7xl mx-auto">
 
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl mb-2">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">Analyse de conformité</h1>
                   <p className="text-sm text-slate-300 mt-1">
