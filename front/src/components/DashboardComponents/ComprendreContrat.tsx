@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { UploadZone } from "../ContractAnalysis/UploadZone";
+import { useEffect, useRef, useState } from "react";
+import { COMPLETION_ANIMATION_MS, LoadingZoneAnalyzer } from "../common/LoadingZoneAnalyzer";
 import { useContractAnalysis } from "../../hooks/useContractAnalysis";
 import { ContractSummary, ContractSummuryList, ClauseItem, summarizeContract, deleteSummarizeContract } from "../../utils/contractSummarizer";
 import { fetchProxy } from "../../utils/fetchProxy";
@@ -37,8 +37,15 @@ const hasValidContent = (obj: any) => {
   return false;
 };
 
+// Formats acceptés pour l'import (identiques à la zone d'import de l'analyzer)
+const ACCEPTED_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
 export function ComprendreContrat() {
-  const { handleFileUpload, handleTextSubmit, isProcessing: isHookProcessing, processingPhase: hookPhase } = useContractAnalysis();
+  const { handleFileUpload } = useContractAnalysis();
   const [summary, setSummary] = useState<ContractSummary | null>(null);
 
   type llm = "gpt-4o-mini" | "gpt-4o" | "gpt-5.2" | "gpt-5.2-nano";
@@ -46,7 +53,10 @@ export function ComprendreContrat() {
   const selectLlm : llm = "gpt-4o-mini";
 
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Input fichier caché : le bouton "Analysez un contrat" ouvre directement l'explorateur
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFileTypeError, setIsFileTypeError] = useState(false);
+  const [isSummaryError, setIsSummaryError] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractSummary | null>(null);
   const [contractsList, setContractsList] = useState<ContractSummuryList[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,35 +64,59 @@ export function ComprendreContrat() {
   const [isDeleteError, setIsDeleteError] = useState(false);
   const [validateModalOpen, setValidateModalOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
+  // Vrai du choix du fichier jusqu'à la réponse de l'IA (extraction + résumé)
   const [isLoadingContract, setIsLoadingContract] = useState(false);
-  const [localProcessingPhase, setLocalProcessingPhase] = useState("");
+  // Vrai quand l'IA a répondu : le loader se remplit à 100 % avant d'afficher le résumé
+  const [isSummaryReady, setIsSummaryReady] = useState(false);
 
-  const isCurrentlyProcessing = isHookProcessing || isLoadingContract;
-  const currentPhase = hookPhase || localProcessingPhase;
   const activeSummary = selectedContract || summary;
+
+  const openFilePicker = () => {
+    if (isLoadingContract) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // On vide l'input pour pouvoir re-sélectionner le même fichier plus tard
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setIsFileTypeError(true);
+      return;
+    }
+    setIsFileTypeError(false);
+    void handleFile(file);
+  };
 
   const handleFile = async (file: File) => {
     try {
-
-
       setIsLoadingContract(true);
-      setLocalProcessingPhase("Extraction du fichier...");
+      setIsSummaryReady(false);
+      setIsSummaryError(false);
+      setSummary(null);
+      setSelectedContract(null);
 
       const extracted = await handleFileUpload(file);
-      if (!extracted?.content) return;
+      if (!extracted?.content) {
+        setIsSummaryError(true);
+        return;
+      }
 
-      setLocalProcessingPhase("Génération du résumé par l'IA...");
       const resSummary = await summarizeContract(extracted.content, extracted.fileName, selectLlm);
 
+      // On laisse le temps à la barre d'arriver à 100 % avant de changer de vue
+      setIsSummaryReady(true);
+      await new Promise((resolve) => setTimeout(resolve, COMPLETION_ANIMATION_MS));
+
       setSummary(resSummary);
-      setSelectedContract(null);
-      setIsModalOpen(false);
-      await handleListContract();
+      void handleListContract();
     } catch (error) {
+      setIsSummaryError(true);
       console.error("Erreur lors de l'analyse du fichier : ", error);
     } finally {
       setIsLoadingContract(false);
-      setLocalProcessingPhase("");
     }
   };
 
@@ -151,31 +185,6 @@ export function ComprendreContrat() {
   }
 
 
-
-  const textSubmit = async (text: string, fileName: string) => {
-    try {
-      setIsLoadingContract(true);
-      setLocalProcessingPhase("Analyse du texte...");
-
-      const extracted = await handleTextSubmit(text, fileName);
-      if (!extracted) return;
-
-      const contentToSummarize = typeof extracted === "string" ? extracted : extracted.content;
-      if (!contentToSummarize) return;
-
-      setLocalProcessingPhase("Génération du résumé par l'IA...");
-      const resSummary = await summarizeContract(contentToSummarize, extracted.fileName, selectLlm);
-      setSummary(resSummary);
-      setSelectedContract(null);
-      setIsModalOpen(false);
-      await handleListContract();
-    } catch (error) {
-      console.error("Erreur lors de l'analyse du texte : ", error);
-    } finally {
-      setIsLoadingContract(false);
-      setLocalProcessingPhase("");
-    }
-  };
 
   useEffect(() => {
     handleListContract();
@@ -266,17 +275,46 @@ export function ComprendreContrat() {
             </p>
           </div>
 
-          {/* Bouton blanc à droite */}
+          {/* Bouton blanc à droite : ouvre directement l'explorateur de fichiers */}
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openFilePicker}
+            disabled={isLoadingContract}
             className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
-             transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0 self-start sm:self-auto"
+             transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0 self-start sm:self-auto
+             disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             <span className="text-base font-normal">+</span> Analysez un contrat
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
         </div>
 
         <div className="space-y-3">
+
+          {isFileTypeError && (
+            <AlertBanner
+              title="Erreur de fichier"
+              variant="error"
+              detail="Seuls les fichiers PDF, DOC et DOCX (Word) sont acceptés."
+              duration={8000}
+              onClose={() => setIsFileTypeError(false)}
+            />
+          )}
+
+          {isSummaryError && (
+            <AlertBanner
+              title="Résumé impossible"
+              variant="error"
+              detail="Une erreur est survenue pendant l'analyse de votre contrat. Veuillez réessayer."
+              duration={8000}
+              onClose={() => setIsSummaryError(false)}
+            />
+          )}
 
           {isDeleteError && (
             <AlertBanner
@@ -313,7 +351,11 @@ export function ComprendreContrat() {
 
         </div>
 
-        {activeSummary ? (
+        {isLoadingContract ? (
+          <div className="mt-8">
+            <LoadingZoneAnalyzer phase="summary" isComplete={isSummaryReady} />
+          </div>
+        ) : activeSummary ? (
           <div className="mt-8 space-y-6 border-t border-gray-100 pt-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-gray-900">Résumé du contrat</h3>
@@ -578,48 +620,6 @@ export function ComprendreContrat() {
           </div>
         )}
 
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                disabled={isCurrentlyProcessing}
-                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-              >
-                ✕
-              </button>
-
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Importer ou coller votre texte
-              </h3>
-
-               {/* <div className="mb-4">
-                <label htmlFor="llm-select" className="block text-xs font-semibold text-gray-600 mb-1">
-                  Modèle d'IA utilisé
-                </label>
-                <select
-                  id="llm-select"
-                  value={selectedLlm}
-                  onChange={(e) => setSelectedLlm(e.target.value)}
-                  disabled={isCurrentlyProcessing}
-                  className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <option value="gpt-4o-mini">GPT-4o Mini (Rapide & Économique)</option>
-                  <option value="gpt-4o">GPT-4o (Standard - Recommandé)</option>
-                </select>
-              </div>  */}
-
-              <UploadZone
-                onFileSelect={handleFile}
-                disabled={isCurrentlyProcessing}
-                onTextSubmit={textSubmit}
-                isProcessing={isCurrentlyProcessing}
-                processingPhase={currentPhase}
-                analyseCredit={9999}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

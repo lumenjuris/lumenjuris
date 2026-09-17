@@ -41,7 +41,7 @@ import {
 import { fetchProxy } from "../utils/fetchProxy";
 import { isAnalyzerQuotaExhausted } from "../utils/analyzerQuota";
 import { QuotaLimitModal } from "../components/common/QuotaLimitModal";
-import { LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
+import { COMPLETION_ANIMATION_MS, LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
 import { ClausesSidebar } from "../components/ContractAnalysis/ClausesSidebar";
 import { isFeatureEnabled } from "../config/features";
 import { useEnterpriseContext } from "../hooks/Analyzer/useEnterpriseContext";
@@ -91,6 +91,9 @@ export default function ContractAnalysis() {
   const [reviewedClauses, setReviewedClauses] = useState<Set<string>>(new Set());
   const [showMarketAnalysis, setShowMarketAnalysis] = useState(false);
   const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
+  // Id de l'analyse dont l'IA vient de répondre : le loader se remplit à 100 %
+  // avant l'affichage du document
+  const [completedAnalysisHistoryId, setCompletedAnalysisHistoryId] = useState<string | null>(null);
   // Vrai quand on arrive avec une analyse déjà faite à rouvrir (ex. depuis la page
   // "Analyse des risques") : on affiche un chargement au lieu de la zone d'import
   // le temps de récupérer l'analyse, pour aller directement sur la vue du document.
@@ -256,6 +259,7 @@ export default function ContractAnalysis() {
     if (currentHistoryIdRef.current === historyId) {
       setShowAnalysisForm(false);
     }
+    setCompletedAnalysisHistoryId(null);
 
     let contentToAnalyze = baseContract.content;
 
@@ -333,6 +337,13 @@ export default function ContractAnalysis() {
           htmlContent: completedEntry.htmlContent,
         }),
       );
+
+      // On laisse le temps à la barre d'arriver à 100 % avant de changer de vue
+      if (currentHistoryIdRef.current === historyId) {
+        setCompletedAnalysisHistoryId(historyId);
+        await new Promise((resolve) => setTimeout(resolve, COMPLETION_ANIMATION_MS));
+      }
+
       if (savedItem) {
         setHistoryItems(await loadContractHistoryIndex());
         removeTemporaryHistoryEntry(historyId);
@@ -881,6 +892,7 @@ export default function ContractAnalysis() {
               <LoadingZoneAnalyzer
                 phase={displayedProcessingPhase}
                 analysisProgress={displayedAnalysisProgress}
+                isComplete={currentHistoryId !== null && completedAnalysisHistoryId === currentHistoryId}
               />
             </div>
           )}
