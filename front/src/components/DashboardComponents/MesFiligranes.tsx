@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Image, Pencil, Trash2, Upload, X, Check } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
+import { PageBanner } from "../common/PageBanner";
 
 interface UploadedImage {
   filename: string;
@@ -155,14 +156,13 @@ export function MesFiligranes() {
   }
 
   return (
-    <div className=" space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <PageBanner
+        title="Mes filigranes"
+        subtitle="Importez vos images pour les utiliser comme filigranes sur vos documents générés."
+      />
+
       <div className="border border-gray-300 rounded-2xl">
-      <div className=" bg-blue-primary px-8 py-8 rounded-t-2xl">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Mes filigranes</h1>
-        <p className="text-sm text-gray-primary mt-1">
-          Importez vos images pour les utiliser comme filigranes sur vos documents générés.
-        </p>
-      </div>
 
       {/* Zone d'upload */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4 m-6">

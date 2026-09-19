@@ -97,7 +97,7 @@ export function PartyPrefill({
   const remplir = (g: Groupe) => (result: CompanyResult, siret?: string) => {
     const p = mapCompanyToContractParty(result, siret);
     const adresse = [p.code_postal, p.ville].filter(Boolean).join(" ");
-    const valeurs: Partial<Record<Cle, string | undefined>> = {
+    const valeurs: Partial<Record<Cle, string | undefined | null>> = {
       nom: p.nom,
       forme_juridique: p.forme_juridique,
       siren: p.siren,

@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { prisma } from "../../prisma/singletonPrisma.js"
+import { includesText } from "../utils/searchText.js"
 
 export type ClauseCategoryValue =
     | "CONFIDENTIALITE" | "RESPONSABILITE" | "RESILIATION" | "PROPRIETE_INTELLECTUELLE"
@@ -84,18 +85,18 @@ export class ClauseService {
         if (filters.category) where["category"] = filters.category
         if (filters.position) where["position"] = filters.position
         if (filters.onlyApproved) where["isApproved"] = true
-        if (filters.q) {
-            where["OR"] = [
-                { title: { contains: filters.q } },
-                { body: { contains: filters.q } },
-                { tags: { contains: filters.q } },
-            ]
-        }
         const rows = await prisma.clause.findMany({
             where,
             orderBy: [{ category: "asc" }, { position: "asc" }, { title: "asc" }],
         })
-        return rows.map(toDTO)
+
+        // Le texte de la clause (`body`) est chiffré : la recherche se fait en
+        // mémoire, après déchiffrement par l'extension Prisma.
+        const q = filters.q
+        const matchingRows = q
+            ? rows.filter((r) => includesText(r.title, q) || includesText(r.body, q) || includesText(r.tags, q))
+            : rows
+        return matchingRows.map(toDTO)
     }
 
     /** Agrégats : nombre de clauses par catégorie + total approuvées. */

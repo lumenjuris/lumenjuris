@@ -9,6 +9,7 @@ import type { ContrathequeTab } from "./ViewTabs";
 import type { ContractStats, ContractListItem, ListFilters, ContractStatus, FolderDTO, TagDTO } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { Sidebar } from "./Sidebar";
+import { PageBanner } from "../../common/PageBanner";
 
 interface Props {
   onOpen: (id: string) => void;
@@ -134,26 +135,26 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   return (
     <div className=" space-y-6 max-w-7xl mx-auto w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Contrathèque</h1>
-          <p className="text-sm text-gray-primary mt-1">Centralisez et suivez le cycle de vie de vos contrats.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
-          <button
-            onClick={() => contractApi.exportCsv(filters)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all durantion-200 hover:-translate-y-0.5 will-change-transform border border-white/15"
-          >
-            <Download className="w-4 h-4" /> Exporter
-          </button>
-          <button
-            onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Importer un contrat
-          </button>
-        </div>
-      </div>
+      <PageBanner
+        title="Contrathèque"
+        subtitle="Centralisez et suivez le cycle de vie de vos contrats."
+        actions={
+          <>
+            <button
+              onClick={() => contractApi.exportCsv(filters)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5 will-change-transform border border-white/15"
+            >
+              <Download className="w-4 h-4" /> Exporter
+            </button>
+            <button
+              onClick={onImport}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Importer un contrat
+            </button>
+          </>
+        }
+      />
        <div className="mt-3"><ViewTabs tab={tab} onTab={onTab} /></div>
 
       <KpiBar stats={stats} loading={loading && !stats} />

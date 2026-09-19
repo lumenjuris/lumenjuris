@@ -127,25 +127,28 @@ export const TextInputZone: React.FC<TextInputZoneProps> = ({
       <div className="flex bg-gray-100 rounded-t-2xl overflow-hidden">
         <button
           onClick={() => setActiveTab("file")}
-          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 whitespace-nowrap px-3 py-3 sm:px-6 sm:py-4 font-medium transition-all flex items-center justify-center gap-2 ${
             activeTab === "file"
               ? "bg-white text-blue-600 shadow-sm"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
           <Upload size={20} />
-          Importer un PDF
+          {/* Libellé raccourci sur mobile : la version longue tient sur trois lignes */}
+          <span className="sm:hidden">PDF</span>
+          <span className="hidden sm:inline">Importer un PDF</span>
         </button>
         <button
           onClick={() => setActiveTab("text")}
-          className={`flex-1 px-6 py-4 font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 whitespace-nowrap px-3 py-3 sm:px-6 sm:py-4 font-medium transition-all flex items-center justify-center gap-2 ${
             activeTab === "text"
               ? "bg-white text-blue-600 shadow-sm"
               : "text-gray-600 hover:text-gray-800"
           }`}
         >
           <Type size={20} />
-          Saisir le texte directement
+          <span className="sm:hidden">Texte</span>
+          <span className="hidden sm:inline">Saisir le texte directement</span>
         </button>
       </div>
 

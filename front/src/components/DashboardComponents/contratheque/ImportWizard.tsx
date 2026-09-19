@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, ExternalLink, Loader2, X } from "lucide-react";
+import { AlertCircle, Check, ExternalLink, Loader2, X } from "lucide-react";
 import { contractApi } from "./api";
 import type { ExtractedField } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
@@ -11,6 +11,7 @@ import {
   suggestTitle, titleFromFileName, toContractColumns, toMetadataPayload,
 } from "./importReview";
 import type { ReviewField } from "./importReview";
+import { PageBanner } from "../../common/PageBanner";
 
 interface Props {
   /** Fichiers déjà choisis par l'utilisateur ; la lecture démarre dessus. */
@@ -267,26 +268,14 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   const [showWarningDuplicate, setShowWarningDuplicate] = useState<boolean>(true)
   return (
     <div className="space-y-3 max-w-[1600px] mx-auto w-full">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-            Ajouter à la contrathèque
-          </h1>
-          <p className="text-sm text-slate-300 mt-1">
-            Renseignez les données du contrat et enregistrer dans votre contrathèque
-          </p>
-        </div>
-      </header>
-      {/* En-tête : retour, intitulé modifiable, état, enregistrement */}
+      <PageBanner
+        className="mb-2"
+        backLink={{ label: "Contrathèque", onClick: requestCancel, disabled: saving }}
+        title="Ajouter à la contrathèque"
+        subtitle="Renseignez les données du contrat et enregistrez-le dans votre contrathèque."
+      />
+      {/* En-tête : intitulé modifiable, état, enregistrement (le retour est dans la bannière) */}
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={requestCancel}
-          disabled={saving}
-          className="shrink-0 p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-colors disabled:opacity-40"
-          title="Retour à la contrathèque"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
         <input
           value={activeItem.title}
           onChange={(event) => patchItem(activeItem.id, { title: event.target.value, titleEditedByUser: true })}

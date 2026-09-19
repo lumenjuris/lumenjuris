@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ClauseRisk } from '../types';
 import { callOpenAI, callOpenAi52, type OpenAIModelId } from '../utils/aiClient';
+
+
+
 /* ---------- TYPES ---------- */
 export interface AltProposal {
   clause: string; // nouvelle rédaction complète
@@ -28,9 +31,13 @@ interface AIState {
 export const getClauseAIKey = (clauseId: string, model: OpenAIModelId) => `${clauseId}:${model}`;
 const pendingClauseAIRequests = new Map<string, Promise<ClauseAI>>();
 
+
+
 const usesResponsesApi = (
   model: OpenAIModelId,
 ): model is Extract<OpenAIModelId, 'gpt-5.2' | 'gpt-5.4-nano'> => model === 'gpt-5.2' || model === 'gpt-5.4-nano';
+
+
 
 const parseClauseAI = (txt: string): ClauseAI => JSON.parse(
   (txt || '{}')

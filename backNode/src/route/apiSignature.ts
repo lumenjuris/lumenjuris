@@ -8,6 +8,7 @@ import { Mailer } from "../infrastructure/mailer/classMailer.js"
 import { SignatureEnvelopeService } from "../services/classSignatureEnvelope.js"
 import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope.js"
 import { prisma } from "../../prisma/singletonPrisma.js"
+import { encryptBuffer, decryptBuffer } from "../services/encryption.js"
 
 const router: Router = express.Router()
 const svc = new SignatureEnvelopeService()
@@ -68,11 +69,11 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: "Nom et e-mail du cocontractant requis." })
         }
 
-        // Sauvegarde le PDF sur le filesystem (pas en DB pour ne pas alourdir)
+        // Sauvegarde le PDF chiffré sur le filesystem (pas en DB pour ne pas alourdir)
         await fs.mkdir(ENVELOPES_DIR, { recursive: true })
-        const storedName = crypto.randomBytes(8).toString("hex") + ".pdf"
+        const storedName = crypto.randomBytes(8).toString("hex") + ".pdf.enc"
         const filePath = path.join(ENVELOPES_DIR, storedName)
-        await fs.writeFile(filePath, Buffer.from(body.fileBase64, "base64"))
+        await fs.writeFile(filePath, encryptBuffer(Buffer.from(body.fileBase64, "base64")))
 
         // Récupère l'email de l'utilisateur connecté pour le mettre en CC
         const user = await prisma.user.findUnique({
@@ -172,7 +173,7 @@ router.get("/public/:token", async (req: Request, res: Response) => {
         let fileBase64: string | null = null
         if (result.documentFilePath) {
             try {
-                const buf = await fs.readFile(result.documentFilePath)
+                const buf = decryptBuffer(await fs.readFile(result.documentFilePath))
                 fileBase64 = buf.toString("base64")
             } catch { /* fichier absent → null */ }
         }

@@ -41,7 +41,7 @@ import {
 import { fetchProxy } from "../utils/fetchProxy";
 import { isAnalyzerQuotaExhausted } from "../utils/analyzerQuota";
 import { QuotaLimitModal } from "../components/common/QuotaLimitModal";
-import { LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
+import { COMPLETION_ANIMATION_MS, LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
 import { ClausesSidebar } from "../components/ContractAnalysis/ClausesSidebar";
 import { isFeatureEnabled } from "../config/features";
 import { useEnterpriseContext } from "../hooks/Analyzer/useEnterpriseContext";
@@ -52,6 +52,7 @@ import { handleAppendClause } from "../utils/aiAnalyser/handleAppendClause";
 import { contractApi } from "../components/DashboardComponents/contratheque/api";
 import { NegotiationDetail } from "../components/DashboardComponents/negotiation/types";
 import { ShareDialog } from "../components/DashboardComponents/negotiation/ShareDialog";
+import { PageBanner } from "../components/common/PageBanner";
 
 
 const consumedNavigationUploadKeys = new Set<string>();
@@ -91,6 +92,14 @@ export default function ContractAnalysis() {
   const [reviewedClauses, setReviewedClauses] = useState<Set<string>>(new Set());
   const [showMarketAnalysis, setShowMarketAnalysis] = useState(false);
   const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
+  // Id de l'analyse dont l'IA vient de répondre : le loader se remplit à 100 %
+  // avant l'affichage du document
+  const [completedAnalysisHistoryId, setCompletedAnalysisHistoryId] = useState<string | null>(null);
+  // Vrai quand on arrive avec une analyse déjà faite à rouvrir (ex. depuis la page
+  // "Analyse des risques") : on affiche un chargement au lieu de la zone d'import
+  // le temps de récupérer l'analyse, pour aller directement sur la vue du document.
+  const historyIdToOpenOnArrival = (location.state as { historyId?: string } | null)?.historyId;
+  const [isOpeningHistoryItem, setIsOpeningHistoryItem] = useState(Boolean(historyIdToOpenOnArrival));
   const currentHistoryIdRef = useRef<string | null>(null);
   const sidebarCollapsed = false;
   const [showShare, setShowShare] = useState<Boolean>(false);
@@ -251,6 +260,7 @@ export default function ContractAnalysis() {
     if (currentHistoryIdRef.current === historyId) {
       setShowAnalysisForm(false);
     }
+    setCompletedAnalysisHistoryId(null);
 
     let contentToAnalyze = baseContract.content;
 
@@ -328,6 +338,13 @@ export default function ContractAnalysis() {
           htmlContent: completedEntry.htmlContent,
         }),
       );
+
+      // On laisse le temps à la barre d'arriver à 100 % avant de changer de vue
+      if (currentHistoryIdRef.current === historyId) {
+        setCompletedAnalysisHistoryId(historyId);
+        await new Promise((resolve) => setTimeout(resolve, COMPLETION_ANIMATION_MS));
+      }
+
       if (savedItem) {
         setHistoryItems(await loadContractHistoryIndex());
         removeTemporaryHistoryEntry(historyId);
@@ -563,9 +580,13 @@ export default function ContractAnalysis() {
     } | null;
     if (state?.historyId) {
       // Ouverture d'une analyse depuis la liste d'historique (page Conformité).
-      const historyId = state.historyId;
+      const navigationHistoryKey = `${location.key}:history:${state.historyId}`;
+      if (consumedNavigationUploadKeys.has(navigationHistoryKey)) return;
+      consumedNavigationUploadKeys.add(navigationHistoryKey);
       navigate(".", { replace: true, state: null });
-      void handleOpenHistoryItem(historyId);
+      void handleOpenHistoryItem(state.historyId).finally(() => {
+        setIsOpeningHistoryItem(false);
+      });
     } else if (state?.file) {
       const navigationUploadKey = `${location.key}:${getFileUploadKey(state.file)}`;
       if (consumedNavigationUploadKeys.has(navigationUploadKey)) return;
@@ -579,12 +600,6 @@ export default function ContractAnalysis() {
       consumedNavigationUploadKeys.add(navigationTextKey);
       navigate(".", { replace: true, state: null });
       void onTextSubmit(state.text, fileName);
-    } else if (state?.historyId) {
-      const navigationHistoryKey = `${location.key}:history:${state.historyId}`;
-      if (consumedNavigationUploadKeys.has(navigationHistoryKey)) return;
-      consumedNavigationUploadKeys.add(navigationHistoryKey);
-      navigate(".", { replace: true, state: null });
-      void handleOpenHistoryItem(state.historyId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -828,9 +843,16 @@ export default function ContractAnalysis() {
     */
   return (
     <>
-      <div className="-m-5 lg:-m-7 p-4 overflow-x-hidden">
+      <div className="-m-4 sm:-m-5 lg:-m-7 p-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
-          {!contract && (
+          {!contract && isOpeningHistoryItem && (
+            <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-500">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-primary" />
+              Ouverture de l'analyse…
+            </div>
+          )}
+
+          {!contract && !isOpeningHistoryItem && (
             <div className="max-w-5xl mx-auto space-y-8">
               <div className="mx-auto max-w-2xl text-center">
                 <h1 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -871,6 +893,7 @@ export default function ContractAnalysis() {
               <LoadingZoneAnalyzer
                 phase={displayedProcessingPhase}
                 analysisProgress={displayedAnalysisProgress}
+                isComplete={currentHistoryId !== null && completedAnalysisHistoryId === currentHistoryId}
               />
             </div>
           )}
@@ -878,17 +901,11 @@ export default function ContractAnalysis() {
           {contract?.processed && !displayedIsProcessing && (
             <div className="max-w-7xl mx-auto">
 
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">Analyse de conformité</h1>
-                  <p className="text-sm text-slate-300 mt-1">
-                    Vérifiez la conformité juridique de vos documents
-                  </p>
-                </div>
-
-                <div className="flex justify-center items-center">
-                </div>
-              </div> 
+              <PageBanner
+                className="mb-2"
+                title="Analyse de conformité"
+                subtitle="Vérifiez la conformité juridique de vos documents"
+              /> 
 
               <ActionButtons
                 onShareReport={() => void openShare()}

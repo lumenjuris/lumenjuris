@@ -1,6 +1,6 @@
 import SignupForm from "../components/auth/SignupForm";
 import LoginForm from "../components/auth/LoginForm";
-import MainHeader from "../components/MainHeader/MainHeader";
+import { MainHeader } from "../components/MainHeader/MainHeader";
 import { useUserStore } from "../store/userStore";
 import { PENDING_CHECKOUT_KEY } from "../utils/planMapping";
 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "../ui/Button";
 import { cn } from "../../utils/shadcnUtils/cn";
+import { PageBanner } from "../common/PageBanner";
 
 import { useUserStore } from "../../store/userStore";
 import type { BillingInterval } from "../../types/subscriptionData";
@@ -209,53 +210,46 @@ export function PlansPanel() {
         <p className="mt-1 text-sm text-ink-muted">Tarification adaptée à votre organisation</p>
       </div>
       {/* ── En-tête + toggle mensuel/annuel ── */}
-      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end bg-blue-primary py-4 px-8 rounded-2xl">
-        <div className="max-w-xl">
-          
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Accéder à nos outils
-          </h1>
-          <p className="mt-2 text-gray-primary">
-            Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout
-            moment.
-          </p>
-        </div>
-
-        <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle p-1 text-sm shadow-sm">
-          <button
-            onClick={() => setYearly(false)}
-            className={cn(
-              "rounded-full px-4 py-1.5 font-medium transition-all",
-              !yearly
-                ? "bg-brand text-white shadow-sm"
-                : "text-ink-muted hover:text-ink",
-            )}
-          >
-            Mensuel
-          </button>
-          <button
-            onClick={() => setYearly(true)}
-            className={cn(
-              "flex items-center gap-2 rounded-full px-4 py-1.5 font-medium transition-all",
-              yearly
-                ? "bg-brand text-white shadow-sm"
-                : "text-ink-muted hover:text-ink",
-            )}
-          >
-            Annuel
-            <span
+      <PageBanner
+        title="Accéder à nos outils"
+        subtitle="Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout moment."
+        actions={
+          <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle p-1 text-sm shadow-sm">
+            <button
+              onClick={() => setYearly(false)}
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                yearly
-                  ? "bg-white/20 text-white"
-                  : "bg-emerald-500/10 text-emerald-600",
+                "rounded-full px-4 py-1.5 font-medium transition-all",
+                !yearly
+                  ? "bg-brand text-white shadow-sm"
+                  : "text-ink-muted hover:text-ink",
               )}
             >
-              -20%
-            </span>
-          </button>
-        </div>
-      </div>
+              Mensuel
+            </button>
+            <button
+              onClick={() => setYearly(true)}
+              className={cn(
+                "flex items-center gap-2 rounded-full px-4 py-1.5 font-medium transition-all",
+                yearly
+                  ? "bg-brand text-white shadow-sm"
+                  : "text-ink-muted hover:text-ink",
+              )}
+            >
+              Annuel
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  yearly
+                    ? "bg-white/20 text-white"
+                    : "bg-emerald-500/10 text-emerald-600",
+                )}
+              >
+                -20%
+              </span>
+            </button>
+          </div>
+        }
+      />
 
       {checkoutError && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

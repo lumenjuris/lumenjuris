@@ -105,8 +105,34 @@ au-dessus de chacune. Il ne capte aucun clic.
 
 Les champs déposés restent déplaçables et supprimables.
 
-**Options** (`PlaceToolbar`) : case "Toutes les pages" (réplique le champ à la
-même position sur chaque page) — utile pour parapher un contrat multi-pages.
+**Options** (`PlaceToolbar`) :
+- « Faire parapher toutes les pages » — voir ci-dessous ;
+- « Toutes les pages » : réplique le champ posé à la même position sur chaque
+  page.
+
+### Paraphes (type de champ `initial`)
+
+Option désactivée par défaut, à cocher par l'émetteur à l'étape de placement
+(grisée pour un document d'une seule page).
+
+- **Qui** : uniquement le cocontractant, sur sa page publique (`SignerPage`).
+- **Où** : toutes les pages sauf la dernière, qui porte déjà la signature
+  complète. Une zone par page, générée par `buildInitialFields` (`types.ts`).
+- **Position fixe** : coin bas-droit (`INITIAL_FIELD_LAYOUT`). À l'étape de
+  placement, les paraphes s'affichent en lecture seule — ni glisser, ni
+  supprimer — et n'ont pas d'étiquette « Glissez pour déplacer ».
+- **Saisie** : des initiales distinctes de la signature. `SignatureModal`
+  reçoit `kind="initial"` (titres adaptés, initiales du nom pré-remplies en
+  mode « Saisir »). Une seule saisie remplit toutes les pages ; après la
+  signature, la modale de paraphe s'ouvre d'elle-même s'il en reste (et
+  inversement).
+- **Pas de date** sous un paraphe, ni à l'écran, ni dans le PDF final (le
+  backend l'ignore même si une date était transmise).
+
+Piège à garder en tête : un paraphe est un champ du cocontractant, mais il ne
+remplace pas sa zone de **signature**. Les tests « le cocontractant a-t-il une
+zone ? » (checklist, bascule automatique, zone ajoutée d'office à l'envoi)
+filtrent donc sur `type === "signature"`.
 
 **Champs déposés** : draggables (mousedown + mousemove global), supprimables
 via une corbeille au survol.
@@ -143,7 +169,7 @@ via une corbeille au survol.
 - À l'envoi : POST `/api/signature-envelope` qui :
   - sauvegarde le PDF dans `backNode/signatureenvelopes/{hex}.pdf`
   - chiffre la liste des champs (positions + signatures dataUrl) en
-    AES-256-GCM dans `encryptedFields`
+    AES-256-GCM dans `envelopeFields`
   - crée la ligne Prisma `SignatureEnvelope` avec statut `SENT`
   - envoie l'invitation à signer au cocontractant, avec l'émetteur en copie
 - Écran de confirmation après succès, qui rappelle que la relance se fait
@@ -195,7 +221,7 @@ Le wizard appelle l'API LumenJuris pour persister les enveloppes :
 
 Côté backend :
 - Modèle Prisma `SignatureEnvelope` (statut, signataires, dates,
-  `documentFilePath`, `encryptedFields`)
+  `documentFilePath`, `envelopeFields`)
 - Service `classSignatureEnvelope.ts` (CRUD + stats agrégées)
 - Route Express `apiSignature.ts`
 - PDF stockés dans `backNode/signatureenvelopes/{hex}.pdf` (ignoré par git)

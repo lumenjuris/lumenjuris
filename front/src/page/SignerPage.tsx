@@ -4,7 +4,7 @@ import { Scale, Loader2, AlertCircle, CheckCircle2, Send, Download, FileText, Sh
 import { PdfViewer } from "../components/DashboardComponents/signature/PdfViewer";
 import { SignatureModal } from "../components/DashboardComponents/signature/SignatureModal";
 import { SIGNERS_DEFAULT } from "../components/DashboardComponents/signature/types";
-import type { Field, CapturedSignature } from "../components/DashboardComponents/signature/types";
+import type { Field, FieldType, CapturedSignature } from "../components/DashboardComponents/signature/types";
 import { fetchProxy } from "../utils/fetchProxy";
 
 /**
@@ -14,7 +14,8 @@ import { fetchProxy } from "../utils/fetchProxy";
  * Workflow :
  *  1. Charge l'enveloppe via GET /api/signature-envelope/public/:token
  *  2. Affiche le PDF avec les champs assignés au cocontractant
- *  3. Le cocontractant signe ses champs via la SignatureModal
+ *  3. Le cocontractant signe ses champs via la SignatureModal — signature et
+ *     paraphes sont deux saisies distinctes, chacune remplit toutes ses zones
  *  4. Soumet les champs signés via POST /api/signature-envelope/public/:token
  */
 export function SignerPage() {
@@ -31,7 +32,11 @@ export function SignerPage() {
   const [fields, setFields] = useState<Field[]>([]);
 
   // ── Signature ─────────────────────────────────────────────────────────────
-  const [capturedSig, setCapturedSig] = useState<CapturedSignature | null>(null);
+  // Une saisie par type : la signature complète et le paraphe (initiales) sont
+  // deux images différentes.
+  const [capturedByType, setCapturedByType] = useState<Record<FieldType, CapturedSignature | null>>({
+    signature: null, initial: null,
+  });
   const [modalOpenFor, setModalOpenFor] = useState<Field | null>(null);
 
   // ── Soumission ────────────────────────────────────────────────────────────
@@ -96,29 +101,44 @@ export function SignerPage() {
   const unsignedCounter = counterFields.filter((f) => !f.value);
   const allSigned = counterFields.length > 0 && unsignedCounter.length === 0;
 
+  const hasInitialFields = counterFields.some((f) => f.type === "initial");
+
   function handleFieldClick(field: Field) {
     if (field.signer !== "counterparty") return;
-    if (capturedSig) {
-      applySignature(field, capturedSig);
+    const captured = capturedByType[field.type];
+    if (captured) {
+      applySignature(field, captured);
     } else {
       setModalOpenFor(field);
     }
   }
 
+  /**
+   * Applique la saisie au champ cliqué et à tous les champs vides du même type
+   * (une seule saisie de paraphe remplit toutes les pages). Seule la signature
+   * est datée : un paraphe ne porte pas de date.
+   *
+   * S'il reste ensuite des champs vides de l'autre type, la modale s'ouvre
+   * aussitôt pour eux : le cocontractant n'a pas à les chercher page par page.
+   */
   function applySignature(field: Field, sig: CapturedSignature) {
-    const signedAt = new Date().toISOString();
-    setFields((prev) => prev.map((f) => {
-      if (f.id === field.id) return { ...f, value: sig.dataUrl, signedAt };
-      if (f.signer === "counterparty" && !f.value) return { ...f, value: sig.dataUrl, signedAt };
-      return f;
-    }));
+    const signedAt = field.type === "signature" ? new Date().toISOString() : undefined;
+    const next = fields.map((f) => {
+      const isTarget = f.id === field.id
+        || (f.signer === "counterparty" && f.type === field.type && !f.value);
+      if (!isTarget) return f;
+      return { ...f, value: sig.dataUrl, ...(signedAt ? { signedAt } : {}) };
+    });
+    setFields(next);
+
+    const nextToComplete = next.find((f) => f.signer === "counterparty" && !f.value);
+    setModalOpenFor(nextToComplete ?? null);
   }
 
   function handleModalConfirm(sig: CapturedSignature) {
     if (!modalOpenFor) return;
-    setCapturedSig(sig);
+    setCapturedByType((prev) => ({ ...prev, [modalOpenFor.type]: sig }));
     applySignature(modalOpenFor, sig);
-    setModalOpenFor(null);
   }
 
   async function handleSubmit() {
@@ -219,14 +239,14 @@ export function SignerPage() {
               Vos champs à signer
             </p>
             <p className="text-xs text-gray-primary">
-              {counterFields.length - unsignedCounter.length}/{counterFields.length} signés
+              {counterFields.length - unsignedCounter.length}/{counterFields.length} complétés
               {counterFields.length === 0 && " — aucun champ à signer"}
             </p>
           </div>
           <button
             onClick={() => void handleSubmit()}
             disabled={!allSigned || submitting}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="flex w-full sm:w-auto justify-center items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {submitting ? "Envoi…" : "Valider ma signature"}
@@ -243,12 +263,19 @@ export function SignerPage() {
         {/* Instruction */}
         {!allSigned && counterFields.length > 0 && (
           <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5">
-            Cliquez sur les zones en <strong>vert</strong> pour apposer votre signature.
+            {hasInitialFields ? (
+              <>
+                Cliquez sur les zones en <strong>vert</strong> pour apposer votre signature et
+                vos paraphes. Une seule saisie remplit toutes les pages.
+              </>
+            ) : (
+              <>Cliquez sur les zones en <strong>vert</strong> pour apposer votre signature.</>
+            )}
           </p>
         )}
 
         {/* PDF viewer */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-2 sm:p-4">
           <PdfViewer
             file={pdfFile}
             fields={fields}
@@ -263,9 +290,13 @@ export function SignerPage() {
       {modalOpenFor && (
         <SignatureModal
           open={true}
-          signerName="Cocontractant"
+          // Une modale neuve par type : sans cela, le dessin de la signature
+          // resterait sur le canevas du paraphe quand on enchaîne les deux.
+          key={modalOpenFor.type}
+          signerName={counterpartyName || "Cocontractant"}
           signerHex="#10b981"
-          initialSignature={capturedSig}
+          kind={modalOpenFor.type}
+          initialSignature={capturedByType[modalOpenFor.type]}
           onClose={() => setModalOpenFor(null)}
           onConfirm={handleModalConfirm}
         />
@@ -277,13 +308,13 @@ export function SignerPage() {
 /** Bandeau de marque des pages publiques de signature. */
 function PublicHeader({ documentName }: { documentName: string }) {
   return (
-    <header className="h-14 bg-blue-primary flex items-center px-6 gap-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-panel bg-brand">
+    <header className="h-14 bg-blue-primary flex items-center px-4 sm:px-6 gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-panel bg-brand">
         <Scale className="h-4 w-4 text-white" />
       </div>
-      <span className="text-sm font-bold text-white">Lumen Juris</span>
+      <span className="text-sm font-bold text-white shrink-0">Lumen Juris</span>
       <span className="text-white/30 mx-1">·</span>
-      <span className="text-sm text-white/70 truncate max-w-xs">
+      <span className="text-sm text-white/70 truncate min-w-0 max-w-xs">
         Signature{documentName ? ` — ${documentName}` : ""}
       </span>
     </header>

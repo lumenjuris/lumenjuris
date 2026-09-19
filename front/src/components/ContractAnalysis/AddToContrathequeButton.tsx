@@ -23,7 +23,7 @@ export function AddToContrathequeButton({ contract, context }: PropsBtn) {
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const btnPrimary = " hover:bg-white/50 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white rounded-xl shadow-sm disabled:opacity-50 transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85";
+  const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white rounded-xl shadow-sm disabled:opacity-50 transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85";
 
   const btnDone = `${btnPrimary}`;
 

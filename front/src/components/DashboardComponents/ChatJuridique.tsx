@@ -180,7 +180,7 @@ export function ChatJuridique() {
   return (
     <div className="flex h-[calc(100vh-9rem)] gap-0 overflow-hidden rounded-card border border-line shadow-card max-w-7xl mx-auto w-full">
       {/* liste des conversations */}
-      <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex-col hidden md:flex">
+      <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex-col hidden lg:flex">
         <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-900">Historique</p>
           <button
@@ -248,24 +248,24 @@ export function ChatJuridique() {
       {/* Zone principale */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shrink-0">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-brand" />
-            <span className="text-sm font-semibold text-gray-900">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4 bg-white border-b border-gray-200 shrink-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <MessageSquare className="h-4 w-4 shrink-0 text-brand" />
+            <span className="truncate text-sm font-semibold text-gray-900">
               {activeConv?.title ?? "Chat juridique RH"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={createConversation}
-              className="md:hidden flex items-center gap-1.5 text-xs text-white bg-brand border border-brand rounded-lg px-3 py-1.5 hover:bg-brand-hover transition-colors"
+              className="lg:hidden flex items-center gap-1.5 text-xs text-white bg-brand border border-brand rounded-lg px-3 py-1.5 hover:bg-brand-hover transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Nouveau
             </button>
             <button className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-gray-300 transition-colors">
               <Download className="h-3.5 w-3.5" />
-              Exporter PDF
+              <span className="hidden sm:inline">Exporter PDF</span>
             </button>
           </div>
         </div>

@@ -6,20 +6,19 @@ import {
   PenTool,
   ShieldCheck,
   MessageSquare,
-  Newspaper,
   Library,
   ChevronDown,
   BookOpen,
   Upload,
   ScrollText,
-  PanelLeft,
   X,
   Sparkles,
   ShieldHalf,
-  MessagesSquare
+  MessagesSquare,
+  Eye
 } from "lucide-react";
 
-import HeaderNavigationBar from "../MainHeader/HeaderNavigationBar";
+import { MainHeader } from "../MainHeader/MainHeader";
 import { FeedbackWidget } from "../common/FeedbackWidget";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
 import { useLegalWatchStore } from "../../store/legalWatchStore";
@@ -81,9 +80,9 @@ const navSections: NavSection[] = [
     items: [
       { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
       { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
-      { icon: ShieldCheck, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+      { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
-     /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
+      /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
   },
 ];
@@ -105,11 +104,10 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
       <NavLink
         to={child.path}
         onClick={onNavigate}
-        className={`relative flex w-full items-center gap-2 rounded-md px-2 py-2 sm:py-1.5 text-sm transition-colors ${
-          isActive
-            ? "bg-white/15 text-white font-medium"
-            : "text-white/70 hover:bg-white/10 hover:text-white"
-        }`}
+        className={`relative flex w-full items-center gap-2 rounded-md px-2 py-2 sm:py-1.5 text-sm transition-colors ${isActive
+          ? "bg-white/15 text-white font-medium"
+          : "text-white/70 hover:bg-white/10 hover:text-white"
+          }`}
       >
         <child.icon className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1">{child.label}</span>
@@ -145,11 +143,10 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
           <NavLink
             to={item.path}
             onClick={onNavigate}
-            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${
-              isParentActive
-                ? "bg-white/15 text-white font-medium"
-                : "text-white/80 hover:bg-white/10 hover:text-white"
-            }`}
+            className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isParentActive
+              ? "bg-white/15 text-white font-medium"
+              : "text-white/80 hover:bg-white/10 hover:text-white"
+              }`}
           >
             <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isParentActive ? "text-white" : "text-white/70"}`} />
             <span className="flex-1 text-left">{item.label}</span>
@@ -171,10 +168,9 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
           end={item.path === "/dashboard"}
           onClick={onNavigate}
           className={({ isActive }) =>
-            `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${
-              isActive
-                ? "bg-white/15 text-white font-medium"
-                : "text-white/80 hover:bg-white/10 hover:text-white"
+            `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isActive
+              ? "bg-white/15 text-white font-medium"
+              : "text-white/80 hover:bg-white/10 hover:text-white"
             }`
           }
         >
@@ -245,6 +241,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
     }
   }, []);
 
+
   return (
     <div className="flex min-h-screen w-full bg-white">
       {/* ── Overlay mobile/tablette ── */}
@@ -308,18 +305,14 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
       </aside>
       {/* ── Zone principale ── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ${sidebarOpen ? "md:ml-64" : "md:ml-0"}`}>
-        <header className="h-12 bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10 border-b border-line">
-          <button
-            onClick={() => setSidebarOpen((o) => !o)}
-            title={sidebarOpen ? "Masquer le menu" : "Afficher le menu"}
-            aria-label={sidebarOpen ? "Masquer le menu" : "Afficher le menu"}
-            aria-expanded={sidebarOpen}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-surface-muted hover:text-ink active:scale-95"
-          >
-            <PanelLeft className="h-5 w-5" />
-          </button>
-          <HeaderNavigationBar />
-        </header>
+
+        <MainHeader
+          onToggleSidebar={() => {
+            setSidebarOpen((isOpen) => !isOpen)
+          }}
+          rotatePannelLeft={sidebarOpen}
+        />
+
 
         <main className="flex-1 p-4 sm:p-5 lg:p-7">
           <ErrorBoundary key={location.pathname}>

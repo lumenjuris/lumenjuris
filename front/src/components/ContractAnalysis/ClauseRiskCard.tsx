@@ -42,7 +42,9 @@ export function ClauseRiskCard({
     if (riskScore === 5) return "flex font-medium text-red-card-primary bg-white p-2 rounded-lg border border-red-800"
     if (riskScore >= 3) 
       return "flex font-medium text-yellow-card-text bg-white p-2 rounded-lg border border-yellow-card-text"
-    return "flex font-medium text-blue-500 bg-white p-2 rounded-lg border border-green-800"
+    if (riskScore === -1)
+      return "flex font-medium text-blue-500 bg-white p-2 rounded-lg border border-blue-300" //modified
+    return "flex font-medium text-green-card-primary bg-white p-2 rounded-lg border border-green-800" // Modéré
   }
 
   const thisClauseIsModified = recommandationApplied?.some(

@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Download, FileText, Loader2, Search, CheckCircle2 } from "lucide-react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  CreditCard,
+  Download,
+  ExternalLink,
+  FileText,
+  Gauge,
+  Loader2,
+  Plus,
+  Receipt,
+  Search,
+} from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import {
@@ -21,6 +33,10 @@ import type {
 } from "../../types/subscriptionData";
 import type { CreditsData } from "../../types/creditsData";
 import { useSubscriptionPortal } from "../../hooks/useSubscription";
+import { SettingsSection } from "./SettingsSection";
+
+const PRIMARY_BUTTON_CLASS =
+  "bg-blue-primary hover:bg-blue-primary/90 text-white font-medium px-5 rounded-lg text-sm";
 
 const STATUS_LABEL: Record<SubscriptionStatus, string> = {
   ACTIVE: "Actif",
@@ -39,7 +55,19 @@ type Invoice = {
   planName: string;
 };
 
-export function SubscriptionSettingsPanel() {
+/**
+ * Délais (en ms) auxquels on relit l'abonnement au retour du portail Stripe :
+ * le webhook qui enregistre le changement (formule, annulation…) peut arriver
+ * quelques secondes après la redirection.
+ */
+const PORTAL_REFRESH_DELAYS_MS = [3000, 8000];
+
+export function SubscriptionSettingsPanel({
+  shouldRefreshAfterPortal = false,
+}: {
+  // Vrai quand l'utilisateur revient du portail Stripe
+  shouldRefreshAfterPortal?: boolean;
+}) {
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null,
@@ -51,7 +79,8 @@ export function SubscriptionSettingsPanel() {
   const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
-  const { handleManageBilling, portalLoading, portalError } = useSubscriptionPortal();
+  const { handleManageBilling, portalLoading, portalError } =
+    useSubscriptionPortal();
 
   const fetchSubscription = useCallback(() => {
     fetchProxy("/api/billing/subscription", {
@@ -87,6 +116,21 @@ export function SubscriptionSettingsPanel() {
     fetchSubscription();
     fetchInvoices();
   }, [fetchSubscription, fetchInvoices]);
+
+  // Au retour du portail Stripe, on relit les données un peu plus tard
+  // pour afficher les changements dès que le webhook les a enregistrés.
+  useEffect(() => {
+    if (!shouldRefreshAfterPortal) return;
+
+    const timeoutIds = PORTAL_REFRESH_DELAYS_MS.map((delay) =>
+      setTimeout(() => {
+        fetchSubscription();
+        fetchInvoices();
+      }, delay),
+    );
+
+    return () => timeoutIds.forEach((timeoutId) => clearTimeout(timeoutId));
+  }, [shouldRefreshAfterPortal, fetchSubscription, fetchInvoices]);
 
   const handleDownloadInvoice = async (invoice: Invoice) => {
     setDownloadingId(invoice.id);
@@ -156,118 +200,130 @@ export function SubscriptionSettingsPanel() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Gérez votre formule d'abonnement Lumen Juris.
-          </p>
-        </div>
-        <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+        <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+        <div className="h-64 animate-pulse rounded-xl bg-gray-100" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">Abonnement</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Gérez votre formule d'abonnement Lumen Juris.
-        </p>
-      </div>
-
-      {subscription === null ? (
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
-          <CreditCard className="mb-3 h-8 w-8 text-gray-300" />
-          <p className="text-sm font-medium text-gray-800">
-            Aucun abonnement actif
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            Souscrivez à un abonnement Lumen Juris pour accéder à toutes les
-            fonctionnalités.
-          </p>
-          <Button
-            type="button"
-            onClick={() => navigate("/souscription")}
-            className="mt-4 bg-lumenjuris text-white hover:bg-lumenjuris/90"
-          >
-            Voir les offres
-          </Button>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-          <div className="flex items-start justify-between border-b border-gray-100 px-5 py-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-gray-900">
+    <div className="flex flex-1 flex-col space-y-6">
+      {/* Section 1 : Abonnement */}
+      <SettingsSection
+        icon={<CreditCard className="h-5 w-5" />}
+        title="Abonnement"
+        description="Gérez votre formule d'abonnement Lumen Juris."
+        action={
+          // Sans abonnement, le bouton « Voir les offres » est déjà dans la carte
+          subscription !== null && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2 border-gray-300 bg-white px-5 hover:bg-gray-100 lg:w-auto"
+              onClick={() => navigate("/souscription")}
+            >
+              <ArrowUpRight className="h-4 w-4" />
+              Changer d'offre
+            </Button>
+          )
+        }
+      >
+        {subscription === null ? (
+          <div className="flex flex-col items-center px-6 py-8 text-center">
+            <CreditCard className="mb-3 h-8 w-8 text-gray-300" />
+            <p className="text-sm font-medium text-gray-800">
+              Aucun abonnement actif
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Souscrivez à un abonnement Lumen Juris pour accéder à toutes les
+              fonctionnalités.
+            </p>
+            <Button
+              type="button"
+              onClick={() => navigate("/souscription")}
+              className={`${PRIMARY_BUTTON_CLASS} mt-4`}
+            >
+              Voir les offres
+            </Button>
+          </div>
+        ) : (
+          <>
+            {/* Formule + prix */}
+            <div className="flex flex-col gap-1 px-5 py-5 sm:px-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-lg font-semibold text-gray-900">
                   {subscription.planName}
                 </p>
                 <Badge variant={subscription.status}>
                   {STATUS_LABEL[subscription.status]}
                 </Badge>
-                {isAnnual && <Badge variant="ACTIVE">Annuel</Badge>}
+                {isAnnual && <Badge variant="info">Annuel</Badge>}
               </div>
-              <p className="mt-0.5 text-sm text-gray-500">
-                {formatPrice(subscription.price)} /{" "}
-                <span className={isAnnual ? "text-gray-400" : undefined}>
-                  {priceLabel}
-                </span>
+              <p className="text-sm text-gray-500">
+                <span className="font-semibold text-gray-900">
+                  {formatPrice(subscription.price)}
+                </span>{" "}
+                / {priceLabel}
               </p>
             </div>
-            <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
-          </div>
 
-          <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-            <div className="px-5 py-3">
-              <p className="text-xs text-gray-500">Date de début</p>
-              <p className="mt-0.5 text-sm font-medium text-gray-800">
-                {formatDate(subscription.startAt)}
+            {/* Gestion via le portail Stripe */}
+            {subscription.canManageBilling && (
+              <div className="flex flex-col gap-2 px-5 py-4 sm:px-6 lg:flex-row lg:justify-end">
+                <Button
+                  type="button"
+                  disabled={portalLoading}
+                  onClick={handleManageBilling}
+                  className={`${PRIMARY_BUTTON_CLASS} w-full gap-2 lg:w-auto`}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {portalLoading ? "Ouverture…" : "Gérer mon abonnement"}
+                </Button>
+              </div>
+            )}
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 gap-3 px-5 py-5 sm:px-6 lg:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-xs text-gray-500">Date de début</p>
+                <p className="mt-0.5 text-sm font-medium text-gray-800">
+                  {formatDate(subscription.startAt)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <p className="text-xs text-gray-500">{expiresAtLabel}</p>
+                <p
+                  className={`mt-0.5 text-sm font-medium ${isActive ? "text-gray-800" : "text-red-600"}`}
+                >
+                  {formatDate(subscription.expiresAt)}
+                </p>
+              </div>
+            </div>
+
+            {portalError && (
+              <p className="px-5 py-3 text-right text-xs text-red-600 sm:px-6">
+                {portalError}
               </p>
-            </div>
-            <div className="px-5 py-3">
-              <p className="text-xs text-gray-500">{expiresAtLabel}</p>
-              <p
-                className={`mt-0.5 text-sm font-medium ${!isActive ? "text-red-600" : "text-gray-800"}`}
-              >
-                {formatDate(subscription.expiresAt)}
-              </p>
-            </div>
-          </div>
+            )}
+          </>
+        )}
+      </SettingsSection>
 
-          {subscription.canManageBilling && (
-            <div className="border-t border-gray-100 px-5 py-3">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={portalLoading}
-                onClick={handleManageBilling}
-                className="w-full hover:bg-gray-100"
-              >
-                {portalLoading ? "Ouverture…" : "Gérer mon abonnement"}
-              </Button>
-              {portalError && (
-                <p className="mt-2 text-xs text-red-600">{portalError}</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Section 2 : Crédits restants */}
       {credits !== null && (
-        <div className="space-y-4 rounded-2xl border border-gray-200 bg-white px-5 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-900">
-              Crédits restants ce mois
-            </p>
-
+        <SettingsSection
+          icon={<Gauge className="h-5 w-5" />}
+          title="Crédits restants"
+          description="Votre solde sur la période en cours, par fonctionnalité."
+          action={
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger
                 render={
                   <Button
                     type="button"
-                    variant="outline"
-                    className="text-xs hover:bg-gray-100"
+                    className={`${PRIMARY_BUTTON_CLASS} w-full gap-2 lg:w-auto`}
                   >
+                    <Plus className="h-4 w-4" />
                     Ajouter des crédits
                   </Button>
                 }
@@ -282,32 +338,24 @@ export function SubscriptionSettingsPanel() {
                 />
               </DialogContent>
             </Dialog>
+          }
+        >
+          <div className="px-5 py-5 sm:px-6">
+            <QuotasDisplay
+              quotas={credits.quotas}
+              planQuotas={credits.planQuotas}
+            />
           </div>
-
-          <QuotasDisplay quotas={credits.quotas} planQuotas={credits.planQuotas} />
-        </div>
+        </SettingsSection>
       )}
 
-      {/* Factures */}
+      {/* Section 3 : Factures */}
       <InvoicesSection
         invoices={invoices}
         loading={invoicesLoading}
         downloadingId={downloadingId}
         onDownload={handleDownloadInvoice}
       />
-
-      {subscription !== null && (
-        <div className="flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            className="hover:bg-gray-100"
-            onClick={() => navigate("/souscription")}
-          >
-            Changer d'offre
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -338,25 +386,24 @@ function InvoicesSection({
   const q = query.trim().toLowerCase();
   const filtered = q
     ? invoices.filter(
-        (inv) =>
-          inv.invoiceNumber.toLowerCase().includes(q) ||
-          inv.planName.toLowerCase().includes(q) ||
-          formatPrice(inv.amountCents).toLowerCase().includes(q),
-      )
+      (inv) =>
+        inv.invoiceNumber.toLowerCase().includes(q) ||
+        inv.planName.toLowerCase().includes(q) ||
+        formatPrice(inv.amountCents).toLowerCase().includes(q),
+    )
     : invoices;
-  const visible = showAll ? filtered : filtered.slice(0, INVOICES_INITIAL_VISIBLE);
+  const visible = showAll
+    ? filtered
+    : filtered.slice(0, INVOICES_INITIAL_VISIBLE);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Factures</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Retrouvez et téléchargez vos factures au format PDF.
-          </p>
-        </div>
-        {invoices.length > 0 && (
-          <div className="relative sm:w-64">
+    <SettingsSection
+      icon={<Receipt className="h-5 w-5" />}
+      title="Factures"
+      description="Retrouvez et téléchargez vos factures au format PDF."
+      action={
+        invoices.length > 0 && (
+          <div className="relative w-full lg:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -369,105 +416,107 @@ function InvoicesSection({
               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-lumenjuris focus:outline-none focus:ring-1 focus:ring-lumenjuris"
             />
           </div>
+        )
+      }
+    >
+      <div className="space-y-3 px-5 py-5 sm:px-6">
+        {loading ? (
+          <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </div>
+        ) : invoices.length === 0 ? (
+          <EmptyInvoices
+            icon={FileText}
+            title="Aucune facture"
+            detail="Vos factures apparaîtront ici après votre premier paiement."
+          />
+        ) : filtered.length === 0 ? (
+          <EmptyInvoices
+            icon={Search}
+            title="Aucun résultat"
+            detail={`Aucune facture ne correspond à « ${query.trim()} ».`}
+          />
+        ) : (
+          <>
+            {/* En-tête de colonnes (desktop) */}
+            <div className="hidden grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 sm:grid">
+              <span>Facture</span>
+              <span className="text-right">Montant</span>
+              <span className="text-center">Statut</span>
+              <span className="text-right">PDF</span>
+            </div>
+
+            <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              {visible.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid-cols-[1fr_auto_auto_auto] sm:gap-4"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 sm:flex">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-sm font-medium text-gray-900">
+                        {invoice.invoiceNumber}
+                      </p>
+                      <p className="truncate text-xs text-gray-500">
+                        {formatDate(invoice.date)} · {invoice.planName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-right text-sm font-semibold text-gray-800 sm:min-w-[90px]">
+                    {formatPrice(invoice.amountCents)}
+                  </p>
+
+                  <div className="hidden justify-center sm:flex">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Payée
+                    </span>
+                  </div>
+
+                  <div className="col-span-2 flex justify-end sm:col-span-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0 gap-1.5 text-xs hover:bg-gray-100"
+                      disabled={downloadingId === invoice.id}
+                      onClick={() => onDownload(invoice)}
+                    >
+                      {downloadingId === invoice.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      PDF
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filtered.length > INVOICES_INITIAL_VISIBLE && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs text-gray-500">
+                  {showAll
+                    ? `${filtered.length} facture${filtered.length > 1 ? "s" : ""}`
+                    : `${Math.min(INVOICES_INITIAL_VISIBLE, filtered.length)} sur ${filtered.length}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAll((v) => !v)}
+                  className="text-xs font-medium text-lumenjuris hover:underline"
+                >
+                  {showAll ? "Réduire" : `Voir tout (${filtered.length})`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-        </div>
-      ) : invoices.length === 0 ? (
-        <EmptyInvoices
-          icon={FileText}
-          title="Aucune facture"
-          detail="Vos factures apparaîtront ici après votre premier paiement."
-        />
-      ) : filtered.length === 0 ? (
-        <EmptyInvoices
-          icon={Search}
-          title="Aucun résultat"
-          detail={`Aucune facture ne correspond à « ${query.trim()} ».`}
-        />
-      ) : (
-        <>
-          {/* En-tête de colonnes (desktop) */}
-          <div className="hidden grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 sm:grid">
-            <span>Facture</span>
-            <span className="text-right">Montant</span>
-            <span className="text-center">Statut</span>
-            <span className="text-right">PDF</span>
-          </div>
-
-          <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            {visible.map((invoice) => (
-              <div
-                key={invoice.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50 sm:grid-cols-[1fr_auto_auto_auto] sm:gap-4"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 sm:flex">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-sm font-medium text-gray-900">
-                      {invoice.invoiceNumber}
-                    </p>
-                    <p className="truncate text-xs text-gray-500">
-                      {formatDate(invoice.date)} · {invoice.planName}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-right text-sm font-semibold text-gray-800 sm:min-w-[90px]">
-                  {formatPrice(invoice.amountCents)}
-                </p>
-
-                <div className="hidden justify-center sm:flex">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Payée
-                  </span>
-                </div>
-
-                <div className="col-span-2 flex justify-end sm:col-span-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="shrink-0 gap-1.5 text-xs hover:bg-gray-100"
-                    disabled={downloadingId === invoice.id}
-                    onClick={() => onDownload(invoice)}
-                  >
-                    {downloadingId === invoice.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                    PDF
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filtered.length > INVOICES_INITIAL_VISIBLE && (
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs text-gray-500">
-                {showAll
-                  ? `${filtered.length} facture${filtered.length > 1 ? "s" : ""}`
-                  : `${Math.min(INVOICES_INITIAL_VISIBLE, filtered.length)} sur ${filtered.length}`}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAll((v) => !v)}
-                className="text-xs font-medium text-lumenjuris hover:underline"
-              >
-                {showAll ? "Réduire" : `Voir tout (${filtered.length})`}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    </SettingsSection>
   );
 }
 

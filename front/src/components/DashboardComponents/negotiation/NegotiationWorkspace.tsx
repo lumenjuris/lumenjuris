@@ -14,6 +14,7 @@ import { buildPdfFromText } from "./buildPdfFromText";
 import { STATUS_LABEL, STATUS_STYLE } from "./types";
 import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
+import { PageBanner } from "../../common/PageBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
 
@@ -144,27 +145,21 @@ export function NegotiationWorkspace() {
           )}
           
 
-        <div className="w-full">
-          <div className="bg-blue-primary rounded-2xl px-8 py-3 shadow-sm w-full max-w-8xl">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Titre et statut */}
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} title="Retour au contrat" className="-ml-3 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl font-normal text-white tracking-tight">
-              Négociation - {data.title}
-            </h1>
+        <PageBanner
+          className="w-full"
+          backLink={{ label: "Fiche du contrat", onClick: () => navigate(`/contratheque/${data.contractExternalId}`) }}
+          title={`Négociation - ${data.title}`}
+          badges={
             <span
               className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
               style={{ backgroundColor: st.bg, color: st.fg }}
             >
               {data.status === "VALIDATED" ? "Prêt à signer" : STATUS_LABEL[data.status]}
             </span>
-          </div>
-
-          {/* Actions, toutes au même style neutre, en haut à droite */}
-          <div className="flex items-center gap-2 flex-wrap">
+          }
+        >
+          {/* Barre d'actions sous forme de boutons harmonisés */}
+          <div className="flex items-center gap-2.5 flex-wrap">
             {data.versions.length > 1 && (
               <select
                 value={selectedVersion?.id ?? ""}
@@ -209,9 +204,7 @@ export function NegotiationWorkspace() {
               </>
             )}
           </div>
-          </div>
-        </div>
-        </div>
+        </PageBanner>
       </div>
 
       <div className="">

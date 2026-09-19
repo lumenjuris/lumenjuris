@@ -124,7 +124,7 @@ export function CompletionGuestForm({ token, data, onChanged }: Props) {
         title={f.label}
         data-field={f.id}
         size={inline ? Math.max(8, (v || f.label).length) : undefined}
-        className={`${inline ? "mx-0.5 inline rounded-chip px-1.5 py-[1px] text-[13px]" : "w-full rounded-lg px-3 py-2 text-sm"} font-medium outline-none transition border ${
+        className={`${inline ? "mx-0.5 inline max-w-full rounded-chip px-1.5 py-[1px] text-[13px]" : "w-full rounded-lg px-3 py-2 text-sm"} font-medium outline-none transition border ${
           invalid
             ? "bg-danger-light text-danger-dark border-danger/40"
             : v.trim()
@@ -145,7 +145,7 @@ export function CompletionGuestForm({ token, data, onChanged }: Props) {
             PROJET — AVANT SIGNATURE
           </span>
         </div>
-        <div className="relative z-10 px-8 py-7 text-[13.5px] leading-relaxed text-ink-secondary whitespace-pre-wrap">
+        <div className="relative z-10 px-4 py-5 sm:px-8 sm:py-7 text-[13.5px] break-words leading-relaxed text-ink-secondary whitespace-pre-wrap">
           {segs.map((s, i) =>
             s.kind === "text" ? (
               <span key={i}>{s.text}</span>
