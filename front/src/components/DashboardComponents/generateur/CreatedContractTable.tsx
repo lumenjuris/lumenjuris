@@ -291,7 +291,8 @@ function TableHeader({
             );
           }
           return (
-            <th key={col.id} className="px-4 py-3">
+            // La colonne Action est alignée à droite, comme son bouton « ⋮ ».
+            <th key={col.id} className={`px-4 py-3 ${col.id === "action" ? "text-right" : ""}`}>
               {col.label}
             </th>
           );
