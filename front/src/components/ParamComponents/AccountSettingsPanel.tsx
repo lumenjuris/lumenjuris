@@ -17,13 +17,58 @@ import {
   DialogTitle,
 } from "../ui/Dialog";
 import { Field, FieldLabel, FieldError } from "../ui/Field";
-import { EyeOffIcon, EyeIcon } from "lucide-react";
+import {
+  Database,
+  Download,
+  EyeIcon,
+  EyeOffIcon,
+  KeyRound,
+  ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { AlertBanner } from "../common/AlertBanner";
-import { useState, useRef } from "react";
+import { useState, useRef, type ReactNode } from "react";
 
 import { fetchProxy } from "../../utils/fetchProxy";
 
 type PasswordDialogMode = "add" | null;
+
+// Classes partagées pour garder un style identique sur tous les champs
+const FIELD_LABEL_CLASS = "text-xs font-medium text-gray-600";
+const INPUT_CLASS = "bg-gray-50/50 border-gray-200";
+const PRIMARY_BUTTON_CLASS =
+  "bg-blue-primary hover:bg-blue-primary/90 text-white font-medium px-5 rounded-lg text-sm";
+
+// Carte d'une section : en-tête (icône + titre + description) puis contenu.
+// Les blocs enfants sont séparés par une fine ligne grise.
+function SettingsSection({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <header className="flex items-start gap-3 border-b border-gray-100 bg-gray-50/60 px-5 py-4 sm:px-6">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-primary/10 text-blue-primary">
+          {icon}
+        </span>
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          <p className="text-xs leading-relaxed text-gray-500">{description}</p>
+        </div>
+      </header>
+      <div className="divide-y divide-gray-100">{children}</div>
+    </section>
+  );
+}
 
 type AccountSettingsPanelProps = {
   profile: AccountProfile;
@@ -215,7 +260,7 @@ export function AccountSettingsPanel({
   };
 
   return (
-    <div className="flex flex-1 flex-col space-y-8">
+    <div className="flex flex-1 flex-col space-y-6">
       {/* Alertes système */}
       {profileUpdateSuccess && (
         <AlertBanner
@@ -289,44 +334,41 @@ export function AccountSettingsPanel({
         />
       )}
 
-      {/* Section 1 : Compte et connexion */}
-      <div className="space-y-3">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-base font-bold text-gray-900">
-            Compte et connexion
-          </h2>
-          <span className="text-xs text-gray-400">
-            Informations personnelles du compte
-          </span>
-        </div>
+      {/* Section 1 : Informations personnelles */}
+      <SettingsSection
+        icon={<UserRound className="h-5 w-5" />}
+        title="Informations personnelles"
+        description="Votre identité et l'adresse e-mail associée à votre compte."
+      >
+        <div className="space-y-4 px-5 py-5 sm:px-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="prenom" className={FIELD_LABEL_CLASS}>
+                Prénom
+              </FieldLabel>
+              <Input
+                id="prenom"
+                value={profile.prenom}
+                onChange={(e) => onProfileFieldChange("prenom", e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </Field>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
-          <Field>
-            <FieldLabel htmlFor="prenom" className="text-xs text-gray-500 font-normal">
-              Prénom
-            </FieldLabel>
-            <Input
-              id="prenom"
-              value={profile.prenom}
-              onChange={(e) => onProfileFieldChange("prenom", e.target.value)}
-              className="bg-gray-50/50 border-gray-200"
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="nom" className="text-xs text-gray-500 font-normal">
-              Nom
-            </FieldLabel>
-            <Input
-              id="nom"
-              value={profile.nom}
-              onChange={(e) => onProfileFieldChange("nom", e.target.value)}
-              className="bg-gray-50/50 border-gray-200"
-            />
-          </Field>
+            <Field>
+              <FieldLabel htmlFor="nom" className={FIELD_LABEL_CLASS}>
+                Nom
+              </FieldLabel>
+              <Input
+                id="nom"
+                value={profile.nom}
+                onChange={(e) => onProfileFieldChange("nom", e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </Field>
+          </div>
 
           <Field>
-            <FieldLabel htmlFor="email" className="text-xs text-gray-500 font-normal">
+            <FieldLabel htmlFor="email" className={FIELD_LABEL_CLASS}>
               E-mail
             </FieldLabel>
             <Input
@@ -334,81 +376,102 @@ export function AccountSettingsPanel({
               type="email"
               value={profile.email}
               onChange={(e) => onProfileFieldChange("email", e.target.value)}
-              className="bg-gray-50/50 border-gray-200"
+              className={INPUT_CLASS}
             />
           </Field>
-
-          <div className="pt-2">
-            <Button
-              type="button"
-              onClick={onUpdateProfileClick}
-              className="bg-[#1e3a5f] hover:bg-[#152a45] text-white font-medium px-5 py-2 rounded-lg text-sm"
-            >
-              Mettre à jour mon profil
-            </Button>
-          </div>
         </div>
-      </div>
+
+        <div className="flex justify-end px-5 py-4 sm:px-6">
+          <Button
+            type="button"
+            onClick={onUpdateProfileClick}
+            className={`${PRIMARY_BUTTON_CLASS} w-full lg:w-auto`}
+          >
+            Mettre à jour mon profil
+          </Button>
+        </div>
+      </SettingsSection>
 
       {/* Section 2 : Sécurité */}
-      <div className="space-y-3">
-        <h2 className="text-base font-bold text-gray-900">Sécurité</h2>
+      <SettingsSection
+        icon={<ShieldCheck className="h-5 w-5" />}
+        title="Sécurité"
+        description="Protégez l'accès à votre compte."
+      >
+        {/* Double authentification */}
+        <div className="px-5 py-5 sm:px-6">
+          <SettingsToggleRow
+            label="Authentification à deux facteurs"
+            description="Un code de vérification vous est envoyé par e-mail à chaque connexion."
+            checked={isTwoFactorEnabled}
+            onCheckedChange={onTwoFactorCheckedChange}
+          />
+        </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-6">
-          <div className="rounded-lg border border-gray-200 p-4">
-            <SettingsToggleRow
-              label="Authentification à deux facteurs"
-              checked={isTwoFactorEnabled}
-              onCheckedChange={onTwoFactorCheckedChange}
-            />
-          </div>
-
-          {/* Panneau Google */}
-          {shouldShowGooglePanel && (
-            <div className="rounded-lg border border-gray-200 bg-white p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex flex-col gap-1 max-w-xl">
-                  <p className="text-sm font-semibold text-gray-900">
+        {/* Panneau Google */}
+        {shouldShowGooglePanel && (
+          <div className="px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white">
+                  <FcGoogle className="h-5 w-5" />
+                </span>
+                <div className="flex max-w-xl flex-col gap-1">
+                  <h3 className="text-sm font-semibold text-gray-900">
                     Connexion Google associée
-                  </p>
-                  <p className="text-xs text-gray-500 leading-relaxed">
+                  </h3>
+                  <p className="text-xs leading-relaxed text-gray-500">
                     {hasAddedPassword
                       ? "Vous pouvez vous connecter à Lumen Juris via Google ou avec votre mot de passe Lumen Juris."
-                      : "Votre compte LumenJuris est lié à votre compte Google. Vous pouvez également créer un mot de passe propre à LumenJuris — Il ne modifie pas votre mot de passe Google."}
+                      : "Votre compte Lumen Juris est lié à votre compte Google. Vous pouvez également créer un mot de passe propre à Lumen Juris — il ne modifie pas votre mot de passe Google."}
                   </p>
                 </div>
-                {!hasAddedPassword && (
-                  <Button
-                    type="button"
-                    className="bg-[#1e3a5f] hover:bg-[#152a45] text-white text-xs font-medium px-4 py-2.5 rounded-lg shrink-0"
-                    onClick={() => setPasswordDialogMode("add")}
-                  >
-                    Créer un mot de passe LumenJuris
-                  </Button>
-                )}
               </div>
+              {!hasAddedPassword && (
+                <Button
+                  type="button"
+                  className={`${PRIMARY_BUTTON_CLASS} w-full lg:w-auto`}
+                  onClick={() => setPasswordDialogMode("add")}
+                >
+                  Créer un mot de passe Lumen Juris
+                </Button>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Formulaire direct de changement de mot de passe */}
+        <form
+          onSubmit={(e) => handleSubmitPassword(e, false)}
+          className="space-y-4 px-5 py-5 sm:px-6"
+        >
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+              <KeyRound className="h-5 w-5" />
+            </span>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Modifier votre mot de passe
+              </h3>
+              <p className="text-xs leading-relaxed text-gray-500">
+                8 caractères minimum, dont une majuscule, un chiffre et un
+                caractère spécial.
+              </p>
+            </div>
+          </div>
+
+          {submitError && (
+            <AlertBanner
+              title="Mot de passe invalide !"
+              variant="error"
+              detail="Les deux mots de passe doivent être identiques !"
+              onClose={() => setSubmitError(false)}
+            />
           )}
 
-          {/* Formulaire direct de changement de mot de passe */}
-          <form
-            onSubmit={(e) => handleSubmitPassword(e, false)}
-            className="space-y-4 pt-2"
-          >
-            {submitError && (
-              <AlertBanner
-                title="Mot de passe invalide !"
-                variant="error"
-                detail="Les deux mots de passe doivent être identiques !"
-                onClose={() => setSubmitError(false)}
-              />
-            )}
-
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Field>
-              <FieldLabel
-                htmlFor="password"
-                className="text-xs text-gray-500 font-normal"
-              >
+              <FieldLabel htmlFor="password" className={FIELD_LABEL_CLASS}>
                 Nouveau mot de passe
               </FieldLabel>
               <InputGroup
@@ -423,7 +486,7 @@ export function AccountSettingsPanel({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={handleChangePassword}
-                  className="bg-gray-50/50 border-gray-200"
+                  className={INPUT_CLASS}
                 />
                 <InputGroupAddon
                   align="inline-end"
@@ -443,7 +506,7 @@ export function AccountSettingsPanel({
             <Field>
               <FieldLabel
                 htmlFor="confirmpassword"
-                className="text-xs text-gray-500 font-normal"
+                className={FIELD_LABEL_CLASS}
               >
                 Confirmer le mot de passe
               </FieldLabel>
@@ -459,7 +522,7 @@ export function AccountSettingsPanel({
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={handleChangeConfirmPassword}
-                  className="bg-gray-50/50 border-gray-200"
+                  className={INPUT_CLASS}
                 />
                 <InputGroupAddon
                   align="inline-end"
@@ -477,25 +540,25 @@ export function AccountSettingsPanel({
                 }
               />
             </Field>
+          </div>
 
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="bg-[#1e3a5f] hover:bg-[#152a45] text-white font-medium px-5 py-2 rounded-lg text-sm"
-                disabled={
-                  !password ||
-                  confirmPassword.length < 8 ||
-                  passwordError.length > 0 ||
-                  confirmPasswordError.length > 0 ||
-                  submitLoading
-                }
-              >
-                Enregistrer le mot de passe
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              className={`${PRIMARY_BUTTON_CLASS} w-full lg:w-auto`}
+              disabled={
+                !password ||
+                confirmPassword.length < 8 ||
+                passwordError.length > 0 ||
+                confirmPasswordError.length > 0 ||
+                submitLoading
+              }
+            >
+              Enregistrer le mot de passe
+            </Button>
+          </div>
+        </form>
+      </SettingsSection>
 
       {/* Modal Dialog spécifique à la création de mot de passe Google */}
       <Dialog
@@ -604,61 +667,79 @@ export function AccountSettingsPanel({
         </DialogContent>
       </Dialog>
 
-      {/* Section3 : Préférences */}
-      <div className="space-y-3">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-base font-bold text-gray-900">
-            Préférences
-          </h2>
-          <span className="text-xs text-gray-400">
-            Préférences simples du compte utilisateur
-          </span>
+      {/* Section 3 : Préférences */}
+      <SettingsSection
+        icon={<SlidersHorizontal className="h-5 w-5" />}
+        title="Préférences"
+        description="Adaptez l'affichage et les communications à vos besoins."
+      >
+        <div className="space-y-3 px-5 py-5 sm:px-6">
+          <SettingsToggleRow
+            label="Mode dyslexique"
+            description="Utilise une police et un espacement adaptés pour faciliter la lecture."
+            checked={isDyslexicModeEnabled}
+            onCheckedChange={onDyslexicModeCheckedChange}
+          />
+          <SettingsToggleRow
+            label="Notifications par e-mail"
+            description="Recevez par e-mail les informations importantes liées à votre compte."
+            checked={isEmailNotificationsEnabled}
+            onCheckedChange={onEmailNotificationsCheckedChange}
+          />
         </div>
+      </SettingsSection>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
-          <div className="rounded-lg border border-gray-200 p-4">
-            <SettingsToggleRow
-              label="Mode dyslexique"
-              checked={isDyslexicModeEnabled}
-              onCheckedChange={onDyslexicModeCheckedChange}
-            />
-          </div>
-
-          <div className="rounded-lg border border-gray-200 p-4">
-            <SettingsToggleRow
-              label="Notifications par e-mail"
-              checked={isEmailNotificationsEnabled}
-              onCheckedChange={onEmailNotificationsCheckedChange}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* PIED DE PAGE : Actions d'exportation et de suppression */}
-      <div className="space-y-2">
-        <h2 className="text-base font-bold text-gray-900">
-          RGPD
-        </h2>
-        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
-          <div className="mt-auto flex flex-col gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="bg-blue-primary text-white hover:bg-opacity-80"
-              onClick={onExportDataClick}
-            >
+      {/* Section 4 : Données personnelles (RGPD) */}
+      <SettingsSection
+        icon={<Database className="h-5 w-5" />}
+        title="Données personnelles (RGPD)"
+        description="Gérez vos données conformément au Règlement général sur la protection des données."
+      >
+        {/* Export des données */}
+        <div className="flex flex-col gap-4 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-semibold text-gray-900">
               Exporter mes données
-            </Button>
+            </h3>
+            <p className="text-xs leading-relaxed text-gray-500">
+              Recevez par e-mail une copie de toutes les informations liées à
+              votre compte.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2 border-gray-300 px-5 text-gray-900 lg:w-auto"
+            onClick={onExportDataClick}
+          >
+            <Download className="h-4 w-4" />
+            Exporter mes données
+          </Button>
+        </div>
+
+        {/* Zone de danger : suppression du compte */}
+        <div className="px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50/60 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-red-700">
+                Supprimer mon compte
+              </h3>
+              <p className="text-xs leading-relaxed text-red-600/90">
+                Action définitive : un lien de confirmation vous sera envoyé
+                par e-mail avant toute suppression.
+              </p>
+            </div>
             <Button
               type="button"
               onClick={onDeleteAccountClick}
-              className="bg-red-500 text-white hover:bg-red-700"
+              className="w-full gap-2 bg-red-600 px-5 text-white hover:bg-red-700 lg:w-auto"
             >
+              <Trash2 className="h-4 w-4" />
               Supprimer mon compte
             </Button>
           </div>
         </div>
-      </div>
+      </SettingsSection>
     </div>
   );
 }

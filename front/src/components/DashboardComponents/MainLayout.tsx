@@ -240,7 +240,6 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
     }
   }, []);
 
-  const [rotate, setRotate] = useState<number>(0)
 
   return (
     <div className="flex min-h-screen w-full bg-white">

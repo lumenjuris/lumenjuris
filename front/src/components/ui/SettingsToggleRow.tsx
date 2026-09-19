@@ -1,17 +1,27 @@
 export function SettingsToggleRow({
   label,
+  description,
   checked,
   defaultChecked = false,
   onCheckedChange,
 }: {
   label: string;
+  // Texte d'aide optionnel affiché sous le libellé
+  description?: string;
   checked?: boolean;
   defaultChecked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-      <span className="text-sm font-medium text-gray-900">{label}</span>
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-gray-900">{label}</span>
+        {description && (
+          <span className="text-xs leading-relaxed text-gray-500">
+            {description}
+          </span>
+        )}
+      </span>
       <span className="relative inline-flex h-7 w-12 shrink-0 items-center">
         <input
           type="checkbox"

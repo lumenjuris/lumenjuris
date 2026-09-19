@@ -306,9 +306,7 @@ export function ParamCompte() {
     }
   };
 
-  const handlePreferenceCheckedChange = (checked: boolean) => {
-    void setDyslexicMode(checked);
-  };
+
 
   const handleEmailNotificationsCheckedChange = (checked: boolean) => {
     void setEmailNotifications(checked);

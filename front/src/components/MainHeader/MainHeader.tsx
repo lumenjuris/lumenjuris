@@ -62,7 +62,7 @@ export const MainHeader = ({ onNavClick, onToggleSidebar, rotatePannelLeft }: Ma
             aria-label="Afficher / masquer le menu"
             className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-subtle hover:text-brand"
           >
-            <PanelLeft className={`h-5 w-5 transform-rotate-${rotatePannelLeft? "-180" : "180"}` } />
+            <PanelLeft className={`h-5 w-5 rotate-${rotatePannelLeft? "-180" : "180"}` } />
           </button>
         )}
       </div>

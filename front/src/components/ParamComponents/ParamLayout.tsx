@@ -30,33 +30,39 @@ export function ParamLayout({
   preferenceSubscriptionPanel,
 }: ParamLayoutProps) {
   return (
-    <div className="max-w-5xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="bg-blue-primary p-4 sm:p-6">
-        <h1 className="text-xl font-bold tracking-tight text-white mb-4">{title}</h1>
 
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onTabChange(tab.id)}
-                className={`inline-flex items-center rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "bg-white/10 text-white hover:bg-white/20"
+
+    <div className="max-w-5xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* banner principale */}
+      <div className="bg-blue-primary p-4 sm:p-6">
+        <h1 className="text-xl font-bold tracking-tight text-white">{title}</h1>
+        <span className="text-white/85 font">
+          Modifiez les paramètres de votre compte
+        </span>
+      </div>
+
+      {/* Btn changement de vue */}
+      <div className="flex gap-0.5 justify-center flex-col sm:flex-row sm:gap-2">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onTabChange(tab.id)}
+              className={`inline-flex items-center rounded-lg sm:mt-4 mt-1 px-4 py-1.5 text-sm font-medium transition-colors  ${isActive
+                  ? "bg-white text-slate-900 shadow-sm text-black border-2"
+                  : "bg-blue-primary text-white hover:bg-blue-primary/85"
                 }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Contenu principal */}
-      <div className="relative p-4 sm:p-6">
+      <div className="relative px-4 sm:p-6">
         <section className="flex flex-col space-y-6 min-h-[600px]">
           {children}
         </section>
