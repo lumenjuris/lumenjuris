@@ -19,7 +19,7 @@ const LIBELLE_MOTIF: Record<string, string> = {
 };
 
 const inputClass = "w-full text-sm border border-line rounded-lg px-3 py-2 outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all bg-white text-ink";
-const labelClass = "block text-sm font-medium text-ink-secondary mb-1 whitespace-nowrap";
+const labelClass = "block text-sm font-medium text-ink-secondary mb-1";
 
 export function Calculateur() {
   const [typeContrat, setTypeContrat] = useState<TypeContrat>("CDI");
@@ -94,10 +94,10 @@ export function Calculateur() {
       {/* Contenu côte à côte */}
       <div className="flex flex-col lg:flex-row gap-5 items-start">
       <div className="bg-white rounded-card border border-line shadow-card overflow-hidden flex-1 min-w-0 max-w-2xl">
-        <div className="px-6 py-4 border-b border-line">
+        <div className="px-4 sm:px-6 py-4 border-b border-line">
           <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest">Paramètres du calcul</p>
         </div>
-        <div className="px-6 py-5 space-y-5">
+        <div className="px-4 sm:px-6 py-5 space-y-5">
 
           {/* Ligne 1 : type contrat + motif */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -180,10 +180,10 @@ export function Calculateur() {
       {/* Résultat */}
       {resultat && (
         <div className="bg-white rounded-card border border-line shadow-card overflow-hidden w-full lg:w-80 shrink-0">
-          <div className="px-6 py-4 border-b border-line">
+          <div className="px-4 sm:px-6 py-4 border-b border-line">
             <p className="text-xs font-semibold text-ink-subtle uppercase tracking-widest">Résultat</p>
           </div>
-          <div className="px-6 py-5 space-y-4">
+          <div className="px-4 sm:px-6 py-5 space-y-4">
             <div className="text-center py-2">
               <p className="text-[11px] font-semibold text-ink-subtle uppercase tracking-widest mb-1">Indemnité estimée</p>
               <p className="text-4xl font-bold text-brand">

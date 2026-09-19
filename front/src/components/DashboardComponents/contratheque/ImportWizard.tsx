@@ -267,7 +267,7 @@ export function ImportWizard({ files, onDone, onCancel }: Props) {
   const [showWarningDuplicate, setShowWarningDuplicate] = useState<boolean>(true)
   return (
     <div className="space-y-3 max-w-[1600px] mx-auto w-full">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-8 py-8 rounded-2xl mb-2">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-4 py-5 sm:px-8 sm:py-8 rounded-2xl mb-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
             Ajouter à la contrathèque

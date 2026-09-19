@@ -31,7 +31,7 @@ export function ParamLayout({
 }: ParamLayoutProps) {
   return (
     <div className="max-w-5xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="bg-blue-primary p-6">
+      <div className="bg-blue-primary p-4 sm:p-6">
         <h1 className="text-xl font-bold tracking-tight text-white mb-4">{title}</h1>
 
         <div className="flex flex-wrap gap-2">
@@ -56,7 +56,7 @@ export function ParamLayout({
       </div>
 
       {/* Contenu principal */}
-      <div className="relative p-6">
+      <div className="relative p-4 sm:p-6">
         <section className="flex flex-col space-y-6 min-h-[600px]">
           {children}
         </section>

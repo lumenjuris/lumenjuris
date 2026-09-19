@@ -95,7 +95,7 @@ export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen,
 
   if (loading) {
     return (
-      <div className="bg-white rounded-card border border-line shadow-card overflow-hidden">
+      <div className="bg-white rounded-card border border-line shadow-card overflow-x-auto">
         <table className="w-full min-w-[720px] text-left border-collapse">
           <TableHeader
             sortBy={sortBy}
@@ -148,7 +148,7 @@ export function ContractTable({ items, loading, sortBy, sortDir, onSort, onOpen,
       </div>
 
       <div className="bg-white rounded-b-2xl border border-slate-200/80 shadow-sm">
-        <div className="">
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left border-collapse">
             <TableHeader
               sortBy={sortBy}

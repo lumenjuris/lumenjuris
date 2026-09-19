@@ -168,7 +168,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
 
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[92vh] overflow-y-auto"
         style={{ animation: "scaleIn 0.2s ease-out" }}
       >
         {/* Header */}
@@ -216,7 +216,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
                   ref={canvasRef}
                   width={900}
                   height={300}
-                  className="w-full h-[220px] cursor-crosshair touch-none"
+                  className="w-full h-[160px] sm:h-[220px] cursor-crosshair touch-none"
                   onMouseDown={startStroke}
                   onMouseMove={moveStroke}
                   onMouseUp={endStroke}
@@ -239,7 +239,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> Effacer
                 </button>
-                <p className="text-[11px] text-gray-400">Utilisez la souris ou un écran tactile.</p>
+                <p className="hidden sm:block text-[11px] text-gray-400">Utilisez la souris ou un écran tactile.</p>
               </div>
             </div>
           )}

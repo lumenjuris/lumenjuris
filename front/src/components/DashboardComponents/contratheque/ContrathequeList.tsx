@@ -134,12 +134,12 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   return (
     <div className=" space-y-6 max-w-7xl mx-auto w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-blue-primary px-6 sm:px-12 py-6 sm:py-8 rounded-2xl">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">Contrathèque</h1>
           <p className="text-sm text-gray-primary mt-1">Centralisez et suivez le cycle de vie de vos contrats.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 shrink-0">
           <button
             onClick={() => contractApi.exportCsv(filters)}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all durantion-200 hover:-translate-y-0.5 will-change-transform border border-white/15"

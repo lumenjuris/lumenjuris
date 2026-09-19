@@ -24,7 +24,7 @@ export function OnboardingSteps({ steps, loading }: Props) {
       <div className="flex items-baseline justify-between px-4 pb-3 pt-4">
         <div className="flex items-baseline gap-2.5">
           <h2 className="font-serif text-[19px] font-normal text-ink">Premiers pas</h2>
-          <span className="text-xs text-ink-subtle">Prenez l'outil en main en 3 étapes</span>
+          <span className="hidden text-xs text-ink-subtle sm:inline">Prenez l'outil en main en 3 étapes</span>
         </div>
         <span className="text-2xs font-semibold uppercase tracking-[0.09em] text-blue-primary">
           {loading ? "…" : `${doneCount} / ${steps.length}`}
@@ -38,7 +38,7 @@ export function OnboardingSteps({ steps, loading }: Props) {
           return (
             <div
               key={step.key}
-              className={`flex items-center gap-3 border-b border-line-subtle px-4 py-3 last:border-b-0 ${
+              className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line-subtle px-4 py-3 last:border-b-0 ${
                 isNext ? "bg-[#fafbfd]" : ""
               }`}
             >

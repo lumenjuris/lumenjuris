@@ -100,7 +100,7 @@ export const FeedbackWidget: React.FC = () => {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-20 right-5 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+          className="fixed bottom-20 right-5 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
           style={{ animation: "feedbackSlideUp 0.18s ease-out" }}
         >
           {/* Header */}
@@ -187,7 +187,7 @@ export const FeedbackWidget: React.FC = () => {
             setOpen((v) => !v);
           }}
           title="Laisser un commentaire"
-          className="fixed z-50 flex items-center gap-2 bg-lumenjuris text-white pl-3 pr-4 py-2.5 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all text-sm font-medium cursor-grab active:cursor-grabbing"
+          className="fixed z-50 flex items-center gap-2 bg-lumenjuris text-white p-3 sm:pl-3 sm:pr-4 sm:py-2.5 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all text-sm font-medium cursor-grab active:cursor-grabbing"
           style={{ right: initialRight, bottom: initialBottom }}
         >
           {open ? (
@@ -195,7 +195,7 @@ export const FeedbackWidget: React.FC = () => {
           ) : (
             <MessageSquarePlus className="w-4 h-4" />
           )}
-          <span>Feedback</span>
+          <span className="hidden sm:inline">Feedback</span>
         </button>
       )}
 

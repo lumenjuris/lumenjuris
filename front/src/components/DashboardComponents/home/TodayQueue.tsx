@@ -79,7 +79,7 @@ export function TodayQueue({ items, loading }: Props) {
                 </div>
 
                 <span className="flex items-center gap-1.5 justify-self-end whitespace-nowrap text-[12.5px] font-semibold text-blue-primary">
-                  {item.action}
+                  <span className="hidden sm:inline">{item.action}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </Link>

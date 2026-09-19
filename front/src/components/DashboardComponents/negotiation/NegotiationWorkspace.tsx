@@ -148,10 +148,10 @@ export function NegotiationWorkspace() {
 
         <div className="w-full">
           <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} className="inline-flex items-center gap-1 text-xs text-ink-subtle hover:text-brand font-medium"><ChevronLeft className="w-3.5 h-3.5" /> Retour au contrat</button>
-          <div className="bg-blue-primary rounded-2xl px-8 py-6 shadow-sm w-full max-w-8xl">
+          <div className="bg-blue-primary rounded-2xl px-5 py-5 sm:px-8 sm:py-6 shadow-sm w-full max-w-8xl">
           {/* Titre et statut */}
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-normal text-white tracking-tight">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-xl sm:text-2xl font-normal text-white tracking-tight break-words">
               Négociation - {data.title}
             </h1>
             <span
