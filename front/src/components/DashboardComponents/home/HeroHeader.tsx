@@ -13,13 +13,6 @@ interface Props {
   loading: boolean;
 }
 
-/** « Dimanche 30 août 2026 », avec une majuscule initiale. */
-function formatToday(): string {
-  const label = new Date().toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
 
 /**
  * En-tête de l'accueil : salutation, puis les deux points d'entrée principaux
@@ -48,12 +41,7 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
 
       <div className="relative flex flex-col gap-6 px-5 pb-6 pt-6 sm:px-7">
         <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#d6b266]" />
-            <span className="text-2xs font-semibold uppercase tracking-[0.14em] text-white/50">
-              {formatToday()}
-            </span>
-          </div>
+
           <h1 className="font-serif text-3xl font-normal leading-tight tracking-tight text-white sm:text-[38px]">
             {greeting}
           </h1>

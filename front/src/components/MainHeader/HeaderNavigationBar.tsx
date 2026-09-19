@@ -164,8 +164,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
 
 
 
-
-
       {isConnected ? (
         <section className="flex items-center gap-3">
           <DropdownMenu>

@@ -4,6 +4,7 @@ import { fetchProxy } from "../../../utils/fetchProxy";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { EnvelopeTable } from "./EnvelopeTable";
 import type { EnvelopeDTO, EnvelopeStatus, ResendState } from "./EnvelopeTable";
+import { PageBanner } from "../../common/PageBanner";
 
 interface Stats {
   total: number;
@@ -196,20 +197,18 @@ export function SignatureDashboard({ onNewContract, refreshKey }: Props) {
 /** Titre de la page + bouton "Nouveau contrat". */
 function Header({ onNewContract }: { onNewContract: () => void }) {
   return (
-    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Signature électronique</h1>
-        <p className="text-sm text-gray-primary mt-1">
-          Suivez l'avancement de vos contrats à signer.
-        </p>
-      </div>
-      <button
-        onClick={onNewContract}
-        className="shrink-0 flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all durantion-200 hover:-translate-y-0.5 will-change-transform shadow-card"
-      >
-        <Plus className="w-4 h-4" /> Envoyer pour signature
-      </button>
-    </div>
+    <PageBanner
+      title="Signature électronique"
+      subtitle="Suivez l'avancement de vos contrats à signer."
+      actions={
+        <button
+          onClick={onNewContract}
+          className="shrink-0 flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-card"
+        >
+          <Plus className="w-4 h-4" /> Envoyer pour signature
+        </button>
+      }
+    />
   );
 }
 

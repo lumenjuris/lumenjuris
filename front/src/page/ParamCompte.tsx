@@ -38,6 +38,10 @@ export function ParamCompte() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Paramètres d'URL posés par le portail Stripe à son retour
+  // (return_url = /mon-compte?tab=subscription&from=portal).
+  const urlParams = new URLSearchParams(location.search);
+
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
     const state = location.state as {
       tab?: SettingsTab;
@@ -45,8 +49,13 @@ export function ParamCompte() {
     } | null;
     if (state?.tab) return state.tab;
     if (state?.origin === "header-alert") return "enterprise";
+    if (urlParams.get("tab") === "subscription") return "subscription";
     return "account";
   });
+  // Mémorisé au premier rendu, car l'URL est nettoyée juste après
+  const [isBackFromBillingPortal] = useState(
+    () => urlParams.get("from") === "portal",
+  );
   const [panelMinHeight, setPanelMinHeight] = useState<number | null>(null);
   const [accountProfile, setAccountProfile] = useState<AccountProfile>(
     EMPTY_ACCOUNT_PROFILE,
@@ -82,7 +91,7 @@ export function ParamCompte() {
   const [deleteMailError, setDeleteMailError] = useState(false);
 
   useEffect(() => {
-    if (location.state) {
+    if (location.state || location.search) {
       navigate(location.pathname, { replace: true, state: null });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,9 +315,7 @@ export function ParamCompte() {
     }
   };
 
-  const handlePreferenceCheckedChange = (checked: boolean) => {
-    void setDyslexicMode(checked);
-  };
+
 
   const handleEmailNotificationsCheckedChange = (checked: boolean) => {
     void setEmailNotifications(checked);
@@ -511,7 +518,11 @@ export function ParamCompte() {
   );
 
 
-  const subscriptionPanel = <SubscriptionSettingsPanel />;
+  const subscriptionPanel = (
+    <SubscriptionSettingsPanel
+      shouldRefreshAfterPortal={isBackFromBillingPortal}
+    />
+  );
 
   return (
     <>

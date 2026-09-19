@@ -10,6 +10,7 @@ import {
   STATUS_LABEL, STATUS_STYLE, MODE_LABEL, MODE_STYLE,
 } from "./types";
 import type { NegotiationListItem } from "./types";
+import { PageBanner } from "../../common/PageBanner";
 
 function fmtRelative(d: string): string {
   const diff = Date.now() - new Date(d).getTime();
@@ -46,16 +47,13 @@ export function NegotiationsList() {
   }
 
 return (
-  <div className="w-full max-w-7xl mx-auto">
-    <div className="bg-white rounded-2xl border border-gray-300 shadow-sm overflow-hidden">
-      <div className="bg-blue-primary px-8 py-6">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Négociation</h1>
-        <p className="text-sm text-gray-200 mt-1">
-          Suivez les contrats partagés à l’autre partie : relecture, propositions de
-          modification ou complétion des champs avant signature.
-        </p>
-      </div>
+  <div className="w-full max-w-7xl mx-auto space-y-6">
+    <PageBanner
+      title="Négociation"
+      subtitle="Suivez les contrats partagés à l’autre partie : relecture, propositions de modification ou complétion des champs avant signature."
+    />
 
+    <div className="bg-white rounded-2xl border border-gray-300 shadow-sm overflow-hidden">
       <div className="p-6">
         {items.length === 0 ? (
           <div className="py-14 flex flex-col items-center gap-4 text-center">

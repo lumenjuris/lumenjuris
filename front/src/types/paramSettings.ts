@@ -4,6 +4,7 @@ export type SettingsTab =
   | "account"
   | "enterprise"
   | "subscription";
+
 export type ConventionSource = "naf" | "custom";
 export type AuthProvider = "GOOGLE";
 export type GoogleConnectionPanelMode =
@@ -78,7 +79,7 @@ export type InseePreviewResponse = {
 };
 
 export type SettingsTabItem = {
-  id: SettingsTab | string;
+  id: SettingsTab;
   label: string;
   icon: LucideIcon;
   description: string;

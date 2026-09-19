@@ -10,6 +10,7 @@ import { CATEGORY_LABEL, POSITION_LABEL, POSITION_STYLE } from "./types";
 import type { Clause, ClauseCategory, ClauseStats } from "./types";
 import { useUserStore } from "../../../store/userStore";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
+import { PageBanner } from "../../common/PageBanner";
 
 /** Bibliothèque de clauses — référentiel réutilisable pour génération & négociation. */
 export function ClausesLibrary() {
@@ -74,14 +75,10 @@ export function ClausesLibrary() {
   return (
     <div className="space-y-5 mx-auto w-full max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-12 sm:py-8 rounded-2xl">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Bibliothèque de clauses</h1>
-          <p className="text-sm text-gray-primary mt-1">
-            Référentiel de clauses approuvées, réutilisables pour la génération et la négociation.
-          </p>
-        </div>
-        {canEdit && (
+      <PageBanner
+        title="Bibliothèque de clauses"
+        subtitle="Référentiel de clauses approuvées, réutilisables pour la génération et la négociation."
+        actions={canEdit && (
           <button
             onClick={() => setEditing("new")}
             className="flex items-center justify-center gap-2 w-full lg:w-auto px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl border border-white transition-all shadow-card shrink-0 hover:-translate-y-0.5"
@@ -89,7 +86,7 @@ export function ClausesLibrary() {
             <Plus className="w-4 h-4" /> Nouvelle clause
           </button>
         )}
-      </div>
+      />
 
       {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">

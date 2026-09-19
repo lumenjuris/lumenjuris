@@ -7,6 +7,7 @@ import { Clock, Trash2 } from "lucide-react";
 import { relativeTime } from "../../utils/format/relativeTime";
 import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
+import { PageBanner } from "../common/PageBanner";
 
 const formatParty = (partie: any) => {
   if (!partie) return "Partie non identifiée";
@@ -201,14 +202,6 @@ export function ComprendreContrat() {
           {/* En-tête */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
             <p className="text-sm font-semibold text-gray-900">Historique</p>
-            {/* Retrait du petit bouton "+"            
- <button
-              onClick={() => setIsModalOpen(true)}
-              title="Analyser un contrat"
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white transition-colors hover:bg-brand-hover"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button> */}
           </div>
 
           {/* Liste ou état vide */}
@@ -265,34 +258,29 @@ export function ComprendreContrat() {
         </div>
       </div>
       <div className="order-1 flex-1 min-w-0 space-y-6 lg:order-2">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 bg-blue-primary p-5 sm:p-8 rounded-2xl">
-          <div className="space-y-4 max-w-lg">
-            <h2 className="text-xl sm:text-3xl font-semibold text-white leading-tight">
-              Analyse et compréhension de contrat
-            </h2>
-            <p className="text-sm text-gray-primary leading-relaxed">
-              Obtenez une synthèse claire de vos documents : points d'attention, niveau de risque et obligations clés.
-            </p>
-          </div>
-
-          {/* Bouton blanc à droite : ouvre directement l'explorateur de fichiers */}
-          <button
-            onClick={openFilePicker}
-            disabled={isLoadingContract}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
-             transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0 self-start sm:self-auto
-             disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-          >
-            <span className="text-base font-normal">+</span> Analysez un contrat
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
-        </div>
+        <PageBanner
+          title="Analyse et compréhension de contrat"
+          subtitle="Obtenez une synthèse claire de vos documents : points d'attention, niveau de risque et obligations clés."
+          actions={
+            /* Bouton blanc à droite : ouvre directement l'explorateur de fichiers */
+            <button
+              onClick={openFilePicker}
+              disabled={isLoadingContract}
+              className="inline-flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
+               transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0
+               disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            >
+              <span className="text-base font-normal">+</span> Analysez un contrat
+            </button>
+          }
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx"
+          className="hidden"
+          onChange={handleFileInputChange}
+        />
 
         <div className="space-y-3">
 

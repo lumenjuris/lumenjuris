@@ -20,6 +20,7 @@ import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
 import { CreatedContractTable } from "./generateur/CreatedContractTable";
 import { GenerateurHub } from "./generateur/GenerateurHub";
+import { PageBanner } from "../common/PageBanner";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
   type CreatedContract,
@@ -1030,7 +1031,7 @@ function CustomTemplateEditor({ templateId, onBack }: { templateId: string; onBa
     return (
       <div className="mx-auto max-w-lg">
         <button onClick={onBack} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-brand">
-          <ChevronLeft className="h-4 w-4" /> Retour
+          <ChevronLeft className="h-4 w-4" /> Retour 
         </button>
         <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger-light px-4 py-3 text-sm text-danger-dark">
           <AlertCircle className="h-4 w-4 shrink-0" /> {error || "Modèle introuvable."}
@@ -1281,35 +1282,20 @@ export function Generateur() {
     setSearchParams({ section: "library" });
   }
 
+  // Les éditeurs document-first (form, blank, useCustom) ont leur propre retour : pas de bannière.
+  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom";
+
   return (
-    <div className={section ? "space-y-8 max-w-5xl mx-auto border border-gray rounded-2xl pb-4 pl-4" : ""}>
-      {/* En-tête — masqué, bandeau compris, pour l'éditeur document-first (chaque
-          éditeur a son propre retour) : sinon un bandeau bleu vide surplombe le contrat. */}
-      {section && section !== "form" && section !== "blank" && section !== "useCustom" && (
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-t-2xl sm:-ml-4">
-        <div>
-          {section && (
-            <button
-              onClick={goHub}
-              className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white transition-colors mb-2 font-medium"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              Générateur de contrat
-            </button>
-          )}
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            {section ? LABELS[section] : "Générateur de contrat"}
-          </h1>
-          {(section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau.") && (
-            <p className="text-sm text-gray-primary mt-1">
-              {section ? SUBS[section] : "Accédez à vos modèles ou importez-en un nouveau."}
-            </p>
-          )}
-        </div>
-      </div>
+    <div className={section ? "space-y-6 max-w-5xl mx-auto" : ""}>
+      {section && hasSectionBanner && (
+        <PageBanner
+          backLink={{ label: "Générateur de contrat", onClick: goHub }}
+          title={LABELS[section]}
+          subtitle={SUBS[section]}
+        />
       )}
 
-
+    <div className={section ? `space-y-8 border border-gray rounded-2xl pb-4 pl-4 ${hasSectionBanner ? "pt-4" : ""}` : ""}>
       {/* Hub — les 3 façons de créer un contrat */}
       {!section && (
         <GenerateurHub
@@ -1364,6 +1350,7 @@ export function Generateur() {
           onBack={handleScratchBack}
         />
       )}
+    </div>
     </div>
   );
 }

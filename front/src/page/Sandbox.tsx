@@ -4,7 +4,7 @@ import {
   type AlertVariant,
 } from "../components/common/AlertBanner";
 
-import MainHeader from "../components/MainHeader/MainHeader";
+import {MainHeader} from "../components/MainHeader/MainHeader";
 import { useUserStore } from "../store/userStore";
 import { Navigate } from "react-router-dom";
 import { fetchProxy } from "../utils/fetchProxy";

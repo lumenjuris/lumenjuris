@@ -3,6 +3,7 @@ import {
   ArrowRight, ArrowUp, BookOpen, Briefcase, CheckCircle2, ClipboardList, FileText,
   Lock, Shield, Sparkles, Upload,
 } from "lucide-react";
+import { PageBanner } from "../../common/PageBanner";
 
 /**
  * Écran d'accueil du générateur : les 3 façons de créer un contrat.
@@ -90,23 +91,10 @@ export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubPr
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* ── En-tête ─────────────────────────────────────────── */}
-      <header className="relative overflow-hidden rounded-3xl bg-blue-primary px-8 py-6 sm:px-10">
-        {/* Halo décoratif */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-title-card-sub/30 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-blue-card-sub/10 blur-3xl" />
-
-        <div className="relative space-y-3">
-{/*           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-blue-card-sub">
-            <Sparkles className="h-3 w-3" /> Générateur de contrat
-          </span> */}
-          <h1 className="font-serif text-3xl leading-tight text-white sm:text-4xl">
-            Rédigez un contrat solide, en quelques minutes.
-          </h1>
-          <p className="text-sm leading-relaxed text-gray-primary">
-            Partez d'une description, d'un document existant ou d'un modèle prêt à l'emploi.
-          </p>
-        </div>
-      </header>
+      <PageBanner
+        title="Rédigez un contrat solide, en quelques minutes."
+        subtitle="Partez d'une description, d'un document existant ou d'un modèle prêt à l'emploi."
+      />
 
       {/* ── Les 3 sections ──────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

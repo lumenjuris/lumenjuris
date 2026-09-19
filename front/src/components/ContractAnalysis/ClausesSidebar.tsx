@@ -33,9 +33,8 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
   const activePatchCount = recommandationApplied ? recommandationApplied.length : 0
   //const activePatchCount = patches.filter((p) => p.active).length;ull
   const critiqueCount = clauses.filter((c) => c.riskScore === 5).length;
-  const moyenCount = clauses.filter(
-    (c) => c.riskScore >= 3 && c.riskScore < 5,
-  ).length;
+  const moyenCount = clauses.filter((c) => c.riskScore >= 3 && c.riskScore < 5).length;
+  const moderateCount = clauses.filter((c) => c.riskScore < 3).length
 
   return (
     <div className="w-full md:w-80 bg-white border rounded-lg flex flex-col h-fit">
@@ -52,7 +51,7 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
         </div>
 
         {/* Summary counters */}
-        {(critiqueCount > 0 || moyenCount > 0) && (
+        {(critiqueCount > 0 || moyenCount > 0 || moderateCount > 0) && (
 
           <div className="flex gap-2 mb-3">
 
@@ -68,6 +67,14 @@ export const ClausesSidebar: React.FC<ClausesSidebarProps> = ({
                 {moyenCount} moyen{moyenCount > 1 ? "s" : ""}
               </span>
             )}
+            {moderateCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gren-700 bg-green-50 border border-orange-100 px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                {moderateCount} modéré{moderateCount > 1 ? "s" : ""}
+              </span>
+            )
+
+            }
           </div>
         )}
 
