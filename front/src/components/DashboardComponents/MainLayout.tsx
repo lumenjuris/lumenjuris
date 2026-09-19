@@ -14,7 +14,8 @@ import {
   X,
   Sparkles,
   ShieldHalf,
-  MessagesSquare
+  MessagesSquare,
+  Eye
 } from "lucide-react";
 
 import { MainHeader } from "../MainHeader/MainHeader";
@@ -79,7 +80,7 @@ const navSections: NavSection[] = [
     items: [
       { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
       { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
-      { icon: ShieldCheck, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+      { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],

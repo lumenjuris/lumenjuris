@@ -89,7 +89,6 @@ export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubPr
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
-      {/* ── En-tête ─────────────────────────────────────────── */}
       <header className="relative overflow-hidden rounded-3xl bg-blue-primary px-8 py-6 sm:px-10">
         {/* Halo décoratif */}
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-title-card-sub/30 blur-3xl" />
