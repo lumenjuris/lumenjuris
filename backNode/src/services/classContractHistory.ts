@@ -1,35 +1,9 @@
-import crypto from "crypto"
+import { Prisma } from "@prisma/client"
 import { prisma } from "../../prisma/singletonPrisma.js"
 
-const ALGO = "aes-256-gcm"
+// Le champ `snapshot` est chiffré/déchiffré automatiquement par l'extension Prisma.
+
 const MAX_ITEMS = 20
-
-function getKey(): Buffer {
-    const hex = process.env.CONTRACT_ENCRYPTION_KEY
-    if (!hex || hex.length !== 64) {
-        throw new Error("CONTRACT_ENCRYPTION_KEY must be a 64-char hex string")
-    }
-    return Buffer.from(hex, "hex")
-}
-
-function encrypt(plaintext: string): string {
-    const iv = crypto.randomBytes(12)
-    const cipher = crypto.createCipheriv(ALGO, getKey(), iv)
-    const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()])
-    const authTag = cipher.getAuthTag()
-    return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("base64")}`
-}
-
-function decrypt(stored: string): string {
-    const i1 = stored.indexOf(":")
-    const i2 = stored.indexOf(":", i1 + 1)
-    const iv = Buffer.from(stored.slice(0, i1), "hex")
-    const authTag = Buffer.from(stored.slice(i1 + 1, i2), "hex")
-    const ciphertext = Buffer.from(stored.slice(i2 + 1), "base64")
-    const decipher = crypto.createDecipheriv(ALGO, getKey(), iv)
-    decipher.setAuthTag(authTag)
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")
-}
 
 export type ContractHistoryItemDTO = {
     id: string
@@ -97,14 +71,10 @@ export class ContractHistory {
     async getSnapshot(userId: number, externalId: string): Promise<object | null> {
         const item = await prisma.contractHistory.findFirst({
             where: { userId, externalId },
-            select: { encryptedSnapshot: true },
+            select: { snapshot: true },
         })
         if (!item) return null
-        try {
-            return JSON.parse(decrypt(item.encryptedSnapshot)) as object
-        } catch {
-            return null
-        }
+        return item.snapshot as object
     }
 
     async save(
@@ -126,7 +96,7 @@ export class ContractHistory {
                 : 0
         const clausesCount = Array.isArray(contract?.clauses) ? contract.clauses.length : 0
         const activePatchCount = patches.filter((p) => p.active).length
-        const encryptedSnapshot = encrypt(JSON.stringify(snapshot))
+        const snapshotJson = snapshot as Prisma.InputJsonValue
 
         const item = await prisma.contractHistory.upsert({
             where: { externalId },
@@ -138,7 +108,7 @@ export class ContractHistory {
                 wordCount,
                 clausesCount,
                 activePatchCount,
-                encryptedSnapshot,
+                snapshot: snapshotJson,
                 userId,
             },
             update: {
@@ -148,7 +118,7 @@ export class ContractHistory {
                 wordCount,
                 clausesCount,
                 activePatchCount,
-                encryptedSnapshot,
+                snapshot: snapshotJson,
                 lastOpenedAt: new Date(),
             },
         })

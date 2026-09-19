@@ -16,6 +16,7 @@
     "seed:legalwatch:demo": "tsx prisma/seedLegalWatchDemo.ts",
     "test:legalwatch": "tsx tests/legalWatch.unit.ts",
     "test:contract": "tsx tests/contract.integration.ts",
+    "test:encryption": "tsx tests/encryption.integration.ts",
     "test:negotiation": "tsx tests/negotiation.stateMachine.test.ts && tsx tests/negotiation.integration.ts"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
 import type { InvoiceData } from "../../pdf/invoicePDF.js";
+import { PlanInterval } from "@prisma/client";
 
 const VAT_RATE = 0.2;
 
@@ -23,8 +24,8 @@ function formatDate(date: Date): string {
   });
 }
 
-function intervalLabel(interval: string): string {
-  return interval === "yearly" ? "annuel" : "mensuel";
+function intervalLabel(interval:string): string {
+  return interval === PlanInterval.yearly ? "annuel" : "mensuel";
 }
 
 export const templateInvoiceEmail = (

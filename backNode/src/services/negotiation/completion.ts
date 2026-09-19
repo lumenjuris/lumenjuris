@@ -6,6 +6,7 @@
 // opérations best-effort qui ne lèvent pas, audit systématique.
 import crypto from "crypto"
 import { prisma } from "../../../prisma/singletonPrisma.js"
+import { hashToken } from "../encryption.js"
 import { recordAudit } from "./audit.js"
 import { safeEmit } from "./events.js"
 import { transition } from "./stateMachine.js"
@@ -124,7 +125,7 @@ export async function enterCompletion(opts: {
 
 /** Contexte invité résolu et vérifié (lien actif + session ouverte). */
 async function guestContext(token: string) {
-  const g = await prisma.guestAccess.findUnique({ where: { token } })
+  const g = await prisma.guestAccess.findUnique({ where: { tokenHash: hashToken(token) } })
   if (!g || g.revokedAt || g.expiresAt <= new Date()) return null
   const s = await prisma.negotiationSession.findUnique({
     where: { idNegotiation: g.negotiationId },

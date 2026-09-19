@@ -7,7 +7,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js"
 import { ContractService } from "../services/classContract.js"
 import { Credit } from "../services/classCredit.js"
 import type { ContractListFilters } from "../services/classContract.js"
-import { encryptBuffer, decryptBuffer } from "../services/cryptoFile.js"
+import { encryptBuffer, decryptBuffer } from "../services/encryption.js"
 import { ContractSummary } from "@prisma/client"
 
 const router: Router = express.Router()

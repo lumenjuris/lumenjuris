@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { prisma } from "./../prisma/singletonPrisma.js"
+import { prisma, type TransactionClient } from "./../prisma/singletonPrisma.js"
 import { Prisma, PlanName, PlanInterval, SubscriptionStatus, CreditTransactionType } from "@prisma/client"
 import { Mailer } from "../src/infrastructure/mailer/classMailer.js"
 import type { InvoiceData } from "../src/infrastructure/pdf/invoicePDF.js"
@@ -132,7 +132,7 @@ export class StripeLumenJuris {
      */
     private async processOnce(
         event: Stripe.Event,
-        work: (tx: Prisma.TransactionClient) => Promise<void>,
+        work: (tx: TransactionClient) => Promise<void>,
     ) {
         try {
             await prisma.$transaction(async (tx) => {
@@ -361,7 +361,7 @@ export class StripeLumenJuris {
                 planName,
                 idPlan: plan.idPlan, //Envoyé pour le récupérer et retrouver le plan correspondant dans notre BDD
             },
-            // On recopie les identifiants sur la subscription elle-même : ainsi les
+            // On recopie les identifiants sur la subscription elle-même, les
             // events qui n'ont pas les metadata de la session (subscription.*,
             // invoice.*) peuvent aussi retrouver l'utilisateur et le plan.
             subscription_data: {
@@ -553,15 +553,64 @@ export class StripeLumenJuris {
             }
 
             // Retrouver NOTRE abonnement via l'ID Stripe (persisté par onCheckoutCompleted)
-            const subscription = await tx.subscription.findFirst({
+            let subscription = await tx.subscription.findFirst({
                 where: { stripeSubscriptionId },
                 include: { plan: true },
             });
+
+            // Lors d'un premier achat, Stripe envoie très souvent invoice.payment_succeeded
+            // AVANT checkout.session.completed : l'abonnement n'est donc pas encore lié.
+            // On le lie nous-mêmes grâce aux metadata (userId, idPlan) recopiées sur la
+            // subscription Stripe par createCheckout (subscription_data.metadata).
             if (!subscription) {
-                // Le paiement est arrivé avant que checkout.session.completed ait lié
-                // l'abonnement à ce stripeSubscriptionId. On rejoue plus tard : sinon
-                // on réinitialiserait les quotas sur le mauvais plan (Freemium).
-                throw new WebhookRetryError(`Abonnement pas encore lié pour stripeSubscriptionId=${stripeSubscriptionId}`)
+                const metadata = subscriptionDetails?.metadata ?? {};
+                const userIdFromMetadata = Number(metadata.userId);
+                const idPlanFromMetadata = Number(metadata.idPlan);
+
+                if (!Number.isInteger(userIdFromMetadata) || !Number.isInteger(idPlanFromMetadata)) {
+                    // Pas de metadata exploitables : on attend que checkout.session.completed
+                    // lie l'abonnement, sinon on réinitialiserait les quotas sur le mauvais plan.
+                    throw new WebhookRetryError(`Abonnement pas encore lié pour stripeSubscriptionId=${stripeSubscriptionId}`)
+                }
+
+                const planFromMetadata = await tx.plan.findUnique({
+                    where: { idPlan: idPlanFromMetadata },
+                    select: { idPlan: true, interval: true, stripePriceId: true },
+                });
+                if (!planFromMetadata) {
+                    throw new Error(`Plan introuvable pour la facture (idPlan=${idPlanFromMetadata})`);
+                }
+
+                // Même écriture que onCheckoutCompleted (qui la refera sans risque ensuite)
+                const now = new Date();
+                const firstExpiresAt =
+                    planFromMetadata.interval === PlanInterval.yearly
+                        ? new Date(new Date(now).setFullYear(now.getFullYear() + 1))
+                        : new Date(new Date(now).setMonth(now.getMonth() + 1));
+
+                subscription = await tx.subscription.upsert({
+                    where: { userId: userIdFromMetadata },
+                    create: {
+                        userId: userIdFromMetadata,
+                        planId: planFromMetadata.idPlan,
+                        status: SubscriptionStatus.ACTIVE,
+                        startAt: now,
+                        expiresAt: firstExpiresAt,
+                        stripeSubscriptionId,
+                        stripePriceId: planFromMetadata.stripePriceId,
+                    },
+                    update: {
+                        planId: planFromMetadata.idPlan,
+                        status: SubscriptionStatus.ACTIVE,
+                        startAt: now,
+                        expiresAt: firstExpiresAt,
+                        stripeSubscriptionId,
+                        stripePriceId: planFromMetadata.stripePriceId,
+                    },
+                    include: { plan: true },
+                });
+
+                console.log(`Abonnement lié depuis la facture (checkout pas encore reçu) : userId=${userIdFromMetadata}`)
             }
 
 

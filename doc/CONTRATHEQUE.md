@@ -104,7 +104,7 @@ avant de déclencher la logique d'alerte (briques d'échéances en V2).
 | **Base légale** | Intérêt légitime / exécution contractuelle |
 | **Données** | Métadonnées contractuelles + PDF ; minimisation (seuls les champs utiles) |
 | **Hébergement** | France / UE (MariaDB + FS locaux ; cible prod UE) |
-| **Chiffrement** | PDF chiffrés AES-256-GCM sur le filesystem (`cryptoFile.ts`) |
+| **Chiffrement** | PDF chiffrés AES-256-GCM sur le filesystem + champs sensibles chiffrés en base par l'extension Prisma (`encryption.ts`, `prisma/encryptedFields.ts`) |
 | **Journalisation** | Tout accès document + mutation tracés dans `AuditLog` (auteur, horodatage, payload avant/après) |
 | **Conservation** | `Contract.retentionUntil` paramétrable par contrat (purge à brancher) |
 | **Accès** | RBAC 3 rôles, cloisonnement par `userId` |
@@ -212,7 +212,7 @@ déjà présents pour la suite.
 back/app/main.py                          ← endpoint /extract-contract-metadata (étape 2)
 backNode/prisma/schema.prisma             ← modèles Contrathèque (étape 1)
 backNode/prisma/seedContratheque.ts       ← seed de démo
-backNode/src/services/cryptoFile.ts       ← chiffrement AES des PDF
+backNode/src/services/encryption.ts       ← chiffrement AES (champs en base + PDF)
 backNode/src/services/classContract.ts    ← service métier (étape 3)
 backNode/src/route/apiContract.ts         ← routes Express + RBAC (étape 3)
 proxy/index.ts                            ← relais /api/contract/** (étape 3)

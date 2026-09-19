@@ -13,6 +13,7 @@ import { normalizeAccountParameters } from "../utils/normalizeAccountParameters.
 import { normalizePreferenceUI } from "../utils/normalizePreferenceUI.js";
 import { getUserFullExport } from "../services/getUserData.js";
 import { readLog, writeLog } from "./apiFeedback.js";
+import { hashToken } from "../services/encryption.js";
 
 import {
   loginLimiter,
@@ -27,7 +28,7 @@ type TokenValidationResult =
     tokenEntry: {
       idToken: number;
       userId: number;
-      token: string;
+      tokenHash: string;
       type: string;
       status: string;
       expiresAt: Date;
@@ -39,7 +40,8 @@ async function validateToken(
   token: string,
   expectedType?: string,
 ): Promise<TokenValidationResult> {
-  const tokenEntry = await prisma.token.findUnique({ where: { token } });
+  // On ne stocke que l'empreinte du token : on la recalcule pour retrouver la ligne.
+  const tokenEntry = await prisma.token.findUnique({ where: { tokenHash: hashToken(token) } });
 
   // Token introuvable
   if (!tokenEntry || (expectedType && tokenEntry.type !== expectedType)) {
@@ -54,7 +56,7 @@ async function validateToken(
   // Token expiré
   if (tokenEntry.expiresAt < new Date()) {
     await prisma.token.update({
-      where: { token },
+      where: { idToken: tokenEntry.idToken },
       data: { status: "EXPIRED" },
     });
     return { valid: false, reason: "expired" };
@@ -269,7 +271,7 @@ routerUser.get(
       });
 
       await prisma.token.update({
-        where: { token },
+        where: { idToken: result.tokenEntry.idToken },
         data: { status: "USED" },
       });
 
@@ -746,7 +748,7 @@ routerUser.post(
       }
 
       const tokenEntry = await prisma.token.findFirst({
-        where: { token: code, userId: idUser, type: "twoFactor" },
+        where: { tokenHash: hashToken(code), userId: idUser, type: "twoFactor" },
       });
 
       if (!tokenEntry) {
@@ -903,7 +905,7 @@ routerUser.post("/confirm-delete", async (req: Request, res: Response) => {
 
   try {
     const tokenEntry = await prisma.token.findFirst({
-      where: { token: token, type: "deleteAccount" },
+      where: { tokenHash: hashToken(token), type: "deleteAccount" },
     });
 
     if (!tokenEntry || new Date() > tokenEntry.expiresAt) {
@@ -1071,7 +1073,7 @@ routerUser.post("/updatepassword", async (req: Request, res: Response) => {
     }
 
     await prisma.token.update({
-      where: { token },
+      where: { idToken: result.tokenEntry.idToken },
       data: { status: "USED" },
     });
 

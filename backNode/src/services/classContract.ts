@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { prisma } from "../../prisma/singletonPrisma.js"
+import { includesText } from "../utils/searchText.js"
 import { ContractSummary } from "@prisma/client"
 import { sum } from "pdf-lib"
 
@@ -10,7 +11,7 @@ import { sum } from "pdf-lib"
  * - Les métadonnées validées vivent en COLONNES claires sur Contract (filtres/tri/KPI).
  * - Le détail IA (valeur suggérée + score + état de validation) vit dans
  *   ContractMetadataField (audit du "trust but verify").
- * - Le PDF est chiffré sur le filesystem (voir cryptoFile + apiContract).
+ * - Le PDF est chiffré sur le filesystem (voir encryption.ts + apiContract).
  * - Toute action sensible est tracée dans AuditLog (RGPD).
  *
  * Voir contratheque/README.md pour l'architecture détaillée.
@@ -249,16 +250,14 @@ export class ContractService {
             ? await prisma.folder.findFirst({ where: { userId, externalId: f.folderExternalId } })
             : null
 
+        // Filtres appliqués par la base : uniquement sur les champs NON chiffrés.
         const where: Record<string, unknown> = {
             userId,
             ...(f.includeArchived ? {} : { isArchived: false }),
             ...(f.status ? { status: f.status } : {}),
             ...(f.contractType ? { contractType: { contains: f.contractType } } : {}),
-            ...(f.counterpartyName ? { counterpartyName: { contains: f.counterpartyName } } : {}),
-            ...(f.responsibleName ? { responsibleName: { contains: f.responsibleName } } : {}),
             ...(typeof f.isB2C === "boolean" ? { isB2C: f.isB2C } : {}),
             ...(folder ? { folderId: folder.idFolder } : {}),
-            ...(f.q ? { OR: [{ title: { contains: f.q } }, { ocrText: { contains: f.q } }] } : {}),
             ...(f.signedFrom || f.signedTo
                 ? { signatureDate: { ...(f.signedFrom ? { gte: new Date(f.signedFrom) } : {}), ...(f.signedTo ? { lte: new Date(f.signedTo) } : {}) } }
                 : {}),
@@ -272,21 +271,37 @@ export class ContractService {
             where["tags"] = { some: { tag: { userId, externalId: { in: f.tagExternalIds } } } }
         }
 
-        const sortBy = f.sortBy ?? "updatedAt" as const
-        const orderBy = { [sortBy === "updatedAt" ? "updatedAt" : sortBy]: f.sortDir ?? "desc" }
+        const sortBy = f.sortBy ?? "updatedAt"
+        const sortDir = f.sortDir ?? "desc"
+        // Le titre est chiffré : son tri se fait en mémoire. Les autres tris restent faits par la base.
+        const orderBy = sortBy === "title" ? undefined : { [sortBy]: sortDir }
 
-        const [rows, total] = await Promise.all([
-            prisma.contract.findMany({
-                where,
-                orderBy,
-                skip: (page - 1) * pageSize,
-                take: pageSize,
-                include: { tags: { include: { tag: true } }, folder: true },
-            }),
-            prisma.contract.count({ where }),
-        ])
+        // Le titre, le cocontractant, le responsable et le texte OCR sont chiffrés :
+        // la base ne peut ni les filtrer ni les trier. On charge donc tous les
+        // contrats qui passent les autres filtres, puis on filtre, trie et pagine
+        // en mémoire (les valeurs sont déjà déchiffrées par l'extension Prisma).
+        const rows = await prisma.contract.findMany({
+            where,
+            orderBy,
+            include: { tags: { include: { tag: true } }, folder: true },
+        })
 
-        const items: ContractListItemDTO[] = rows.map((c:any) => ({
+        const matchingRows = rows.filter((c) =>
+            includesText(c.counterpartyName, f.counterpartyName) &&
+            includesText(c.responsibleName, f.responsibleName) &&
+            (!f.q || includesText(c.title, f.q) || includesText(c.ocrText, f.q))
+        )
+
+        if (sortBy === "title") {
+            matchingRows.sort((a, b) =>
+                sortDir === "asc" ? a.title.localeCompare(b.title, "fr") : b.title.localeCompare(a.title, "fr")
+            )
+        }
+
+        const total = matchingRows.length
+        const pageRows = matchingRows.slice((page - 1) * pageSize, page * pageSize)
+
+        const items: ContractListItemDTO[] = pageRows.map((c:any) => ({
             id: c.externalId,
             title: c.title,
             contractType: c.contractType,
