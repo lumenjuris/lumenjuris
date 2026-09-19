@@ -5,7 +5,7 @@ import {
   BookOpen, Sparkles, ChevronLeft, ChevronRight,
   Briefcase, ClipboardList, FileText, Shield,
   UploadCloud, Lock, CheckCircle2,
-  Loader2, AlertCircle, Trash2, Search,
+  Loader2, AlertCircle, Search,
 } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
@@ -18,6 +18,7 @@ import { lettreDisciplinaireModel } from "../../contractEngine/models/lettreDisc
 import { ruptureConventionnelleModel } from "../../contractEngine/models/ruptureConventionnelle";
 import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
+import { CreatedContractTable } from "./generateur/CreatedContractTable";
 import { GenerateurHub } from "./generateur/GenerateurHub";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
@@ -91,17 +92,6 @@ const GENERIC_EDITORS: Record<DocId, { model: ContractModel; fileBase: string }>
 /** Normalise (minuscules + sans accents) pour une recherche tolérante. */
 function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-/** Date lisible pour l'historique des contrats créés. */
-function formatCreatedAt(ts: number): string {
-  try {
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-    }).format(new Date(ts));
-  } catch {
-    return "";
-  }
 }
 
 
@@ -252,33 +242,17 @@ function LibrarySection({
         onCancel={() => { setValidateModalOpen(false); setContractDelete(null); }}
       />
 
-      {/* Historique des contrats créés — volontairement discret (sous les modèles) */}
+      {/* Historique des contrats créés : même tableau que les modèles enregistrés */}
       {createdMatches.length > 0 && (
-        <div className="mt-2 overflow-hidden rounded-panel border border-line-subtle bg-surface-subtle/60 divide-y divide-line-subtle">
-          <p className="px-3 pt-2 pb-0.5 text-[9px] font-semibold uppercase tracking-widest text-ink-subtle/80">
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
             Historique des contrats créés
           </p>
-          {createdMatches.map((c) => (
-            <div
-              key={c.id}
-              className="group flex w-full items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-surface-muted/60"
-            >
-              <button onClick={() => onOpenCreated(c)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-                <FileText className="h-3.5 w-3.5 shrink-0 text-ink-subtle" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] text-ink-secondary">{c.title}</span>
-                  <span className="block text-[10px] text-ink-subtle">{formatCreatedAt(c.createdAt)}</span>
-                </span>
-              </button>
-              <button
-                onClick={() => handleDeleteCreated(c.id)}
-                title="Retirer de l'historique"
-                className="shrink-0 rounded-lg p-1 text-ink-subtle opacity-0 transition-all hover:bg-danger-light hover:text-danger group-hover:opacity-100"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          <CreatedContractTable
+            items={createdMatches}
+            onOpen={onOpenCreated}
+            onDelete={(contract) => handleDeleteCreated(contract.id)}
+          />
         </div>
       )}
     </div>
