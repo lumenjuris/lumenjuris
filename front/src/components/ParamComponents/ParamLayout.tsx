@@ -35,8 +35,8 @@ export function ParamLayout({
     <div className="max-w-5xl mx-auto rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       {/* banner principale */}
       <div className="bg-blue-primary p-4 sm:p-6">
-        <h1 className="text-xl font-bold tracking-tight text-white">{title}</h1>
-        <span className="text-white/85 font">
+        <h1 className="text-xl font-bold tracking-tight text-white text-lg">{title}</h1>
+        <span className="text-white/85  text-sm">
           Modifiez les paramètres de votre compte
         </span>
       </div>

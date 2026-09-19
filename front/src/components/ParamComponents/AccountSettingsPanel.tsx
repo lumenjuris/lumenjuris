@@ -29,7 +29,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { AlertBanner } from "../common/AlertBanner";
-import { useState, useRef, type ReactNode } from "react";
+import { useState, useRef } from "react";
+import { SettingsSection } from "./SettingsSection";
 
 import { fetchProxy } from "../../utils/fetchProxy";
 
@@ -40,35 +41,6 @@ const FIELD_LABEL_CLASS = "text-xs font-medium text-gray-600";
 const INPUT_CLASS = "bg-gray-50/50 border-gray-200";
 const PRIMARY_BUTTON_CLASS =
   "bg-blue-primary hover:bg-blue-primary/90 text-white font-medium px-5 rounded-lg text-sm";
-
-// Carte d'une section : en-tête (icône + titre + description) puis contenu.
-// Les blocs enfants sont séparés par une fine ligne grise.
-function SettingsSection({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <header className="flex items-start gap-3 border-b border-gray-100 bg-gray-50/60 px-5 py-4 sm:px-6">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-primary/10 text-blue-primary">
-          {icon}
-        </span>
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <p className="text-xs leading-relaxed text-gray-500">{description}</p>
-        </div>
-      </header>
-      <div className="divide-y divide-gray-100">{children}</div>
-    </section>
-  );
-}
 
 type AccountSettingsPanelProps = {
   profile: AccountProfile;

@@ -1030,7 +1030,7 @@ function CustomTemplateEditor({ templateId, onBack }: { templateId: string; onBa
     return (
       <div className="mx-auto max-w-lg">
         <button onClick={onBack} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-brand">
-          <ChevronLeft className="h-4 w-4" /> Retour
+          <ChevronLeft className="h-4 w-4" /> Retour 
         </button>
         <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger-light px-4 py-3 text-sm text-danger-dark">
           <AlertCircle className="h-4 w-4 shrink-0" /> {error || "Modèle introuvable."}

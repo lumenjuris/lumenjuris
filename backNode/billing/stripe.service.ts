@@ -411,7 +411,9 @@ export class StripeLumenJuris {
 
         const session = await this.stripeClient.billingPortal.sessions.create({
             customer: user.stripeCustomerId,
-            return_url: `${process.env.HOST_FRONT}/mon-compte`
+            // Retour sur l'onglet Facturation ; `from=portal` indique au front de
+            // relire l'abonnement le temps que le webhook de mise à jour arrive.
+            return_url: `${process.env.HOST_FRONT}/mon-compte?tab=subscription&from=portal`
         })
 
         return { success: true, url: session.url }
