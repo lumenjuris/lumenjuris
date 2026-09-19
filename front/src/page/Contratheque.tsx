@@ -10,6 +10,7 @@ import { DeadlinesView } from "../components/DashboardComponents/contratheque/De
 import { ViewTabs } from "../components/DashboardComponents/contratheque/ViewTabs";
 import type { ContrathequeTab } from "../components/DashboardComponents/contratheque/ViewTabs";
 import { useUserStore } from "../store/userStore";
+import { PageBanner } from "../components/common/PageBanner";
 
 /**
  * Contrathèque — point d'entrée (routes /contratheque et /contratheque/:externalId).
@@ -113,10 +114,7 @@ export function Contratheque() {
   if (tab === "echeances") {
     return (
       <div className="space-y-5 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col items-center gap-4 bg-blue-primary px-5 py-6 sm:px-12 sm:py-8 rounded-2xl text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Contrathèque</h1>
-          <p className="text-sm text-gray-primary mt-1">Alertes de renouvellement et suivi des échéances.</p>
-        </div>
+        <PageBanner title="Contrathèque" subtitle="Alertes de renouvellement et suivi des échéances." />
         <div className="mt-3"><ViewTabs tab={tab} onTab={setTab} /></div>
         <DeadlinesView refreshKey={refreshKey} onOpen={(id) => navigate(`/contratheque/${id}`)} />
       </div>

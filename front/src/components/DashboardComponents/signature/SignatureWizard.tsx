@@ -11,6 +11,7 @@ import type {
   Field, FieldType, Signer, SignerRole, WizardStep, CapturedSignature,
 } from "./types";
 import { SIGNERS_DEFAULT, DEFAULT_FIELD_SIZE, isValidEmail } from "./types";
+import { PageBanner } from "../../common/PageBanner";
 
 interface Props {
   /** Fichier PDF déjà sélectionné (vient du file picker du dashboard). */
@@ -313,22 +314,17 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
         onChange={handleReplaceDocument}
       />
 
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-4 py-5 sm:px-8 sm:py-8 rounded-2xl mb-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-            Signature électronique
-          </h1>
-          <p className="text-sm text-slate-300 mt-1">
-            {file && (
-                <div className="flex gap-1">
-                  <FileText className="w-3.5 h-3.5 text-white/75 shrink-0" />
-                  <span className="text-white/75">·</span>
-                  <span className="text-xs text-white/75 truncate">{file.name}</span>
-                </div>
-            )}
-          </p>
-        </div>
-      </header>
+      <PageBanner
+        className="mb-2"
+        backLink={onExit && { label: "Signature électronique", onClick: () => { resetWizard(); onExit(); } }}
+        title="Envoyer pour signature"
+        subtitle={file && (
+          <div className="flex items-center gap-1.5 text-xs text-white/75">
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{file.name}</span>
+          </div>
+        )}
+      />
 
       {step === "prepare" && (
         <PrepareStep

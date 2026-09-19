@@ -15,6 +15,7 @@ import { buildPdfFromText } from "./buildPdfFromText";
 import { STATUS_LABEL, STATUS_STYLE } from "./types";
 import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
+import { PageBanner } from "../../common/PageBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
 
@@ -146,24 +147,21 @@ export function NegotiationWorkspace() {
           )}
           
 
-        <div className="w-full">
-          <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} className="inline-flex items-center gap-1 text-xs text-ink-subtle hover:text-brand font-medium"><ChevronLeft className="w-3.5 h-3.5" /> Retour au contrat</button>
-          <div className="bg-blue-primary rounded-2xl px-5 py-5 sm:px-8 sm:py-6 shadow-sm w-full max-w-8xl">
-          {/* Titre et statut */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="text-xl sm:text-2xl font-normal text-white tracking-tight break-words">
-              Négociation - {data.title}
-            </h1>
+        <PageBanner
+          className="w-full"
+          backLink={{ label: "Fiche du contrat", onClick: () => navigate(`/contratheque/${data.contractExternalId}`) }}
+          title={`Négociation - ${data.title}`}
+          badges={
             <span
               className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
               style={{ backgroundColor: st.bg, color: st.fg }}
             >
               {data.status === "VALIDATED" ? "Prêt à signer" : STATUS_LABEL[data.status]}
             </span>
-          </div>
-
+          }
+        >
           {/* Barre d'actions sous forme de boutons harmonisés */}
-          <div className="flex items-center gap-2.5 mt-5 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {canEdit && data.status !== "CLOSED" && (
               <>
                 {/* Action Principale : Transmettre à la signature */}
@@ -218,8 +216,7 @@ export function NegotiationWorkspace() {
               </select>
             )}
           </div>
-        </div>
-        </div>
+        </PageBanner>
       </div>
 
       <div className="">

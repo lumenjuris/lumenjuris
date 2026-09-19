@@ -52,6 +52,7 @@ import { handleAppendClause } from "../utils/aiAnalyser/handleAppendClause";
 import { contractApi } from "../components/DashboardComponents/contratheque/api";
 import { NegotiationDetail } from "../components/DashboardComponents/negotiation/types";
 import { ShareDialog } from "../components/DashboardComponents/negotiation/ShareDialog";
+import { PageBanner } from "../components/common/PageBanner";
 
 
 const consumedNavigationUploadKeys = new Set<string>();
@@ -900,17 +901,11 @@ export default function ContractAnalysis() {
           {contract?.processed && !displayedIsProcessing && (
             <div className="max-w-7xl mx-auto">
 
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl mb-2">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">Analyse de conformité</h1>
-                  <p className="text-sm text-slate-300 mt-1">
-                    Vérifiez la conformité juridique de vos documents
-                  </p>
-                </div>
-
-                <div className="flex justify-center items-center">
-                </div>
-              </div> 
+              <PageBanner
+                className="mb-2"
+                title="Analyse de conformité"
+                subtitle="Vérifiez la conformité juridique de vos documents"
+              /> 
 
               <ActionButtons
                 onShareReport={() => void openShare()}
