@@ -8,7 +8,7 @@
  *      y compris dans les écritures imbriquées et les `include` ;
  *   3. le garde-fou : un `where` / `orderBy` sur un champ chiffré lève une erreur.
  *
- * Prérequis : base migrée avec le schéma à jour + au moins un utilisateur.
+ * Prérequis : base migrée avec le schéma à jour (le test crée son propre utilisateur).
  * Lancement : npm run test:encryption  (depuis backNode/)
  * Auto-nettoyant : supprime les données de test à la fin.
  */
@@ -69,12 +69,37 @@ async function main() {
 
     console.log("\nExtension Prisma (base réelle)\n")
 
-    const user = await prisma.user.findFirst({ select: { idUser: true } })
-    if (!user) throw new Error("Aucun utilisateur en base : impossible de lancer le test")
+    // Utilisateur de test dédié (supprimé à la fin, avec ses contrats en cascade)
+    const user = await prisma.user.create({
+        data: { email: `test-encryption-${crypto.randomUUID()}@example.test`, nom: "Dupont", prenom: "Élise" },
+    })
     const externalId = `test-encryption-${crypto.randomUUID()}`
     let contractId = 0
 
     try {
+        await check("nom / prénom de l'utilisateur chiffrés en base, lus en clair", async () => {
+            const rows = await prisma.$queryRaw<Array<{ nom: string; prenom: string; email: string }>>`
+                SELECT nom, prenom, email FROM User WHERE idUser = ${user.idUser}`
+            assert.ok(rows[0].nom.startsWith("enc:v1:"), "nom non chiffré")
+            assert.ok(rows[0].prenom.startsWith("enc:v1:"), "prénom non chiffré")
+            assert.ok(rows[0].email.endsWith("@example.test"), "l'email doit rester en clair")
+            const reread = await prisma.user.findUniqueOrThrow({ where: { idUser: user.idUser } })
+            assert.equal(reread.nom, "Dupont")
+            assert.equal(reread.prenom, "Élise")
+        })
+
+        await check("jeton de compte : seule l'empreinte est stockée et elle permet de le retrouver", async () => {
+            const token = crypto.randomBytes(32).toString("hex")
+            await prisma.token.create({
+                data: { tokenHash: hashToken(token), type: "verifyAccount", expiresAt: new Date(Date.now() + 60_000), userId: user.idUser },
+            })
+            const found = await prisma.token.findUnique({ where: { tokenHash: hashToken(token) } })
+            assert.ok(found, "jeton introuvable par son empreinte")
+            const rows = await prisma.$queryRaw<Array<{ tokenHash: string }>>`
+                SELECT tokenHash FROM Token WHERE userId = ${user.idUser}`
+            assert.ok(!rows.some((r) => r.tokenHash === token), "le jeton est stocké en clair")
+        })
+
         await check("création d'un contrat avec écritures imbriquées", async () => {
             const contract = await prisma.contract.create({
                 data: {
@@ -163,9 +188,8 @@ async function main() {
             await assert.rejects(prisma.contract.findMany({ orderBy: { title: "asc" } }), /chiffré/)
         })
     } finally {
-        // Nettoyage (la suppression du contrat supprime en cascade champs et versions)
-        await prisma.contractSummary.deleteMany({ where: { externalId: `${externalId}-summary` } })
-        await prisma.contract.deleteMany({ where: { externalId } })
+        // Nettoyage : supprimer l'utilisateur supprime en cascade ses contrats, synthèses et jetons
+        await prisma.user.delete({ where: { idUser: user.idUser } })
         await prisma.$disconnect()
     }
 

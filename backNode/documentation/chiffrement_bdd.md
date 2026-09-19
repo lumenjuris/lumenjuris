@@ -213,7 +213,15 @@ Les factures envoyées par email, téléchargées ou exportées en ZIP sont **r�
 
 ## 10. Reste à faire
 
-- **Historique des migrations Prisma cassé** (indépendant du chiffrement) : plusieurs migrations `init` se chevauchent, et l'historique ne se rejoue plus sur une base vide. `migrate dev` et `migrate reset` échouent donc. À corriger avant de générer la migration du chiffrement.
+- **Historique des migrations Prisma** (indépendant du chiffrement) : la migration `20260730155851_init` recrée toutes les tables, donc l'historique ne se rejoue pas sur une base vide (`migrate reset` et `migrate dev` échouent). Pour reconstruire une base locale sans toucher à l'historique (synchronisé avec la prod) :
+
+  ```bash
+  npx prisma migrate reset --force                              # s'arrête sur 20260730155851_init
+  npx prisma migrate resolve --applied 20260730155851_init      # comme en prod
+  npx prisma migrate deploy                                     # applique la suite
+  ```
+
+  Nouvelles migrations : les générer avec `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`, puis **remettre les noms de tables en PascalCase** (sous Windows, MariaDB les renvoie en minuscules ; en production sous Linux, les noms sont sensibles à la casse).
 - Noms de fichiers et de modèles en clair : `ContractHistory.fileName`, `ContractTemplate.name`, `SignatureEnvelope.documentName`.
 - `.env.production` : ajouter `CONTRACT_ENCRYPTION_KEY`.
 - Rotation de clé : préparer `getKey` et écrire le script de rechiffrement (voir section 5).
