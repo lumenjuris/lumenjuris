@@ -32,6 +32,14 @@ export interface GuideContent {
   stepNumber: GuideStepNumber;
   /** Titre de ce qu'il y a à faire maintenant. */
   title: string;
+  /**
+   * Consigne concrète, une phrase : où agir et quoi faire ensuite. Le titre
+   * seul ne suffisait pas — à l'arrivée, les zones étant pré-placées, on lisait
+   * « Les deux zones sont placées » sans savoir qu'on pouvait les déplacer ni
+   * qu'il fallait ensuite cliquer sur « Signer » (les étiquettes animées sur le
+   * document sont souvent hors de l'écran, en bas de page).
+   */
+  hint: string;
   /** Signataire concerné — sert à colorer le bandeau d'étape. */
   signer: SignerRole | null;
 }
@@ -56,16 +64,49 @@ export type GuideStepNumber = 1 | 2 | 3;
 export function getGuideContent(phase: GuidePhase): GuideContent {
   switch (phase) {
     case "place-self":
-      return { stepNumber: 1, title: "Placez votre zone de signature", signer: "self" };
+      return {
+        stepNumber: 1,
+        title: "Placez votre zone de signature",
+        hint: "Cliquez sur le document, à l'endroit où vous signerez.",
+        signer: "self",
+      };
     case "place-counterparty":
-      return { stepNumber: 1, title: "Placez la zone du cocontractant", signer: "counterparty" };
+      return {
+        stepNumber: 1,
+        title: "Placez la zone du cocontractant",
+        hint: "Cliquez sur le document, à l'endroit où signera votre cocontractant.",
+        signer: "counterparty",
+      };
     case "place-ready":
-      return { stepNumber: 1, title: "Les deux zones sont placées", signer: null };
+      // Les deux zones sont pré-placées par le wizard (dernière page, bas de
+      // page, émetteur à gauche, cocontractant à droite) : c'est l'état
+      // d'arrivée, d'où un titre qui dit quoi faire plutôt qu'un constat.
+      return {
+        stepNumber: 1,
+        title: "Placez les zones de signature à l'endroit souhaité",
+        hint: "Deux zones sont déjà posées en bas de la dernière page : la vôtre à gauche, celle du cocontractant à droite. Faites-les glisser si besoin, puis cliquez sur « Signer ».",
+        signer: null,
+      };
     case "sign-self":
-      return { stepNumber: 2, title: "Apposez votre signature", signer: "self" };
+      return {
+        stepNumber: 2,
+        title: "Apposez votre signature",
+        hint: "Cliquez sur votre zone, sur le document, pour signer.",
+        signer: "self",
+      };
     case "sign-recipient":
-      return { stepNumber: 3, title: "Indiquez à qui envoyer le contrat", signer: "counterparty" };
+      return {
+        stepNumber: 3,
+        title: "Indiquez à qui envoyer le contrat",
+        hint: "Renseignez le nom et l'e-mail de votre cocontractant.",
+        signer: "counterparty",
+      };
     case "sign-send":
-      return { stepNumber: 3, title: "Tout est prêt", signer: null };
+      return {
+        stepNumber: 3,
+        title: "Tout est prêt",
+        hint: "Vérifiez le destinataire, puis cliquez sur « Envoyer ».",
+        signer: null,
+      };
   }
 }

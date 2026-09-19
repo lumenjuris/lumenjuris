@@ -601,8 +601,20 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   const getContractText = () => {
     if (!editor) return "";
     const json = editor.getJSON() as JNode;
+    // Conserve les retours à la ligne et les listes (sinon « Le Client s'engage à :- coopérer… »).
+    const blockText = (n: JNode): string => {
+      if (n.type === "bulletList" || n.type === "orderedList") {
+        return (n.content ?? []).map((li, i) =>
+          `${n.type === "bulletList" ? "-" : `${i + 1}.`} ${(li.content ?? []).map(blockText).join(" ")}`).join("\n");
+      }
+      const kids = n.content ?? [];
+      if (kids.some((k) => k.type === "paragraph" || k.type === "heading" || k.type === "bulletList" || k.type === "orderedList")) {
+        return kids.map(blockText).filter((t) => t.trim()).join("\n");
+      }
+      return kids.map((k) => (k.type === "hardBreak" ? "\n" : inlineText([k]))).join("");
+    };
     return (json.content ?? [])
-      .map((n) => inlineText(n.content))
+      .map(blockText)
       .filter((t) => t.trim())
       .join("\n\n");
   };

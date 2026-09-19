@@ -88,8 +88,7 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-card border border-line shadow-card p-4 space-y-3">
-      <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">Informations du contrat</p>
+    <div className="bg-white rounded-card border border-line shadow-card p-3 space-y-3">
 
       {error && (
         <div role="alert" className="flex items-start gap-2 text-xs text-danger-dark bg-danger-light border border-danger/20 px-3 py-2 rounded-lg">

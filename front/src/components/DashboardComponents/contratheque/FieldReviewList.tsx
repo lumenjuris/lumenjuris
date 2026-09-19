@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
 import {
   RELATION_OPTIONS, RENEWAL_OPTIONS,
   computeFieldStatus, formatFieldValue, getFieldConfig,
@@ -199,7 +199,7 @@ export function FieldReviewList({
   }
 
   return (
-    <div ref={listRef} className="space-y-5">
+    <div ref={listRef} className="flex flex-col gap-3">
       {/*       <Progress readyCount={readyCount} totalCount={essentialFields.length} />
  */}      
  
@@ -211,7 +211,7 @@ export function FieldReviewList({
       </p>
 
       {fieldsToComplete.length > 0 && (
-        <section className="space-y-2">
+        <section className="space-y-1.5">
           <FieldStatusHeading status="to_complete" count={fieldsToComplete.length} />
           {fieldsToComplete.map((field) => (
             <ActionFieldCard
@@ -228,7 +228,7 @@ export function FieldReviewList({
       )}
 
       {fieldsToVerify.length > 0 && (
-        <section className="space-y-2">
+        <section className="space-y-1.5">
           <FieldStatusHeading status="to_verify" count={fieldsToVerify.length} />
           {fieldsToVerify.map((field) => (
             <ActionFieldCard
@@ -403,26 +403,27 @@ function ActionFieldCard({
   const borderClass = alreadyHandled ? "border-success/40" : FIELD_STATUS_STYLE[group].borderClass;
 
   return (
-    <div {...containerProps} className={`bg-white rounded-panel border shadow-card p-3 transition-colors ${borderClass}`}>
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <FieldLabel fieldKey={field.key} />
+    <div {...containerProps} className={`bg-white rounded-lg border px-2.5 py-1.5 transition-colors flex items-center gap-2 ${borderClass}`}>
+      <div className="w-[34%] shrink-0 flex items-center gap-1 min-w-0">
+        <FieldLabel fieldKey={field.key} className="text-xs font-medium text-ink-secondary leading-tight" />
         {saving ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin text-ink-subtle" />
         ) : alreadyHandled ? (
           <Check className="w-3.5 h-3.5 text-success" />
         ) : field.origin === "calculated" ? (
-          <span className="text-[11px] text-ink-subtle">calculée</span>
+          <span className="text-[10px] text-ink-subtle">calculée</span>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
         <div className="flex-1 min-w-0">{control}</div>
         {onConfirm && !alreadyHandled && (
           <button
             onClick={onConfirm}
             aria-label={`Confirmer ${config.label}`}
-            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-info-dark bg-info-light rounded-lg hover:bg-info/20 transition-colors"
+            title="Confirmer"
+            className="shrink-0 p-1.5 text-info-dark bg-info-light rounded-md hover:bg-info/20 transition-colors"
           >
-            <Check className="w-3.5 h-3.5" /> Confirmer
+            <Check className="w-3.5 h-3.5" />
           </button>
         )}
         {onMarkAbsent && !alreadyHandled && (
@@ -430,9 +431,9 @@ function ActionFieldCard({
             onClick={onMarkAbsent}
             aria-label={`${config.label} : information absente du contrat`}
             title="Cette information ne figure pas dans le contrat"
-            className="shrink-0 px-2.5 py-1.5 text-xs font-medium text-ink-muted border border-line rounded-lg hover:bg-surface-subtle hover:text-ink-secondary transition-colors"
+            className="shrink-0 p-1.5 text-ink-subtle rounded-md hover:bg-surface-subtle hover:text-ink-secondary transition-colors"
           >
-            Retirer
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -452,7 +453,7 @@ function FieldControl({
   onEnter: () => void;
 }) {
   const config = getFieldConfig(field.key);
-  const inputClass = "w-full text-sm px-2.5 py-1.5 rounded-lg border border-line text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand placeholder:text-ink-placeholder transition-all";
+  const inputClass = "w-full text-sm px-2 py-1 rounded-md border border-line text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand placeholder:text-ink-placeholder transition-all";
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {

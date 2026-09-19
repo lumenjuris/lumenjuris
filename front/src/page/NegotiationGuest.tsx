@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Scale, Eye, ShieldCheck, Lock, MapPin } from "lucide-react";
+import { Loader2, Scale } from "lucide-react";
 import { guestApi } from "../components/DashboardComponents/negotiation/api";
 import { NegotiationDoc } from "../components/DashboardComponents/negotiation/NegotiationDoc";
 import type { AddAnnotationPayload } from "../components/DashboardComponents/negotiation/NegotiationDoc";
@@ -66,26 +66,8 @@ export function NegotiationGuest() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-col bg-blue-primary p-4 gap-2 rounded-2xl">
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{data.title}</h1>
-              <p className="text-sm text-gray-primary mt-1 inline-flex items-center gap-1.5">
-                {completion
-                  ? "Complétez les champs surlignés qui vous sont assignés, puis validez : le reste du document est en lecture seule."
-                  : data.guest.canComment
-                    ? "Surlignez un passage du contrat pour le commenter ou proposer une modification."
-                    : <><Eye className="w-3.5 h-3.5" /> Vous consultez ce document en lecture seule.</>}
-              </p>
-              {/* Réassurance : ce que l'invité peut faire, où sont les données */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-[11px] text-ink-muted">
-              <span className="inline-flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-brand" /> Connexion chiffrée, lien personnel et révocable</span>
-              <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-brand" /> Document hébergé en France</span>
-              <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-brand" />
-                {completion
-                  ? "Vous ne pouvez modifier que les champs qui vous sont assignés"
-                  : "Vos contributions sont visibles de votre interlocuteur et tracées"}
-              </span>
-            </div>
+            <div className="flex flex-col bg-blue-primary px-6 py-5 gap-2 rounded-2xl">
+              <h1 className="text-2xl font-bold text-white tracking-tight">{data.title}</h1>
 
             </div>
 
