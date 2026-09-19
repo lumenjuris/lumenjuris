@@ -2,8 +2,9 @@ import crypto from "crypto"
 import fs from "fs/promises"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import type { PDFFont, PDFImage, PDFPage } from "pdf-lib"
+import { Prisma } from "@prisma/client"
 import { prisma } from "../../prisma/singletonPrisma.js"
-import { encryptJson, decryptJson } from "./classContractTemplate.js"
+import { hashToken, decryptBuffer } from "./encryption.js"
 
 /**
  * Statuts possibles d'une enveloppe de signature (miroir du enum Prisma).
@@ -18,7 +19,7 @@ export type EnvelopeStatusValue =
 
 /**
  * Données des champs (positions, signatures capturées) stockées chiffrées
- * dans `encryptedFields`. La structure reflète l'état du wizard frontend.
+ * dans `envelopeFields`. La structure reflète l'état du wizard frontend.
  */
 export interface EnvelopeFieldsPayload {
   fields: Array<Record<string, unknown>>;
@@ -141,8 +142,8 @@ function toDTO(row: {
  *   - statistiques agrégées pour le dashboard
  *   - suppression
  *
- * Les champs (positions, signatures dataUrl) sont chiffrés AES-256-GCM via
- * les utilitaires partagés `encryptJson` / `decryptJson` du module template.
+ * Les champs (positions, signatures dataUrl) sont chiffrés AES-256-GCM
+ * automatiquement par l'extension Prisma (prisma/encryptionExtension.ts).
  * Le fichier PDF lui-même est stocké sur le filesystem par la route (voir
  * `apiSignature.ts`), seul son chemin est référencé ici.
  */
@@ -159,6 +160,7 @@ export class SignatureEnvelopeService {
       where: { userId, ...(status ? { status } : {}) },
       orderBy: { updatedAt: "desc" },
       take: 100,
+      omit: { envelopeFields: true }, // inutile pour la liste : évite de déchiffrer les signatures
     });
     return rows.map(toDTO);
   }
@@ -178,7 +180,7 @@ export class SignatureEnvelopeService {
       where: { userId, externalId },
     });
     if (!row) return null;
-    const fields = decryptJson<EnvelopeFieldsPayload>(row.encryptedFields);
+    const fields = row.envelopeFields as unknown as EnvelopeFieldsPayload;
     return { meta: toDTO(row), fields, documentFilePath: row.documentFilePath };
   }
 
@@ -203,14 +205,17 @@ export class SignatureEnvelopeService {
     },
   ): Promise<SignatureEnvelopeDTO> {
     const now = new Date();
+    const signingToken = crypto.randomBytes(32).toString("hex");
     const row = await prisma.signatureEnvelope.create({
       data: {
         externalId: crypto.randomUUID(),
-        signingToken: crypto.randomBytes(32).toString("hex"),
+        // Empreinte pour retrouver l'enveloppe + copie chiffrée (par l'extension) pour renvoyer le lien
+        signingTokenHash: hashToken(signingToken),
+        signingToken,
         documentName: data.documentName,
         documentFilePath: data.documentFilePath ?? null,
         numPages: data.numPages,
-        encryptedFields: encryptJson(data.fields),
+        envelopeFields: data.fields as unknown as Prisma.InputJsonValue,
         status: "SENT",
         selfName: data.selfName,
         selfEmail: data.selfEmail,
@@ -234,10 +239,10 @@ export class SignatureEnvelopeService {
     documentFilePath: string | null;
   } | null> {
     const row = await prisma.signatureEnvelope.findUnique({
-      where: { signingToken },
+      where: { signingTokenHash: hashToken(signingToken) },
     });
     if (!row) return null;
-    const fields = decryptJson<EnvelopeFieldsPayload>(row.encryptedFields);
+    const fields = row.envelopeFields as unknown as EnvelopeFieldsPayload;
     return { meta: toDTO(row), fields, documentFilePath: row.documentFilePath };
   }
 
@@ -249,7 +254,7 @@ export class SignatureEnvelopeService {
     signedFields: EnvelopeFieldsPayload,
   ): Promise<SignatureEnvelopeDTO | null> {
     const row = await prisma.signatureEnvelope.findUnique({
-      where: { signingToken },
+      where: { signingTokenHash: hashToken(signingToken) },
     });
     if (!row) return null;
 
@@ -259,9 +264,9 @@ export class SignatureEnvelopeService {
 
     const now = new Date();
     const updated = await prisma.signatureEnvelope.update({
-      where: { signingToken },
+      where: { signingTokenHash: hashToken(signingToken) },
       data: {
-        encryptedFields: encryptJson(signedFields),
+        envelopeFields: signedFields as unknown as Prisma.InputJsonValue,
         status: "SIGNED",
         counterpartySignedAt: now,
         completedAt: now,
@@ -317,7 +322,7 @@ export class SignatureEnvelopeService {
   ): Promise<{ documentName: string; buffer: Buffer } | null> {
     let pdfBytes: Buffer;
     try {
-      pdfBytes = await fs.readFile(documentFilePath);
+      pdfBytes = decryptBuffer(await fs.readFile(documentFilePath));
     } catch (err) {
       console.warn("[signature] PDF source introuvable:", documentFilePath, err);
       return null;
@@ -349,6 +354,7 @@ export class SignatureEnvelopeService {
         where: { userId },
         orderBy: { updatedAt: "desc" },
         take: 5,
+        omit: { envelopeFields: true }, // inutile ici : évite de déchiffrer les signatures
       }),
     ]);
     const stats: SignatureDashboardStats = {

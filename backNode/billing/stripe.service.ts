@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { prisma } from "./../prisma/singletonPrisma.js"
+import { prisma, type TransactionClient } from "./../prisma/singletonPrisma.js"
 import { Prisma, PlanName, PlanInterval, SubscriptionStatus, CreditTransactionType } from "@prisma/client"
 import { Mailer } from "../src/infrastructure/mailer/classMailer.js"
 import type { InvoiceData } from "../src/infrastructure/pdf/invoicePDF.js"
@@ -132,7 +132,7 @@ export class StripeLumenJuris {
      */
     private async processOnce(
         event: Stripe.Event,
-        work: (tx: Prisma.TransactionClient) => Promise<void>,
+        work: (tx: TransactionClient) => Promise<void>,
     ) {
         try {
             await prisma.$transaction(async (tx) => {

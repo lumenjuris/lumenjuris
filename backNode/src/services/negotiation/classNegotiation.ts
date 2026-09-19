@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "../../../prisma/singletonPrisma.js";
+import { hashToken } from "../encryption.js";
 import { recordAudit } from "./audit.js";
 import { safeEmit } from "./events.js";
 import { transition, exitToSignature } from "./stateMachine.js";
@@ -35,6 +36,7 @@ export type NegotiationAuditDTO = {
 export type GuestAccessDTO = {
   idGuest: number;
   externalId: string;
+  tokenHash: string;
   token: string;
   participantId: number | null;
   expiresAt: Date;
@@ -575,10 +577,13 @@ export class NegotiationService {
           ? "THIRD_PARTY"
           : "COUNTERPARTY"
         : null;
+    const guestToken = crypto.randomBytes(32).toString("hex");
     const g = await prisma.guestAccess.create({
       data: {
         externalId: crypto.randomUUID(),
-        token: crypto.randomBytes(32).toString("hex"),
+        // Empreinte pour retrouver l'accès + copie chiffrée (par l'extension) pour réafficher le lien
+        tokenHash: hashToken(guestToken),
+        token: guestToken,
         participantId,
         name: data.name ?? null,
         email: data.email ?? null,
@@ -641,7 +646,7 @@ export class NegotiationService {
 
   /** Vue invité par token : valide le lien et renvoie une vue filtrée (externe). */
   async getByGuestToken(token: string) {
-    const g = await prisma.guestAccess.findUnique({ where: { token } });
+    const g = await prisma.guestAccess.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!g || g.revokedAt || g.expiresAt <= new Date()) return null;
     const s = await prisma.negotiationSession.findUnique({
       where: { idNegotiation: g.negotiationId },
@@ -718,7 +723,7 @@ export class NegotiationService {
       proposedText?: string | null;
     },
   ) {
-    const g = await prisma.guestAccess.findUnique({ where: { token } });
+    const g = await prisma.guestAccess.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!g || g.revokedAt || g.expiresAt <= new Date()) return null;
     // Garde-fou de rôle : un lecteur seul ne peut pas commenter.
     if (g.participantId) {

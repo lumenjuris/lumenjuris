@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/authMiddleware.js"
 import { ContractTemplateService } from "../services/classContractTemplate.js"
 import type { TemplateStructure } from "../services/classContractTemplate.js"
 import { TemplatePlaybookService } from "../services/classTemplatePlaybook.js"
+import { encryptBuffer } from "../services/encryption.js"
 
 const router: Router = express.Router()
 const svc = new ContractTemplateService()
@@ -62,9 +63,10 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         if (fileBase64 && sourceFilename) {
             await fs.mkdir(TEMPLATES_DIR, { recursive: true })
             const ext = path.extname(sourceFilename) || ".bin"
-            const storedName = crypto.randomBytes(8).toString("hex") + ext
+            // Fichier source chiffré (déchiffrer avec decryptBuffer de services/encryption.ts)
+            const storedName = crypto.randomBytes(8).toString("hex") + ext + ".enc"
             savedFilePath = path.join(TEMPLATES_DIR, storedName)
-            await fs.writeFile(savedFilePath, Buffer.from(fileBase64, "base64"))
+            await fs.writeFile(savedFilePath, encryptBuffer(Buffer.from(fileBase64, "base64")))
         }
 
         const created = await svc.create(userId, {

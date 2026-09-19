@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { encryptBuffer } from "../../services/encryption.js";
 
 // Ligne de facturation additionnelle (ex: options prises avec l'abonnement).
 // Le prix est TTC, exprimé en centimes, comme `amountTTCCents`.
@@ -99,7 +100,7 @@ function monthFolder(date: Date): string {
 }
 
 // ── Configuration du document ───────────────────────────────────────────────
-// Regroupe la création du document + son enregistrement sur disque.
+// Crée le document PDF (l'enregistrement sur disque se fait dans generateInvoicePDF).
 function createDocument(data: InvoiceData): PdfDoc {
   const doc: PdfDoc = new PDFDocument({
     size: "A4",
@@ -112,12 +113,18 @@ function createDocument(data: InvoiceData): PdfDoc {
     },
   });
 
-  // Enregistre la facture dans ./facture/<mois>_<année>/
+  return doc;
+}
+
+/**
+ * Archive la facture dans ./facture/<mois>_<année>/, chiffrée (AES-256-GCM) :
+ * elle contient les données personnelles du client. Pour la relire :
+ * decryptBuffer(fs.readFileSync(chemin)) — voir src/services/encryption.ts.
+ */
+function saveEncryptedCopy(data: InvoiceData, pdf: Buffer) {
   const dir = path.join("./facture", monthFolder(data.date));
   fs.mkdirSync(dir, { recursive: true });
-  doc.pipe(fs.createWriteStream(path.join(dir, `facture_${data.invoiceNumber}.pdf`)));
-
-  return doc;
+  fs.writeFileSync(path.join(dir, `facture_${data.invoiceNumber}.pdf.enc`), encryptBuffer(pdf));
 }
 
 // ── Logo Lumen Juris (repris du mailer) ─────────────────────────────────────
@@ -351,7 +358,16 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("end", () => {
+      const pdf = Buffer.concat(chunks);
+      try {
+        saveEncryptedCopy(data, pdf);
+      } catch (err) {
+        // L'archive sur disque ne doit pas empêcher l'envoi / le téléchargement de la facture.
+        console.error("[facture] archivage chiffré impossible :", err);
+      }
+      resolve(pdf);
+    });
     doc.on("error", reject);
 
     createHeader(doc, data);

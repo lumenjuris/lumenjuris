@@ -1,5 +1,6 @@
 import { prisma } from "../../prisma/singletonPrisma.js";
 import crypto from "crypto";
+import { hashToken } from "./encryption.js";
 
 type TokenType =
   | "verifyAccount"
@@ -40,9 +41,10 @@ export class Token {
         );
       }
 
+      // Seule l'empreinte est stockée : le token en clair part uniquement dans l'email.
       await prisma.token.create({
         data: {
-          token,
+          tokenHash: hashToken(token),
           expiresAt: expiresAt,
           userId,
           type,
@@ -69,7 +71,7 @@ export class Token {
     try {
       await prisma.token.delete({
         where: {
-          token,
+          tokenHash: hashToken(token),
         },
       });
       return {
@@ -98,7 +100,7 @@ export class Token {
       const expiresAt = this.setExpiresAt("twoFactor")!;
 
       await prisma.token.create({
-        data: { token: code, expiresAt, userId, type: "twoFactor" },
+        data: { tokenHash: hashToken(code), expiresAt, userId, type: "twoFactor" },
       });
 
       return { success: true, code };

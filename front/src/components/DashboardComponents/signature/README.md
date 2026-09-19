@@ -169,7 +169,7 @@ via une corbeille au survol.
 - À l'envoi : POST `/api/signature-envelope` qui :
   - sauvegarde le PDF dans `backNode/signatureenvelopes/{hex}.pdf`
   - chiffre la liste des champs (positions + signatures dataUrl) en
-    AES-256-GCM dans `encryptedFields`
+    AES-256-GCM dans `envelopeFields`
   - crée la ligne Prisma `SignatureEnvelope` avec statut `SENT`
   - envoie l'invitation à signer au cocontractant, avec l'émetteur en copie
 - Écran de confirmation après succès, qui rappelle que la relance se fait
@@ -221,7 +221,7 @@ Le wizard appelle l'API LumenJuris pour persister les enveloppes :
 
 Côté backend :
 - Modèle Prisma `SignatureEnvelope` (statut, signataires, dates,
-  `documentFilePath`, `encryptedFields`)
+  `documentFilePath`, `envelopeFields`)
 - Service `classSignatureEnvelope.ts` (CRUD + stats agrégées)
 - Route Express `apiSignature.ts`
 - PDF stockés dans `backNode/signatureenvelopes/{hex}.pdf` (ignoré par git)

@@ -155,8 +155,8 @@ model User {
   idUser           Int     @id @default(autoincrement())
   role             Role    @default(USER)
   email            String  @unique
-  nom              String?
-  prenom           String?
+  nom              String? @db.Text // chiffré
+  prenom           String? @db.Text // chiffré
   password         String?
   isVerified       Boolean @default(false)
   twoFactorEnabled Boolean @default(false)
@@ -263,7 +263,7 @@ model Address {
 /// Chaque token a un type, un statut (ACTIVE/EXPIRED/USED) et une date d'expiration.
 model Token {
   idToken   Int        @id @default(autoincrement())
-  token     String     @unique
+  tokenHash String     @unique // SHA-256 du token : le token lui-même n'est jamais stocké
   expiresAt DateTime
   type      String
   status    TokenState @default(ACTIVE)
@@ -345,8 +345,8 @@ model ContractHistory {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   lastOpenedAt      DateTime @default(now())
-  // Snapshot completète chiffré : contenu contrat + clauses + contexte + patches
-  encryptedSnapshot String   @db.LongText
+  // Snapshot complet (chiffré par l'extension Prisma) : contenu contrat + clauses + contexte + patches
+  snapshot          Json
 
   userId Int
   user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
@@ -506,7 +506,7 @@ model ContractTemplate {
   contractType       String?
   sourceFilename     String?
   sourceFilePath     String?
-  encryptedStructure String   @db.LongText
+  structure          Json // chiffré par l'extension Prisma
   version            Int      @default(1)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -556,7 +556,7 @@ model GenerationLog {
   variables        Json
   promptTokens     Int      @default(0)
   completionTokens Int      @default(0)
-  encryptedOutput  String   @db.LongText
+  output           Json // chiffré par l'extension Prisma
   createdAt        DateTime @default(now())
 
   templateId Int
@@ -576,16 +576,17 @@ model SignatureEnvelope {
   documentFilePath String?
   numPages         Int            @default(1)
   // Token public unique pour la page de signature du cocontractant
-  signingToken     String         @unique
-  // Champs (zones de signature + signatures capturées) chiffrés AES-256-GCM
-  encryptedFields  String         @db.LongText
+  signingTokenHash String         @unique // SHA-256 du token (sert à retrouver l'enveloppe)
+  signingToken     String         @db.Text // token chiffré (pour renvoyer le lien de signature)
+  // Champs (zones de signature + signatures capturées), chiffrés par l'extension Prisma
+  envelopeFields   Json
   status           EnvelopeStatus @default(DRAFT)
 
-  // Métadonnées signataires (clair pour permettre les filtres/recherche)
-  selfName          String
-  selfEmail         String
-  counterpartyName  String
-  counterpartyEmail String
+  // Métadonnées signataires (chiffrées : ne pas filtrer/trier dessus en base)
+  selfName          String @db.Text
+  selfEmail         String @db.Text
+  counterpartyName  String @db.Text
+  counterpartyEmail String @db.Text
 
   // Suivi du cycle de vie
   sentAt               DateTime?
@@ -656,10 +657,10 @@ model UserLlmUsage {
 model Contract {
   idContract       Int            @id @default(autoincrement())
   externalId       String         @unique
-  title            String
+  title            String  @db.Text // chiffré (voir encryptedFields.ts)
   contractType     String?
-  counterpartyName String? // cocontractant
-  responsibleName  String? // responsable interne
+  counterpartyName String? @db.Text // cocontractant — chiffré
+  responsibleName  String? @db.Text // responsable interne — chiffré
   status           ContractStatus @default(DRAFT)
 
   // Dates clés
@@ -747,7 +748,7 @@ model ContractMetadataField {
 model Amendment {
   idAmendment      Int       @id @default(autoincrement())
   externalId       String    @unique
-  title            String
+  title            String    @db.Text // chiffré
   documentFilePath String?
   signatureDate    DateTime?
   effectiveDate    DateTime?
@@ -1085,8 +1086,8 @@ model NegotiationParticipant {
   side          ParticipantSide @default(INTERNAL)
   role          ParticipantRole @default(COMMENTER)
   userId        Int? // interne (scalaire, pas de FK)
-  name          String?
-  email         String?
+  name          String?         @db.Text // chiffré
+  email         String?         @db.Text // chiffré
   createdAt     DateTime        @default(now())
 
   negotiationId Int
@@ -1099,10 +1100,11 @@ model NegotiationParticipant {
 model GuestAccess {
   idGuest       Int        @id @default(autoincrement())
   externalId    String     @unique
-  token         String     @unique // secret du lien invité
+  tokenHash     String     @unique // SHA-256 du secret du lien invité (sert à retrouver l'accès)
+  token         String     @db.Text // secret du lien invité, chiffré (pour réafficher / renvoyer le lien)
   participantId Int?
-  name          String? // lien nominatif : destinataire affiché sur la page invité
-  email         String? // destinataire de l'invitation et des relances
+  name          String?    @db.Text // lien nominatif : destinataire affiché sur la page invité — chiffré
+  email         String?    @db.Text // destinataire de l'invitation et des relances — chiffré
   fillSide      FieldSide? // COMPLETION : côté des champs que cet invité remplit
   lastSentAt    DateTime? // dernier envoi d'e-mail (invitation ou relance)
   expiresAt     DateTime
@@ -1113,7 +1115,7 @@ model GuestAccess {
   negotiation   NegotiationSession @relation(fields: [negotiationId], references: [idNegotiation], onDelete: Cascade)
 
   @@index([negotiationId])
-  @@index([token])
+  @@index([tokenHash])
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1256,10 +1258,10 @@ model ContractSummary {
   points_attention       Json // string[] → stocké en JSON
   niveau_risque          Json? // Objet { "niveau" : "", justification : ""}
 
-  duree String?
+  duree String? @db.Text // chiffré
 
   // Texte source (pour pouvoir re-générer sans re-uploader)
-  fileName String?
+  fileName String? @db.Text // chiffré
   rawText  String? @db.LongText
 
   createdAt DateTime @default(now())

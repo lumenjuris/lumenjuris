@@ -127,7 +127,7 @@ export async function getUserFullExport(
             };
           }),
           guestAccesses: (guestAccesses || []).map(
-            ({ token, ...guestRest }) => ({
+            ({ token, tokenHash, ...guestRest }) => ({
               ...guestRest,
               token: "",
             }),

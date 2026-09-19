@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { prisma } from "../../prisma/singletonPrisma.js"
-import { encryptJson, decryptJson } from "./classContractTemplate.js"
+
+// Le champ `output` est chiffré/déchiffré automatiquement par l'extension Prisma.
 
 export interface GenerationLogDTO {
     id: string
@@ -53,7 +54,7 @@ export class GenerationLogService {
             include: { template: { select: { userId: true } } },
         })
         if (!row || row.template.userId !== userId) return null
-        const output = decryptJson<string>(row.encryptedOutput)
+        const output = row.output as string
         return { ...toDTO(row), output }
     }
 
@@ -77,7 +78,7 @@ export class GenerationLogService {
                 variables: data.variables,
                 promptTokens: data.promptTokens,
                 completionTokens: data.completionTokens,
-                encryptedOutput: encryptJson(data.output),
+                output: data.output,
                 templateId: template.idTemplate,
             },
         })
