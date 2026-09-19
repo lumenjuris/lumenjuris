@@ -10,7 +10,7 @@ import { useUserStore } from "../../../store/userStore";
 import type {
   Field, FieldType, Signer, SignerRole, WizardStep, CapturedSignature,
 } from "./types";
-import { SIGNERS_DEFAULT, DEFAULT_FIELD_SIZE, isValidEmail } from "./types";
+import { SIGNERS_DEFAULT, DEFAULT_FIELD_SIZE, buildInitialFields, isValidEmail } from "./types";
 import { PageBanner } from "../../common/PageBanner";
 
 interface Props {
@@ -68,6 +68,9 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // Toujours armé sur "signature" — le placement est actif dès l'étape 2
   const [armedFieldType, setArmedFieldType] = useState<FieldType | null>("signature");
   const [replicateAllPages, setReplicateAllPages] = useState(false);
+  // Paraphes du cocontractant sur toutes les pages sauf la dernière.
+  // Désactivé par défaut : c'est du travail en plus pour le cocontractant.
+  const [initialAllPages, setInitialAllPages] = useState(false);
 
   // Étape 3 : signatures capturées + modale en cours
   const [capturedSigs, setCapturedSigs] = useState<Record<SignerRole, CapturedSignature | null>>({
@@ -99,7 +102,10 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
       // Guidage naturel : dès que VOTRE zone est posée et qu'aucune zone
       // cocontractant n'existe, on bascule automatiquement sur « Cocontractant »
       // — l'utilisateur enchaîne sans avoir à comprendre le sélecteur.
-      if (f.signer === "self" && !next.some((x) => x.signer === "counterparty")) {
+      const hasCounterpartySignature = next.some(
+        (x) => x.signer === "counterparty" && x.type === "signature",
+      );
+      if (f.signer === "self" && !hasCounterpartySignature) {
         setActiveSignerRole("counterparty");
       }
       return next;
@@ -122,6 +128,18 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     const removed = fields.find((f) => f.id === id);
     setFields((prev) => prev.filter((f) => f.id !== id));
     if (removed) setActiveSignerRole(removed.signer);
+  }
+
+  /**
+   * Active / désactive les paraphes : ajoute une zone de paraphe fixe sur
+   * chaque page sauf la dernière, ou les retire toutes.
+   */
+  function handleInitialAllPagesChange(enabled: boolean) {
+    setInitialAllPages(enabled);
+    setFields((prev) => {
+      const withoutInitials = prev.filter((f) => f.type !== "initial");
+      return enabled ? [...withoutInitials, ...buildInitialFields(numPages)] : withoutInitials;
+    });
   }
 
   /**
@@ -231,6 +249,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
     setCapturedSigs({ self: null, counterparty: null });
     setArmedFieldType("signature");
     setReplicateAllPages(false);
+    setInitialAllPages(false);
     setRecipientModalOpen(false);
   }
 
@@ -257,7 +276,10 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
       // Si aucun champ cocontractant n'a été placé, on en ajoute un automatiquement
       // en bas de la dernière page (position standard pour une signature de fin).
       let fieldsToSend = fields;
-      const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
+      // Un paraphe ne remplace pas la zone de signature du cocontractant.
+      const hasCounterpartyField = fields.some(
+        (f) => f.signer === "counterparty" && f.type === "signature",
+      );
       if (!hasCounterpartyField) {
         const lastPage = Math.max(0, numPages - 1);
         fieldsToSend = [
@@ -346,9 +368,12 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           activeSignerRole={activeSignerRole}
           armedFieldType={armedFieldType}
           replicateAllPages={replicateAllPages}
+          initialAllPages={initialAllPages}
+          canAddInitials={numPages > 1}
           onSignerChange={setActiveSignerRole}
           onArmFieldType={setArmedFieldType}
           onReplicateAllPagesChange={setReplicateAllPages}
+          onInitialAllPagesChange={handleInitialAllPagesChange}
           onFieldAdd={addField}
           onFieldMove={moveField}
           onFieldRemove={removeField}
@@ -357,11 +382,17 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
             // Première ouverture : les deux zones sont suggérées d'emblée en bas
             // de la dernière page (où l'on signe habituellement) — il ne reste
             // qu'à les glisser si besoin. Jamais si des zones existent déjà.
+            // Si les paraphes sont activés (cas d'un document remplacé), ils sont
+            // recréés pour le nouveau nombre de pages.
             const last = Math.max(0, n - 1);
-            setFields((prev) => (prev.length > 0 ? prev : [
-              { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
-              { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
-            ]));
+            setFields((prev) => {
+              const withSignatureZones: Field[] = prev.length > 0 ? prev : [
+                { id: "sugg_self", type: "signature", signer: "self", page: last, xPct: 0.08, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
+                { id: "sugg_counter", type: "signature", signer: "counterparty", page: last, xPct: 0.58, yPct: 0.8, widthPct: DEFAULT_FIELD_SIZE.widthPct, heightPct: DEFAULT_FIELD_SIZE.heightPct },
+              ];
+              const needsInitials = initialAllPages && !withSignatureZones.some((f) => f.type === "initial");
+              return needsInitials ? [...withSignatureZones, ...buildInitialFields(n)] : withSignatureZones;
+            });
           }}
           onChangeDocument={() => replaceDocumentInputRef.current?.click()}
           onNext={goToSignStep}

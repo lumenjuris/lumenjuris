@@ -3,7 +3,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { FieldOverlay } from "./FieldOverlay";
 import type { Field, FieldType, Signer, SignerRole } from "./types";
-import { DEFAULT_FIELD_SIZE } from "./types";
+import { DEFAULT_FIELD_SIZE, INITIAL_FIELD_LAYOUT } from "./types";
 
 // Configure le worker pdf.js via le CDN cloudflare (évite la config Vite custom).
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -43,10 +43,12 @@ interface Props {
   spotlightLabel?: string;
 }
 
-// Dimensions par défaut des champs (en pourcentage de la page)
-// (le paraphe « initial » a été retiré du produit — seul « signature » subsiste)
+// Dimensions par défaut des champs (en pourcentage de la page). Le clic ne
+// pose que des signatures ; les paraphes sont générés d'office, à position
+// fixe (voir `buildInitialFields`).
 const DEFAULT_SIZES: Record<FieldType, { width: number; height: number }> = {
   signature: { width: DEFAULT_FIELD_SIZE.widthPct, height: DEFAULT_FIELD_SIZE.heightPct },
+  initial: { width: INITIAL_FIELD_LAYOUT.widthPct, height: INITIAL_FIELD_LAYOUT.heightPct },
 };
 
 /**

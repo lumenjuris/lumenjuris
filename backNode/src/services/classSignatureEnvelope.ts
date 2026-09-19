@@ -32,6 +32,8 @@ export interface EnvelopeFieldsPayload {
  * de la page (0..1), l'origine étant le coin HAUT-gauche (repère écran).
  */
 interface SignatureFieldData {
+    /** "signature" (datée) ou "initial" (paraphe, jamais daté). */
+    type?: string
     /** Index de page 0-based. */
     page: number
     xPct: number
@@ -466,7 +468,9 @@ function drawSignatureOnPage(
     const boxBottom = ph - field.yPct * ph - boxH
 
     // Réserve un bandeau bas pour la date (comme l'aperçu front).
-    const hasDate = typeof field.signedAt === "string" && field.signedAt.length > 0
+    // Un paraphe n'est jamais daté, même si une date lui était associée.
+    const hasDate = field.type !== "initial"
+        && typeof field.signedAt === "string" && field.signedAt.length > 0
     const dateFontSize = Math.max(5, Math.min(7, boxH * 0.18))
     const dateStripH = hasDate ? dateFontSize + 2 : 0
 
