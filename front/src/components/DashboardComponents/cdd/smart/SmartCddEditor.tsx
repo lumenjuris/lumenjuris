@@ -125,6 +125,7 @@ function inlineText(nodes?: JNode[]): string {
   return nodes
     .map((n) =>
       n.type === "text" ? n.text ?? ""
+      : n.type === "hardBreak" ? "\n"
       : n.type === "variable" ? (String(n.attrs?.value || "") || "…")
       : inlineText(n.content),
     )
@@ -137,6 +138,7 @@ function markerText(nodes?: JNode[]): string {
   return nodes
     .map((n) =>
       n.type === "text" ? n.text ?? ""
+      : n.type === "hardBreak" ? "\n"
       : n.type === "variable" ? `{{${String(n.attrs?.name ?? "")}}}`
       : markerText(n.content),
     )
@@ -152,6 +154,7 @@ function mixedText(nodes: JNode[] | undefined, externalIds: Set<string>): string
   return nodes
     .map((n) => {
       if (n.type === "text") return n.text ?? "";
+      if (n.type === "hardBreak") return "\n";
       if (n.type === "variable") {
         const name = String(n.attrs?.name ?? "");
         return externalIds.has(name) ? `{{${name}}}` : String(n.attrs?.value || "");
@@ -531,7 +534,11 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     };
     for (const n of json.content ?? []) {
       const txt = inlineText(n.content);
-      if (n.type === "heading") block(txt, true, n.attrs?.level === 2 ? 15 : 11.5, 4);
+      if (n.type === "heading") {
+        // Espace avant le titre (sauf en haut de page) pour le détacher du paragraphe précédent.
+        if (y > margin) y += 8;
+        block(txt, true, n.attrs?.level === 2 ? 15 : 11.5, 4);
+      }
       else if (txt.trim()) block(txt, false, 10.5, 8);
     }
     if (isFreemium) {
@@ -655,6 +662,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     const docx = await import("docx");
     const { saveAs } = await import("file-saver");
     const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer } = docx;
+    // Word ignore les "\n" dans un TextRun : chaque ligne devient un run avec un retour à la ligne avant.
+    const textRunsWithLineBreaks = (txt: string, bold = false) =>
+      txt.split("\n").map((line, index) => new TextRun({ text: line, bold, break: index > 0 ? 1 : undefined }));
     const children = (json.content ?? []).map((n) => {
       const txt = inlineText(n.content);
       if (n.type === "heading") {
@@ -662,10 +672,11 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         return new Paragraph({
           heading: isTitle ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
           alignment: isTitle ? AlignmentType.CENTER : undefined,
-          children: [new TextRun({ text: txt, bold: true })],
+          spacing: { before: 240, after: 120 },
+          children: textRunsWithLineBreaks(txt, true),
         });
       }
-      return new Paragraph({ children: [new TextRun(txt)] });
+      return new Paragraph({ spacing: { after: 120 }, children: textRunsWithLineBreaks(txt) });
     });
     
     const waterMark = new TextRun({

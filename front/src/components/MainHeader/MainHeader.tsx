@@ -1,10 +1,10 @@
 // UI //
-import type { MouseEvent } from "react";
-
+import { MouseEvent, useEffect, useState } from "react";
 import HeaderNavigationBar from "./HeaderNavigationBar";
-import { LumenJurisLogo } from "../common/LumenJurisLogo";
+import { PanelLeft } from "lucide-react";
 
-import { Link } from "react-router-dom";
+
+
 
 type NavigationClickHandler = (
   event?: MouseEvent<HTMLElement>,
@@ -13,18 +13,62 @@ type NavigationClickHandler = (
 interface MainHeaderProps {
   onNavClick?: NavigationClickHandler;
   setIsConnected?: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Ouvre / rétracte la barre de navigation latérale (fournie par MainLayout). */
+  onToggleSidebar?: () => void;
 }
 
-const MainHeader = ({ onNavClick }: MainHeaderProps) => {
-  return (
-    <header className="h-16 border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4">
-      <Link to="/dashboard" className="flex items-center" onClick={onNavClick}>
-        <LumenJurisLogo variant="light" height={30} />
-      </Link>
+const TodayClock = () => {
+  const [now, setNow] = useState<Date>(new Date())
 
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(intervalId)
+  }, [])
+
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }
+  const today = now.toLocaleDateString("fr-FR", options)
+  const hours = String(now.getHours()).padStart(2, "0")
+  const minutes = String(now.getMinutes()).padStart(2, "0")
+
+  return (
+    <div className="hidden md:flex items-center gap-2.5 rounded-full bg-surface-subtle py-1.5 pl-2 pr-3.5 text-sm">
+      <span className="font-medium capitalize text-ink-secondary">{today}</span>
+      <span className="h-4 w-px bg-line-emphasis" />
+      <span className="font-semibold tabular-nums text-brand">
+        {hours}h{minutes}
+      </span>
+    </div>
+  )
+}
+
+
+
+export const MainHeader = ({ onNavClick, onToggleSidebar }: MainHeaderProps) => {
+  return (
+    <header className="h-12 border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4">
+      <div className="flex items-center gap-3">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Afficher / masquer le menu"
+            className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-subtle hover:text-brand"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      <TodayClock />
       <HeaderNavigationBar onNavClick={onNavClick} />
+
+
+
     </header>
   );
 };
 
-export default MainHeader;

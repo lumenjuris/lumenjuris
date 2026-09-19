@@ -62,7 +62,7 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <PrimaryAction
-            to="/contrat-generation?section=scratch"
+            to="/contrat-generation"
             icon={Sparkles}
             title="Générer un contrat"
             description="Décrivez votre besoin, nous rédigeons la structure et les clauses."
