@@ -24,11 +24,12 @@ export interface Signer {
 
 /**
  * Type de champ déposable sur le document.
- * - `signature` : zone de signature graphique
- *
- * La date est gérée automatiquement (`Field.signedAt`).
+ * - `signature` : zone de signature graphique ; la date est apposée
+ *   automatiquement (`Field.signedAt`)
+ * - `initial`   : paraphe — initiales du cocontractant, posées d'office sur
+ *   toutes les pages sauf la dernière, à une position fixe, sans date
  */
-export type FieldType = "signature";
+export type FieldType = "signature" | "initial";
 
 /**
  * Une zone (signature ou paraphe) déposée sur le PDF.
@@ -49,7 +50,7 @@ export interface Field {
   heightPct: number;
   /** dataUrl PNG de la signature/paraphe une fois signé. */
   value?: string;
-  /** Date de signature (ISO) — affichée sous la signature. */
+  /** Date de signature (ISO) — affichée sous la signature (jamais sous un paraphe). */
   signedAt?: string;
   /** Si vrai, le champ est dupliqué visuellement à la même position sur toutes les pages. */
   replicateAllPages?: boolean;
@@ -59,9 +60,9 @@ export interface Field {
 export type WizardStep = "prepare" | "place" | "sign";
 
 /**
- * Signature capturée par l'utilisateur via la modale.
- * Réutilisée automatiquement pour tous les champs du signataire qui sont
- * encore vides.
+ * Signature (ou paraphe) capturée par l'utilisateur via la modale.
+ * Réutilisée automatiquement pour tous les champs du même signataire et du
+ * même type qui sont encore vides.
  */
 export interface CapturedSignature {
   /** Méthode de saisie : tracée à la main ou tapée stylisée. */
@@ -99,6 +100,30 @@ export function formatSignedDate(iso?: string): string {
  * pré-placées et zone cocontractant ajoutée d'office à l'envoi (SignatureWizard).
  */
 export const DEFAULT_FIELD_SIZE = { widthPct: 0.22, heightPct: 0.06 };
+
+/**
+ * Emplacement fixe des paraphes, en pourcentage de la page : coin bas-droit.
+ * Non déplaçable (choix produit : même position sur toutes les pages).
+ */
+export const INITIAL_FIELD_LAYOUT = { xPct: 0.84, yPct: 0.9, widthPct: 0.12, heightPct: 0.05 };
+
+/**
+ * Zones de paraphe du cocontractant : une par page, sauf la dernière, qui
+ * porte déjà la signature complète. Vide pour un document d'une seule page.
+ */
+export function buildInitialFields(numPages: number): Field[] {
+  const initialFields: Field[] = [];
+  for (let pageIndex = 0; pageIndex < numPages - 1; pageIndex++) {
+    initialFields.push({
+      id: `initial_p${pageIndex}`,
+      type: "initial",
+      signer: "counterparty",
+      page: pageIndex,
+      ...INITIAL_FIELD_LAYOUT,
+    });
+  }
+  return initialFields;
+}
 
 /**
  * Validation très permissive d'un e-mail (`x@y.z`). Volontairement laxiste :

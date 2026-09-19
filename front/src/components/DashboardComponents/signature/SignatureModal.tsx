@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Pencil, Type as TypeIcon, RotateCcw } from "lucide-react";
-import type { CapturedSignature } from "./types";
+import type { CapturedSignature, FieldType } from "./types";
 
 const TYPED_FONTS = [
   { id: "caveat",       label: "Caveat",       css: "'Caveat', cursive" },
@@ -9,10 +9,33 @@ const TYPED_FONTS = [
   { id: "satisfy",      label: "Satisfy",      css: "'Satisfy', cursive" },
 ];
 
+/** Textes de la modale selon ce qui est saisi : signature complète ou paraphe. */
+const MODAL_TEXTS: Record<FieldType, {
+  title: string;
+  drawPlaceholder: string;
+  typePlaceholder: string;
+  confirmLabel: string;
+}> = {
+  signature: {
+    title: "Créez votre signature",
+    drawPlaceholder: "Tracez votre signature ici…",
+    typePlaceholder: "Votre nom complet",
+    confirmLabel: "Valider la signature",
+  },
+  initial: {
+    title: "Créez votre paraphe",
+    drawPlaceholder: "Tracez vos initiales ici…",
+    typePlaceholder: "Vos initiales",
+    confirmLabel: "Valider le paraphe",
+  },
+};
+
 interface Props {
   open: boolean;
   signerName: string;
   signerHex: string;
+  /** Ce qui est saisi : la signature (par défaut) ou le paraphe (initiales). */
+  kind?: FieldType;
   initialSignature?: CapturedSignature | null;
   onClose: () => void;
   onConfirm: (sig: CapturedSignature) => void;
@@ -22,8 +45,16 @@ interface Props {
  * Modale de création de signature avec 2 onglets : Dessiner (canvas) et Saisir
  * (texte stylisé en police cursive).
  * Renvoie un dataUrl PNG réutilisable pour tous les champs du signataire.
+ *
+ * En mode paraphe (`kind="initial"`), le texte proposé par défaut est fait des
+ * initiales du signataire (« Jean Dupont » → « J.D. »).
  */
-export function SignatureModal({ open, signerName, signerHex, initialSignature, onClose, onConfirm }: Props) {
+export function SignatureModal({
+  open, signerName, signerHex, kind = "signature", initialSignature, onClose, onConfirm,
+}: Props) {
+  const texts = MODAL_TEXTS[kind];
+  const defaultTypedText = kind === "initial" ? toInitials(signerName) : signerName;
+
   const [tab, setTab] = useState<"draw" | "type">("draw");
   const [typedText, setTypedText] = useState("");
   const [typedFont, setTypedFont] = useState(TYPED_FONTS[0].id);
@@ -37,16 +68,16 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
     if (open) {
       if (initialSignature?.type === "typed") {
         setTab("type");
-        setTypedText(initialSignature.text ?? signerName);
+        setTypedText(initialSignature.text ?? defaultTypedText);
         setTypedFont(initialSignature.font ?? TYPED_FONTS[0].id);
       } else if (initialSignature?.type === "drawn") {
         setTab("draw");
       } else {
         setTab("draw");
-        setTypedText(signerName);
+        setTypedText(defaultTypedText);
       }
     }
-  }, [open, initialSignature, signerName]);
+  }, [open, initialSignature, defaultTypedText]);
 
   // Setup canvas
   useEffect(() => {
@@ -178,7 +209,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
               <Pencil className="w-4 h-4" style={{ color: signerHex }} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Créez votre signature</h3>
+              <h3 className="text-sm font-bold text-gray-900">{texts.title}</h3>
               <p className="text-[11px] text-gray-400 mt-0.5">{signerName}</p>
             </div>
           </div>
@@ -227,7 +258,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
                 />
                 {!hasInk && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <p className="text-sm text-gray-300 italic">Tracez votre signature ici…</p>
+                    <p className="text-sm text-gray-300 italic">{texts.drawPlaceholder}</p>
                   </div>
                 )}
               </div>
@@ -249,7 +280,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
               <input
                 value={typedText}
                 onChange={(e) => setTypedText(e.target.value)}
-                placeholder="Votre nom complet"
+                placeholder={texts.typePlaceholder}
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-gray-300 focus:bg-white transition"
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -267,7 +298,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
                       className="text-3xl truncate"
                       style={{ fontFamily: f.css, color: signerHex }}
                     >
-                      {typedText.trim() || signerName}
+                      {typedText.trim() || defaultTypedText}
                     </span>
                   </button>
                 ))}
@@ -290,7 +321,7 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
             className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             style={{ backgroundColor: signerHex }}
           >
-            Valider la signature
+            {texts.confirmLabel}
           </button>
         </div>
 
@@ -304,4 +335,13 @@ export function SignatureModal({ open, signerName, signerHex, initialSignature, 
       </div>
     </div>
   );
+}
+
+/**
+ * Initiales d'un nom, pour pré-remplir le paraphe : « Jean Dupont » → « J.D. »,
+ * « Marie-Claire Martin » → « M.C.M. ».
+ */
+function toInitials(fullName: string): string {
+  const words = fullName.trim().split(/[\s-]+/).filter(Boolean);
+  return words.map((word) => word.charAt(0).toUpperCase() + ".").join("");
 }

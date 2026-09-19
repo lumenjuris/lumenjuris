@@ -15,9 +15,14 @@ interface Props {
   /** Type de champ "armé" pour le prochain clic. null = mode placement désactivé. */
   armedFieldType: FieldType | null;
   replicateAllPages: boolean;
+  /** Vrai quand le cocontractant doit parapher toutes les pages (sauf la dernière). */
+  initialAllPages: boolean;
+  /** Faux pour un document d'une seule page : il n'y a alors rien à parapher. */
+  canAddInitials: boolean;
   onSignerChange: (role: SignerRole) => void;
   onArmFieldType: (type: FieldType) => void;
   onReplicateAllPagesChange: (value: boolean) => void;
+  onInitialAllPagesChange: (value: boolean) => void;
   onFieldAdd: (field: Omit<Field, "id">) => void;
   onFieldMove: (id: string, xPct: number, yPct: number) => void;
   onFieldRemove: (id: string) => void;
@@ -45,17 +50,23 @@ const BRAND_HEX = "#354F99";
  * d'elles et une étiquette « Glissez pour déplacer » rebondit au-dessus de
  * chacune. Rien n'est imposé : l'utilisateur peut les déplacer, les supprimer
  * ou cliquer ailleurs pour en poser d'autres.
+ *
+ * Les paraphes (option « Faire parapher toutes les pages ») sont à part : ils
+ * ont une position fixe et ne comptent pas comme zone de signature.
  */
 export function PlaceStep(props: Props) {
   const {
     file, fields, signers, activeSignerRole, armedFieldType, replicateAllPages,
-    onSignerChange, onArmFieldType, onReplicateAllPagesChange,
+    initialAllPages, canAddInitials,
+    onSignerChange, onArmFieldType, onReplicateAllPagesChange, onInitialAllPagesChange,
     onFieldAdd, onFieldMove, onFieldRemove, onNumPagesLoaded,
     onChangeDocument, onNext, canGoNext,
   } = props;
 
-  const hasSelfField = fields.some((f) => f.signer === "self");
-  const hasCounterpartyField = fields.some((f) => f.signer === "counterparty");
+  // Seules les zones de signature comptent ici : un paraphe du cocontractant
+  // ne remplace pas sa zone de signature.
+  const hasSelfField = fields.some((f) => f.signer === "self" && f.type === "signature");
+  const hasCounterpartyField = fields.some((f) => f.signer === "counterparty" && f.type === "signature");
   const selfSigner = signers.find((s) => s.role === "self");
   const counterSigner = signers.find((s) => s.role === "counterparty");
 
@@ -118,6 +129,9 @@ export function PlaceStep(props: Props) {
             replicateAllPages={replicateAllPages}
             onArmFieldType={onArmFieldType}
             onReplicateAllPagesChange={onReplicateAllPagesChange}
+            initialAllPages={initialAllPages}
+            canAddInitials={canAddInitials}
+            onInitialAllPagesChange={onInitialAllPagesChange}
           />
 
           {/* Actions : au même endroit qu'à l'étape suivante, toujours visibles */}
@@ -153,7 +167,8 @@ export function PlaceStep(props: Props) {
             activeSignerRole={activeSignerRole}
             replicateAllPages={replicateAllPages}
             initialPage="last"
-            spotlight={() => !hasMovedAField}
+            // Les paraphes ne se déplacent pas : pas d'étiquette « Glissez » sur eux.
+            spotlight={(f) => f.type === "signature" && !hasMovedAField}
             spotlightLabel="Glissez pour déplacer"
             onFieldAdd={onFieldAdd}
             onFieldMove={handleFieldMove}

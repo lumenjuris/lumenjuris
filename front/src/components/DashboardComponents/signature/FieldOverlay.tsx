@@ -3,11 +3,13 @@ import { Trash2 } from "lucide-react";
 import { formatSignedDate } from "./types";
 import type { Field, Signer } from "./types";
 
+type OverlayMode = "place" | "sign" | "preview";
+
 interface Props {
   field: Field;
   signer: Signer;
   /** "place" = drag + delete, "sign" = clic pour signer, "preview" = lecture seule. */
-  mode: "place" | "sign" | "preview";
+  mode: OverlayMode;
   onMove?: (xPct: number, yPct: number) => void;
   onRemove?: () => void;
   onClick?: () => void;
@@ -21,13 +23,18 @@ interface Props {
  *  - sign    : cliquable pour ouvrir la modale de signature
  *  - preview : lecture seule (utilisé après envoi)
  *
+ * Exception : les paraphes ont une position fixe (choix produit). À l'étape de
+ * placement, ils s'affichent donc en lecture seule — ni glisser, ni supprimer.
+ *
  * Quand le champ est signé (value présente), on affiche l'image de signature.
  * Pour les `signature`, la date de signature (`signedAt`) apparaît en petit
  * sous la signature.
  */
 export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }: Props) {
   const elRef = useRef<HTMLDivElement | null>(null);
-  const dragState = useDragHandlers(elRef, field, mode, onMove);
+  const isFixedInitial = field.type === "initial" && mode === "place";
+  const interactionMode: OverlayMode = isFixedInitial ? "preview" : mode;
+  const dragState = useDragHandlers(elRef, field, interactionMode, onMove);
 
   const filled = !!field.value;
   const colorBg = signer.hex + "1A"; // alpha 10%
@@ -41,11 +48,10 @@ export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }:
       onClick={(e) => {
         e.stopPropagation();
         if (mode === "place") return;
-        
-
         onClick?.();
       }}
-      className={`absolute group select-none transition-shadow ${mode === "place" ? "cursor-move" : mode === "sign" ? "cursor-pointer hover:shadow-lg" : ""
+      title={isFixedInitial ? "Paraphe du cocontractant — position fixe" : undefined}
+      className={`absolute group select-none transition-shadow ${interactionMode === "place" ? "cursor-move" : interactionMode === "sign" ? "cursor-pointer hover:shadow-lg" : ""
         } ${dragState.dragging ? "shadow-2xl ring-2" : ""}`}
       style={{
         left: `${field.xPct * 100}%`,
@@ -66,7 +72,7 @@ export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }:
         <EmptyPlaceholder label={label} signerName={signer.name} colorBorder={colorBorder} />
       )}
 
-      {mode === "place" && onRemove && (
+      {interactionMode === "place" && onRemove && (
         <DeleteButton onClick={() => onRemove()} />
       )}
     </div>
@@ -79,7 +85,7 @@ export function FieldOverlay({ field, signer, mode, onMove, onRemove, onClick }:
 function FilledContent({ field, showDate }: { field: Field; showDate: boolean }) {
   if (!field.value) return null;
   if (!showDate) {
-    return <img src={field.value} alt="signature" className="w-full h-full object-contain p-0.5" />;
+    return <img src={field.value} alt={field.type === "initial" ? "paraphe" : "signature"} className="w-full h-full object-contain p-0.5" />;
   }
   return (
     <div className="w-full h-full flex flex-col">
@@ -139,7 +145,7 @@ interface DragState {
 function useDragHandlers(
   elRef: React.RefObject<HTMLDivElement | null>,
   field: Field,
-  mode: "place" | "sign" | "preview",
+  mode: OverlayMode,
   onMove?: (xPct: number, yPct: number) => void,
 ): DragState {
   const [dragging, setDragging] = useState(false);
@@ -149,7 +155,6 @@ function useDragHandlers(
     if (mode !== "place") return;
     if (!elRef.current) return;
     e.stopPropagation();
-    setDragging(true);
     setDragging(true);
     startRef.current = {
       mouseX: e.clientX,
