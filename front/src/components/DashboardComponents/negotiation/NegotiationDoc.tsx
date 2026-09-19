@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { MessageSquarePlus, Loader2, Check, CornerDownRight, Lock, Globe, X } from "lucide-react";
+import { MessageSquarePlus, Loader2, Check, CornerDownRight, Lock, Globe, X, Save } from "lucide-react";
 import { fmtDate } from "../contratheque/types";
 import type { NegoComment } from "./types";
 
@@ -21,6 +21,8 @@ interface Props {
   guest?: boolean;
   onAdd: (p: AddAnnotationPayload) => Promise<void>;
   onResolve?: (commentId: string, resolved: boolean) => Promise<void>;
+  /** Si fourni, le texte est modifiable directement ; l'enregistrement crée une nouvelle version. */
+  onSaveText?: (text: string) => Promise<void>;
 }
 
 type Segment = { text: string; ann?: NegoComment };
@@ -59,10 +61,27 @@ function selectionOffsets(container: HTMLElement): { start: number; end: number;
 }
 
 /** Vue document : contrat affiché, passages surlignés, sélection→annotation, fil par annotation. */
-export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onResolve }: Props) {
+export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onResolve, onSaveText }: Props) {
   const docRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null); // id de l'annotation ouverte
   const [pending, setPending] = useState<{ start: number; end: number; text: string } | null>(null);
+  const editable = Boolean(onSaveText);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [resetKey, setResetKey] = useState(0); // remonte la zone pour annuler les modifications
+
+  function onInput() {
+    setDirty((docRef.current?.textContent ?? "") !== text);
+  }
+  function cancelEdits() { setDirty(false); setResetKey((k) => k + 1); }
+  async function saveEdits() {
+    if (!onSaveText || !docRef.current) return;
+    const next = docRef.current.textContent ?? "";
+    if (!next.trim()) return;
+    setSaving(true);
+    try { await onSaveText(next); setDirty(false); setResetKey((k) => k + 1); }
+    finally { setSaving(false); }
+  }
 
   // Annotations = commentaires racine avec ancrage. Commentaires généraux = sans ancrage et sans parent.
   const anchored = useMemo(() => comments.filter((c) => c.anchorStart != null && c.parentCommentId == null), [comments]);
@@ -70,7 +89,7 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
   const segments = useMemo(() => buildSegments(text, anchored), [text, anchored]);
 
   function onMouseUp() {
-    if (!canAnnotate || !docRef.current) return;
+    if (!canAnnotate || dirty || !docRef.current) return; // pas d'annotation sur un texte non enregistré
     const off = selectionOffsets(docRef.current);
     if (off) { setPending(off); setSelected(null); }
   }
@@ -81,22 +100,40 @@ export function NegotiationDoc({ text, comments, canAnnotate, guest, onAdd, onRe
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
       {/* Document */}
       <div className="lg:col-span-3 bg-white rounded-card border border-line shadow-card">
-        <div className="bg-blue-primary p-5 rounded-t-2xl ">
+        <div className="bg-blue-primary px-5 py-3 rounded-t-2xl flex items-center justify-between gap-3 min-h-[3.25rem]">
           <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">
-            Document {canAnnotate && <span className="text-ink-placeholder normal-case font-normal">· sélectionnez un passage pour l'annoter</span>}
+            Document {!dirty && (editable || canAnnotate) && (
+              <span className="text-ink-placeholder normal-case font-normal">
+                · {editable ? "cliquez dans le texte pour le modifier" : ""}{editable && canAnnotate ? ", " : ""}{canAnnotate ? "sélectionnez un passage pour l'annoter" : ""}
+              </span>
+            )}
           </p>
+          {dirty && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/80">Modifications non enregistrées</span>
+              <button onClick={cancelEdits} disabled={saving} className="px-3 py-1.5 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-all">Annuler</button>
+              <button onClick={() => void saveEdits()} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-primary bg-white hover:bg-white/90 rounded-lg transition-all disabled:opacity-50">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Enregistrer
+              </button>
+            </div>
+          )}
         </div>
-        {text ? (
+        {text || editable ? (
           <div
+            key={`${resetKey}-${text}`}
             ref={docRef}
             onMouseUp={onMouseUp}
-            className="text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans selection:bg-brand/20 p-5"
+            onInput={onInput}
+            contentEditable={editable ? "plaintext-only" : undefined}
+            suppressContentEditableWarning
+            data-placeholder="Saisissez ou collez le texte du contrat…"
+            className={`text-sm text-ink-secondary whitespace-pre-wrap leading-relaxed font-sans selection:bg-brand/20 p-5 outline-none ${editable ? "min-h-[40vh] focus:bg-surface-subtle/40 empty:before:content-[attr(data-placeholder)] empty:before:text-ink-placeholder" : ""}`}
           >
             {segments.map((seg, i) =>
               seg.ann ? (
                 <mark
                   key={i}
-                  onClick={() => { setSelected(seg.ann!.id); setPending(null); }}
+                  onClick={() => { if (!dirty) { setSelected(seg.ann!.id); setPending(null); } }}
                   className="rounded px-0.5 cursor-pointer transition-colors"
                   style={{
                     backgroundColor: seg.ann.resolved ? "#e5e7eb" : seg.ann.visibility === "EXTERNAL" ? "#dbeafe" : "#fef3c7",

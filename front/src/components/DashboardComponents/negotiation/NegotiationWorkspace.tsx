@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, ChevronDown, Loader2, AlertCircle, FilePlus2,  Users, GitCompare,
+  ChevronLeft, ChevronDown, Loader2, AlertCircle,   Users, GitCompare,
 } from "lucide-react";
 import { useUserStore } from "../../../store/userStore";
 import { negotiationApi } from "./api";
 import { NegotiationDoc } from "./NegotiationDoc";
 import type { AddAnnotationPayload } from "./NegotiationDoc";
-import { ParticipantsPanel } from "./ParticipantsPanel";
 import { ShareDialog } from "./ShareDialog";
 import { VersionDiff } from "./VersionDiff";
 import { CompletionOwnerPanel } from "./CompletionOwnerPanel";
@@ -30,7 +29,6 @@ export function NegotiationWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [versionId, setVersionId] = useState<string>("");
-  const [newVersionOpen, setNewVersionOpen] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [versionSuccess, setVersionSuccess] = useState(false);
@@ -122,7 +120,7 @@ export function NegotiationWorkspace() {
   const st = STATUS_STYLE[data.status];
 
   return (
-    <div className="space-y-4 max-w-7xl w-full mx-auto">
+    <div className="space-y-4 -mt-2 sm:-mt-3 lg:-mt-5 max-w-7xl w-full mx-auto">
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         {versionSuccess && (
@@ -147,10 +145,13 @@ export function NegotiationWorkspace() {
           
 
         <div className="w-full">
-          <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} className="inline-flex items-center gap-1 text-xs text-ink-subtle hover:text-brand font-medium"><ChevronLeft className="w-3.5 h-3.5" /> Retour au contrat</button>
-          <div className="bg-blue-primary rounded-2xl px-8 py-6 shadow-sm w-full max-w-8xl">
+          <div className="bg-blue-primary rounded-2xl px-8 py-3 shadow-sm w-full max-w-8xl">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Titre et statut */}
           <div className="flex items-center gap-3">
+            <button onClick={() => navigate(`/contratheque/${data.contractExternalId}`)} title="Retour au contrat" className="-ml-3 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <h1 className="text-2xl font-normal text-white tracking-tight">
               Négociation - {data.title}
             </h1>
@@ -162,61 +163,52 @@ export function NegotiationWorkspace() {
             </span>
           </div>
 
-          {/* Barre d'actions sous forme de boutons harmonisés */}
-          <div className="flex items-center gap-2.5 mt-5 flex-wrap">
+          {/* Actions, toutes au même style neutre, en haut à droite */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {data.versions.length > 1 && (
+              <select
+                value={selectedVersion?.id ?? ""}
+                onChange={(e) => setVersionId(e.target.value)}
+                className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed outline-none cursor-pointer [&>option]:text-ink"
+              >
+                {data.versions.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    Version {v.versionNumber}{v.label ? ` · ${v.label}` : ""}{v.isFinal ? " (validée)" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
             {canEdit && data.status !== "CLOSED" && (
               <>
-                {/* Action Principale : Transmettre à la signature */}
+                {selectedVersion && !selectedVersion.isFinal && (
+                  <button
+                    onClick={() => void validateDisplayed()}
+                    className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Marquer la version affichée comme version définitive"
+                  >
+                    Valider cette version
+                  </button>
+                )}
+                {/* En complétion guidée, le panneau ci-dessous porte déjà ce bouton. */}
+                {data.mode !== "COMPLETION" && (
                 <button
                   onClick={() => void exitToSignature()}
                   disabled={!data.finalVersionId}
-                  className="px-4 py-2 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-xl shadow-sm transition-all disabled:opacity-50"
-                  title={data.finalVersionId ? "Transmettre à la signature" : "Validez d'abord une version"}
+                  className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={data.finalVersionId ? "Envoyer la version validée en signature" : "Validez d'abord une version"}
                 >
-                  Vers la signature
+                  Envoyer en signature
                 </button>
-
-                {canEdit && selectedVersion && !selectedVersion.isFinal && (
-                  <button
-                    onClick={() => void validateDisplayed()}
-                    className="px-3.5 py-2 text-xs font-medium text-blue-primary bg-white hover:bg-white/90 border border-white/10 rounded-xl backdrop-blur-sm transition-all"
-                  >
-                    Valider la signature
-                  </button>
                 )}
-                
-                {canEdit && (
-                  <button
-                    onClick={() => setNewVersionOpen((v) => !v)}
-                    className="px-3.5 py-2 text-xs font-medium text-slate-200 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl backdrop-blur-sm transition-all"
-                  >
-                    {data.versions.length === 0 ? "Ajouter le texte" : "Nouveau round"}
-                  </button>
-                )}
-
                 <button
                   onClick={() => void abort()}
-                  className="px-3.5 py-2 text-xs font-semibold text-red-500 bg-white hover:text-red-700 border border-red-500 rounded-xl transition-all"
+                  className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Abandonner
                 </button>
               </>
             )}
-
-            {/* Sélecteur de version si plus d'une version */}
-            {data.versions.length > 1 && (
-              <select
-                value={selectedVersion?.id ?? ""}
-                onChange={(e) => setVersionId(e.target.value)}
-                className="px-3 py-2.5 bg-white text-ink text-xs font-medium rounded-xl outline-none cursor-pointer shadow-sm"
-              >
-                {data.versions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    v{v.versionNumber}{v.label ? ` · ${v.label}` : ""}{v.isFinal ? " (finale)" : ""}
-                  </option>
-                ))}
-              </select>
-            )}
+          </div>
           </div>
         </div>
         </div>
@@ -224,11 +216,8 @@ export function NegotiationWorkspace() {
 
       <div className="">
       {/* Section secondaire : participants & partage (repliable) */}
-      <Collapsible icon={Users} title="Participants & partage du lien" open={showParticipants} onToggle={() => setShowParticipants((v) => !v)} badge={data.participants.length}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ParticipantsPanel data={data} canEdit={canEdit} onChanged={load} />
-          <ShareDialog data={data} canEdit={canEdit} onChanged={load} />
-        </div>
+      <Collapsible icon={Users} title="Personnes invitées" open={showParticipants} onToggle={() => setShowParticipants((v) => !v)} badge={data.guestAccesses.length || data.participants.length}>
+        <ShareDialog data={data} canEdit={canEdit} onChanged={load} />
       </Collapsible>
 
       {/* Section secondaire : versions & comparaison (repliable) */}
@@ -236,7 +225,6 @@ export function NegotiationWorkspace() {
         <VersionDiff data={data} canEdit={canEdit} onChanged={load} />
       </Collapsible>
       </div>
-      {newVersionOpen && canEdit && <NewVersionForm negotiationId={data.id} nextNumber={data.versions.length + 1} onDone={() => { setNewVersionOpen(false); void load(); }} />}
 
       {/* Complétion guidée : suivi des champs, relances et passage en signature */}
       {data.mode === "COMPLETION" && (
@@ -250,6 +238,11 @@ export function NegotiationWorkspace() {
         canAnnotate={canEdit && data.status !== "CLOSED"}
         onAdd={addAnnotation}
         onResolve={resolveAnnotation}
+        onSaveText={canEdit && data.status !== "CLOSED" ? async (t) => {
+          await negotiationApi.createVersion(data.id, t);
+          const d = await negotiationApi.get(negotiationId!); setData(d);
+          const last = d.versions[d.versions.length - 1]; if (last) setVersionId(last.id);
+        } : undefined}
       />
 
       <ConfirmationModal
@@ -288,24 +281,3 @@ function Collapsible({ icon: Icon, title, open, onToggle, badge, children }: { i
   );
 }
 
-function NewVersionForm({ negotiationId, nextNumber, onDone }: { negotiationId: string; nextNumber: number; onDone: () => void }) {
-  const [text, setText] = useState("");
-  const [label, setLabel] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function create() {
-    if (!text.trim()) return;
-    setBusy(true);
-    try { await negotiationApi.createVersion(negotiationId, text, label.trim() || undefined); onDone(); }
-    finally { setBusy(false); }
-  }
-  return (
-    <div className="bg-white rounded-card border border-brand/30 shadow-card p-4 space-y-2">
-      <p className="text-[10px] font-bold text-brand uppercase tracking-widest">Nouvelle version (round de négociation)</p>
-      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Libellé (ex. « Retour contrepartie »)" className="w-full text-sm px-3 py-1.5 border border-line rounded-lg outline-none focus:border-brand/40 placeholder:text-ink-placeholder" />
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} placeholder="Collez le texte du contrat pour cette version…" className="w-full text-sm px-3 py-2 border border-line rounded-lg outline-none focus:border-brand/40 resize-y placeholder:text-ink-placeholder font-mono leading-relaxed" />
-      <button onClick={() => void create()} disabled={busy || !text.trim()} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand-hover transition-all disabled:opacity-50">
-        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FilePlus2 className="w-3.5 h-3.5" />} Enregistrer la version {nextNumber}
-      </button>
-    </div>
-  );
-}

@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, Loader2, AlertCircle, FileText, Trash2, Download, Handshake, Pencil,
+  ChevronLeft, Loader2, AlertCircle, Trash2, Download, Handshake,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { ContractFieldsPanel } from "./ContractFieldsPanel";
-import { ContractEditor } from "./ContractEditor";
+import { InlineContractEditor } from "./InlineContractEditor";
 import { contractApi } from "./api";
 import { negotiationApi } from "../negotiation/api";
 import { daysUntil, STATUS_LABEL } from "./types";
 import type { AmendmentDTO, ContractDetail as Detail, ContractStatus } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
-import { VersionCompare } from "./VersionCompare";
 import { Amendments } from "./Amendments";
 
 interface Props {
@@ -28,7 +27,6 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [openingNego, setOpeningNego] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -101,13 +99,15 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
   const urgent = remainingDays !== null && remainingDays >= 0 && remainingDays <= 90;
 
   return (
-    <div className="space-y-4">
-      <BackBtn onBack={onBack} />
+    <div className="space-y-3 -mt-2 sm:-mt-3 lg:-mt-5">
 
       {/* En-tête : identité du contrat et actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-primary py-6 px-8 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-blue-primary py-3 px-8 rounded-2xl">
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
+            <button onClick={onBack} title="Retour à la contrathèque" className="-ml-3 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{data.title}</h1>
             <StatusBadge status={data.status} />
             {urgent && (
@@ -132,7 +132,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
               href={contractApi.documentUrl(contractId)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" /> Télécharger
             </a>
@@ -141,12 +141,12 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
           <button
             onClick={() => void handleNegotiate()}
             disabled={openingNego}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-900 bg-white rounded-xl shadow-sm transition-all duration-200 hover:-translate-y-0.5 will-change-transform disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-50"
           >
             {openingNego ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Handshake className="w-3.5 h-3.5 text-blue-600" />
+              <Handshake className="w-3.5 h-3.5" />
             )}
             Négocier
           </button>
@@ -154,7 +154,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
           {canDelete && (
             <button
               onClick={() => setDeleteModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-danger bg-white border border-danger rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" /> Supprimer
             </button>
@@ -171,38 +171,10 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
       {/* Contenu du contrat (gauche) + informations et suivi (droite) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div
-          className={`lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 ${editing ? "" : "overflow-y-auto"}`}
-          style={editing ? undefined : { maxHeight: 620 }}
+          className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col"
+          style={{ maxHeight: 680 }}
         >
-          <div className="flex items-center justify-between gap-2 mb-3 bg-blue-primary -mx-5 -mt-5 px-6 py-4">
-            <p className="text-[10px] font-bold text-white uppercase tracking-widest">Contenu du contrat</p>
-            {!editing && (
-              <button
-                onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-primary bg-white border border-white rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Modifier le contrat
-              </button>
-            )}
-          </div>
-
-          {editing ? (
-            <ContractEditor
-              contractId={contractId}
-              initialText={data.ocrText ?? ""}
-              onSaved={() => { setEditing(false); refreshInBackground(); }}
-              onCancel={() => setEditing(false)}
-            />
-          ) : data.ocrText ? (
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans">
-              {data.ocrText}
-            </pre>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
-              <FileText className="w-8 h-8 text-ink-placeholder" />
-              <p className="text-sm text-ink-subtle">Aucun texte disponible. Cliquez sur « Modifier le contrat » pour le saisir.</p>
-            </div>
-          )}
+          <InlineContractEditor contractId={contractId} text={data.ocrText ?? ""} onSaved={refreshInBackground} />
         </div>
 
         {/* Colonne droite : ce qu'il reste à traiter d'abord, le reste ensuite */}
@@ -214,7 +186,6 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             amendments={data.amendments ?? []}
             onAddAmendment={handleAmendment}
           />
-          <VersionCompare data={data} canEdit={!editing} onChanged={refreshInBackground} />
         </div>
       </div>
 
