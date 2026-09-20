@@ -51,7 +51,7 @@ const SecondsDial = ({ seconds }: { seconds: number }) => {
   const sweepTransition = isNewMinute ? "none" : "all 1s linear"
 
   return (
-    <span className="relative flex h-5 w-5 items-center justify-center">
+    <span className="relative flex h-5 w-5 items-center justify-center ml-1">
       {/* Halo qui s'élargit à chaque nouvelle minute */}
       <AnimatePresence>
         {isNewMinute && (

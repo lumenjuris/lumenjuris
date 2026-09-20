@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 
 import { EmptyHint } from "./EmptyHint";
+import { SectionCard, SectionSkeleton } from "./SectionCard";
 import type { DeadlineCard } from "./types";
 
 interface Props {
@@ -12,26 +14,24 @@ interface Props {
  * Bloc « Échéances à venir » : les prochaines dates clés extraites des contrats
  * de la contrathèque (fin de contrat, préavis, information consommateur).
  *
- * C'est l'information la plus consultée au retour sur l'accueil : elle est
- * placée juste sous les actions principales.
+ * Il vit dans la colonne de droite : la mise en page reste étroite (pastille de
+ * date + titre), le lien de fin de ligne se réduit à un chevron.
  */
 export function UpcomingDeadlines({ items, loading }: Props) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#e8eaf0] bg-white shadow-card">
-      <div className="flex items-baseline justify-between px-4 pb-3.5 pt-4">
-        <h2 className="font-serif text-[19px] font-normal text-ink">Échéances à venir</h2>
-        <Link to="/contratheque?vue=echeances" className="text-[12.5px] font-semibold text-blue-primary hover:underline">
-          Voir le calendrier
+    <SectionCard
+      eyebrow="Agenda"
+      title="Échéances à venir"
+      headerRight={
+        <Link
+          to="/contratheque?vue=echeances"
+          className="text-[12.5px] font-semibold text-blue-primary hover:underline"
+        >
+          Calendrier
         </Link>
-      </div>
-
-      {loading && (
-        <div className="flex flex-col gap-3 border-t border-line-subtle px-4 py-5">
-          {[0, 1].map((row) => (
-            <div key={row} className="h-9 animate-pulse rounded-lg bg-surface-subtle" />
-          ))}
-        </div>
-      )}
+      }
+    >
+      {loading && <SectionSkeleton rows={2} />}
 
       {!loading && items.length > 0 && (
         <div className="flex flex-col border-t border-line-subtle">
@@ -39,13 +39,13 @@ export function UpcomingDeadlines({ items, loading }: Props) {
             <Link
               key={item.key}
               to={item.to}
-              className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3.5 border-b border-line-subtle px-4 py-3 last:border-b-0 transition-colors hover:bg-[#fafbfd]"
+              className="group grid grid-cols-[42px_minmax(0,1fr)_14px] items-center gap-3 border-b border-line-subtle px-5 py-3 last:border-b-0 transition-colors hover:bg-[#f8fafd]"
             >
-              <div className="flex flex-col items-center gap-px border-r border-line-subtle py-1">
-                <span className="font-serif text-[19px] font-normal leading-none tabular-nums text-blue-primary">
+              <div className="flex flex-col items-center gap-px rounded-[11px] bg-brand-light py-1.5">
+                <span className="font-serif text-[18px] font-normal leading-none tabular-nums text-blue-primary">
                   {item.day}
                 </span>
-                <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-ink-subtle">
+                <span className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-blue-primary/70">
                   {item.month}
                 </span>
               </div>
@@ -61,15 +61,13 @@ export function UpcomingDeadlines({ items, loading }: Props) {
                 </div>
               </div>
 
-              <span className="justify-self-end whitespace-nowrap text-[12.5px] font-semibold text-blue-primary">
-                Ouvrir
-              </span>
+              <ChevronRight className="h-3.5 w-3.5 text-ink-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-blue-primary" />
             </Link>
           ))}
         </div>
       )}
 
       {!loading && items.length === 0 && <EmptyHint>Aucune échéance à venir.</EmptyHint>}
-    </section>
+    </SectionCard>
   );
 }

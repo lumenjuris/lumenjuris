@@ -6,7 +6,7 @@
  */
 export function EmptyHint({ children }: { children: React.ReactNode }) {
   return (
-    <p className="border-t border-line-subtle px-4 py-3.5 text-[12.5px] text-ink-subtle">
+    <p className="border-t border-line-subtle px-5 py-3.5 text-[12.5px] text-ink-subtle">
       {children}
     </p>
   );
