@@ -32,6 +32,8 @@ interface ColumnConfig {
   id: string;
   label: string;
   sortKey?: SortKey;
+  /** Colonne alignée à droite (la cellule correspondante l'est aussi). */
+  alignRight?: boolean;
 }
 
 const STORAGE_KEY = "contract_table_visible_columns";
@@ -46,7 +48,7 @@ const COLUMN_LIST: ColumnConfig[] = [
   { id: "status", label: "Statut", sortKey: "status" },
   { id: "responsibleName", label: "Responsable" },
   { id: "tags", label: "Tags" },
-  { id: "action", label: "Action" },
+  { id: "action", label: "Action", alignRight: true },
 ];
 
 /** Tableau principal de la liste des contrats. */
@@ -348,7 +350,10 @@ function TableHeader({
             );
           }
           return (
-            <th key={col.id} className="px-4 py-3">
+            <th
+              key={col.id}
+              className={`px-4 py-3 ${col.alignRight ? "text-right" : ""}`}
+            >
               {col.label}
             </th>
           );

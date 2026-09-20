@@ -903,6 +903,7 @@ export default function ContractAnalysis() {
 
               <PageBanner
                 className="mb-2"
+                backLink={{ label: "Conformité", onClick: () => navigate("/conformite") }}
                 title="Analyse de conformité"
                 subtitle="Vérifiez la conformité juridique de vos documents"
               /> 
