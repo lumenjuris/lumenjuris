@@ -41,9 +41,9 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
 
       {/* Sur écran large, la salutation et les deux actions tiennent sur une
           seule rangée : l'en-tête occupe deux fois moins de hauteur. */}
-      <div className="relative flex flex-col gap-4 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+      <div className="relative flex flex-col gap-4 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
         <div className="flex min-w-0 flex-col gap-1.5 lg:max-w-sm">
-          <h1 className="font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[30px]">
+          <h1 className="font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[28px]">
             {greeting}
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/60">{subline}</p>

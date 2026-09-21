@@ -334,7 +334,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         />
 
 
-        <main className="flex-1 p-4 sm:p-5 lg:p-7">
+        <main className="flex-1 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-4">
           <ErrorBoundary key={location.pathname}>
             {children ?? <Outlet />}
           </ErrorBoundary>
