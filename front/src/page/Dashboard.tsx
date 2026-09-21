@@ -61,7 +61,7 @@ export function Dashboard() {
       </div>
 
       <p className="font-serif text-sm italic text-ink-muted">
-        Lumen Juris — Metre à lumière le juridique.
+        Lumen Juris — Metre en lumière le juridique.
       </p>
     </div>
   );

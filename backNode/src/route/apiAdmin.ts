@@ -10,7 +10,7 @@ import { buildDayWindow, localDayKey } from "../utils/dayWindow.js"
 import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
-import { Plan, PlanName } from "@prisma/client"
+import { Plan, PlanName, PlanInterval } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
@@ -81,7 +81,14 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
             return res.status(400).json({ success: false, message: "Vous ne pouvez pas modifier votre propre plan" });
         }
 
-        const newPlan = await prisma.plan.findFirst({ where: { name: planName as PlanName } });
+        // L'intervalle est porté par le nom du plan (ex: Starter_annuel). Les plans
+        // gratuits (Freemium, Betatesteur) n'existent qu'en mensuel. Sans ce couple
+        // name+interval, findFirst pouvait renvoyer le mauvais plan.
+        const interval = planName.endsWith("_annuel") ? PlanInterval.yearly : PlanInterval.monthly
+
+        const newPlan = await prisma.plan.findUnique({
+            where: { name_interval: { name: planName as PlanName, interval } },
+        });
 
         if (!newPlan) {
             return res.status(400).json({ success: false, message: "Le plan spécifié n'existe pas." })
@@ -97,17 +104,21 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
         }
 
         const now = new Date();
-        let expiresAt = new Date();
+        let expiresAt: Date;
 
         if (planName === "Freemium" || planName === "Betatesteur") {
             expiresAt = new Date("2099-12-31T23:59:59.999Z");
-        } else if (planName.endsWith("_annuel")) {
-            expiresAt = new Date(now);
-            expiresAt.setDate(expiresAt.getDate() + 365);
-        } else if (planName.endsWith("_mensuel")) {
-            expiresAt = new Date(now);
-            expiresAt.setDate(expiresAt.getDate() + 30);
+        } else if (interval === PlanInterval.yearly) {
+            expiresAt = new Date(new Date(now).setFullYear(now.getFullYear() + 1));
+        } else {
+            expiresAt = new Date(new Date(now).setMonth(now.getMonth() + 1));
         }
+
+        // Un abonnement payé chez Stripe continue d'être facturé : on ne touche donc
+        // JAMAIS à stripeSubscriptionId / stripePriceId ici (les effacer rendrait
+        // l'abonnement introuvable pour les webhooks de renouvellement). L'admin doit
+        // annuler ou changer l'abonnement depuis Stripe.
+        const hasStripeSubscription = Boolean(targetUser.subscription?.stripeSubscriptionId);
 
         await prisma.$transaction([
             prisma.subscription.upsert({
@@ -126,8 +137,6 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
                     status: "ACTIVE",
                     startAt: now,
                     expiresAt,
-                    stripeSubscriptionId: null,
-                    stripePriceId: null,
                 },
             }),
 
@@ -142,7 +151,17 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
                 },
             }),
         ]);
-        return res.json({ success: true, data: { plan: newPlan.name, expiresAt, } });
+        // L'admin doit savoir que le changement ne vaut que dans notre base : Stripe
+        // continuera de prélever et de réattribuer les quotas de l'abonnement payé.
+        const warning = hasStripeSubscription
+            ? "Cet utilisateur a un abonnement Stripe en cours. Son plan est changé dans l'application, mais Stripe continuera de le facturer et de recréditer son ancien plan à chaque paiement. Annulez ou modifiez son abonnement depuis Stripe."
+            : undefined;
+
+        if (warning) {
+            console.warn(`[admin] plan changé pour userId=${targetId} malgré un abonnement Stripe actif.`);
+        }
+
+        return res.json({ success: true, data: { plan: newPlan.name, expiresAt, warning } });
     } catch (err) {
         console.error("[admin] update plan error", err);
         return res.status(500).json({ success: false, message: "Erreur serveur" })
@@ -502,8 +521,14 @@ router.get("/overview", authMiddleware, requireAdmin, async (_req: Request, res:
                 distinct: ["userId"],
             }).then((r) => r.length),
 
-            // Abonnements actifs
-            prisma.subscription.count({ where: { status: "ACTIVE" } }),
+            // Abonnements actifs payants uniquement : chaque utilisateur reçoit un
+            // abonnement Freemium ACTIVE à l'inscription, le compter donnerait 100 %.
+            prisma.subscription.count({
+                where: {
+                    status: "ACTIVE",
+                    plan: { name: { notIn: [PlanName.Freemium, PlanName.Betatesteur] } },
+                },
+            }),
 
             // Coût LLM aujourd'hui
             prisma.llmUsage.aggregate({
