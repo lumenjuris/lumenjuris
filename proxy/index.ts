@@ -48,7 +48,8 @@ app.use(
       /^http:\/\/127\.0\.0\.1:\d+$/,
       /^https:\/\/.*\.odns\.fr$/,
       "http://localhost:5173",
-      "https://beta.lumenjuris.com"
+      "https://beta.lumenjuris.com",
+      "https://app.lumenjuris.com"
     ],
     credentials: true,
   }),
