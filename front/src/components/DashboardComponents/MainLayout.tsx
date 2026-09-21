@@ -284,7 +284,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         {/* Logo + bouton fermeture */}
         <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
-            <LumenJurisLogo variant="dark" height={30} />
+            <LumenJurisLogo variant="dark" height={44} />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}

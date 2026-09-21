@@ -1,6 +1,8 @@
+import logoBlanc from "../../assets/lumen-juris-logo-blanc.svg";
+
 /**
  * Logo officiel LumenJuris.
- * variant="dark"  → texte blanc (sidebar sombre)
+ * variant="dark"  → logo blanc fourni par Geoff (menu latéral, fonds sombres)
  * variant="light" → texte #0A2540 (fond clair, défaut)
  */
 export function LumenJurisLogo({
@@ -10,7 +12,11 @@ export function LumenJurisLogo({
   variant?: "light" | "dark";
   height?: number;
 }) {
-  const textColor = variant === "dark" ? "#ffffff" : "#0A2540";
+  if (variant === "dark") {
+    // Proportions du fichier fourni : 150,38 × 34.
+    return <img src={logoBlanc} alt="Lumen Juris" height={height} width={Math.round(height * (150.38 / 34))} />;
+  }
+  const textColor = "#0A2540";
   // viewBox recadré sur le contenu réel (cercle + texte) pour éliminer le vide
   // vertical : le logo remplit toute la hauteur demandée au lieu d'être noyé.
   const width = height * (200 / 36);
