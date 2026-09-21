@@ -31,6 +31,8 @@ interface SignupFormProps {
   setAcceptCgu: React.Dispatch<React.SetStateAction<boolean>>;
   confirmPassword: string;
   setConfirmPassword: React.Dispatch<React.SetStateAction<string>>;
+  /** Compte créé et e-mail de vérification parti : la page affiche l'écran « Vérifiez votre boîte mail ». */
+  onInscrit?: (email: string) => void;
 }
 
 const PROXY_URL: string =
@@ -71,6 +73,7 @@ const SignupForm = ({
   setAcceptCgu,
   confirmPassword,
   setConfirmPassword,
+  onInscrit,
 }: SignupFormProps) => {
  
 
@@ -183,6 +186,11 @@ const SignupForm = ({
         setServerError(true);
         setServerErrorMessage(data.message);
         setSubmitLoading(false);
+      } else if (onInscrit) {
+        setSubmitPending(false);
+        setSubmitLoading(false);
+        onInscrit(email);
+        return;
       } else {
         setSubmitPending(false);
         setSubmitSuccess(true);
@@ -508,6 +516,8 @@ const SignupForm = ({
                   Accepter nos{" "}
                   <a
                     href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="hover:cursor-pointer underline"
                   >
                     <span>CGU</span>
