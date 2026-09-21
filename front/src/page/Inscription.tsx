@@ -1,5 +1,6 @@
 import SignupForm from "../components/auth/SignupForm";
 import LoginForm from "../components/auth/LoginForm";
+import { VerifierBoiteMail } from "../components/auth/VerifierBoiteMail";
 import { MainHeader } from "../components/MainHeader/MainHeader";
 import { useUserStore } from "../store/userStore";
 import { PENDING_CHECKOUT_KEY } from "../utils/planMapping";
@@ -21,6 +22,10 @@ export function Inscription() {
   const [forgotPassword, setForgotPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Adresse à laquelle l'e-mail de vérification vient d'être envoyé : tant
+  // qu'elle est renseignée, l'écran « Vérifiez votre boîte mail » remplace le
+  // formulaire.
+  const [emailAVerifier, setEmailAVerifier] = useState<string | null>(null);
 
   const authStatus = useUserStore((state) => state.authStatus);
 
@@ -49,6 +54,18 @@ export function Inscription() {
       <div className="bg-lumenjuris-background min-h-[calc(100vh-48px)] w-full">
         <div className="w-full max-w-[420px] mx-auto px-4 pt-12">
           <div className="w-full border border-border px-4 py-7 rounded-xl flex flex-col gap-5 bg-background">
+            {emailAVerifier ? (
+              <VerifierBoiteMail
+                email={emailAVerifier}
+                onModifier={() => setEmailAVerifier(null)}
+                onSeConnecter={() => {
+                  setEmailAVerifier(null);
+                  setPassword("");
+                  setConfirmPassword("");
+                  setIsLoginOnScreen(true);
+                }}
+              />
+            ) : (<>
             <section className="w-full flex items-center justify-between">
               <div className="w-44 flex flex-col items-center gap-1">
                 <Button
@@ -105,9 +122,11 @@ export function Inscription() {
                   setAcceptCgu={setAcceptCgu}
                   confirmPassword={confirmPassword}
                   setConfirmPassword={setConfirmPassword}
+                  onInscrit={setEmailAVerifier}
                 />
               )}
             </>
+            </>)}
           </div>
         </div>
       </div>
