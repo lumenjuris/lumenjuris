@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
+import { useLayoutStore } from "../../store/layoutStore";
 import { SmartCddEditor } from "./cdd/smart/SmartCddEditor";
 import type { ContractModel, VariableDef, BlockDef } from "../../contractEngine/types";
 import { cddAccroissementModel } from "../../contractEngine/models/cddAccroissement";
@@ -1285,8 +1286,17 @@ export function Generateur() {
   // Les éditeurs document-first (form, blank, useCustom) ont leur propre retour : pas de bannière.
   const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom";
 
+  // Contrat ouvert dans l'éditeur : le menu latéral se replie pour laisser
+  // toute la largeur au document, et revient en quittant l'éditeur.
+  const estEditeur = section === "form" || section === "blank" || section === "useCustom";
+  const setEditeurPleinEcran = useLayoutStore((s) => s.setEditeurPleinEcran);
+  useEffect(() => {
+    setEditeurPleinEcran(estEditeur);
+    return () => setEditeurPleinEcran(false);
+  }, [estEditeur, setEditeurPleinEcran]);
+
   return (
-    <div className={section ? "space-y-6 max-w-5xl mx-auto" : ""}>
+    <div className={section ? `space-y-6 mx-auto ${estEditeur ? "max-w-7xl" : "max-w-5xl"}` : ""}>
       {section && hasSectionBanner && (
         <PageBanner
           backLink={{ label: "Générateur de contrat", onClick: goHub }}
@@ -1295,7 +1305,9 @@ export function Generateur() {
         />
       )}
 
-    <div className={section ? `space-y-8 border border-gray rounded-2xl pb-4 pl-4 ${hasSectionBanner ? "pt-4" : ""}` : ""}>
+    {/* Pas de cadre autour des sous-sections : chacune a déjà le sien, un
+        cadre de plus faisait double emploi et réduisait la place utile. */}
+    <div className={section ? "space-y-8" : ""}>
       {/* Hub — les 3 façons de créer un contrat */}
       {!section && (
         <GenerateurHub

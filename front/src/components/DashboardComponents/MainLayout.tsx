@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -24,6 +24,7 @@ import { useTemplateNotificationStore } from "../../store/templateNotificationSt
 import { useLegalWatchStore } from "../../store/legalWatchStore";
 import { LumenJurisLogo } from "../common/LumenJurisLogo";
 import { useUserStore } from "../../store/userStore";
+import { useLayoutStore } from "../../store/layoutStore";
 
 import { ErrorBoundary } from "../ContractAnalysis/ErrorBoundary";
 
@@ -220,6 +221,25 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
     mql.addEventListener("change", handleChange);
     return () => mql.removeEventListener("change", handleChange);
   }, []);
+
+  // Contrat ouvert dans l'éditeur : on replie le menu pour laisser la place au
+  // document, puis on le remet comme il était en quittant l'éditeur. Sur
+  // mobile, le menu est déjà un tiroir fermé par défaut : rien à faire.
+  const editeurPleinEcran = useLayoutStore((s) => s.editeurPleinEcran);
+  const menuAvantEditeur = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (window.innerWidth < MOBILE_BREAKPOINT) return;
+    if (editeurPleinEcran) {
+      menuAvantEditeur.current = sidebarOpen;
+      setSidebarOpen(false);
+    } else if (menuAvantEditeur.current !== null) {
+      setSidebarOpen(menuAvantEditeur.current);
+      menuAvantEditeur.current = null;
+    }
+    // L'état du menu est lu au moment du basculement, pas suivi en continu :
+    // l'utilisateur reste libre de le rouvrir pendant qu'il édite.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editeurPleinEcran]);
 
   // Bloque le scroll du body quand le drawer mobile est ouvert
   useEffect(() => {

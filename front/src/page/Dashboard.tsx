@@ -9,10 +9,10 @@ import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
 /**
  * Page d'accueil (`/dashboard`).
  *
- * Une seule colonne, lue de haut en bas : les deux points d'entrée de l'outil
- * (générer / importer un contrat), puis la prise en main tant qu'elle n'est pas
- * terminée, puis les deux informations réellement consultées au retour
- * (échéances et file de travail).
+ * Compacte et organisée à l'horizontale : l'en-tête place la salutation à côté
+ * des deux points d'entrée (générer / importer un contrat), la prise en main
+ * s'affiche tant qu'elle n'est pas terminée, puis la file de travail et les
+ * échéances sont côte à côte sur écran large.
  *
  * Toutes les données viennent d'un seul chargement (`useDashboardData`).
  */
@@ -21,7 +21,7 @@ export function Dashboard() {
   const data = useDashboardData();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
       <InfoBanner />
 
       <HeroHeader
@@ -37,13 +37,12 @@ export function Dashboard() {
         <OnboardingSteps steps={data.onboarding} loading={data.loading} />
       )}
 
-      <TodayQueue items={data.queue} loading={data.loading} />
-
-      <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
-
-      <p className="font-serif text-sm italic text-ink-muted">
-        Lumen Juris — la clarté contractuelle, en continu.
-      </p>
+      {/* Le titre « Lumen Juris » de bas de page a été retiré : le logo du menu
+          suffit à situer l'utilisateur, la page d'accueil reste utilitaire. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <TodayQueue items={data.queue} loading={data.loading} />
+        <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
+      </div>
     </div>
   );
 }

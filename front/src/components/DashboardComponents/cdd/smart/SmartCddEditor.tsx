@@ -786,26 +786,28 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
             <div className="sticky top-12 z-20 -mx-px -mt-px flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-line border-b-line-subtle bg-white px-4 py-2.5">
               {editor && (
                 <div className="flex shrink-0 items-center gap-1">
-                  <button type="button" className={tbtn(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></button>
-                  <button type="button" className={tbtn(editor.isActive("italic"))} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></button>
-                  <button type="button" className={tbtn(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}><List className="h-4 w-4" /></button>
-                  <button type="button" className={tbtn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote className="h-4 w-4" /></button>
+                  <FormatButton label="Gras" className={tbtn(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></FormatButton>
+                  <FormatButton label="Italique" className={tbtn(editor.isActive("italic"))} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></FormatButton>
+                  <FormatButton label="Liste à puces" className={tbtn(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}><List className="h-4 w-4" /></FormatButton>
+                  <FormatButton label="Encadré (citation)" className={tbtn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote className="h-4 w-4" /></FormatButton>
                 </div>
               )}
 
-              {/* Fonctionnalités du contrat : une icône chacune, libellé au survol */}
+              {/* Fonctionnalités du contrat : une icône chacune, avec un mot court
+                  sur écran large et une explication immédiate au survol. */}
               <div className="flex shrink-0 items-center gap-0.5">
-                <ToolbarAction icon={Share2} label="Partager à l'autre partie" onClick={openShare} highlight />
-                <ToolbarAction icon={FileSignature} label="Envoyer en signature" onClick={goSignature} />
-                <ToolbarAction icon={MessagesSquare} label="Ouvrir la négociation" onClick={() => void goNegotiation()} />
-                <ToolbarAction icon={ShieldAlert} label="Réviser les risques" onClick={goReview} />
+                <ToolbarAction icon={Share2} short="Partager" label="Partager le contrat avec l'autre partie" onClick={openShare} highlight />
+                <ToolbarAction icon={FileSignature} short="Signer" label="Envoyer le contrat en signature électronique" onClick={goSignature} />
+                <ToolbarAction icon={MessagesSquare} short="Négocier" label="Négocier le contrat avec l'autre partie" onClick={() => void goNegotiation()} />
+                <ToolbarAction icon={ShieldAlert} short="Risques" label="Analyser les risques du contrat" onClick={goReview} />
                 {hasConvention && (
-                  <ToolbarAction icon={ShieldCheck} label="Convention collective" onClick={() => setCcPanel(true)} />
+                  <ToolbarAction icon={ShieldCheck} short="Convention" label="Vérifier la convention collective" onClick={() => setCcPanel(true)} />
                 )}
                 <span aria-hidden className="mx-1.5 h-5 w-px bg-line" />
-                <ToolbarAction icon={Download} label="Télécharger en PDF" onClick={exportPdf} />
+                <ToolbarAction icon={Download} short="PDF" label="Télécharger en PDF" onClick={exportPdf} />
                 <ToolbarAction
                   icon={FileText}
+                  short="Word"
                   label={isFreemium ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
                   onClick={() => void exportDocx()}
                   disabled={!!isFreemium}
@@ -839,10 +841,11 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 type="button"
                 onClick={openAi}
                 style={{ top: hover.top }}
-                title="Préciser cette clause avec l'IA"
-                className="absolute right-3 z-10 inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-white px-2 py-1 text-[11px] font-medium text-brand shadow-sm transition hover:bg-brand-light"
+                aria-label="Préciser cette clause avec l'IA"
+                className="group absolute right-3 z-10 inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-white px-2 py-1 text-[11px] font-medium text-brand shadow-sm transition hover:bg-brand-light"
               >
                 <Sparkles className="h-3.5 w-3.5" /> IA
+                <InfoBulle texte="Préciser cette clause avec l'IA" align="right" />
               </button>
             )}
 
@@ -987,10 +990,49 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   );
 }
 
-/** Icône d'action de la barre d'outils de l'éditeur : libellé en infobulle au survol. */
-function ToolbarAction({ icon: Icon, label, onClick, disabled = false, highlight = false }: {
+/**
+ * Infobulle affichée IMMÉDIATEMENT au survol (ou au focus clavier) de son
+ * parent, qui doit porter la classe `group` et être positionné. L'infobulle
+ * native du navigateur (`title`) n'apparaît qu'après un délai : devant une
+ * icône inconnue, l'utilisateur doit pouvoir lire sa fonction tout de suite.
+ */
+function InfoBulle({ texte, align = "center" }: { texte: string; align?: "left" | "right" | "center" }) {
+  const position =
+    align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2";
+  return (
+    <span
+      role="tooltip"
+      className={`pointer-events-none absolute top-full z-30 mt-1.5 hidden whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium leading-tight text-white shadow-md group-hover:block group-focus-visible:block ${position}`}
+    >
+      {texte}
+    </span>
+  );
+}
+
+/** Bouton de mise en forme du texte (gras, italique…), avec infobulle immédiate. */
+function FormatButton({ label, className, onClick, children }: {
+  label: string;
+  className: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" aria-label={label} className={`group relative ${className}`} onClick={onClick}>
+      {children}
+      <InfoBulle texte={label} align="left" />
+    </button>
+  );
+}
+
+/**
+ * Icône d'action de la barre d'outils de l'éditeur. Sur écran large, un mot
+ * court accompagne l'icône ; dans tous les cas, l'explication complète
+ * s'affiche immédiatement au survol.
+ */
+function ToolbarAction({ icon: Icon, label, short, onClick, disabled = false, highlight = false }: {
   icon: React.ElementType;
   label: string;
+  short?: string;
   onClick: () => void;
   disabled?: boolean;
   highlight?: boolean;
@@ -1000,15 +1042,16 @@ function ToolbarAction({ icon: Icon, label, onClick, disabled = false, highlight
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={label}
       aria-label={label}
-      className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`group relative inline-flex items-center gap-1 rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 xl:px-2 ${
         highlight
           ? "text-brand hover:bg-brand-light"
           : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
       }`}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="h-4 w-4 shrink-0" />
+      {short && <span className="hidden text-[12px] font-medium xl:inline">{short}</span>}
+      <InfoBulle texte={label} align="right" />
     </button>
   );
 }
