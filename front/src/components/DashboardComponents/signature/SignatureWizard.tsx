@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { FileText } from "lucide-react";
 import { PrepareStep } from "./PrepareStep";
 import { PlaceStep } from "./PlaceStep";
 import { SignStep } from "./SignStep";
@@ -340,12 +339,6 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
         className="mb-2"
         backLink={onExit && { label: "Signature électronique", onClick: () => { resetWizard(); onExit(); } }}
         title="Envoyer pour signature"
-        subtitle={file && (
-          <div className="flex items-center gap-1.5 text-xs text-white/75">
-            <FileText className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{file.name}</span>
-          </div>
-        )}
       />
 
       {step === "prepare" && (

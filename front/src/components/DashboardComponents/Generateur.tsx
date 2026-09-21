@@ -20,7 +20,7 @@ import { ruptureConventionnelleModel } from "../../contractEngine/models/rupture
 import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
 import { CreatedContractTable } from "./generateur/CreatedContractTable";
-import { GenerateurHub } from "./generateur/GenerateurHub";
+import { CreerDeZeroCard, GenerateurHub } from "./generateur/GenerateurHub";
 import { PageBanner } from "../common/PageBanner";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
@@ -1052,51 +1052,11 @@ function CustomTemplateEditor({ templateId, onBack }: { templateId: string; onBa
  * ouverture dans l'éditeur.
  */
 function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: () => void }) {
-  const [title, setTitle] = useState("");
-  const canStart = title.trim().length >= 3;
-
+  // Même carte animée que sur l'accueil du générateur. Titre trop court :
+  // on ne fait rien, le champ reste ouvert.
   return (
-    <div className="w-full max-w-4xl">
-      <div className="bg-white rounded-card border border-line shadow-card p-6 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-ink-secondary mb-2">
-            Quel contrat souhaitez-vous créer ?
-          </label>
-          <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && canStart && onStart(title.trim())}
-              placeholder="ex : Contrat de prestation de services informatiques"
-              className="w-full sm:flex-1 p-2.5 border border-line rounded-xl text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder min-w-0"
-            />
-            <button
-              onClick={() => onStart(title.trim())}
-              disabled={!canStart}
-              className="w-full sm:w-auto px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-card shrink-0"
-            >
-              Commencer
-            </button>
-          </div>
-        </div>
-
-        {/* Les étapes */}
-        <ol className="space-y-2 text-sm text-ink-muted">
-          <li className="flex items-start gap-2.5">
-            <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
-            Nommez le contrat souhaité
-          </li>
-          <li className="flex items-start gap-2.5">
-            <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-            Générez-le tout de suite — ou répondez à quelques questions simples
-          </li>
-          <li className="flex items-start gap-2.5">
-            <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-            Le contrat s&apos;ouvre dans l&apos;éditeur, article RGPD inclus
-          </li>
-        </ol>
-      </div>
+    <div className="w-full max-w-5xl">
+      <CreerDeZeroCard onCreate={(title) => title && onStart(title)} className="min-h-[22rem]" />
     </div>
   );
 }

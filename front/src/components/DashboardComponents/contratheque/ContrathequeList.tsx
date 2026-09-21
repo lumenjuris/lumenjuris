@@ -9,7 +9,7 @@ import type { ContrathequeTab } from "./ViewTabs";
 import type { ContractStats, ContractListItem, ListFilters, ContractStatus, FolderDTO, TagDTO } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { Sidebar } from "./Sidebar";
-import { PageBanner } from "../../common/PageBanner";
+import { BannerAction, PageBanner } from "../../common/PageBanner";
 
 interface Props {
   onOpen: (id: string) => void;
@@ -140,18 +140,12 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
         subtitle="Centralisez et suivez le cycle de vie de vos contrats."
         actions={
           <>
-            <button
-              onClick={() => contractApi.exportCsv(filters)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 hover:-translate-y-0.5 will-change-transform border border-white/15"
-            >
-              <Download className="w-4 h-4" /> Exporter
-            </button>
-            <button
-              onClick={onImport}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-900 bg-white hover:bg-slate-100 rounded-lg transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm"
-            >
-              <Plus className="w-4 h-4" /> Importer un contrat
-            </button>
+            <BannerAction variant="secondary" onClick={() => contractApi.exportCsv(filters)} icon={<Download />}>
+              Exporter
+            </BannerAction>
+            <BannerAction onClick={onImport} icon={<Plus />}>
+              Importer un contrat
+            </BannerAction>
           </>
         }
       />

@@ -79,7 +79,13 @@ interface GenerateurHubProps {
   onLibrary: () => void;
 }
 
-export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubProps) {
+/**
+ * Carte « Créer de zéro » : champ de saisie (exemples qui s'écrivent seuls) et
+ * animation des clauses qui se génèrent. Partagée par l'accueil du générateur
+ * et l'écran « Créer de zéro », pour une présentation identique.
+ * `onCreate("")` quand le titre est trop court (l'appelant décide quoi faire).
+ */
+export function CreerDeZeroCard({ onCreate, className = "" }: { onCreate: (title: string) => void; className?: string }) {
   const [contractTitle, setContractTitle] = useState("");
   const canStartWithTitle = contractTitle.trim().length >= 3;
   const typingPlaceholder = useTypingPlaceholder();
@@ -89,17 +95,7 @@ export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubPr
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
-      {/* ── En-tête ─────────────────────────────────────────── */}
-      <PageBanner
-        title="Rédigez un contrat solide, en quelques minutes."
-        subtitle="Partez d'une description, d'un document existant ou d'un modèle prêt à l'emploi."
-      />
-
-      {/* ── Les 3 sections ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Créer de zéro — carte mise en avant */}
-        <section className="group relative flex flex-col gap-6 overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-light via-white to-white p-6 shadow-card transition-shadow hover:shadow-card-md lg:col-span-2 sm:p-8">
+        <section className={`group relative flex flex-col gap-6 overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-light via-white to-white p-6 shadow-card transition-shadow hover:shadow-card-md sm:p-8 ${className}`}>
           <div className="space-y-2">
             <h2 className="text-xl font-semibold tracking-tight text-ink">Créer de zéro</h2>
             <p className="max-w-md text-sm leading-relaxed text-ink-muted">
@@ -137,6 +133,22 @@ export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubPr
           <ClauseGenerationAnimation />
 
         </section>
+  );
+}
+
+export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubProps) {
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      {/* ── En-tête ─────────────────────────────────────────── */}
+      <PageBanner
+        title="Rédigez un contrat solide, en quelques minutes."
+        subtitle="Partez d'une description, d'un document existant ou d'un modèle prêt à l'emploi."
+      />
+
+      {/* ── Les 3 sections ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Créer de zéro — carte mise en avant */}
+        <CreerDeZeroCard onCreate={onCreate} className="lg:col-span-2" />
 
         {/* Colonne droite : importer + bibliothèque */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">

@@ -26,6 +26,7 @@ import {
 import { contractApi } from "./contratheque/api";
 import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
 import { QuotaLimitModal } from "../common/QuotaLimitModal";
+import { BannerAction, PageBanner } from "../common/PageBanner";
 
 type RiskLevel = "Élevé" | "Moyen" | "Faible" | "—";
 
@@ -165,22 +166,15 @@ export function Conformite() {
     <>
     <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
       {/* Title + CTA */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
-        <div className="text-left">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-            Analyse de conformité
-          </h2>
-          <p className="text-sm text-gray-primary leading-relaxed mt-1">
-            Vérifiez la conformité juridique de vos documents.
-          </p>
-        </div>
-        <button
-          onClick={handleNewAnalysis}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 will-change-transform backface-invisible shadow-sm shrink-0 self-start sm:self-end"
-        >
-          <Plus className="text-base font-normal" /> Nouvelle analyse
-        </button>
-      </div>
+      <PageBanner
+        title="Analyse de conformité"
+        subtitle="Vérifiez la conformité juridique de vos documents."
+        actions={
+          <BannerAction onClick={handleNewAnalysis} icon={<Plus />}>
+            Nouvelle analyse
+          </BannerAction>
+        }
+      />
 
 <div className="my-4 pl-4 border-l-2 border-blue-primary">
   <h3 className="text-xs font-bold uppercase tracking-wider text-blue-primary mb-2">

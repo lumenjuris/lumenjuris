@@ -3,6 +3,7 @@ import { LegalWatchAlerts } from "./veille/LegalWatchAlerts";
 import { LegalWatchFeed } from "./veille/LegalWatchFeed";
 import { LegalWatchSettings } from "./veille/LegalWatchSettings";
 import { useLegalWatchStore } from "../../store/legalWatchStore";
+import { PageBanner } from "../common/PageBanner";
 
 /**
  * Page Veille — trois onglets à rôle unique :
@@ -25,7 +26,7 @@ export function Veille() {
 
   return (
     <div className="mx-auto w-full space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold text-ink tracking-tight">Actualité juridique</h1>
+      <PageBanner title="Actualité juridique" subtitle="Alertes et actualités du droit qui concernent vos contrats." />
 
       {/* Onglets */}
       <div className="flex items-center gap-1 border-b border-line">
