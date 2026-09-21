@@ -20,7 +20,7 @@ export function Dashboard() {
   const data = useDashboardData();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <InfoBanner />
 
       <HeroHeader

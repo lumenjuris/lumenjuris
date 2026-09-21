@@ -326,7 +326,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 max-w-7xl m-auto">
+    <div className="space-y-4 w-full max-w-7xl mx-auto">
       <input
         ref={replaceDocumentInputRef}
         type="file"

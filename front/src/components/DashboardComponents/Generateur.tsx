@@ -1055,7 +1055,7 @@ function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: (
   // Même carte animée que sur l'accueil du générateur. Titre trop court :
   // on ne fait rien, le champ reste ouvert.
   return (
-    <div className="w-full max-w-5xl">
+    <div className="w-full">
       <CreerDeZeroCard onCreate={(title) => title && onStart(title)} sansTitre />
     </div>
   );
@@ -1224,7 +1224,7 @@ export function Generateur() {
   }, [estEditeur, setEditeurPleinEcran]);
 
   return (
-    <div className={section ? `space-y-6 mx-auto ${estEditeur ? "max-w-7xl" : "max-w-5xl"}` : ""}>
+    <div className={section ? "space-y-6 mx-auto w-full max-w-7xl" : ""}>
       {section && hasSectionBanner && (
         <PageBanner
           backLink={{ label: "Générateur de contrat", onClick: goHub }}

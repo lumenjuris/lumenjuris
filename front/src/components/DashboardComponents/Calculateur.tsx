@@ -75,7 +75,7 @@ export function Calculateur() {
   };
 
   return (
-    <div className="mx-auto w-full space-y-6 max-w-5xl">
+    <div className="mx-auto w-full space-y-6 max-w-7xl">
 
       <PageBanner
         title="Simulateur d'indemnité de licenciement"

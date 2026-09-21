@@ -236,7 +236,7 @@ export function PlansPanel() {
 
 
   return (
-    <div className="mx-auto max-w-7xl pb-6">
+    <div className="mx-auto w-full max-w-7xl pb-6">
       {/* ── En-tête + toggle mensuel/annuel ── */}
       <PageBanner
         title="Accéder à nos outils"

@@ -25,7 +25,7 @@ export function Veille() {
   ];
 
   return (
-    <div className="mx-auto w-full space-y-6 max-w-4xl">
+    <div className="mx-auto w-full space-y-6 max-w-7xl">
       <PageBanner title="Actualité juridique" subtitle="Alertes et actualités du droit qui concernent vos contrats." />
 
       {/* Onglets */}

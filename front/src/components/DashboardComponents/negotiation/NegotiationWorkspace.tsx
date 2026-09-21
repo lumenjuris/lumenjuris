@@ -121,7 +121,7 @@ export function NegotiationWorkspace() {
   const st = STATUS_STYLE[data.status];
 
   return (
-    <div className="space-y-4 -mt-2 sm:-mt-3 lg:-mt-5 max-w-7xl w-full mx-auto">
+    <div className="space-y-4 max-w-7xl w-full mx-auto">
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         {versionSuccess && (

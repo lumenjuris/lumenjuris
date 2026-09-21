@@ -145,7 +145,7 @@ export function CreerDeZeroCard({ onCreate, className = "", sansTitre = false }:
 
 export function GenerateurHub({ onCreate, onImport, onLibrary }: GenerateurHubProps) {
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* ── En-tête ─────────────────────────────────────────── */}
       <PageBanner
         title="Rédigez un contrat solide, en quelques minutes."
