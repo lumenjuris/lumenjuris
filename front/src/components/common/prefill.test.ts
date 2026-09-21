@@ -50,7 +50,7 @@ describe("valeursDuProfil", () => {
       profile: { prenom: "Geoffrey", nom: "Pin", email: "g@example.fr" },
     } as unknown as UserData;
     expect(valeursDuProfil(user, "01 23 45 67 89")).toEqual({
-      denomination: "Lumen Juris", forme_juridique: "SAS", siren: "123456789", adresse: "1 rue X",
+      denomination: "Lumen Juris", forme_juridique: "SAS", siren: "123456789", tva: "FR32123456789", adresse: "1 rue X",
       code_postal: "75001", representant: "Geoffrey Pin", email: "g@example.fr", telephone: "01 23 45 67 89",
     });
   });

@@ -19,11 +19,12 @@ import {
   mapCompanyToContractParty,
   normalizeDigits,
 } from "../../utils/companyLookup";
+import { fetchProxy } from "../../utils/fetchProxy";
 
 export type Donnee =
   | "denomination" | "forme_juridique" | "capital" | "siren" | "siret"
   | "adresse" | "code_postal" | "ville" | "rcs" | "representant" | "qualite"
-  | "email" | "telephone";
+  | "email" | "telephone" | "tva";
 
 /** Suffixe de champ -> donnée. L'ordre compte : le plus précis d'abord. */
 const CORRESPONDANCES: { motif: RegExp; donnee: Donnee }[] = [
@@ -32,6 +33,7 @@ const CORRESPONDANCES: { motif: RegExp; donnee: Donnee }[] = [
   { motif: /(denomination|raison_sociale|nom_societe|societe|entreprise|nom)$/, donnee: "denomination" },
   { motif: /(forme_juridique|forme)$/, donnee: "forme_juridique" },
   { motif: /(capital_social|capital)$/, donnee: "capital" },
+  { motif: /(tva_intracommunautaire|tva_intracom|numero_tva|num_tva|n_tva)$/, donnee: "tva" },
   { motif: /siren$/, donnee: "siren" },
   { motif: /siret$/, donnee: "siret" },
   { motif: /ville$/, donnee: "ville" },
@@ -45,7 +47,7 @@ const CORRESPONDANCES: { motif: RegExp; donnee: Donnee }[] = [
 export interface ChampPartie { id: string; donnee: Donnee }
 export interface GroupePartie { prefixe: string; libelle: string; champs: ChampPartie[] }
 
-function reconnaitre(id: string): { prefixe: string; donnee: Donnee } | null {
+export function reconnaitre(id: string): { prefixe: string; donnee: Donnee } | null {
   for (const { motif, donnee } of CORRESPONDANCES) {
     const m = motif.exec(id);
     if (m) return { prefixe: id.slice(0, m.index).replace(/_+$/, ""), donnee };
@@ -115,6 +117,7 @@ export function valeursDuProfil(user: UserData | null, telephone: string | null)
     siren: e?.siren ?? undefined,
     adresse: e?.address?.address ?? undefined,
     code_postal: e?.address?.codePostal ?? undefined,
+    tva: tvaIntracom(e?.siren) ?? undefined,
     representant: representant || undefined,
     email: p?.email ?? undefined,
     telephone: telephone ?? undefined,
@@ -130,6 +133,7 @@ export function valeursSirene(result: CompanyResult, siret?: string): Valeurs {
     forme_juridique: p.forme_juridique ?? undefined,
     siren: p.siren ?? undefined,
     siret: p.siret ?? undefined,
+    tva: tvaIntracom(p.siren) ?? undefined,
     adresse: p.adresse ?? undefined,
     code_postal: p.code_postal ?? undefined,
     ville: p.ville ?? undefined,
@@ -137,6 +141,52 @@ export function valeursSirene(result: CompanyResult, siret?: string): Valeurs {
     representant: p.representant ?? undefined,
     qualite: p.qualite ?? undefined,
   });
+}
+
+/**
+ * Numéro de TVA intracommunautaire français : il se déduit du SIREN
+ * (clé = (12 + 3 × (SIREN mod 97)) mod 97), sans rien interroger.
+ */
+export function tvaIntracom(siren?: string | null): string | null {
+  const s = (siren ?? "").replace(/\s/g, "");
+  if (!/^[0-9]{9}$/.test(s)) return null;
+  const cle = (12 + 3 * (Number(s) % 97)) % 97;
+  return `FR${String(cle).padStart(2, "0")}${s}`;
+}
+
+/** L'entreprise est-elle fermée (radiée, cessée) selon le registre ? */
+export function estFermee(result: CompanyResult): boolean {
+  return result.etat_administratif === "C" || result.siege?.etat_administratif === "F";
+}
+
+/** Ville extraite d'une adresse du type « 1 rue X 75001 PARIS ». */
+export function villeDeLAdresse(adresse?: string | null): string | null {
+  const m = /\b\d{5}\s+(.+)$/.exec((adresse ?? "").trim());
+  if (!m) return null;
+  // « SAINT-GERMAIN-EN-LAYE » -> « Saint-Germain-en-Laye »
+  const petits = new Set(["de", "du", "des", "en", "la", "le", "les", "sur", "sous", "aux", "et"]);
+  return m[1]
+    .trim()
+    .toLowerCase()
+    .replace(/[a-zà-ÿ]+/g, (mot, i: number) =>
+      i > 0 && petits.has(mot) ? mot : mot.charAt(0).toUpperCase() + mot.slice(1),
+    );
+}
+
+/**
+ * Capital social (registre INPI, via notre serveur). Null si le registre
+ * n'est pas branché ou ne connaît pas l'entreprise : rien n'est inventé.
+ */
+export async function chercherCapital(siren?: string | null): Promise<string | null> {
+  if (!siren || !/^[0-9]{9}$/.test(siren)) return null;
+  try {
+    const res = await fetchProxy(`/api/enterprise/capital/${siren}`, { credentials: "include" });
+    if (!res.ok) return null;
+    const payload = await res.json().catch(() => null);
+    return payload?.data?.capital ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function nettoyer(v: Valeurs): Valeurs {
