@@ -843,7 +843,7 @@ export default function ContractAnalysis() {
     */
   return (
     <>
-      <div className="-m-4 sm:-m-5 lg:-m-7 p-4 overflow-x-hidden">
+      <div className="-mx-4 -mb-4 sm:-mx-5 sm:-mb-5 lg:-mx-7 lg:-mb-7 px-4 pb-4 overflow-x-hidden">
         <div className="min-w-0 w-full">
           {!contract && isOpeningHistoryItem && (
             <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-500">
