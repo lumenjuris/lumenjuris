@@ -902,12 +902,11 @@ export default function ContractAnalysis() {
             <div className="max-w-7xl mx-auto">
 
               <PageBanner
-                className="mb-2"
+                className="mb-6"
                 title="Analyse de conformité"
-                subtitle="Vérifiez la conformité juridique de vos documents"
-              /> 
-
-              <ActionButtons
+                subtitle="Vérifiez la conformité juridique de vos documents."
+                actions={
+                  <ActionButtons
                 onShareReport={() => void openShare()}
                 contract={contract}
                 context={currentAnalysisContext || undefined}
@@ -919,6 +918,8 @@ export default function ContractAnalysis() {
                 isRelaunchingAnalysis={displayedIsProcessing}
                 onSuggestedClauses={handleMarketAnalysisClick}
                 isLoadingSuggested={isMarketAnalysisLoading}
+                  />
+                }
               />
 
 

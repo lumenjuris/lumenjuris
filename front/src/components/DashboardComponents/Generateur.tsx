@@ -1056,7 +1056,7 @@ function ScratchEntry({ onStart }: { onStart: (title: string) => void; onBack: (
   // on ne fait rien, le champ reste ouvert.
   return (
     <div className="w-full max-w-5xl">
-      <CreerDeZeroCard onCreate={(title) => title && onStart(title)} className="min-h-[22rem]" />
+      <CreerDeZeroCard onCreate={(title) => title && onStart(title)} sansTitre />
     </div>
   );
 }

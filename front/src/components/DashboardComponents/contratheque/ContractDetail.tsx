@@ -11,7 +11,7 @@ import { negotiationApi } from "../negotiation/api";
 import { daysUntil, STATUS_LABEL } from "./types";
 import type { AmendmentDTO, ContractDetail as Detail, ContractStatus } from "./types";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
-import { PageBanner } from "../../common/PageBanner";
+import { BANNER_ACTION_CLASS, PageBanner } from "../../common/PageBanner";
 import { Amendments } from "./Amendments";
 
 interface Props {
@@ -130,21 +130,21 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
                 href={contractApi.documentUrl(contractId)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
+                className={BANNER_ACTION_CLASS}
               >
-                <Download className="w-3.5 h-3.5" /> Télécharger
+                <Download /> Télécharger
               </a>
             )}
 
             <button
               onClick={() => void handleNegotiate()}
               disabled={openingNego}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-900 bg-white rounded-xl shadow-sm transition-all duration-200 hover:-translate-y-0.5 will-change-transform disabled:opacity-50"
+              className={BANNER_ACTION_CLASS}
             >
               {openingNego ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-700" />
+                <Loader2 className="animate-spin" />
               ) : (
-                <Handshake className="w-3.5 h-3.5 text-blue-600" />
+                <Handshake />
               )}
               Négocier
             </button>
@@ -152,9 +152,9 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             {canDelete && (
               <button
                 onClick={() => setDeleteModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-danger bg-white border border-danger rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform"
+                className={BANNER_ACTION_CLASS}
               >
-                <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                <Trash2 /> Supprimer
               </button>
             )}
           </>

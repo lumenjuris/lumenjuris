@@ -1,16 +1,16 @@
 // Page « Mes négociations » : toutes les sessions (négociation et complétion
 // guidée) de l'utilisateur, avec statut, progression et accès direct.
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  Loader2, AlertCircle, MessagesSquare, ArrowRight, Users, FileText, Sparkles,
+  Loader2, AlertCircle, MessagesSquare, ArrowRight, Users, FileText, Plus,
 } from "lucide-react";
 import { negotiationApi } from "./api";
 import {
   STATUS_LABEL, STATUS_STYLE, MODE_LABEL, MODE_STYLE,
 } from "./types";
 import type { NegotiationListItem } from "./types";
-import { PageBanner } from "../../common/PageBanner";
+import { BannerAction, PageBanner } from "../../common/PageBanner";
 
 function fmtRelative(d: string): string {
   const diff = Date.now() - new Date(d).getTime();
@@ -51,6 +51,16 @@ return (
     <PageBanner
       title="Négociation"
       subtitle="Suivez les contrats partagés à l’autre partie : relecture, propositions de modification ou complétion des champs avant signature."
+      actions={
+        <>
+          <BannerAction onClick={() => navigate("/contratheque")} icon={<FileText />}>
+            Depuis la contrathèque
+          </BannerAction>
+          <BannerAction onClick={() => navigate("/contrat-generation?section=scratch")} icon={<Plus />}>
+            Nouveau contrat
+          </BannerAction>
+        </>
+      }
     />
 
     <div className="bg-white rounded-2xl border border-gray-300 shadow-sm overflow-hidden">
@@ -65,14 +75,6 @@ return (
                 faire compléter ou relire un document. Vous pouvez aussi ouvrir une
                 négociation depuis la fiche d’un contrat de la contrathèque.
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link to="/contrat-generation?section=scratch" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand-hover transition-all">
-                <Sparkles className="w-3.5 h-3.5" /> Créer un contrat
-              </Link>
-              <Link to="/contratheque" className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-ink-secondary bg-white border border-line rounded-lg hover:bg-surface-subtle transition-all">
-                <FileText className="w-3.5 h-3.5" /> Ouvrir la contrathèque
-              </Link>
             </div>
           </div>
         ) : (

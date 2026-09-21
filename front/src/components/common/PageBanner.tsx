@@ -88,24 +88,24 @@ export function PageBanner({
 }
 
 type BannerActionProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  /** "primary" = bouton blanc (action principale) ; "secondary" = bouton translucide. */
-  variant?: "primary" | "secondary";
   icon?: ReactNode;
 };
 
-/** Bouton d'en-tête : même hauteur, même police et même forme sur toutes les pages. */
-export function BannerAction({ variant = "primary", icon, className, children, ...rest }: BannerActionProps) {
+/**
+ * Style unique des boutons d'en-tête : blancs, même hauteur, même police,
+ * sans couleur différente d'un bouton ou d'une page à l'autre. Exporté pour
+ * les boutons qui ne peuvent pas utiliser `BannerAction` directement.
+ */
+export const BANNER_ACTION_CLASS =
+  "inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-4 text-sm font-semibold text-blue-primary shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-60 lg:w-auto [&_svg]:h-4 [&_svg]:w-4";
+
+/** Bouton d'en-tête, à placer dans `actions` de PageBanner (à droite du bandeau). */
+export function BannerAction({ icon, className, children, ...rest }: BannerActionProps) {
   return (
     <button
       type="button"
       {...rest}
-      className={cn(
-        "inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-60 lg:w-auto [&_svg]:h-4 [&_svg]:w-4",
-        variant === "primary"
-          ? "bg-white text-blue-primary shadow-card hover:bg-white/90"
-          : "border border-white/15 bg-white/10 text-white hover:bg-white/20",
-        className,
-      )}
+      className={cn(BANNER_ACTION_CLASS, className)}
     >
       {icon}
       {children}

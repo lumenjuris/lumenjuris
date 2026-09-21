@@ -140,7 +140,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
         subtitle="Centralisez et suivez le cycle de vie de vos contrats."
         actions={
           <>
-            <BannerAction variant="secondary" onClick={() => contractApi.exportCsv(filters)} icon={<Download />}>
+            <BannerAction onClick={() => contractApi.exportCsv(filters)} icon={<Download />}>
               Exporter
             </BannerAction>
             <BannerAction onClick={onImport} icon={<Plus />}>

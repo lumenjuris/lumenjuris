@@ -85,7 +85,12 @@ interface GenerateurHubProps {
  * et l'écran « Créer de zéro », pour une présentation identique.
  * `onCreate("")` quand le titre est trop court (l'appelant décide quoi faire).
  */
-export function CreerDeZeroCard({ onCreate, className = "" }: { onCreate: (title: string) => void; className?: string }) {
+export function CreerDeZeroCard({ onCreate, className = "", sansTitre = false }: {
+  onCreate: (title: string) => void;
+  className?: string;
+  /** Écran « Créer de zéro » : le bandeau porte déjà le titre, la carte ne le répète pas. */
+  sansTitre?: boolean;
+}) {
   const [contractTitle, setContractTitle] = useState("");
   const canStartWithTitle = contractTitle.trim().length >= 3;
   const typingPlaceholder = useTypingPlaceholder();
@@ -96,13 +101,15 @@ export function CreerDeZeroCard({ onCreate, className = "" }: { onCreate: (title
 
   return (
         <section className={`group relative flex flex-col gap-6 overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-light via-white to-white p-6 shadow-card transition-shadow hover:shadow-card-md sm:p-8 ${className}`}>
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold tracking-tight text-ink">Créer de zéro</h2>
-            <p className="max-w-md text-sm leading-relaxed text-ink-muted">
-              Décrivez le contrat souhaité, répondez à quelques questions : il est rédigé pour vous,
-              article RGPD inclus.
-            </p>
-          </div>
+          {!sansTitre && (
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold tracking-tight text-ink">Créer de zéro</h2>
+              <p className="max-w-md text-sm leading-relaxed text-ink-muted">
+                Décrivez le contrat souhaité, répondez à quelques questions : il est rédigé pour vous,
+                article RGPD inclus.
+              </p>
+            </div>
+          )}
 
           {/* Champ de saisie direct */}
           <form
