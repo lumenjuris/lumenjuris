@@ -20,7 +20,7 @@ interface MainHeaderProps {
 // le centre de la barre sans rien apporter au travail sur les contrats.
 export const MainHeader = ({ onNavClick, onToggleSidebar, rotatePannelLeft }: MainHeaderProps) => {
   return (
-    <header className={`${onToggleSidebar ? "h-12" : "h-16"} border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4 pl-0`}>
+    <header className={`h-12 border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4 pl-0`}>
       <div className="flex items-center gap-3">
         {onToggleSidebar && (
           <button
@@ -38,7 +38,7 @@ export const MainHeader = ({ onNavClick, onToggleSidebar, rotatePannelLeft }: Ma
             le logo, qui ramène à la page d'accueil du site. */}
         {!onToggleSidebar && (
           <a href="https://www.lumenjuris.com" className="flex items-center pl-4" aria-label="Accueil Lumen Juris">
-            <LumenJurisLogo variant="light" height={54} />
+            <LumenJurisLogo variant="light" height={44} />
           </a>
         )}
       </div>
