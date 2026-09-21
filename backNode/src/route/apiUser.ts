@@ -587,9 +587,20 @@ routerUser.put(
   async (req: Request, res: Response) => {
     try {
       const idUser = Number(req.idUser);
-      const accountParameters = normalizeAccountParameters(
-        req.body?.accountParameters,
-      );
+
+      // Fusion avec les paramètres déjà enregistrés : chaque écran n'envoie
+      // que ce qu'il modifie (les notifications d'un côté, le téléphone de
+      // l'autre). Sans fusion, régler les notifications effaçait le téléphone.
+      const existant = await prisma.userPreference.findUnique({
+        where: { userId: idUser },
+        select: { accountParameters: true },
+      });
+      const estObjet = (v: unknown): v is Record<string, unknown> =>
+        !!v && typeof v === "object" && !Array.isArray(v);
+      const accountParameters = normalizeAccountParameters({
+        ...(estObjet(existant?.accountParameters) ? existant.accountParameters : {}),
+        ...(estObjet(req.body?.accountParameters) ? req.body.accountParameters : {}),
+      });
 
       await prisma.userPreference.upsert({
         where: { userId: idUser },

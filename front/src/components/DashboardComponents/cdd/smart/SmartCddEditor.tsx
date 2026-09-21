@@ -13,14 +13,16 @@ import { jsPDF } from "jspdf";
 import {
   Download, FileText, FileSignature, Bold, Italic, List, Quote,
   Sparkles, X, Loader2, ShieldCheck, ShieldAlert, MessagesSquare, Check, Share2,
+  Wand2, BookmarkPlus, ChevronDown,
 } from "lucide-react";
 import { cddAccroissementModel } from "../../../../contractEngine/models/cddAccroissement";
-import type { ContractModel } from "../../../../contractEngine/types";
+import type { ContractModel, VariableDef } from "../../../../contractEngine/types";
 import { createInitialState } from "../../../../contractEngine/state";
 import { splitSegments } from "../../../../contractEngine/segments";
 import { Variable } from "./VariableNode";
 import { CompanySearchField } from "../../../common/CompanySearchField";
-import { PartyPrefill } from "../../../common/PartyPrefill";
+import { ContractPrefill, type OrigineChamp } from "../../../common/ContractPrefill";
+import { useTemplateNotificationStore } from "../../../../store/templateNotificationStore";
 import { mapCompanyToContractParty, formatConventionFromCompany } from "../../../../utils/companyLookup";
 import type { CompanyResult } from "../../../../types/companySearch";
 import ReactMarkdown from "react-markdown";
@@ -45,12 +47,18 @@ function segmentsToHtml(
   content: string,
   varLabel: Map<string, string>,
   values?: Record<string, string>,
+  extras?: {
+    /** Importance de chaque champ (contrats rédigés par l'IA). */
+    importance?: Map<string, string>;
+    /** Origine des valeurs à restaurer : une suggestion reste une suggestion. */
+    origins?: Record<string, string>;
+  },
 ): string {
   return splitSegments(content)
     .map((seg) =>
       seg.type === "text"
         ? escapeHtml(seg.text)
-        : `<span data-variable="${seg.name}" data-label="${escapeHtml(varLabel.get(seg.name) ?? seg.name)}" data-value="${escapeHtml(values?.[seg.name] ?? "")}"></span>`,
+        : `<span data-variable="${seg.name}" data-label="${escapeHtml(varLabel.get(seg.name) ?? seg.name)}" data-value="${escapeHtml(values?.[seg.name] ?? "")}" data-origin="${escapeHtml(extras?.origins?.[seg.name] ?? "")}" data-importance="${escapeHtml(extras?.importance?.get(seg.name) ?? "")}"></span>`,
     )
     .join("");
 }
@@ -65,7 +73,7 @@ function resolveBlockContent(model: ContractModel, block: ContractModel["blocks"
 }
 
 /** Document de départ : contrat complet par défaut, variables vides surlignées. */
-function buildInitialHtml(model: ContractModel, varLabel: Map<string, string>): string {
+function buildInitialHtml(model: ContractModel, varLabel: Map<string, string>, varImportance: Map<string, string>): string {
   let html = "";
   for (const block of model.blocks) {
     const content = resolveBlockContent(model, block);
@@ -79,7 +87,7 @@ function buildInitialHtml(model: ContractModel, varLabel: Map<string, string>): 
     // (Sans cela, ProseMirror écrase tous les \n et affiche la section en un seul bloc.)
     for (const para of content.split(/\n{2,}/)) {
       if (!para.trim()) continue;
-      html += `<p>${segmentsToHtml(para, varLabel).replace(/\n/g, "<br>")}</p>`;
+      html += `<p>${segmentsToHtml(para, varLabel, undefined, { importance: varImportance }).replace(/\n/g, "<br>")}</p>`;
     }
   }
   return html;
@@ -182,7 +190,24 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   }, []);
 
   const varLabel = useMemo(() => new Map(model.variables.map((v) => [v.id, v.label])), [model]);
-  const initialHtml = useMemo(() => buildInitialHtml(model, varLabel), [model, varLabel]);
+  const varImportance = useMemo(
+    () => new Map(model.variables.filter((v) => v.importance).map((v) => [v.id, v.importance as string])),
+    [model],
+  );
+  const initialHtml = useMemo(() => buildInitialHtml(model, varLabel, varImportance), [model, varLabel, varImportance]);
+
+  // Champs classés par importance (contrats rédigés par l'IA) : les optionnels
+  // sont regroupés et repliés. Sans importance (modèles fixes) : null, et le
+  // panneau garde son regroupement par article.
+  const parImportance = useMemo(() => {
+    if (!model.variables.some((v) => v.importance)) return null;
+    const imp = (v: VariableDef) => v.importance ?? "recommande";
+    return {
+      obligatoire: model.variables.filter((v) => imp(v) === "obligatoire"),
+      recommande: model.variables.filter((v) => imp(v) === "recommande"),
+      optionnel: model.variables.filter((v) => imp(v) === "optionnel"),
+    };
+  }, [model]);
   const fieldGroups = useMemo(() => buildFieldGroups(model), [model]);
   const hasConvention = useMemo(
     () => model.variables.some((v) => v.id === "convention_collective"),
@@ -217,7 +242,29 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, tick]);
 
+  // Origine de chaque valeur ("" saisie/validée, "profil", "suggestion").
+  const origins = useMemo(() => {
+    const map: Record<string, string> = {};
+    editor?.state.doc.descendants((node) => {
+      if (node.type.name === "variable") map[node.attrs.name as string] = (node.attrs.origin as string) || "";
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, tick]);
+
   const isFilled = (name: string) => (values[name] ?? "").trim().length > 0;
+
+  /** Amène un champ à l'écran et y place le curseur. */
+  const voirChamp = (name: string) => {
+    const el = editor?.view.dom.querySelector<HTMLInputElement>(`input[data-var-name="${name}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.focus({ preventScroll: true });
+    }
+  };
+
+  // Préremplissage : le bouton de la barre d'outils ouvre le panneau.
+  const [demandePrefill, setDemandePrefill] = useState(0);
 
   /** Focus + défilement vers le premier champ non rempli d'une section (ou le premier). */
   const scrollToGroup = (group: FieldGroup) => {
@@ -231,11 +278,11 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     }
   };
 
-  const setVar = (name: string, value: string) => {
+  const setVar = (name: string, value: string, origin: OrigineChamp = "") => {
     editor?.commands.command(({ tr, state }) => {
       state.doc.descendants((node, pos) => {
         if (node.type.name === "variable" && node.attrs.name === name) {
-          tr.setNodeMarkup(pos, undefined, { ...node.attrs, value });
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, value, origin: value ? origin : "" });
         }
       });
       return true;
@@ -334,7 +381,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     const from = $p.before(1), to = $p.after(1);
     // Reconstruit le paragraphe en re-parsant les {{NOM}} en variables surlignées
     // (au lieu d'un texte brut qui supprimerait les variables de la clause).
-    const html = `<p>${segmentsToHtml(ai.result, varLabel).replace(/\n/g, "<br>")}</p>`;
+    const html = `<p>${segmentsToHtml(ai.result, varLabel, undefined, { importance: varImportance }).replace(/\n/g, "<br>")}</p>`;
     editor.chain().focus().insertContentAt({ from, to }, html).run();
     setAi(null);
     setHover(null);
@@ -448,18 +495,21 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     if (!editor) return;
     // Conserve les valeurs déjà saisies dans les variables.
     const savedValues: Record<string, string> = {};
+    const savedOrigins: Record<string, string> = {};
     editor.state.doc.descendants((node) => {
       if (node.type.name === "variable" && node.attrs.value) {
         savedValues[node.attrs.name as string] = node.attrs.value as string;
+        savedOrigins[node.attrs.name as string] = (node.attrs.origin as string) || "";
       }
     });
+    const extras = { importance: varImportance, origins: savedOrigins };
     let html = "";
     for (const block of newText.split(/\n{2,}/)) {
       const t = block.trim();
       if (!t) continue;
       if (t.startsWith("# ")) html += `<h2>${escapeHtml(t.slice(2))}</h2>`;
-      else if (t.startsWith("### ")) html += `<h3>${segmentsToHtml(t.slice(4), varLabel, savedValues)}</h3>`;
-      else html += `<p>${segmentsToHtml(t, varLabel, savedValues).replace(/\n/g, "<br>")}</p>`;
+      else if (t.startsWith("### ")) html += `<h3>${segmentsToHtml(t.slice(4), varLabel, savedValues, extras)}</h3>`;
+      else html += `<p>${segmentsToHtml(t, varLabel, savedValues, extras).replace(/\n/g, "<br>")}</p>`;
     }
     if (!html) return;
     // insertContentAt sur toute la plage = transaction annulable (contrairement à setContent).
@@ -708,6 +758,72 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     saveAs(blob, `${fileBase}.docx`);
   };
 
+  // ── Enregistrer ce contrat comme modèle ──────────────────────────────────
+  // Le modèle reprend le contrat TEL QU'IL EST dans l'éditeur (modifications
+  // IA et manuelles comprises), les champs redevenant des {{variables}} à
+  // remplir : on réutilise la structure, jamais les valeurs d'un client.
+  const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
+  const [modele, setModele] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const enregistrerModele = async () => {
+    if (!editor || modele === "saving") return;
+    setModele("saving");
+    try {
+      const json = editor.getJSON() as JNode;
+      const blocs: { titre: string; morceaux: string[] }[] = [];
+      let courant: { titre: string; morceaux: string[] } | null = null;
+      for (const n of json.content ?? []) {
+        if (n.type === "heading" && n.attrs?.level === 2) continue; // titre du contrat
+        if (n.type === "heading") {
+          courant = { titre: markerText(n.content).trim() || `Section ${blocs.length + 1}`, morceaux: [] };
+          blocs.push(courant);
+          continue;
+        }
+        const txt = markerText(n.content);
+        if (!txt.trim()) continue;
+        if (!courant) {
+          courant = { titre: "Préambule", morceaux: [] };
+          blocs.push(courant);
+        }
+        courant.morceaux.push(txt);
+      }
+      const variablesDe = (texte: string) => [...new Set([...texte.matchAll(/\{\{([\w-]+)\}\}/g)].map((m) => m[1]))];
+      const sections = blocs
+        .filter((b) => b.morceaux.length > 0)
+        .map((b, i) => {
+          const content = b.morceaux.join("\n\n");
+          return { title: b.titre, clauses: [{ id: `s${i + 1}`, title: b.titre, content, variables: variablesDe(content) }] };
+        });
+      const detectedVariables = [...new Set(sections.flatMap((s) => s.clauses[0].variables))];
+      const structure = {
+        sections,
+        detectedVariables,
+        variableDefs: model.variables
+          .filter((v) => detectedVariables.includes(v.id))
+          .map((v) => ({ name: v.id, label: v.label, type: v.type })),
+      };
+      const res = await fetchProxy("/api/template", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: model.label || fileBase, contractType: model.label || fileBase, structure }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      notifyAdded();
+      setModele("saved");
+    } catch {
+      setModele("error");
+    }
+  };
+
+  // Contrat complet : tous les champs obligatoires (ou, sans importance
+  // connue, tous les champs) sont remplis. C'est « la fin » du remplissage :
+  // on propose alors de le réutiliser comme modèle.
+  const contratComplet = model.variables.length > 0 && (
+    parImportance
+      ? parImportance.obligatoire.every((v) => isFilled(v.id))
+      : fieldGroups.every((g) => g.varIds.every(isFilled))
+  );
+
   const tbtn = (active: boolean) =>
     `rounded-lg p-1.5 transition-colors ${active ? "bg-brand text-white" : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"}`;
 
@@ -746,37 +862,91 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
               onShared={(r) => setSharedNego({ id: r.negotiationId, mode: r.mode })}
             />
           )}
+          {/* Préremplissage, en tête du panneau : c'est la première chose à
+              faire en arrivant sur le contrat. Générique : fonctionne sur les
+              modèles à champs fixes (emp_*) comme sur les contrats rédigés par
+              l'IA, dont les noms de champs suivent une convention. */}
+          {!shareOpen && (
+            <ContractPrefill
+              variables={model.variables}
+              values={values}
+              origins={origins}
+              setVar={setVar}
+              onVoirChamp={voirChamp}
+              demandeOuverture={demandePrefill}
+            />
+          )}
+
           <div className={`rounded-2xl border border-line bg-white p-4 shadow-card ${shareOpen ? "hidden" : ""}`}>
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">
               Champs à compléter
             </p>
-            <ul className="max-h-60 space-y-1 overflow-y-auto lg:max-h-none lg:overflow-visible">
-              {fieldGroups.map((g) => {
-                const complete = g.varIds.every(isFilled);
-                return (
-                  <li key={g.id}>
-                    <button
-                      onClick={() => scrollToGroup(g)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                        complete ? "bg-brand-light" : "hover:bg-surface-subtle"
-                      }`}
-                    >
-                      <span className={`min-w-0 flex-1 text-sm leading-snug lg:truncate ${complete ? "font-medium text-ink" : "text-ink-secondary"}`}>
-                        {g.label}
-                      </span>
-                      {complete && <Check className="h-4 w-4 shrink-0 text-brand" />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            {parImportance ? (
+              <div className="space-y-3">
+                <ListeChamps titre="Obligatoires" champs={parImportance.obligatoire} values={values} origins={origins} onVoir={voirChamp} marqueManquant />
+                <ListeChamps titre="Recommandés" champs={parImportance.recommande} values={values} origins={origins} onVoir={voirChamp} />
+                {parImportance.optionnel.length > 0 && (
+                  // Optionnels repliés par défaut : ils ne doivent pas détourner
+                  // l'attention de ce qui est nécessaire.
+                  <details className="group/optionnels">
+                    <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-1 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle hover:text-ink-muted [&::-webkit-details-marker]:hidden">
+                      Optionnels ({parImportance.optionnel.length})
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/optionnels:rotate-180" />
+                    </summary>
+                    <div className="pt-1">
+                      <ListeChamps champs={parImportance.optionnel} values={values} origins={origins} onVoir={voirChamp} />
+                    </div>
+                  </details>
+                )}
+              </div>
+            ) : (
+              <ul className="max-h-60 space-y-1 overflow-y-auto lg:max-h-none lg:overflow-visible">
+                {fieldGroups.map((g) => {
+                  const complete = g.varIds.every(isFilled);
+                  return (
+                    <li key={g.id}>
+                      <button
+                        onClick={() => scrollToGroup(g)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
+                          complete ? "bg-brand-light" : "hover:bg-surface-subtle"
+                        }`}
+                      >
+                        <span className={`min-w-0 flex-1 text-sm leading-snug lg:truncate ${complete ? "font-medium text-ink" : "text-ink-secondary"}`}>
+                          {g.label}
+                        </span>
+                        {complete && <Check className="h-4 w-4 shrink-0 text-brand" />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
-          {/* Pré-remplissage des parties par recherche d'entreprise, ici, au moment
-              où l'on remplit les champs du contrat. Générique : fonctionne aussi
-              bien sur les modèles à champs fixes (emp_*) que sur les contrats
-              générés de zéro, dont les noms de champs sont produits par l'IA. */}
-          {!shareOpen && <PartyPrefill variables={model.variables} setVar={setVar} />}
+          {/* Fin du remplissage : proposer de réutiliser ce contrat. */}
+          {!shareOpen && contratComplet && modele !== "saved" && (
+            <div className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-sm font-semibold text-emerald-900">Contrat prêt</p>
+              <p className="text-xs leading-snug text-emerald-800">
+                Réutilisez-le : il rejoint votre bibliothèque, avec des champs vides à remplir.
+              </p>
+              <button
+                type="button"
+                onClick={() => void enregistrerModele()}
+                disabled={modele === "saving"}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {modele === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                Enregistrer comme modèle
+              </button>
+              {modele === "error" && <p className="text-[11px] text-danger">L'enregistrement a échoué. Réessayez.</p>}
+            </div>
+          )}
+          {!shareOpen && modele === "saved" && (
+            <p className="flex items-center gap-1.5 px-1 text-xs text-success-dark">
+              <Check className="h-3.5 w-3.5" /> Modèle enregistré dans votre bibliothèque.
+            </p>
+          )}
         </aside>
 
         {/* Colonne éditeur */}
@@ -796,6 +966,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
               {/* Fonctionnalités du contrat : une icône chacune, avec un mot court
                   sur écran large et une explication immédiate au survol. */}
               <div className="flex shrink-0 items-center gap-0.5">
+                <ToolbarAction icon={Wand2} short="Préremplir" label="Préremplir le contrat avec vos informations et celles de l'autre partie" onClick={() => setDemandePrefill((n) => n + 1)} highlight />
                 <ToolbarAction icon={Share2} short="Partager" label="Partager le contrat avec l'autre partie" onClick={openShare} highlight />
                 <ToolbarAction icon={FileSignature} short="Signer" label="Envoyer le contrat en signature électronique" onClick={goSignature} />
                 <ToolbarAction icon={MessagesSquare} short="Négocier" label="Négocier le contrat avec l'autre partie" onClick={() => void goNegotiation()} />
@@ -811,6 +982,13 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                   label={isFreemium ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
                   onClick={() => void exportDocx()}
                   disabled={!!isFreemium}
+                />
+                <ToolbarAction
+                  icon={BookmarkPlus}
+                  short="Modèle"
+                  label={modele === "saved" ? "Modèle enregistré dans votre bibliothèque" : "Enregistrer ce contrat comme modèle réutilisable"}
+                  onClick={() => void enregistrerModele()}
+                  disabled={modele === "saving"}
                 />
               </div>
             </div>
@@ -986,6 +1164,58 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         </div>
       )}
 
+    </div>
+  );
+}
+
+/**
+ * Liste des champs d'une catégorie d'importance, dans le panneau « Champs à
+ * compléter ». Un clic amène le champ à l'écran ; l'état (rempli, suggéré,
+ * manquant) se lit d'un coup d'œil.
+ */
+function ListeChamps({ titre, champs, values, origins, onVoir, marqueManquant = false }: {
+  titre?: string;
+  champs: VariableDef[];
+  values: Record<string, string>;
+  origins: Record<string, string>;
+  onVoir: (id: string) => void;
+  /** Point de couleur sur les champs vides (obligatoires). */
+  marqueManquant?: boolean;
+}) {
+  if (champs.length === 0) return null;
+  const faits = champs.filter((v) => (values[v.id] ?? "").trim()).length;
+  return (
+    <div>
+      {titre && (
+        <p className="mb-1 flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
+          {titre}
+          <span className="font-medium normal-case tracking-normal tabular-nums">{faits}/{champs.length}</span>
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {champs.map((v) => {
+          const rempli = (values[v.id] ?? "").trim().length > 0;
+          const suggere = rempli && origins[v.id] === "suggestion";
+          return (
+            <li key={v.id}>
+              <button
+                type="button"
+                onClick={() => onVoir(v.id)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-subtle"
+              >
+                <span className={`min-w-0 flex-1 truncate text-[13px] ${rempli ? "text-ink" : "text-ink-secondary"}`}>{v.label}</span>
+                {suggere ? (
+                  <span className="shrink-0 rounded bg-violet-100 px-1 text-[9px] font-semibold uppercase tracking-wide text-violet-700">Suggéré</span>
+                ) : rempli ? (
+                  <Check className="h-3.5 w-3.5 shrink-0 text-brand" />
+                ) : marqueManquant ? (
+                  <span aria-label="À compléter" className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

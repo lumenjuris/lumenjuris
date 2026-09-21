@@ -1187,47 +1187,15 @@ export function Generateur() {
     else setSearchParams({ section: "scratch" });
   }
 
-  // Contrat créé par le questionnaire : on l'archive, on le préenregistre en
-  // bibliothèque de modèles (réutilisable), puis on ouvre l'éditeur.
+  // Contrat créé par le questionnaire : on l'archive, puis on ouvre l'éditeur.
+  // Il n'est plus enregistré d'office comme modèle : l'éditeur le propose à
+  // la fin du remplissage (et dans sa barre d'actions), avec le contenu tel
+  // que l'utilisateur l'a finalisé.
   function handleScratchReady(r: { model: ContractModel; fileBase: string }) {
     const title = wizardTitle ?? r.model.label;
     addCreatedContract({ title, model: r.model, fileBase: r.fileBase });
-    void saveModelAsTemplate(title, r.model);
     setBlankEditor(r);
     setSearchParams({ section: "blank" });
-  }
-
-  /** Préenregistre le contrat généré comme modèle réutilisable (best-effort :
-   *  un échec ne bloque jamais l'ouverture de l'éditeur). Le tokeniseur des
-   *  modèles lit nativement le format {{variable}} : aucune conversion du
-   *  contenu n'est nécessaire. */
-  async function saveModelAsTemplate(title: string, model: ContractModel) {
-    try {
-      const structure: TemplateStructure = {
-        sections: model.blocks
-          .filter((b) => b.kind !== "title" && b.content?.trim())
-          .map((b, i) => {
-            const heading = b.heading?.trim() || (b.kind === "signature" ? "Signatures" : `Section ${i + 1}`);
-            const vars = model.variables
-              .filter((v) => (b.content ?? "").includes(`{{${v.id}}}`))
-              .map((v) => v.id);
-            return {
-              title: heading,
-              clauses: [{ id: b.id, title: heading, content: b.content, variables: vars }],
-            };
-          }),
-        detectedVariables: model.variables.map((v) => v.id),
-      };
-      const res = await fetchProxy("/api/template", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: title, contractType: title, structure }),
-      });
-      if (res.ok) notifyAdded();
-    } catch {
-      // silencieux : le contrat reste utilisable et ré-enregistrable plus tard
-    }
   }
 
   // Rouvre un contrat déjà créé depuis l'historique.
