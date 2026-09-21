@@ -236,11 +236,7 @@ export function PlansPanel() {
 
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="flex flex-col mb-2">
-        <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Tarifs</h3>
-        <p className="mt-1 text-sm text-ink-muted">Tarification adaptée à votre organisation</p>
-      </div>
+    <div className="mx-auto max-w-7xl pb-6">
       {/* ── En-tête + toggle mensuel/annuel ── */}
       <PageBanner
         title="Accéder à nos outils"
@@ -298,7 +294,7 @@ export function PlansPanel() {
       )}
 
       {/* ── Grille des 3 offres principales ── */}
-      <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           const actuelle = estActuelle(plan);
