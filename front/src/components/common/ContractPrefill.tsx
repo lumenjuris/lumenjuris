@@ -254,6 +254,8 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
 
   // ── Rendu ────────────────────────────────────────────────────────────────
   const ordre = maGroupe ? [maGroupe, ...parties.filter((g) => g !== maGroupe)] : parties;
+  // Aucune partie reconnue (contrat entre personnes, modèle sans société) : rien à préremplir.
+  if (parties.length === 0) return null;
 
   return (
     <div className="space-y-2.5 rounded-2xl border border-brand/25 bg-white p-3 shadow-card">

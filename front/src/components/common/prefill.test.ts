@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { trouverParties, valeurPourChamp, valeursDuProfil, valeursSirene } from "./prefill";
+import { reconnaitre, trouverParties, valeurPourChamp, valeursDuProfil, valeursSirene } from "./prefill";
 import type { UserData } from "../../types/userData";
 import type { CompanyResult } from "../../types/companySearch";
 
@@ -73,5 +73,21 @@ describe("valeursSirene", () => {
     expect(v.rcs).toBe("PARIS");
     expect(v.representant).toBe("Antoine Saint-Affrique");
     expect(v.qualite).toBe("Directeur Général");
+  });
+});
+
+describe("reconnaitre", () => {
+  it("accepte la donnée placée avant la partie, et le libellé à défaut du nom", () => {
+    expect(reconnaitre("siren_du_prestataire")).toEqual({ prefixe: "prestataire", donnee: "siren" });
+    expect(reconnaitre("representant_legal_client")).toEqual({ prefixe: "client", donnee: "representant" });
+    expect(reconnaitre("var_3", "Adresse du siège social du client")).toEqual({ prefixe: "client", donnee: "adresse" });
+    expect(reconnaitre("date_signature", "Date de signature")).toBeNull();
+  });
+});
+
+describe("reconnaitre (représentant)", () => {
+  it("le nom du représentant n'est pas pris pour la dénomination", () => {
+    expect(reconnaitre("nom_du_representant_du_client")).toEqual({ prefixe: "client", donnee: "representant" });
+    expect(reconnaitre("client_nom")).toEqual({ prefixe: "client", donnee: "denomination" });
   });
 });

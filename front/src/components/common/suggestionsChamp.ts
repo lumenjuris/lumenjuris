@@ -157,3 +157,17 @@ export function suggestionsPourChamp(id: string, label: string, ctx: ContexteSug
 
   return [];
 }
+
+/**
+ * Champ à rédiger (description, livrables, planning…) : on y propose un texte
+ * écrit par l'IA, jamais une valeur toute faite.
+ */
+export function estChampRedige(id: string, label: string): boolean {
+  const cle = `${id} ${label}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_");
+  if (/date|montant|prix|tarif|taux|duree|delai|nombre|siren|siret|adresse|email|telephone/.test(cle)) return false;
+  return /description|objet|livrable|planning|jalon|mission|perimetre|modalite|nature_des|detail|contenu|obligations|activite|fonctions|poste/.test(cle);
+}

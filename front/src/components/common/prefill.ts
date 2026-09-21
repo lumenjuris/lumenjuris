@@ -8,8 +8,8 @@
  *
  * Les contrats n'ont pas de liste de champs figée : les modèles fixes
  * utilisent `emp_denomination`, les contrats rédigés par l'IA des noms comme
- * `prestataire_siret`. On reconnaît donc chaque champ par son suffixe, et on
- * regroupe les champs d'une même partie par leur préfixe.
+ * `prestataire_siret`. On reconnaît donc chaque champ aux mots de son nom (ou
+ * de son libellé), et on regroupe les champs d'une même partie.
  */
 import type { CompanyResult, CompanySearchResponse } from "../../types/companySearch";
 import type { UserData } from "../../types/userData";
@@ -26,33 +26,65 @@ export type Donnee =
   | "adresse" | "code_postal" | "ville" | "rcs" | "representant" | "qualite"
   | "email" | "telephone" | "tva";
 
-/** Suffixe de champ -> donnée. L'ordre compte : le plus précis d'abord. */
-const CORRESPONDANCES: { motif: RegExp; donnee: Donnee }[] = [
-  { motif: /(rcs_ville|ville_rcs|rcs|greffe)$/, donnee: "rcs" },
-  { motif: /(code_postal|cp)$/, donnee: "code_postal" },
-  { motif: /(denomination|raison_sociale|nom_societe|societe|entreprise|nom)$/, donnee: "denomination" },
-  { motif: /(forme_juridique|forme)$/, donnee: "forme_juridique" },
-  { motif: /(capital_social|capital)$/, donnee: "capital" },
-  { motif: /(tva_intracommunautaire|tva_intracom|numero_tva|num_tva|n_tva)$/, donnee: "tva" },
-  { motif: /siren$/, donnee: "siren" },
-  { motif: /siret$/, donnee: "siret" },
-  { motif: /ville$/, donnee: "ville" },
-  { motif: /(adresse|siege_social|siege)$/, donnee: "adresse" },
-  { motif: /(representant|representee_par|represente_par|signataire|dirigeant)$/, donnee: "representant" },
-  { motif: /(qualite|fonction)$/, donnee: "qualite" },
-  { motif: /(email|e_mail|courriel|mail)$/, donnee: "email" },
-  { motif: /(telephone|tel|phone)$/, donnee: "telephone" },
+/**
+ * Mots désignant chaque donnée. L'ordre compte : le plus précis d'abord
+ * (« rcs_ville » avant « ville »). Le mot peut être n'importe où dans le nom
+ * du champ : `client_siren` comme `siren_du_client`.
+ */
+const CORRESPONDANCES: { mots: string[]; donnee: Donnee }[] = [
+  { mots: ["rcs_ville", "ville_rcs", "ville_d_immatriculation", "rcs", "greffe"], donnee: "rcs" },
+  { mots: ["code_postal", "cp"], donnee: "code_postal" },
+  { mots: ["tva_intracommunautaire", "tva_intracom", "numero_tva", "num_tva", "n_tva"], donnee: "tva" },
+  // Avant la dénomination : « nom du représentant » désigne le représentant.
+  { mots: ["representant_legal", "representant", "representee_par", "represente_par", "signataire", "dirigeant"], donnee: "representant" },
+  { mots: ["denomination_sociale", "denomination", "raison_sociale", "nom_societe", "nom_entreprise", "societe", "entreprise", "nom"], donnee: "denomination" },
+  { mots: ["forme_juridique", "forme"], donnee: "forme_juridique" },
+  { mots: ["capital_social", "capital"], donnee: "capital" },
+  { mots: ["siren"], donnee: "siren" },
+  { mots: ["siret"], donnee: "siret" },
+  { mots: ["ville", "commune"], donnee: "ville" },
+  { mots: ["adresse", "siege_social", "siege"], donnee: "adresse" },
+  { mots: ["qualite", "fonction"], donnee: "qualite" },
+  { mots: ["email", "e_mail", "courriel", "mail"], donnee: "email" },
+  { mots: ["telephone", "tel", "phone"], donnee: "telephone" },
 ];
+
+/** Mots de liaison retirés pour isoler le nom de la partie. */
+const LIAISONS = new Set(["du", "de", "des", "la", "le", "l", "d", "legal", "social", "sociale", "siege", "numero", "n", "no", "nom", "prenom"]);
 
 export interface ChampPartie { id: string; donnee: Donnee }
 export interface GroupePartie { prefixe: string; libelle: string; champs: ChampPartie[] }
 
-export function reconnaitre(id: string): { prefixe: string; donnee: Donnee } | null {
-  for (const { motif, donnee } of CORRESPONDANCES) {
-    const m = motif.exec(id);
-    if (m) return { prefixe: id.slice(0, m.index).replace(/_+$/, ""), donnee };
+function jetons(texte: string): string[] {
+  return texte
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+function reconnaitreJetons(t: string[]): { prefixe: string; donnee: Donnee } | null {
+  for (const { mots, donnee } of CORRESPONDANCES) {
+    for (const mot of mots) {
+      const m = mot.split("_");
+      for (let i = 0; i + m.length <= t.length; i += 1) {
+        if (m.every((x, k) => t[i + k] === x)) {
+          const reste = [...t.slice(0, i), ...t.slice(i + m.length)].filter((x) => !LIAISONS.has(x));
+          return { prefixe: reste.join("_"), donnee };
+        }
+      }
+    }
   }
   return null;
+}
+
+/**
+ * Donnée portée par un champ et partie à laquelle il appartient, d'après son
+ * nom technique, ou à défaut son libellé (« Adresse du prestataire »).
+ */
+export function reconnaitre(id: string, label?: string): { prefixe: string; donnee: Donnee } | null {
+  return reconnaitreJetons(jetons(id)) ?? (label ? reconnaitreJetons(jetons(label)) : null);
 }
 
 /** Libellé lisible d'une partie à partir du préfixe technique. */
@@ -78,10 +110,10 @@ function libelle(prefixe: string): string {
  * (dénomination ou numéro d'immatriculation) et au moins deux données. Sans
  * cela, on proposerait une recherche d'entreprise sur « date_signature ».
  */
-export function trouverParties(variables: { id: string }[]): GroupePartie[] {
+export function trouverParties(variables: { id: string; label?: string }[]): GroupePartie[] {
   const parPrefixe = new Map<string, GroupePartie>();
   for (const v of variables) {
-    const r = reconnaitre(v.id);
+    const r = reconnaitre(v.id, v.label);
     if (!r) continue;
     const g = parPrefixe.get(r.prefixe) ?? { prefixe: r.prefixe, libelle: libelle(r.prefixe), champs: [] };
     g.champs.push({ id: v.id, donnee: r.donnee });
@@ -171,6 +203,29 @@ export function villeDeLAdresse(adresse?: string | null): string | null {
     .replace(/[a-zà-ÿ]+/g, (mot, i: number) =>
       i > 0 && petits.has(mot) ? mot : mot.charAt(0).toUpperCase() + mot.slice(1),
     );
+}
+
+const villesConnues = new Map<string, string | null>();
+
+/**
+ * Ville de la fiche entreprise. L'adresse enregistrée n'a pas toujours le
+ * code postal (« 59 RUE LA FAYETTE PARIS ») : on la situe alors avec la Base
+ * Adresse Nationale. Résultat gardé en mémoire le temps de la session.
+ */
+export async function villeDeLaFiche(adresse?: string | null, codePostal?: string | null): Promise<string | null> {
+  const directe = villeDeLAdresse(adresse);
+  if (directe || !adresse || !codePostal) return directe;
+  const cle = `${adresse}|${codePostal}`;
+  if (villesConnues.has(cle)) return villesConnues.get(cle) ?? null;
+  try {
+    const res = await fetch(`https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(`${adresse} ${codePostal}`)}&postcode=${codePostal}&limit=1`);
+    const data = res.ok ? await res.json() : null;
+    const ville = (data?.features?.[0]?.properties?.city as string | undefined) ?? null;
+    villesConnues.set(cle, ville);
+    return ville;
+  } catch {
+    return null;
+  }
 }
 
 /**

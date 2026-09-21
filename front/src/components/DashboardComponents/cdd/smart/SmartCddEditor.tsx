@@ -22,6 +22,7 @@ import { splitSegments } from "../../../../contractEngine/segments";
 import { Variable } from "./VariableNode";
 import { CompanySearchField } from "../../../common/CompanySearchField";
 import { ContractPrefill, type OrigineChamp } from "../../../common/ContractPrefill";
+import { trouverParties } from "../../../common/prefill";
 import { useTemplateNotificationStore } from "../../../../store/templateNotificationStore";
 import { mapCompanyToContractParty, formatConventionFromCompany } from "../../../../utils/companyLookup";
 import type { CompanyResult } from "../../../../types/companySearch";
@@ -265,6 +266,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   // Préremplissage : le bouton de la barre d'outils ouvre le panneau.
   const [demandePrefill, setDemandePrefill] = useState(0);
+  // Préremplir n'a de sens que si le contrat a des parties (sociétés) reconnues.
+  const aPrefill = useMemo(() => trouverParties(model.variables).length > 0, [model]);
 
   /** Focus + défilement vers le premier champ non rempli d'une section (ou le premier). */
   const scrollToGroup = (group: FieldGroup) => {
@@ -818,6 +821,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   // Contrat complet : tous les champs obligatoires (ou, sans importance
   // connue, tous les champs) sont remplis. C'est « la fin » du remplissage :
   // on propose alors de le réutiliser comme modèle.
+  // Contrat sans aucun champ : pas de colonne de gauche, le document prend toute la largeur.
+  const aDesChamps = parImportance ? model.variables.length > 0 : fieldGroups.some((g) => g.varIds.length > 0);
   const contratComplet = model.variables.length > 0 && (
     parImportance
       ? parImportance.obligatoire.every((v) => isFilled(v.id))
@@ -844,9 +849,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
       {/* Corps : panneau latéral + éditeur. En mode partage, la colonne
           s'élargit pour accueillir le panneau (on reste sur le contrat). */}
-      <div className={`grid grid-cols-1 items-start gap-6 ${shareOpen ? "lg:grid-cols-[19rem_minmax(0,1fr)]" : "lg:grid-cols-[16rem_minmax(0,1fr)]"}`}>
+      <div className={`grid grid-cols-1 items-start gap-6 ${shareOpen ? "lg:grid-cols-[19rem_minmax(0,1fr)]" : aDesChamps ? "lg:grid-cols-[16rem_minmax(0,1fr)]" : ""}`}>
         {shareOpen && <div aria-hidden className="fixed inset-x-0 top-12 bottom-0 z-[25] bg-ink/[0.03] pointer-events-none" />}
-        <aside className={`space-y-4 self-start lg:sticky lg:top-12 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
+        <aside className={`${!shareOpen && !aDesChamps ? "hidden" : ""} space-y-4 self-start lg:sticky lg:top-12 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:pr-1 ${shareOpen ? "relative z-30" : ""}`}>
           {shareOpen && (
             <ShareContractPanel
               onClose={() => setShareOpen(false)}
@@ -966,7 +971,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
               {/* Fonctionnalités du contrat : une icône chacune, avec un mot court
                   sur écran large et une explication immédiate au survol. */}
               <div className="flex shrink-0 items-center gap-0.5">
-                <ToolbarAction icon={Wand2} short="Préremplir" label="Préremplir le contrat avec vos informations et celles de l'autre partie" onClick={() => setDemandePrefill((n) => n + 1)} highlight />
+                {aPrefill && (
+                  <ToolbarAction icon={Wand2} short="Préremplir" label="Préremplir le contrat avec vos informations et celles de l'autre partie" onClick={() => setDemandePrefill((n) => n + 1)} highlight />
+                )}
                 <ToolbarAction icon={Share2} short="Partager" label="Partager le contrat avec l'autre partie" onClick={openShare} highlight />
                 <ToolbarAction icon={FileSignature} short="Signer" label="Envoyer le contrat en signature électronique" onClick={goSignature} />
                 <ToolbarAction icon={MessagesSquare} short="Négocier" label="Négocier le contrat avec l'autre partie" onClick={() => void goNegotiation()} />
