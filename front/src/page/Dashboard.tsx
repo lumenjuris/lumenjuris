@@ -2,7 +2,6 @@ import { useUserStore } from "../store/userStore";
 import { useDashboardData } from "../components/DashboardComponents/home/useDashboardData";
 import { InfoBanner } from "../components/DashboardComponents/home/InfoBanner";
 import { HeroHeader } from "../components/DashboardComponents/home/HeroHeader";
-import { OnboardingSteps } from "../components/DashboardComponents/home/OnboardingSteps";
 import { UpcomingDeadlines } from "../components/DashboardComponents/home/UpcomingDeadlines";
 import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
 import { SubscriptionCard } from "../components/DashboardComponents/home/SubscriptionCard";
@@ -10,13 +9,10 @@ import { SubscriptionCard } from "../components/DashboardComponents/home/Subscri
 /**
  * Page d'accueil (`/dashboard`).
  *
- * L'en-tête occupe toute la largeur : il porte les deux points d'entrée de
- * l'outil (générer / importer un contrat). En dessous, deux colonnes :
- *   - à gauche, ce sur quoi on travaille (prise en main, file « À traiter ») ;
- *   - à droite, ce qu'on consulte d'un coup d'œil (échéances, crédits).
- *
- * La colonne de droite passe sous la principale en dessous de `xl` : le menu
- * latéral mange déjà de la largeur sur les écrans intermédiaires.
+ * Compacte et organisée à l'horizontale : l'en-tête place la salutation à côté
+ * des deux points d'entrée (générer / importer un contrat), puis la file de
+ * travail et les échéances sont côte à côte sur écran large. (Le bloc
+ * « Premiers pas » a été retiré : il faisait doublon avec ces deux entrées.)
  *
  * Toutes les données viennent d'un seul chargement (`useDashboardData`).
  */
@@ -39,30 +35,12 @@ export function Dashboard() {
         loading={data.loading}
       />
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-5">
-          {/* Le bloc de prise en main s'efface dès que les trois étapes sont faites. */}
-          {!data.loading && !data.onboardingCompleted && (
-            <OnboardingSteps steps={data.onboarding} loading={data.loading} />
-          )}
-
-          <TodayQueue items={data.queue} loading={data.loading} />
-        </div>
-
-        <div className="flex flex-col gap-5">
-          <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
-
-          <SubscriptionCard
-            planName={data.planName}
-            quotas={data.quotas}
-            loading={data.loading}
-          />
-        </div>
+      {/* Le titre « Lumen Juris » de bas de page a été retiré : le logo du menu
+          suffit à situer l'utilisateur, la page d'accueil reste utilitaire. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <TodayQueue items={data.queue} loading={data.loading} />
+        <UpcomingDeadlines items={data.deadlines} loading={data.loading} />
       </div>
-
-      <p className="font-serif text-sm italic text-ink-muted">
-        Lumen Juris — Metre en lumière le juridique.
-      </p>
     </div>
   );
 }

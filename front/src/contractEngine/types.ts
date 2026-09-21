@@ -41,6 +41,12 @@ export interface VariableDef {
   id: string;
   label: string;
   type: VarType;
+  /**
+   * Importance du champ, fournie par la rédaction IA des contrats « de zéro ».
+   * Absente sur les modèles fixes : le champ est alors traité normalement.
+   * Les champs optionnels sont regroupés et repliés dans l'éditeur.
+   */
+  importance?: "obligatoire" | "recommande" | "optionnel";
   default?: string;
   placeholder?: string;
   constraints?: VariableConstraint[];

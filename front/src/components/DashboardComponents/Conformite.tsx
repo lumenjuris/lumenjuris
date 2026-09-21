@@ -26,8 +26,35 @@ import {
 import { contractApi } from "./contratheque/api";
 import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
 import { QuotaLimitModal } from "../common/QuotaLimitModal";
-import { AnalysisHistoryTable } from "./conformite/AnalysisHistoryTable";
-import { formatDate, getRiskLevel, getRiskStyles } from "./conformite/riskLevel";
+import { BannerAction, PageBanner } from "../common/PageBanner";
+
+type RiskLevel = "Élevé" | "Moyen" | "Faible" | "—";
+
+function getRiskLevel(score?: number): RiskLevel {
+  if (score === undefined || score === null) return "—";
+  if (score >= 60) return "Élevé";
+  if (score >= 30) return "Moyen";
+  return "Faible";
+}
+
+function getRiskStyles(level: RiskLevel): string {
+  switch (level) {
+    case "Élevé": return "text-danger-dark border-danger/20 bg-danger-light";
+    case "Moyen": return "text-warning-dark border-warning/20 bg-warning-light";
+    case "Faible": return "text-success-dark border-success/20 bg-success-light";
+    default: return "text-ink-subtle border-line bg-surface-muted";
+  }
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 function avgScore(items: ContractHistoryItem[]): number {
   const scored = items.filter((i) => i.overallRiskScore !== undefined);
@@ -165,22 +192,30 @@ export function Conformite() {
 
   return (
     <>
-      <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
-          <div className="text-left">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-              Analyse de conformité
-            </h2>
-            <p className="text-sm text-gray-primary leading-relaxed mt-1">
-              Vérifiez la conformité juridique de vos documents.
-            </p>
-          </div>
-          <button
-            onClick={handleNewAnalysis}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 will-change-transform backface-invisible shadow-sm shrink-0 self-start sm:self-end"
-          >
-            <Plus className="text-base font-normal" /> Nouvelle analyse
-          </button>
+    <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
+      {/* Title + CTA */}
+      <PageBanner
+        title="Analyse de conformité"
+        subtitle="Vérifiez la conformité juridique de vos documents."
+        actions={
+          <BannerAction onClick={handleNewAnalysis} icon={<Plus />}>
+            Nouvelle analyse
+          </BannerAction>
+        }
+      />
+
+
+      {/* KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <KpiCard label="Total documents" value={history.length} icon={BarChart3} accent="#2C3A5E" />
+        <KpiCard label="Risque élevé" value={highRiskCount} icon={ShieldAlert} accent="#dc2626" />
+        <KpiCard
+          label="Conformité moy."
+          value={history.length ? `${conformityAvg}%` : "—"}
+          icon={FileCheck}
+          accent="#059669"
+        />
+      </div>
 
           <input
             ref={fileInputRef}

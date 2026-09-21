@@ -33,7 +33,7 @@ export function ParamLayout({
   return (
 
 
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl w-full mx-auto space-y-6">
       <PageBanner title={title} subtitle="Modifiez les paramètres de votre compte" />
 
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">

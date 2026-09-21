@@ -201,6 +201,10 @@ export type ContractPartyPrefill = {
   nom: string | null;
   forme_juridique: string | null;
   siren: string | null;
+  /** SIRET de l'établissement ciblé (le siège à défaut). */
+  siret: string | null;
+  /** Adresse postale (voie) de l'établissement. */
+  adresse: string | null;
   code_postal: string | null;
   ville: string | null;
   rcs_ville: string | null;
@@ -251,6 +255,8 @@ export function mapCompanyToContractParty(
       result.nom_complet?.trim() || result.nom_raison_sociale?.trim() || null,
     forme_juridique: formeJuridiqueLabel(result.nature_juridique),
     siren: result.siren?.trim() || null,
+    siret: etab?.siret?.trim() || null,
+    adresse: etab ? composeAddress(etab) : null,
     code_postal: etab?.code_postal?.trim() || null,
     ville,
     // Le greffe RCS correspond le plus souvent à la ville du siège (modifiable).

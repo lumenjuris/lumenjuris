@@ -43,18 +43,17 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
       <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(97,146,214,0.35)_0%,rgba(97,146,214,0)_70%)]" />
       <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(214,178,102,0.18)_0%,rgba(214,178,102,0)_70%)]" />
 
-      <div className="relative flex flex-col gap-7 px-6 pb-7 pt-7 sm:px-8 sm:pt-9">
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <span className="text-2xs font-semibold uppercase tracking-[0.18em] text-[#d6b266]">
-            Lumen Juris
-          </span>
-          <h1 className="font-serif text-3xl font-normal leading-tight tracking-tight text-white sm:text-[40px]">
+      {/* Sur écran large, la salutation et les deux actions tiennent sur une
+          seule rangée : l'en-tête occupe deux fois moins de hauteur. */}
+      <div className="relative flex flex-col gap-4 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-1.5 lg:max-w-sm">
+          <h1 className="font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[28px]">
             {greeting}
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/60">{subline}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl lg:flex-1">
           <PrimaryAction
             to="/contrat-generation?section=scratch"
             icon={Sparkles}
@@ -116,7 +115,7 @@ function PrimaryAction({ to, icon: Icon, title, description, emphasis }: ActionP
   return (
     <Link
       to={to}
-      className={`group flex items-start gap-3.5 rounded-[18px] px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 ${cardStyle}`}
+      className={`group flex items-start gap-3.5 rounded-2xl px-4 py-3 transition-colors ${cardStyle}`}
     >
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${iconStyle}`}>
         <Icon className="h-[18px] w-[18px]" />

@@ -14,7 +14,7 @@ import { buildPdfFromText } from "./buildPdfFromText";
 import { STATUS_LABEL, STATUS_STYLE } from "./types";
 import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
-import { PageBanner } from "../../common/PageBanner";
+import { BANNER_ACTION_CLASS, PageBanner } from "../../common/PageBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 
 
@@ -121,7 +121,7 @@ export function NegotiationWorkspace() {
   const st = STATUS_STYLE[data.status];
 
   return (
-    <div className="space-y-4 -mt-2 sm:-mt-3 lg:-mt-5 max-w-7xl w-full mx-auto">
+    <div className="space-y-4 max-w-7xl w-full mx-auto">
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4">
         {versionSuccess && (
@@ -157,14 +157,13 @@ export function NegotiationWorkspace() {
               {data.status === "VALIDATED" ? "Prêt à signer" : STATUS_LABEL[data.status]}
             </span>
           }
-        >
-          {/* Barre d'actions sous forme de boutons harmonisés */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          actions={
+            <>
             {data.versions.length > 1 && (
               <select
                 value={selectedVersion?.id ?? ""}
                 onChange={(e) => setVersionId(e.target.value)}
-                className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed outline-none cursor-pointer [&>option]:text-ink"
+                className="h-10 cursor-pointer rounded-xl bg-white px-3 text-sm font-semibold text-blue-primary shadow-card outline-none"
               >
                 {data.versions.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -178,7 +177,7 @@ export function NegotiationWorkspace() {
                 {selectedVersion && !selectedVersion.isFinal && (
                   <button
                     onClick={() => void validateDisplayed()}
-                    className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={BANNER_ACTION_CLASS}
                     title="Marquer la version affichée comme version définitive"
                   >
                     Valider cette version
@@ -189,7 +188,7 @@ export function NegotiationWorkspace() {
                 <button
                   onClick={() => void exitToSignature()}
                   disabled={!data.finalVersionId}
-                  className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className={BANNER_ACTION_CLASS}
                   title={data.finalVersionId ? "Envoyer la version validée en signature" : "Validez d'abord une version"}
                 >
                   Envoyer en signature
@@ -197,14 +196,15 @@ export function NegotiationWorkspace() {
                 )}
                 <button
                   onClick={() => void abort()}
-                  className="px-3.5 py-2 text-xs font-medium text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className={BANNER_ACTION_CLASS}
                 >
                   Abandonner
                 </button>
               </>
             )}
-          </div>
-        </PageBanner>
+            </>
+          }
+        />
       </div>
 
       <div className="">
