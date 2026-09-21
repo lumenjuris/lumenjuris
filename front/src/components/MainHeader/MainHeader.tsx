@@ -2,6 +2,7 @@
 import { MouseEvent } from "react";
 import HeaderNavigationBar from "./HeaderNavigationBar";
 import { PanelLeft } from "lucide-react";
+import { LumenJurisLogo } from "../common/LumenJurisLogo";
 
 
 type NavigationClickHandler = (
@@ -12,7 +13,7 @@ interface MainHeaderProps {
   onNavClick?: NavigationClickHandler;
   setIsConnected?: React.Dispatch<React.SetStateAction<boolean>>;
   onToggleSidebar?: () => void;
-  rotatePannelLeft:boolean
+  rotatePannelLeft?: boolean
 }
 
 // La date et l'heure ne sont plus affichées dans l'en-tête : elles occupaient
@@ -32,6 +33,13 @@ export const MainHeader = ({ onNavClick, onToggleSidebar, rotatePannelLeft }: Ma
           >
             <PanelLeft className={`h-5 w-5 rotate-${rotatePannelLeft? "-180" : "180"}` } />
           </button>
+        )}
+        {/* Pages publiques (inscription, connexion) : pas de menu latéral, donc
+            le logo, qui ramène à la page d'accueil du site. */}
+        {!onToggleSidebar && (
+          <a href="https://www.lumenjuris.com" className="flex items-center pl-4" aria-label="Accueil Lumen Juris">
+            <LumenJurisLogo variant="light" height={26} />
+          </a>
         )}
       </div>
 
