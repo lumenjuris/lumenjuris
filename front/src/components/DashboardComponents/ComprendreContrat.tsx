@@ -536,9 +536,7 @@ export function ComprendreContrat() {
             )}
           </div>
         ) : (
-          <div className="mt-8 border-t border-gray-100 pt-8 text-center text-gray-400">
-            <p className="text-sm">Analysez un contrat, ou ouvrez-en un dans la liste ci-dessous.</p>
-          </div>
+          null
         )}
 
         {/* Historique : tous les contrats déjà analysés, en liste sous
