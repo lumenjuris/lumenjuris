@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -24,6 +24,7 @@ import { useTemplateNotificationStore } from "../../store/templateNotificationSt
 import { useLegalWatchStore } from "../../store/legalWatchStore";
 import { LumenJurisLogo } from "../common/LumenJurisLogo";
 import { useUserStore } from "../../store/userStore";
+import { useLayoutStore } from "../../store/layoutStore";
 
 import { ErrorBoundary } from "../ContractAnalysis/ErrorBoundary";
 
@@ -221,6 +222,25 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
     return () => mql.removeEventListener("change", handleChange);
   }, []);
 
+  // Contrat ouvert dans l'éditeur : on replie le menu pour laisser la place au
+  // document, puis on le remet comme il était en quittant l'éditeur. Sur
+  // mobile, le menu est déjà un tiroir fermé par défaut : rien à faire.
+  const editeurPleinEcran = useLayoutStore((s) => s.editeurPleinEcran);
+  const menuAvantEditeur = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (window.innerWidth < MOBILE_BREAKPOINT) return;
+    if (editeurPleinEcran) {
+      menuAvantEditeur.current = sidebarOpen;
+      setSidebarOpen(false);
+    } else if (menuAvantEditeur.current !== null) {
+      setSidebarOpen(menuAvantEditeur.current);
+      menuAvantEditeur.current = null;
+    }
+    // L'état du menu est lu au moment du basculement, pas suivi en continu :
+    // l'utilisateur reste libre de le rouvrir pendant qu'il édite.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editeurPleinEcran]);
+
   // Bloque le scroll du body quand le drawer mobile est ouvert
   useEffect(() => {
     const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
@@ -264,7 +284,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         {/* Logo + bouton fermeture */}
         <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
-            <LumenJurisLogo variant="dark" height={30} />
+            <LumenJurisLogo variant="dark" height={44} />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -314,7 +334,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         />
 
 
-        <main className="flex-1 p-4 sm:p-5 lg:p-7">
+        <main className="flex-1 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-3">
           <ErrorBoundary key={location.pathname}>
             {children ?? <Outlet />}
           </ErrorBoundary>

@@ -1,13 +1,11 @@
 // UI //
 import {
-  LogInIcon,
   User,
   Bell,
   LogOutIcon,
   AlertCircleIcon,
   HandCoinsIcon,
 } from "lucide-react";
-import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +13,7 @@ import {
   DropdownMenuItem
 } from "../ui/DropDownMenu";
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import type { MouseEvent } from "react";
 
@@ -114,12 +112,10 @@ function deriveOverallBadge(tab: NotificationItem[]): NotificationBadge {
  *                   (logout, mon compte…). Retourner `false` annule la navigation.
  */
 const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const { userData, isConnected, userAvatarUrl, logoutUser } = useUserStore();
 
-  const [isMobile, setIsMobile] = useState(false);
   const [notificationTab, setNotificationTab] = useState<NotificationItem[]>(
     [],
   );
@@ -136,15 +132,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
     }
     setNotificationTab(tab);
   }, [userData]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   useEffect(() => {
     fetchNotificationData();
@@ -277,80 +264,7 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </DropdownMenu>
           </div>
         </section>
-      ) : (
-        <nav className="flex items-center gap-1 pr-2">
-          {isMobile ? (
-            <>
-              <Link to="/souscription">
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  className={
-                    pathname === "/souscription"
-                      ? " text-gray-500 tracking-wide font-semibold hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <HandCoinsIcon
-                    className={pathname === "/souscription" ? "size-6" : ""}
-                  />
-                </Button>
-              </Link>
-              <Link to="/inscription">
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  className={
-                    pathname === "/inscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <LogInIcon
-                    className={pathname === "/inscription" ? "size-6" : ""}
-                  />
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              {" "}
-              <Link to="/souscription">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={
-                    pathname === "/souscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <HandCoinsIcon
-                    className={pathname === "/souscription" ? "size-5" : ""}
-                  />
-                  Tarifs
-                </Button>
-              </Link>
-              <Link to="/inscription">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={
-                    pathname === "/inscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <LogInIcon
-                    className={pathname === "/inscription" ? "size-5" : ""}
-                  />
-                  Se connecter
-                </Button>
-              </Link>
-            </>
-          )}
-        </nav>
-      )}
+      ) : null}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Check, FolderPlus, Loader2 } from "lucide-react";
 import { contractApi } from "../DashboardComponents/contratheque/api";
 import type { ContractAnalysis } from "../../types";
 import type { AnalysisContext } from "../../types/contextualAnalysis";
+import { BANNER_ACTION_CLASS } from "../common/PageBanner";
 
 /**
  * Enregistre le contrat analysé dans la contrathèque.
@@ -23,7 +24,8 @@ export function AddToContrathequeButton({ contract, context }: PropsBtn) {
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white rounded-xl shadow-sm disabled:opacity-50 transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85";
+  // Bouton du bandeau bleu : même style que tous les boutons d'en-tête.
+  const btnPrimary = BANNER_ACTION_CLASS;
 
   const btnDone = `${btnPrimary}`;
 

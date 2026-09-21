@@ -17,7 +17,12 @@ function slug(s: string): string {
 }
 
 function buildModel(title: string, draft: ContractDraft): ContractModel {
-  const variables: VariableDef[] = draft.variables.map((v) => ({ id: v.id, label: v.label, type: "text" }));
+  const variables: VariableDef[] = draft.variables.map((v) => ({
+    id: v.id,
+    label: v.label,
+    type: "text",
+    ...(v.importance ? { importance: v.importance } : {}),
+  }));
   const blocks: BlockDef[] = [
     { id: "title", kind: "title", content: draft.title || title.toUpperCase() },
   ];

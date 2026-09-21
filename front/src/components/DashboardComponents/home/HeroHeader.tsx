@@ -39,16 +39,17 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
       {/* Filet doré en haut de la carte */}
       <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,rgba(214,178,102,0.9)_0%,rgba(214,178,102,0.15)_34%,rgba(255,255,255,0)_70%)]" />
 
-      <div className="relative flex flex-col gap-6 px-5 pb-6 pt-6 sm:px-7">
-        <div className="flex min-w-0 flex-col gap-2">
-
-          <h1 className="font-serif text-3xl font-normal leading-tight tracking-tight text-white sm:text-[38px]">
+      {/* Sur écran large, la salutation et les deux actions tiennent sur une
+          seule rangée : l'en-tête occupe deux fois moins de hauteur. */}
+      <div className="relative flex flex-col gap-4 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-1.5 lg:max-w-sm">
+          <h1 className="font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[28px]">
             {greeting}
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/60">{subline}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl lg:flex-1">
           <PrimaryAction
             to="/contrat-generation?section=scratch"
             icon={Sparkles}
@@ -110,7 +111,7 @@ function PrimaryAction({ to, icon: Icon, title, description, emphasis }: ActionP
   return (
     <Link
       to={to}
-      className={`group flex items-start gap-3.5 rounded-2xl px-4 py-4 transition-colors ${cardStyle}`}
+      className={`group flex items-start gap-3.5 rounded-2xl px-4 py-3 transition-colors ${cardStyle}`}
     >
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}>
         <Icon className="h-[18px] w-[18px]" />

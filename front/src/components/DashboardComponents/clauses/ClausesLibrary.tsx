@@ -10,7 +10,7 @@ import { CATEGORY_LABEL, POSITION_LABEL, POSITION_STYLE } from "./types";
 import type { Clause, ClauseCategory, ClauseStats } from "./types";
 import { useUserStore } from "../../../store/userStore";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
-import { PageBanner } from "../../common/PageBanner";
+import { BannerAction, PageBanner } from "../../common/PageBanner";
 
 /** Bibliothèque de clauses — référentiel réutilisable pour génération & négociation. */
 export function ClausesLibrary() {
@@ -79,12 +79,9 @@ export function ClausesLibrary() {
         title="Bibliothèque de clauses"
         subtitle="Référentiel de clauses approuvées, réutilisables pour la génération et la négociation."
         actions={canEdit && (
-          <button
-            onClick={() => setEditing("new")}
-            className="flex items-center justify-center gap-2 w-full lg:w-auto px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl border border-white transition-all shadow-card shrink-0 hover:-translate-y-0.5"
-          >
-            <Plus className="w-4 h-4" /> Nouvelle clause
-          </button>
+          <BannerAction onClick={() => setEditing("new")} icon={<Plus />}>
+            Nouvelle clause
+          </BannerAction>
         )}
       />
 
