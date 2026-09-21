@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { SettingsDisplayField, SettingsField } from "../ui/SettingsField";
 import { AlertBanner } from "../common/AlertBanner";
+import { CompanySearchField } from "../common/CompanySearchField";
 
 type EnterpriseSettingsPanelProps = {
   enterpriseSettings: EnterpriseSettings;
@@ -30,7 +31,8 @@ type EnterpriseSettingsPanelProps = {
   canTriggerInseePrefill: boolean;
   isPrefillingFromSiren: boolean;
   inseePrefillError: string | null;
-  onPrefillFromSiren: () => void;
+  /** Remplit la fiche depuis les données publiques de l'entreprise (par son SIREN). */
+  onPrefillFromSiren: (siren?: string) => void;
 };
 
 export function EnterpriseSettingsPanel({
@@ -47,9 +49,6 @@ export function EnterpriseSettingsPanel({
   onEnterpriseFieldChange,
   onEnterpriseAddressFieldChange,
   shouldShowInseePrefill,
-  inseeLookupSiren,
-  onInseeLookupSirenChange,
-  canTriggerInseePrefill,
   isPrefillingFromSiren,
   inseePrefillError,
   onPrefillFromSiren,
@@ -87,45 +86,21 @@ export function EnterpriseSettingsPanel({
       )}
 
       {shouldShowInseePrefill ? (
-        <div className="space-y-3 rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              Pré-remplissage via les données publiques
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              Renseignez un numéro SIREN pour récupérer automatiquement les
-              informations de l’entreprise.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <SettingsField label="Numéro SIREN">
-                <Input
-                  value={inseeLookupSiren}
-                  onChange={(event) =>
-                    onInseeLookupSirenChange(event.target.value)
-                  }
-                  placeholder="Ex. 940468606"
-                  inputMode="numeric"
-                />
-              </SettingsField>
-            </div>
-
-            <Button
-              type="button"
-              onClick={onPrefillFromSiren}
-              disabled={!canTriggerInseePrefill || isPrefillingFromSiren}
-              className="bg-lumenjuris text-white hover:bg-lumenjuris/90 disabled:bg-lumenjuris/60"
-            >
-              {isPrefillingFromSiren ? "Pré-remplissage..." : "Pré-remplir"}
-            </Button>
-          </div>
-
-          {!canTriggerInseePrefill ? (
-            <p className="text-xs text-gray-500">
-              Le SIREN doit contenir 9 chiffres.
-            </p>
+        // Recherche par nom, SIREN ou SIRET, avec suggestions au fil de la
+        // frappe : personne ne connaît son SIREN par cœur. L'entreprise choisie
+        // remplit la fiche (convention collective comprise) ; on vérifie puis
+        // on enregistre.
+        <div className="space-y-2 rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
+          <CompanySearchField
+            label="Trouver votre entreprise"
+            hint="Tapez son nom, son SIREN ou son SIRET : les informations publiques remplissent la fiche, vous vérifiez puis enregistrez."
+            placeholder="Ex. « Lumen Juris » ou 940468606"
+            onSelect={(result) => {
+              if (result.siren) onPrefillFromSiren(result.siren);
+            }}
+          />
+          {isPrefillingFromSiren ? (
+            <p className="text-xs text-gray-500">Récupération des informations publiques…</p>
           ) : null}
           {inseePrefillError ? (
             <p className="text-xs text-red-600">{inseePrefillError}</p>

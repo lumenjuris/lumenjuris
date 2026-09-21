@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { Check, Loader2, Phone, RotateCcw, Wand2, X } from "lucide-react";
 import type { VariableDef } from "../../contractEngine/types";
 import { useUserStore } from "../../store/userStore";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { CompanySearchField } from "./CompanySearchField";
 import type { CompanyResult } from "../../types/companySearch";
+import { fetchProxy } from "../../utils/fetchProxy";
+import { mapCompanyToEnterprise } from "../../utils/companyLookup";
 import {
   chercherEntreprise,
   trouverParties,
@@ -45,6 +46,7 @@ type Etape = "accueil" | "choix" | "fait";
  */
 export function ContractPrefill({ variables, values, origins, setVar, onVoirChamp, demandeOuverture }: Props) {
   const userData = useUserStore((s) => s.userData);
+  const fetchUser = useUserStore((s) => s.fetchUser);
   const telephone = usePreferencesStore((s) => s.telephone);
   const setTelephone = usePreferencesStore((s) => s.setTelephone);
 
@@ -54,6 +56,12 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
   const [enCours, setEnCours] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [telSaisi, setTelSaisi] = useState("");
+  // Société de l'utilisateur trouvée dans SIRENE alors que sa fiche est vide :
+  // on lui propose, en un clic, de la garder pour les contrats suivants.
+  const [aSauver, setASauver] = useState<{ result: CompanyResult; siret?: string } | null>(null);
+  const [sauvegarde, setSauvegarde] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const profilVide = !userData?.enterprise?.name && !userData?.enterprise?.siren;
 
   useEffect(() => {
     if (demandeOuverture > 0 && etape === "accueil") demarrer();
@@ -109,10 +117,17 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
     if (moi) {
       const profil = valeursDuProfil(userData, telephone);
       depuisProfil += remplir(moi, profil, "profil", dejaRemplis);
-      const requete = profil.siren ?? profil.denomination;
+      // Fiche vide : on tente avec ce qui est déjà écrit dans le contrat. Si
+      // rien, le panneau propose la recherche de la société.
+      const requete =
+        profil.siren ?? profil.denomination ??
+        valeurDe(moi, "siret") ?? valeurDe(moi, "siren") ?? valeurDe(moi, "denomination");
       if (requete) {
         const trouve = await chercherEntreprise(requete);
-        if (trouve) suggerees += remplir(moi, valeursSirene(trouve.result, trouve.siret), "suggestion", dejaRemplis);
+        if (trouve) {
+          suggerees += remplir(moi, valeursSirene(trouve.result, trouve.siret), "suggestion", dejaRemplis);
+          if (profilVide) setASauver(trouve);
+        }
       }
     }
 
@@ -146,6 +161,63 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
     };
   }
 
+  /** L'utilisateur a trouvé SA société dans les suggestions (fiche vide). */
+  function choisirMaSociete(result: CompanyResult, siret?: string) {
+    const moi = parties.find((g) => g.prefixe === maPartie);
+    if (moi) remplir(moi, valeursSirene(result, siret), "suggestion", new Set(), true);
+    setASauver({ result, siret });
+    setSauvegarde("idle");
+  }
+
+  /**
+   * Un clic : la société rejoint la fiche de l'utilisateur, et ses champs dans
+   * ce contrat passent de « suggéré » à validé (il vient de les confirmer).
+   * On passe par l'aperçu serveur des données publiques, qui ajoute la
+   * convention collective ; à défaut, on garde ce que SIRENE a renvoyé.
+   */
+  async function enregistrerSociete() {
+    if (!aSauver) return;
+    setSauvegarde("saving");
+    try {
+      const siren = aSauver.result.siren ?? "";
+      const apercu = siren
+        ? await fetchProxy(`/api/enterprise/insee/${encodeURIComponent(siren)}`, { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        : null;
+      const detail = apercu?.success ? apercu.data : null;
+      const src = detail ?? mapCompanyToEnterprise(aSauver.result, aSauver.siret);
+      const res = await fetchProxy("/api/enterprise", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: src.name,
+          siren: src.siren,
+          codeNaf: src.codeNaf,
+          intituleNaf: src.intituleNaf,
+          statusJuridiqueCode: src.statusJuridiqueCode,
+          statusJuridique: src.statusJuridique,
+          address: src.address?.address ?? "",
+          codePostal: src.address?.codePostal ?? "",
+          pays: src.address?.pays ?? "France",
+          idccSelections: detail?.idccSelections ?? [],
+          selectedIdccKey: detail?.selectedIdccKey ?? null,
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.success) throw new Error(String(res.status));
+      const moi = parties.find((g) => g.prefixe === maPartie);
+      for (const c of moi?.champs ?? []) {
+        if (origins[c.id] === "suggestion" && rempli(c.id)) setVar(c.id, values[c.id] ?? "", "profil");
+      }
+      setSauvegarde("saved");
+      void fetchUser();
+    } catch {
+      setSauvegarde("error");
+    }
+  }
+
   async function enregistrerTelephone() {
     const tel = telSaisi.trim();
     if (!tel) return;
@@ -164,7 +236,9 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
   const maGroupe = parties.find((g) => g.prefixe === maPartie);
   const demandeTelephone =
     etape === "fait" && !telephone && !!maGroupe?.champs.some((c) => c.donnee === "telephone" && !rempli(c.id));
-  const ficheVide = etape === "fait" && maPartie !== null && !userData?.enterprise?.name;
+  // Fiche vide et société pas encore trouvée : on la cherche ici même, sans
+  // envoyer l'utilisateur dans Mon compte (il veut tester le contrat).
+  const chercherMaSociete = etape === "fait" && !!maGroupe && profilVide && !aSauver && sauvegarde !== "saved";
 
   return (
     <div className="space-y-3 rounded-2xl border border-brand/25 bg-white p-4 shadow-card">
@@ -233,14 +307,45 @@ export function ContractPrefill({ variables, values, origins, setVar, onVoirCham
 
           {message && <p className="text-xs text-ink-muted">{message}</p>}
 
-          {ficheVide && (
-            <p className="rounded-lg bg-surface-subtle px-2.5 py-2 text-[11px] leading-snug text-ink-muted">
-              Votre fiche entreprise est vide.{" "}
-              <Link to="/mon-compte" target="_blank" className="font-medium text-brand underline underline-offset-2">
-                Complétez-la dans Mon compte
-              </Link>{" "}
-              pour ne plus la ressaisir.
+          {chercherMaSociete && maGroupe && (
+            <CompanySearchField
+              label={`Votre société (${maGroupe.libelle.toLowerCase()})`}
+              hint="Nom, SIREN ou SIRET : ses informations publiques remplissent vos champs."
+              onSelect={choisirMaSociete}
+            />
+          )}
+
+          {/* Une seule question, un seul clic, juste après la suggestion. */}
+          {aSauver && sauvegarde !== "saved" && (
+            <div className="flex items-center gap-2 rounded-lg bg-brand-light px-2.5 py-2">
+              <p className="min-w-0 flex-1 text-xs leading-snug text-ink">
+                Garder <span className="font-semibold">{aSauver.result.nom_complet ?? aSauver.result.nom_raison_sociale ?? "cette société"}</span> pour vos prochains contrats ?
+              </p>
+              <button
+                type="button"
+                onClick={() => void enregistrerSociete()}
+                disabled={sauvegarde === "saving"}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+              >
+                {sauvegarde === "saving" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Oui
+              </button>
+              <button
+                type="button"
+                onClick={() => setASauver(null)}
+                aria-label="Non merci"
+                className="shrink-0 rounded-md px-1.5 py-1 text-xs text-ink-muted hover:bg-white"
+              >
+                Non
+              </button>
+            </div>
+          )}
+          {sauvegarde === "saved" && (
+            <p className="flex items-center gap-1.5 text-xs text-success-dark">
+              <Check className="h-3.5 w-3.5" /> Société enregistrée : elle sera préremplie la prochaine fois.
             </p>
+          )}
+          {sauvegarde === "error" && (
+            <p className="text-xs text-danger">L'enregistrement a échoué. Réessayez, ou complétez Mon compte.</p>
           )}
 
           {demandeTelephone && (
