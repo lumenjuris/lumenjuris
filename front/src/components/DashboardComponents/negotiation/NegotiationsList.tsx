@@ -6,9 +6,7 @@ import {
   Loader2, AlertCircle, MessagesSquare, ArrowRight, Users, FileText, Plus,
 } from "lucide-react";
 import { negotiationApi } from "./api";
-import {
-  STATUS_LABEL, STATUS_STYLE, MODE_LABEL, MODE_STYLE,
-} from "./types";
+import { STATUS_LABEL, STATUS_STYLE, MODE_LABEL, MODE_STYLE } from "./types";
 import type { NegotiationListItem } from "./types";
 import { BannerAction, PageBanner } from "../../common/PageBanner";
 
@@ -24,10 +22,39 @@ function fmtRelative(d: string): string {
   return new Date(d).toLocaleDateString("fr-FR");
 }
 
+/** Part des champs déjà remplis, de 0 à 100 (0 si la session n'en a pas). */
+function completionPercent(item: NegotiationListItem): number {
+  if (!item.completion || item.completion.total === 0) return 0;
+  return Math.round((item.completion.filled / item.completion.total) * 100);
+}
+
+/** Trie les sessions sans modifier le tableau d'origine. */
+function sortNegotiations(
+  items: NegotiationListItem[],
+  sortBy: SortKey,
+  sortDirection: SortDirection,
+): NegotiationListItem[] {
+  return [...items].sort((a, b) => {
+    let comparison: number;
+    if (sortBy === "title") {
+      comparison = a.title.localeCompare(b.title, "fr", { sensitivity: "base" });
+    } else if (sortBy === "status") {
+      comparison = a.status.localeCompare(b.status);
+    } else if (sortBy === "completion") {
+      comparison = completionPercent(a) - completionPercent(b);
+    } else {
+      comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    }
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
+}
+
 export function NegotiationsList() {
   const navigate = useNavigate();
   const [items, setItems] = useState<NegotiationListItem[] | null>(null);
   const [error, setError] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("updatedAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     negotiationApi.list()
@@ -35,15 +62,27 @@ export function NegotiationsList() {
       .catch((e) => setError(e instanceof Error ? e.message : "Erreur réseau"));
   }, []);
 
+  const sortedItems = useMemo(
+    () => sortNegotiations(items ?? [], sortBy, sortDirection),
+    [items, sortBy, sortDirection],
+  );
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortBy) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      // Intitulé et statut : A → Z d'abord ; progression et dates : le plus haut d'abord.
+      setSortDirection(key === "title" || key === "status" ? "asc" : "desc");
+    }
+  };
+
   if (error) {
     return (
-      <div className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
-        <AlertCircle className="w-4 h-4" /> {error}
+      <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger-light px-4 py-3 text-sm text-danger-dark">
+        <AlertCircle className="h-4 w-4" /> {error}
       </div>
     );
-  }
-  if (!items) {
-    return <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-ink-subtle" /></div>;
   }
 
 return (
@@ -130,5 +169,5 @@ return (
       </div>
 
     </div>
-  </div>
-)};
+  );
+}

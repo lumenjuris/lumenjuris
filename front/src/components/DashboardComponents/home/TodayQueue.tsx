@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { ArrowRight, FileText, MessagesSquare, PenTool } from "lucide-react";
 
 import { EmptyHint } from "./EmptyHint";
+import { SectionCard, SectionSkeleton } from "./SectionCard";
 import type { QueueGroup, QueueItem } from "./types";
 
 /** Nombre de lignes affichées au maximum dans la file. */
-const MAX_ROWS = 5;
+const MAX_ROWS = 8;
 
 /** Icône et couleurs de chaque famille de travail. */
 const GROUP_STYLE: Record<QueueGroup, {
@@ -37,17 +38,18 @@ export function TodayQueue({ items, loading }: Props) {
   const visible = items.slice(0, MAX_ROWS);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#e8eaf0] bg-white shadow-card">
-      <div className="flex items-baseline justify-between gap-3 px-4 pb-3.5 pt-4">
-        <h2 className="font-serif text-[19px] font-normal text-ink">À traiter</h2>
-        {!loading && items.length > MAX_ROWS && (
+    <SectionCard
+      eyebrow="Vos actions en cours"
+      title="À traiter"
+      headerRight={
+        !loading && items.length > MAX_ROWS ? (
           <span className="text-xs text-ink-subtle">
             {visible.length} sur {items.length}
           </span>
-        )}
-      </div>
-
-      {loading && <QueueSkeleton />}
+        ) : undefined
+      }
+    >
+      {loading && <SectionSkeleton />}
 
       {!loading && visible.length > 0 && (
         <div className="flex flex-col border-t border-line-subtle">
@@ -58,9 +60,9 @@ export function TodayQueue({ items, loading }: Props) {
               <Link
                 key={item.key}
                 to={item.to}
-                className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line-subtle px-4 py-3.5 last:border-b-0 transition-shadow hover:bg-[#fafbfd] hover:shadow-[inset_2px_0_0_#213957]"
+                className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 border-b border-line-subtle px-5 py-3.5 last:border-b-0 transition-all hover:bg-[#f8fafd] hover:shadow-[inset_3px_0_0_#213957]"
               >
-                <span className={`flex h-[30px] w-[30px] items-center justify-center rounded-lg ${style.iconClassName}`}>
+                <span className={`flex h-[34px] w-[34px] items-center justify-center rounded-[11px] ${style.iconClassName}`}>
                   <Icon className="h-[15px] w-[15px]" />
                 </span>
 
@@ -89,17 +91,6 @@ export function TodayQueue({ items, loading }: Props) {
       )}
 
       {!loading && visible.length === 0 && <EmptyHint>Aucun élément en cours.</EmptyHint>}
-    </section>
-  );
-}
-
-/** Barres grises affichées pendant le chargement. */
-function QueueSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 border-t border-line-subtle px-4 py-5">
-      {[0, 1, 2].map((row) => (
-        <div key={row} className="h-9 animate-pulse rounded-lg bg-surface-subtle" />
-      ))}
-    </div>
+    </SectionCard>
   );
 }

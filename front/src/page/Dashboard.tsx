@@ -4,6 +4,7 @@ import { InfoBanner } from "../components/DashboardComponents/home/InfoBanner";
 import { HeroHeader } from "../components/DashboardComponents/home/HeroHeader";
 import { UpcomingDeadlines } from "../components/DashboardComponents/home/UpcomingDeadlines";
 import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
+import { SubscriptionCard } from "../components/DashboardComponents/home/SubscriptionCard";
 
 /**
  * Page d'accueil (`/dashboard`).
@@ -20,7 +21,10 @@ export function Dashboard() {
   const data = useDashboardData();
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+    <div className="relative mx-auto flex w-full max-w-[1240px] flex-col gap-5">
+      {/* Halo très léger derrière le contenu, pour décoller la page du fond uni. */}
+      <div className="pointer-events-none absolute -top-16 left-1/2 -z-10 h-72 w-[680px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(76,124,192,0.10)_0%,rgba(76,124,192,0)_70%)]" />
+
       <InfoBanner />
 
       <HeroHeader

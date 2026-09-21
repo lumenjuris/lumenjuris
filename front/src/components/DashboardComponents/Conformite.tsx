@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import {
@@ -64,6 +64,13 @@ function avgScore(items: ContractHistoryItem[]): number {
   return Math.round(100 - avg);
 }
 
+/** Formats acceptés par l'analyzer (mêmes types que la zone d'import). */
+const ACCEPTED_FILE_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
 export function Conformite() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,6 +79,8 @@ export function Conformite() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [analyzerLimitOpen, setAnalyzerLimitOpen] = useState(false);
   const [addState, setAddState] = useState<Record<string, "saving" | "done">>({});
+  // Champ fichier caché : le bouton « Nouvelle analyse » l'ouvre à notre place.
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadContractHistoryIndex().then(setHistory).catch(() => { });
@@ -82,15 +91,34 @@ export function Conformite() {
     navigate(`/analyzer`, { state: { historyId: id } });
   };
 
-  // Nouvelle analyse : on vérifie le quota AVANT de naviguer vers l'analyzer,
-  // pour bloquer tôt (carte de plafond) plutôt qu'une fois sur la page.
-  // Fail-open : en cas d'erreur, on navigue quand même (le serveur reste garde-fou).
+  // Nouvelle analyse : on vérifie le quota AVANT d'ouvrir l'explorateur de
+  // fichiers, pour bloquer tôt (carte de plafond) plutôt qu'une fois sur la page.
+  // Fail-open : en cas d'erreur, on ouvre quand même (le serveur reste garde-fou).
   const handleNewAnalysis = async () => {
     if (await isAnalyzerQuotaExhausted()) {
       setAnalyzerLimitOpen(true);
       return;
     }
-    navigate("/analyzer");
+    fileInputRef.current?.click();
+  };
+
+  /**
+   * Fichier choisi dans l'explorateur : on l'envoie à l'analyzer, qui lance
+   * l'analyse tout seul à l'arrivée (voir le `location.state` de ContractAnalysis).
+   */
+  const handleFileChosen = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // On vide le champ tout de suite : sans ça, rechoisir le même fichier
+    // ne déclencherait pas de nouvel événement `change`.
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ACCEPTED_FILE_TYPES.has(file.type)) {
+      toast.error("Seuls les fichiers PDF, DOC et DOCX sont acceptés.");
+      return;
+    }
+
+    navigate("/analyzer", { state: { file } });
   };
 
   //Handle de la fermeture de la modale "Action"
@@ -103,7 +131,7 @@ export function Conformite() {
       window.removeEventListener("click", handleClickOutside);
     };
   }, []);
-  
+
   /** Enregistre le document analysé dans la contrathèque (charge le texte du snapshot). */
   const handleAddToContratheque = async (item: ContractHistoryItem) => {
     if (addState[item.id]) return;
@@ -138,7 +166,7 @@ export function Conformite() {
         /403|éditeur|editor/i.test(msg)
           ? "Réservé aux rôles Juriste et Administrateur."
           : "La limite de la contrathèque est atteinte. Passez au plan supérieur pour augmenter le nombre d'emplacement.",
-          {duration : 10000}
+        { duration: 10000 }
       );
     }
   };
@@ -189,295 +217,214 @@ export function Conformite() {
         />
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex flex-col md:flex-row gap-2.5">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle stroke-[1.5]" />
           <input
-            type="text"
-            placeholder="Rechercher un document…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-line rounded-xl text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder shadow-card"
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={handleFileChosen}
           />
         </div>
-        <div className="relative w-full md:w-48">
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="appearance-none w-full bg-white border border-line px-4 py-2.5 pr-9 rounded-xl text-sm text-ink-secondary outline-none focus:border-brand/40 cursor-pointer transition-all shadow-card"
-          >
-            <option value="Tous">Filtrer par priorité</option>
-            <option value="Élevé">Élevé</option>
-            <option value="Moyen">Moyen</option>
-            <option value="Faible">Faible</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle pointer-events-none stroke-[1.5]" />
+{/* 
+        <div className="my-4 pl-4 border-l-2 border-blue-primary">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-primary mb-2">
+            Pourquoi utiliser l'Analyzer ?
+          </h3>
+
+          <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 font-bold select-none">•</span>
+              <span>
+                <strong className="font-semibold text-slate-800">Diagnostic & Score de risque :</strong> Chaque clause est analysée et assortie d'un score visuel pour repérer instantanément les points de vigilance.
+              </span>
+            </li>
+
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 font-bold select-none">•</span>
+              <span>
+                <strong className="font-semibold text-slate-800">Modifications concrètes :</strong> L'outil propose des réécritures adaptées et vous explique en détail la justification de chaque changement.
+              </span>
+            </li>
+
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 font-bold select-none">•</span>
+              <span>
+                <strong className="font-semibold text-slate-800">Suggestions de clauses :</strong> Bénéficiez de recommandations de clauses à ajouter pour combler les manques et protéger au mieux vos intérêts.
+              </span>
+            </li>
+          </ul>
+        </div> */}
+
+        {/* KPI */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <KpiCard label="Total documents" value={history.length} icon={BarChart3} accent="#2C3A5E" />
+          <KpiCard label="Risque élevé" value={highRiskCount} icon={ShieldAlert} accent="#dc2626" />
+          <KpiCard
+            label="Conformité moy."
+            value={history.length ? `${conformityAvg}%` : "—"}
+            icon={FileCheck}
+            accent="#059669"
+          />
+        </div>
+
+        {/* Search + Filter */}
+        <div className="flex flex-col md:flex-row gap-2.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle stroke-[1.5]" />
+            <input
+              type="text"
+              placeholder="Rechercher un document…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-line rounded-xl text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder shadow-card"
+            />
+          </div>
+          <div className="relative w-full md:w-48">
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="appearance-none w-full bg-white border border-line px-4 py-2.5 pr-9 rounded-xl text-sm text-ink-secondary outline-none focus:border-brand/40 cursor-pointer transition-all shadow-card"
+            >
+              <option value="Tous">Filtrer par priorité</option>
+              <option value="Élevé">Élevé</option>
+              <option value="Moyen">Moyen</option>
+              <option value="Faible">Faible</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle pointer-events-none stroke-[1.5]" />
+          </div>
+        </div>
+
+        {/* Historique des analyses : cartes sur mobile, tableau sur desktop. */}
+        <div className="md:hidden bg-white border border-line rounded-card shadow-card">
+            {/* ── Vue Mobile (Cartes / Liste) ── */}
+            <div className="md:hidden divide-y divide-line-subtle">
+              {filtered.length > 0 ? (
+                filtered.map((item) => {
+                  const level = getRiskLevel(item.overallRiskScore);
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-4 space-y-3 hover:bg-surface-subtle/60 transition-all cursor-pointer"
+                      onClick={() => handleOpenAnalyzer(item.id)}
+                    >
+                      {/* Entête Carte : Icône + Nom + Status + Actions */}
+                      <div className="flex items-start justify-between gap-2 whitespace-nowrap">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-ink truncate">
+                              {item.fileName}
+                            </p>
+                            <p className="text-xs text-ink-subtle mt-0.5">
+                              {item.status === "analyzed" ? "Analysé" : "En cours"}
+                              {item.activePatchCount > 0 ? ` · ${item.activePatchCount} modif.` : ""}
+                              <span className="ml-1 text-ink-placeholder">• {formatDate(item.createdAt)}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions rapide sur mobile */}
+                        <div
+                          className="relative flex items-center gap-1 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => handleAddToContratheque(item)}
+                            disabled={addState[item.id] === "saving"}
+                            title={
+                              addState[item.id] === "done"
+                                ? "Ajouté à la contrathèque"
+                                : "Ajouter à la contrathèque"
+                            }
+                            className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
+                          >
+                            {addState[item.id] === "done" ? (
+                              <Check className="w-4 h-4 text-success stroke-[1.5]" />
+                            ) : addState[item.id] === "saving" ? (
+                              <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
+                            ) : (
+                              <FolderPlus className="w-4 h-4 stroke-[1.5]" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
+                            className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
+                          >
+                            <MoreVertical className="w-4 h-4 stroke-[1.5]" />
+                          </button>
+
+                          {openMenuId === item.id && (
+                            <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Supprimer
+                              </button>
+                              <button
+                                onClick={() => handleOpenAnalyzer(item.id)}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Ouvrir
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Pied Carte : Informations secondaires (Clauses & Priorité) */}
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-line-subtle/50">
+                        <div className="flex items-center gap-1.5 text-ink-subtle">
+                          <span>Clauses :</span>
+                          <span className="font-semibold text-ink">{item.clausesCount ?? "—"}</span>
+                        </div>
+                        <div>
+                          {level !== "—" ? (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-chip border text-[10px] font-semibold tracking-wide ${getRiskStyles(level)}`}
+                            >
+                              {level}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-placeholder">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-6 py-12 text-center text-ink-subtle italic text-sm">
+                  {history.length === 0
+                    ? "Aucun document analysé pour le moment."
+                    : "Aucun résultat pour cette recherche."}
+                </div>
+              )}
+            </div>
+        </div>
+
+        <div className="hidden md:block">
+          <AnalysisHistoryTable
+            items={filtered}
+            onOpen={handleOpenAnalyzer}
+            onDelete={handleDelete}
+            onAddToContratheque={handleAddToContratheque}
+            addState={addState}
+          />
         </div>
       </div>
-
-      {/* History table */}
-      <div className="bg-white border border-line rounded-card shadow-card ">
-  
-  {/* ── Vue Mobile (Cartes / Liste) ── */}
-  <div className="md:hidden divide-y divide-line-subtle">
-    {filtered.length > 0 ? (
-      filtered.map((item) => {
-        const level = getRiskLevel(item.overallRiskScore);
-        return (
-          <div
-            key={item.id}
-            className="p-4 space-y-3 hover:bg-surface-subtle/60 transition-all cursor-pointer"
-            onClick={() => handleOpenAnalyzer(item.id)}
-          >
-            {/* Entête Carte : Icône + Nom + Status + Actions */}
-            <div className="flex items-start justify-between gap-2 whitespace-nowrap">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink truncate">
-                    {item.fileName}
-                  </p>
-                  <p className="text-xs text-ink-subtle mt-0.5">
-                    {item.status === "analyzed" ? "Analysé" : "En cours"}
-                    {item.activePatchCount > 0 ? ` · ${item.activePatchCount} modif.` : ""}
-                    <span className="ml-1 text-ink-placeholder">• {formatDate(item.createdAt)}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Actions rapide sur mobile */}
-              <div
-                className="relative flex items-center gap-1 shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => handleAddToContratheque(item)}
-                  disabled={addState[item.id] === "saving"}
-                  title={
-                    addState[item.id] === "done"
-                      ? "Ajouté à la contrathèque"
-                      : "Ajouter à la contrathèque"
-                  }
-                  className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
-                >
-                  {addState[item.id] === "done" ? (
-                    <Check className="w-4 h-4 text-success stroke-[1.5]" />
-                  ) : addState[item.id] === "saving" ? (
-                    <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
-                  ) : (
-                    <FolderPlus className="w-4 h-4 stroke-[1.5]" />
-                  )}
-                </button>
-                <button
-                  onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
-                  className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
-                >
-                  <MoreVertical className="w-4 h-4 stroke-[1.5]" />
-                </button>
-
-                {openMenuId === item.id && (
-                  <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Supprimer
-                    </button>
-                    <button
-                      onClick={() => handleOpenAnalyzer(item.id)}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Ouvrir
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Pied Carte : Informations secondaires (Clauses & Priorité) */}
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-line-subtle/50">
-              <div className="flex items-center gap-1.5 text-ink-subtle">
-                <span>Clauses :</span>
-                <span className="font-semibold text-ink">{item.clausesCount ?? "—"}</span>
-              </div>
-              <div>
-                {level !== "—" ? (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-chip border text-[10px] font-semibold tracking-wide ${getRiskStyles(level)}`}
-                  >
-                    {level}
-                  </span>
-                ) : (
-                  <span className="text-xs text-ink-placeholder">—</span>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })
-    ) : (
-      <div className="px-6 py-12 text-center text-ink-subtle italic text-sm">
-        {history.length === 0
-          ? "Aucun document analysé pour le moment."
-          : "Aucun résultat pour cette recherche."}
-      </div>
-    )}
-  </div>
-
-  {/* ── Vue Desktop (Tableau classique) ── */}
-  <div className="hidden md:block">
-    <table className="w-full text-left border-collapse">
-      <thead className="bg-blue-primary border-b border-line text-white text-[10px] uppercase tracking-widest font-semibold">
-        <tr>
-          <th className="px-6 py-4">Document</th>
-          <th className="px-4 py-4 text-center">Clauses</th>
-          <th className="px-4 py-4">Priorité</th>
-          <th className="px-4 py-4">Date</th>
-          <th className="px-6 py-4 text-right">Action</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-line-subtle">
-        {filtered.length > 0 ? (
-          filtered.map((item) => {
-            const level = getRiskLevel(item.overallRiskScore);
-            return (
-              <tr
-                key={item.id}
-                className="hover:bg-slate-100 transition-all group cursor-pointer"
-                onClick={() => handleOpenAnalyzer(item.id)}
-              >
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-blue-700 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink truncate max-w-xs group-hover:text-blue-600 transition-colors">
-                        {item.fileName}
-                      </p>
-                      <p className="text-xs text-ink-subtle mt-0.5">
-                        {item.status === "analyzed" ? "Analysé" : "En cours"}
-                        {item.activePatchCount > 0
-                          ? ` · ${item.activePatchCount} modif.`
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-5 text-center">
-                  <span className="text-sm text-ink-muted">
-                    {item.clausesCount ?? "—"}
-                  </span>
-                </td>
-                <td className="px-4 py-5">
-                  {level !== "—" ? (
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-chip border text-[11px] font-semibold tracking-wide ${getRiskStyles(level)}`}
-                    >
-                      {level}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-ink-placeholder">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-5">
-                  <span className="text-xs text-ink-subtle">
-                    {formatDate(item.createdAt)}
-                  </span>
-                </td>
-
-                <td className="px-6 py-5 text-right">
-                  <div
-                    className="relative inline-flex items-center gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === item.id ? null : item.id)
-                      }
-                      className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
-                    >
-                      <MoreVertical className="w-4 h-4 stroke-[1.5]" />
-                    </button>
-                    {openMenuId === item.id && (
-                      <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md min-w-[140px]">
-
-                        <button
-                          onClick={() => handleOpenAnalyzer(item.id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 hover:rounded-t-panel transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Ouvrir
-                        </button>
-
-                        <button
-                          onClick={() => handleAddToContratheque(item)}
-                          disabled={addState[item.id] === "saving"}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors disabled:opacity-50"
-                        >
-                          {addState[item.id] === "done" ? (
-                            <>
-                              <Check className="w-4 h-4 text-success stroke-[1.5]" />
-                              <span>Ajouté à la contrathèque</span>
-                            </>
-                          ) : addState[item.id] === "saving" ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
-                              <span>Ajout en cours...</span>
-                            </>
-                          ) : (
-                            <>
-                              <FolderPlus className="w-3.5 h-3.5 stroke-[1.5]" />
-                              <span>Contrathèque</span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light hover:rounded-b-panel transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Supprimer
-                        </button>
-
-                      </div> 
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })
-        ) : (
-          <tr>
-            <td
-              colSpan={5}
-              className="px-6 py-16 text-center text-ink-subtle italic text-sm"
-            >
-              {history.length === 0
-                ? "Aucun document analysé pour le moment."
-                : "Aucun résultat pour cette recherche."}
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-</div>
-    </div>
-    <Toaster position="top-right" />
-    {analyzerLimitOpen && (
-      <QuotaLimitModal
-        title="Limite d'analyses atteinte"
-        message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
-        onClose={() => setAnalyzerLimitOpen(false)}
-      />
-    )}
+      <Toaster position="top-right" />
+      {analyzerLimitOpen && (
+        <QuotaLimitModal
+          title="Limite d'analyses atteinte"
+          message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
+          onClose={() => setAnalyzerLimitOpen(false)}
+        />
+      )}
     </>
   );
 }

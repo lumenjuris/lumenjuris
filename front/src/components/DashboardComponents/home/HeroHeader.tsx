@@ -13,13 +13,12 @@ interface Props {
   loading: boolean;
 }
 
-
 /**
  * En-tête de l'accueil : salutation, puis les deux points d'entrée principaux
  * de l'outil (générer / importer un contrat) présentés comme cartes d'action.
  *
- * Les compteurs restent affichés en bas de l'en-tête, en version compacte :
- * ce sont des repères, pas le sujet de la page.
+ * Les compteurs restent affichés en bas de l'en-tête, sous forme de pastilles
+ * cliquables : ce sont des repères, pas le sujet de la page.
  */
 export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }: Props) {
   // Le prénom peut manquer (compte créé via OAuth sans profil complet).
@@ -34,10 +33,15 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
       : "Rien d'urgent aujourd'hui : tous vos contrats sont à jour.";
   }
 
+  const visibleKpis = kpis.filter((kpi) => !kpi.hideWhenZero || kpi.value > 0);
+
   return (
-    <div className="relative overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#223b5b_0%,#1b3049_100%)] shadow-[0_18px_44px_-22px_rgba(20,34,54,0.55)]">
+    <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(150deg,#24405f_0%,#1b3049_55%,#16263a_100%)] shadow-[0_28px_60px_-30px_rgba(16,34,54,0.75)]">
       {/* Filet doré en haut de la carte */}
       <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,rgba(214,178,102,0.9)_0%,rgba(214,178,102,0.15)_34%,rgba(255,255,255,0)_70%)]" />
+      {/* Halos décoratifs : ils donnent de la profondeur au fond uni. */}
+      <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(97,146,214,0.35)_0%,rgba(97,146,214,0)_70%)]" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(214,178,102,0.18)_0%,rgba(214,178,102,0)_70%)]" />
 
       {/* Sur écran large, la salutation et les deux actions tiennent sur une
           seule rangée : l'en-tête occupe deux fois moins de hauteur. */}
@@ -66,19 +70,19 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
         </div>
       </div>
 
-      {!isEmpty && (
-        <div className="relative flex flex-wrap gap-x-7 gap-y-3 border-t border-white/10 px-5 py-3.5 sm:px-7">
-          {/* Un compteur à zéro n'apprend rien : on ne garde que ce qui existe. */}
-          {kpis.filter((kpi) => !kpi.hideWhenZero || kpi.value > 0).map((kpi) => (
+      {/* Un compteur à zéro n'apprend rien : on ne garde que ce qui existe. */}
+      {!isEmpty && visibleKpis.length > 0 && (
+        <div className="relative flex flex-wrap gap-2 border-t border-white/10 px-6 py-4 sm:px-8">
+          {visibleKpis.map((kpi) => (
             <Link
               key={kpi.label}
               to={kpi.to}
-              className="group flex items-baseline gap-2 transition-opacity hover:opacity-100 sm:opacity-90"
+              className="group flex items-baseline gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 transition-colors hover:border-white/25 hover:bg-white/[0.12]"
             >
               <span className="text-[15px] font-semibold tabular-nums text-white">
                 {loading ? "—" : kpi.value}
               </span>
-              <span className="text-xs text-white/50 group-hover:text-white/75">{kpi.label}</span>
+              <span className="text-xs text-white/55 group-hover:text-white/80">{kpi.label}</span>
               {kpi.hint && (
                 <span className={`text-xs font-medium ${kpi.toneClassName}`}>{kpi.hint}</span>
               )}
@@ -102,7 +106,7 @@ interface ActionProps {
 /** Grande carte cliquable : c'est le point d'entrée mis en avant de la page. */
 function PrimaryAction({ to, icon: Icon, title, description, emphasis }: ActionProps) {
   const cardStyle = emphasis
-    ? "bg-white shadow-[0_10px_26px_-14px_rgba(0,0,0,0.6)] hover:bg-brand-light"
+    ? "bg-white shadow-[0_14px_30px_-16px_rgba(0,0,0,0.7)] hover:bg-brand-light"
     : "border border-white/20 bg-white/[0.06] hover:border-white/35 hover:bg-white/[0.12]";
   const iconStyle = emphasis ? "bg-brand-light text-blue-primary" : "bg-white/10 text-white";
   const titleStyle = emphasis ? "text-[#1b3049]" : "text-white";
@@ -113,7 +117,7 @@ function PrimaryAction({ to, icon: Icon, title, description, emphasis }: ActionP
       to={to}
       className={`group flex items-start gap-3.5 rounded-2xl px-4 py-3 transition-colors ${cardStyle}`}
     >
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}>
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${iconStyle}`}>
         <Icon className="h-[18px] w-[18px]" />
       </span>
 
