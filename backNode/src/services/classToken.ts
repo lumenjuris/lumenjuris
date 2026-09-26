@@ -114,6 +114,35 @@ export class Token {
     }
   }
 
+  // Génère un code à 6 chiffres pour l'activation d'un compte (valide 15 min).
+  // Même principe que le code 2FA : le compte se valide en saisissant ce code
+  // dans le formulaire, plutôt qu'en cliquant un lien.
+  async createVerifyAccountCode(userId: number) {
+    try {
+      // Invalide tout code d'activation ACTIVE encore en cours pour ce compte.
+      await prisma.token.updateMany({
+        where: { userId, type: "verifyAccount", status: "ACTIVE" },
+        data: { status: "EXPIRED" },
+      });
+
+      const code = String(crypto.randomInt(100000, 999999));
+      const expiresAt = this.setExpiresAt("verifyAccount")!;
+
+      await prisma.token.create({
+        data: { tokenHash: hashToken(code), expiresAt, userId, type: "verifyAccount" },
+      });
+
+      return { success: true as const, code };
+    } catch (err) {
+      console.error(err);
+      return {
+        success: false as const,
+        message:
+          "Une erreur est survenue lors de la création du code d'activation.",
+      };
+    }
+  }
+
   //Prévus pour tâche cron, cela supprime tout les tokens où la date est expirée
   async managementDeleteTokenExpires() {
     try {

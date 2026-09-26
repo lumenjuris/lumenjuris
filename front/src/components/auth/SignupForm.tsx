@@ -2,140 +2,122 @@
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/InputGroup";
-import {
-  Field,
-  FieldLabel,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-} from "../ui/Field";
+import { Field, FieldLabel } from "../ui/Field";
 import { Checkbox } from "../ui/Checkbox";
-import { EyeOffIcon, EyeIcon, PenBoxIcon } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
+import { CheckIcon, EyeOffIcon, EyeIcon, Loader2, PenBoxIcon } from "lucide-react";
 
 import { AlertBanner } from "../common/AlertBanner";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { AuthPanelShell } from "./AuthPanelShell";
+import { ConnectGoogle } from "./ConnectGoogle";
+import { ConnectMicrosoft } from "./ConnectMicrosoft";
+import { ActivationParCode } from "./ActivationParCode";
+import type { PresentationPanneau } from "../../store/authPanelStore";
+import { useUserStore } from "../../store/userStore";
+import { consommerDestination } from "../../utils/destinationApresConnexion";
 import { fetchProxy } from "../../utils/fetchProxy";
 
+const REGEX_EMAIL =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+
 interface SignupFormProps {
-  lastName: string;
-  setLastName: React.Dispatch<React.SetStateAction<string>>;
-  firstName: string;
-  setFirstName: React.Dispatch<React.SetStateAction<string>>;
-  email: string;
-  setEmail: React.Dispatch<React.SetStateAction<string>>;
-  password: string;
-  setPassword: React.Dispatch<React.SetStateAction<string>>;
-  acceptCgu: boolean;
-  setAcceptCgu: React.Dispatch<React.SetStateAction<boolean>>;
-  confirmPassword: string;
-  setConfirmPassword: React.Dispatch<React.SetStateAction<string>>;
-  /** Compte créé et e-mail de vérification parti : la page affiche l'écran « Vérifiez votre boîte mail ». */
-  onInscrit?: (email: string) => void;
+  /** Referme le panneau : croix, clic à côté, touche Échap. */
+  onClose: () => void;
+  /** Bascule sur le panneau de connexion, depuis le pied du formulaire ou
+   *  l'écran d'activation (compte déjà activé). */
+  onSwitchToLogin: () => void;
+  /** Carte sous le bouton de l'en-tête, ou fenêtre centrée sur fond flouté. */
+  presentation: PresentationPanneau;
 }
 
-const PROXY_URL: string =
-  import.meta.env.VITE_URL_PROXY || "http://localhost:3000";
-
 /**
- * Formulaire d'inscription gérant deux flux de création de compte :
+ * Panneau de création de compte.
  *
- * 1. **Email / mot de passe** — `POST /api/user/signup` avec nom, prénom, email,
- *    mot de passe et CGU. Les données entreprise ne sont plus demandées ici :
- *    elles sont renseignées depuis le profil une fois le compte actif.
- *    En cas de succès, affiche une alerte de confirmation avec l'adresse email
- *    utilisée, puis remet tous les champs à zéro.
+ * Il met les connexions par fournisseur en premier — c'est le chemin le plus
+ * court pour la plupart des gens — et ne déroule le formulaire qu'ensuite.
  *
- * 2. **Google OAuth** — redirige `window.location` vers `PROXY_URL/api/google`.
+ * Les règles du mot de passe sont montrées sous forme de liste qui se coche au
+ * fil de la frappe, plutôt qu'en message d'erreur : l'utilisateur voit ce qui
+ * lui reste à faire au lieu de découvrir un refus après coup.
  *
- * @param lastName     Valeur contrôlée du champ nom (obligatoire).
- * @param setLastName  Setter du champ nom.
- * @param firstName    Valeur contrôlée du champ prénom (optionnel).
- * @param setFirstName Setter du champ prénom.
- * @param email        Valeur contrôlée du champ email (obligatoire).
- * @param setEmail     Setter du champ email.
- * @param password     Valeur contrôlée du champ mot de passe (obligatoire).
- * @param setPassword  Setter du champ mot de passe.
- * @param acceptCgu    `true` si l'utilisateur a coché les CGU (obligatoire pour soumettre).
- * @param setAcceptCgu Setter de l'état d'acceptation des CGU.
+ * Une fois le compte créé, le formulaire cède la place à la saisie du code
+ * d'activation reçu par e-mail, dans le même panneau. À la validation du code,
+ * la session s'ouvre et l'utilisateur poursuit sa navigation.
  */
-const SignupForm = ({
-  lastName,
-  setLastName,
-  firstName,
-  setFirstName,
-  email,
-  setEmail,
-  password,
-  setPassword,
-  acceptCgu,
-  setAcceptCgu,
-  confirmPassword,
-  setConfirmPassword,
-  onInscrit,
+export const SignupForm = ({
+  onClose,
+  onSwitchToLogin,
+  presentation,
 }: SignupFormProps) => {
- 
+  // Adresse à laquelle le code d'activation vient de partir : tant qu'elle est
+  // renseignée, l'écran de saisie du code remplace le formulaire.
+  const [emailAVerifier, setEmailAVerifier] = useState<string | null>(null);
 
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [submitLoading, setSubmitLoading] = useState(false);
+  const fetchUser = useUserStore((state) => state.fetchUser);
+  const navigate = useNavigate();
+
+  // Compte activé et session ouverte par /verify-code : on recharge l'utilisateur,
+  // on ferme le panneau et on l'emmène là où il voulait aller (ou l'accueil).
+  const handleCompteActive = async () => {
+    await fetchUser();
+    const destination = consommerDestination();
+    onClose();
+    navigate(destination ?? "/dashboard");
+  };
+
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptCgu, setAcceptCgu] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState(false);
   const [submitCguError, setSubmitCguError] = useState(false);
   const [submitPending, setSubmitPending] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
   const [serverError, setServerError] = useState(false);
   const [serverErrorMessage, setServerErrorMessage] = useState("");
 
-  const passwordErrorTimeout = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  // Les messages sont rendus sous le bouton d'inscription : on amene ce bloc
-  // dans le champ de vision plutot que le haut du formulaire, sinon la reponse
-  // s'affiche hors ecran juste apres le clic.
-  const feedbackRef = useRef<HTMLDivElement>(null);
-  const scrollToFeedback = () => {
-    // Laisse React peindre l'alerte avant de la faire defiler.
-    requestAnimationFrame(() => {
-      feedbackRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    });
-  };
+  // Tout ce qui se déduit de la saisie est calculé ici plutôt que gardé en
+  // état : une seule source de vérité, et l'affichage suit la frappe sans
+  // temporisation.
+  const emailValide = REGEX_EMAIL.test(email);
+  const criteresMotDePasse = [
+    { libelle: "8 caractères minimum", rempli: password.length >= 8 },
+    { libelle: "Une majuscule", rempli: /[A-Z]/.test(password) },
+    { libelle: "Un chiffre", rempli: /[0-9]/.test(password) },
+    { libelle: "Un caractère spécial", rempli: /[^a-zA-Z0-9]/.test(password) },
+  ];
+  const motDePasseValide = criteresMotDePasse.every((critere) => critere.rempli);
+  const confirmationCorrespond = confirmPassword === password;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!lastName || !email || !password) {
+    if (!lastName || !email || !password || !confirmPassword) {
       setSubmitError(true);
-      scrollToFeedback();
       return;
     }
-    if (acceptCgu === false) {
+
+    if (!acceptCgu) {
       setSubmitCguError(true);
-      scrollToFeedback();
       return;
     }
 
-    if (password !== confirmPassword) {
-        setConfirmPasswordError("Les mots de passe doivent être identiques");
-        return;
-    }
-
-    if (passwordError) {
-      return;
-    }
+    // Adresse mal formée, mot de passe trop faible ou confirmation différente :
+    // le défaut est déjà signalé sous le champ concerné, inutile d'ajouter une
+    // bannière par-dessus.
+    if (!emailValide || !motDePasseValide || !confirmationCorrespond) return;
 
     setSubmitLoading(true);
     setSubmitPending(true);
-    scrollToFeedback();
     const trimedLastName = lastName.trim();
     const trimedFirstName = firstName.trim();
 
@@ -165,16 +147,15 @@ const SignupForm = ({
         // dans "message" : sans les deux, la banniere s'affichait vide.
         setServerErrorMessage(
           data?.message ||
-            data?.error ||
-            (signupResponse.status === 429
-              ? "Trop de tentatives d'inscription. Réessayez dans une heure."
-              : "Une erreur s'est produite, nous n'avons pas pu créer votre compte..."),
+          data?.error ||
+          (signupResponse.status === 429
+            ? "Trop de tentatives d'inscription. Réessayez dans une heure."
+            : "Une erreur s'est produite, nous n'avons pas pu créer votre compte..."),
         );
         // Le bouton doit redevenir cliquable : l'utilisateur a une correction a
         // faire (adresse deja prise, mot de passe trop court) et doit pouvoir
         // resoumettre sans avoir a fermer la banniere au prealable.
         setSubmitLoading(false);
-        scrollToFeedback();
         return;
       }
 
@@ -186,22 +167,14 @@ const SignupForm = ({
         setServerError(true);
         setServerErrorMessage(data.message);
         setSubmitLoading(false);
-      } else if (onInscrit) {
-        setSubmitPending(false);
-        setSubmitLoading(false);
-        onInscrit(email);
         return;
-      } else {
-        setSubmitPending(false);
-        setSubmitSuccess(true);
-        // Le serveur distingue l'envoi confirme de l'envoi encore en cours :
-        // on reprend son message plutot que d'affirmer un envoi abouti.
-        setSuccessMessage(
-          data?.message ||
-            `Votre compte a été créé. Un email de vérification a été envoyé à ${email}. Veuillez vérifier votre boîte de réception et vos spams.`,
-        );
       }
-      scrollToFeedback();
+
+      // Compte créé et e-mail parti : le panneau bascule sur l'écran de
+      // vérification, qui dit où chercher le lien et permet de le renvoyer.
+      setSubmitPending(false);
+      setSubmitLoading(false);
+      setEmailAVerifier(email);
     } catch (error) {
       setSubmitPending(false);
       setSubmitLoading(false);
@@ -213,105 +186,23 @@ const SignupForm = ({
     }
   };
 
-
-
-
-
-  // Inscription via Google
-  const handleSubmitGoogle = async() => {
-    await fetchProxy(`${PROXY_URL}/api/user/auth/google`);
-  };
-
-
-
-
-
-  const handleChangeLastname = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setLastName(value);
-  };
-
-  const handleChangeFirstname = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const value = event.target.value.trim();
-    setFirstName(value);
-  };
-
-  const handleChangeEmail = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setEmail(value);
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
-    if (value.length > 0 && !emailRegex.test(value)) {
-      setEmailError("L'adresse e-mail n'est pas valide");
-    } else {
-      setEmailError("");
-    }
-  };
-
-  const handleChangePassword = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setPassword(value);
-    setPasswordError("");
-
-    if (passwordErrorTimeout.current)
-      clearTimeout(passwordErrorTimeout.current);
-
-    passwordErrorTimeout.current = setTimeout(() => {
-      if (value.length > 0 && value.length < 8) {
-        setPasswordError("Le mot de passe est trop court");
-      } else if (value.length >= 8 && !/[A-Z]/.test(value)) {
-        setPasswordError("Le mot de passe doit contenir au moins 1 majuscule");
-      } else if (value.length >= 8 && !/[0-9]/.test(value)) {
-        setPasswordError("Le mot de passe doit contenir au moins 1 chiffre");
-      } else if (value.length >= 8 && !/[^a-zA-Z0-9]/.test(value)) {
-        setPasswordError(
-          "Le mot de passe doit contenir au moins 1 caractère spécial",
-        );
-      }
-    }, 500);
-  };
-
-  const handleChangeConfirmPassword = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const value = event.target.value;
-    setConfirmPassword(value);
-    if (value.length >= 8 && value !== password) {
-      setConfirmPasswordError("Les mots de passe doivent être identiques !");
-    } else if (value.length >= 8 && value === password) {
-      setConfirmPasswordError("");
-    }
-  };
-
-  const handleCheckCgu = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.checked;
-    setAcceptCgu(value);
-  };
-
-  // Bloc de retour affiche sous le bouton d'inscription (voir plus bas dans le
-  // formulaire) : la reponse apparait la ou l'utilisateur vient de cliquer.
   const feedback = (
-    <div ref={feedbackRef} className="flex flex-col gap-3 empty:hidden">
+    <div className="flex flex-col gap-3 empty:hidden">
       {submitError && (
         <AlertBanner
           title="Champs manquants !"
           variant="error"
           detail="Certains champs obligatoires sont manquants."
-          onClose={() => {
-            setSubmitError(false);
-          }}
+          onClose={() => setSubmitError(false)}
         />
       )}
+
       {submitCguError && (
         <AlertBanner
           title="CGU !"
           variant="error"
           detail="Vous devez accepter nos CGU."
-          onClose={() => {
-            setSubmitCguError(false);
-          }}
+          onClose={() => setSubmitCguError(false)}
         />
       )}
 
@@ -327,6 +218,7 @@ const SignupForm = ({
           }}
         />
       )}
+
       {submitPending && (
         <AlertBanner
           title="Inscription en cours…"
@@ -336,244 +228,271 @@ const SignupForm = ({
           onClose={() => setSubmitPending(false)}
         />
       )}
-      {submitSuccess && (
-        <AlertBanner
-          title="Inscription réussie !"
-          variant="success"
-          detail={successMessage}
-          duration={9000}
-          onClose={() => {
-            setSubmitSuccess(false);
-            setSubmitLoading(false);
-            setSuccessMessage("");
-            setLastName("");
-            setFirstName("");
-            setEmail("");
-            setPassword("");
-            setConfirmPassword("");
-            setAcceptCgu(false);
-          }}
-        />
-      )}
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <form onSubmit={handleSubmit}>
-        <section className="flex flex-col gap-6">
-          <div className="grid gap-2">
-            <Field>
-              <FieldLabel
-                htmlFor="lastname"
-                className="after:text-red-500 after:content-['*']"
-              >
-                Nom
-              </FieldLabel>
-              <Input
-                id="lastname"
-                type="text"
-                placeholder="Dupond"
-                value={lastName}
-                onChange={handleChangeLastname}
-              />
-            </Field>
+    <AuthPanelShell
+      id="signup-panel-title"
+      titre={emailAVerifier ? "Activez votre compte" : "Créer un compte"}
+      presentation={presentation}
+      onClose={onClose}
+      largeur={400}
+    >
+      {emailAVerifier ? (
+        <ActivationParCode
+          email={emailAVerifier}
+          onModifier={() => setEmailAVerifier(null)}
+          onActive={handleCompteActive}
+          onSeConnecter={onSwitchToLogin}
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+
+          {/* Les messages (erreurs, envoi en cours) sont en tête du panneau :
+              toujours visibles, sans pousser le bas du formulaire ni forcer un
+              défilement. */}
+          {feedback}
+
+          {/* Le chemin le plus court d'abord : la plupart des gens s'arrêtent ici. */}
+          <div className="flex flex-col gap-2">
+            <ConnectGoogle />
+            <ConnectMicrosoft />
           </div>
 
-          <div className="grid gap-2">
-            <Field>
-              <FieldLabel htmlFor="firstname">Prénom</FieldLabel>
-              <Input
-                id="firstname"
-                type="text"
-                placeholder="Jenny"
-                value={firstName}
-                onChange={handleChangeFirstname}
-              />
-            </Field>
+          <div className="flex items-center gap-3">
+            <div className="h-px w-full bg-line" />
+            <span className="text-[11px] font-medium tracking-wide text-ink-subtle">
+              OU
+            </span>
+            <div className="h-px w-full bg-line" />
           </div>
 
-          <div className="grid gap-2">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Nom et prénom tiennent sur une ligne : deux champs courts
+                empilés allongeaient le formulaire pour rien. */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel htmlFor="lastname" className="text-[13px]">
+                  Nom
+                </FieldLabel>
+                <Input
+                  id="lastname"
+                  type="text"
+                  autoFocus
+                  autoComplete="family-name"
+                  placeholder="Dupond"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel
+                  htmlFor="firstname"
+                  className="flex items-baseline gap-1.5 text-[13px]"
+                >
+                  Prénom
+                  <span className="text-[11px] font-normal text-ink-subtle">
+                    facultatif
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="firstname"
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="Jenny"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value.trim())}
+                />
+              </Field>
+            </div>
+
             <Field>
-              <FieldLabel
-                htmlFor="email"
-                className="after:text-red-500 after:content-['*']"
-              >
-                Email
+              <FieldLabel htmlFor="signup-email" className="text-[13px]">
+                E-mail
               </FieldLabel>
               <Input
-                id="email"
+                id="signup-email"
                 type="email"
+                autoComplete="email"
                 placeholder="mail@example.com"
                 value={email}
-                // pattern="/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/"
-                onChange={handleChangeEmail}
+                onChange={(event) => setEmail(event.target.value)}
+                aria-invalid={email.length > 0 && !emailValide}
                 className={
-                  emailError &&
-                  "text-destructive border-destructive focus-visible:border-destructive focus-visible:ring-destructive ring-1 ring-destructive"
+                  email.length > 0 && !emailValide
+                    ? "border-destructive ring-1 ring-destructive"
+                    : undefined
                 }
               />
-              <FieldError
-                errors={emailError ? [{ message: emailError }] : undefined}
-              ></FieldError>
+              {email.length > 0 && !emailValide && (
+                <p className="text-[12px] text-destructive">
+                  L'adresse e-mail n'est pas valide.
+                </p>
+              )}
             </Field>
-          </div>
 
-          <div className="grid gap-2">
-            <Field className="max-w-sm">
-              <FieldLabel
-                htmlFor="password"
-                className="after:text-red-500 after:content-['*']"
-              >
-                Password
+            <Field>
+              <FieldLabel htmlFor="signup-password" className="text-[13px]">
+                Mot de passe
               </FieldLabel>
-              <InputGroup
-                className={
-                  passwordError &&
-                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
-                }
-              >
+              <InputGroup>
                 <InputGroupInput
-                  id="password"
+                  id="signup-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="Choisissez un mot de passe"
                   value={password}
-                  onChange={handleChangePassword}
-                  className={passwordError && "text-destructive"}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
                 <InputGroupAddon
                   align="inline-end"
                   onClick={() => setShowPassword(!showPassword)}
                   className="hover:cursor-pointer"
                 >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showPassword ? (
+                    <EyeOffIcon className="h-4 w-4" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4" />
+                  )}
                 </InputGroupAddon>
               </InputGroup>
-              <FieldError
-                errors={
-                  passwordError ? [{ message: passwordError }] : undefined
-                }
-              ></FieldError>
-            </Field>
-          </div>
 
-          <div className="grid gap-2">
-            <Field className="max-w-sm">
-              <FieldLabel
-                htmlFor="confirmpassword"
-                className="after:text-red-500 after:content-['*']"
-              >
-                Confirm password
+              {/* La liste n'apparaît qu'à la première frappe (vide, elle
+                  ressemblerait à une liste de reproches) et disparaît une fois
+                  toutes les règles satisfaites : elle n'a plus rien à signaler. */}
+              {password.length > 0 && !motDePasseValide && (
+                <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                  {criteresMotDePasse.map((critere) => (
+                    <li
+                      key={critere.libelle}
+                      className={`flex items-center gap-1.5 text-[11.5px] transition-colors ${
+                        critere.rempli ? "text-success-dark" : "text-ink-subtle"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors ${
+                          critere.rempli
+                            ? "bg-success text-white"
+                            : "border border-line-emphasis"
+                        }`}
+                      >
+                        {critere.rempli && <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />}
+                      </span>
+                      {critere.libelle}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="confirmpassword" className="text-[13px]">
+                Confirmer le mot de passe
               </FieldLabel>
               <InputGroup
                 className={
-                  confirmPasswordError &&
-                  "border-2 border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-destructive has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-destructive"
+                  confirmPassword.length > 0 && !confirmationCorrespond
+                    ? "border-destructive"
+                    : undefined
                 }
               >
                 <InputGroupInput
                   id="confirmpassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirmez votre mot de passe"
+                  autoComplete="new-password"
+                  placeholder="Saisissez-le à nouveau"
                   value={confirmPassword}
-                  onChange={handleChangeConfirmPassword}
-                  className={confirmPasswordError && "text-destructive"}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                 />
-                <InputGroupAddon
-                  align="inline-end"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="hover:cursor-pointer"
-                >
-                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                <InputGroupAddon align="inline-end" className="gap-1.5">
+                  {confirmPassword.length > 0 && confirmationCorrespond && (
+                    <CheckIcon className="h-4 w-4 text-success" strokeWidth={2.5} />
+                  )}
+                  <span
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="hover:cursor-pointer"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOffIcon className="h-4 w-4" />
+                    ) : (
+                      <EyeIcon className="h-4 w-4" />
+                    )}
+                  </span>
                 </InputGroupAddon>
               </InputGroup>
-              <FieldError
-                errors={
-                  confirmPasswordError
-                    ? [{ message: confirmPasswordError }]
-                    : undefined
-                }
-              ></FieldError>
+              {confirmPassword.length > 0 && !confirmationCorrespond && (
+                <p className="text-[12px] text-destructive">
+                  Les deux mots de passe ne sont pas identiques.
+                </p>
+              )}
             </Field>
-          </div>
 
-          <div className="grid gap-2">
-            <FieldGroup className="w-72">
-              <Field orientation="horizontal">
+            {/* Toute la bande coche la case, pas seulement le petit carré.
+                Un <label> ne conviendrait pas : la case de base-ui garde son
+                <input> masqué, que le label viserait à la place du contrôle
+                réellement affiché. */}
+            <div
+              onClick={() => setAcceptCgu(!acceptCgu)}
+              className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line-subtle bg-surface-subtle px-3 py-2.5 transition-colors hover:border-line"
+            >
+              {/* La case gère déjà son propre clic et le clavier : sans cette
+                  garde, le clic serait compté deux fois et s'annulerait. */}
+              <span onClick={(event) => event.stopPropagation()}>
                 <Checkbox
                   id="terms-checkbox-desc"
                   name="terms-checkbox-desc"
+                  aria-label="J'accepte les conditions générales d'utilisation"
                   checked={acceptCgu}
                   defaultChecked={false}
-                  onCheckedChange={(checked) => {
-                    handleCheckCgu({
-                      target: { checked },
-                    } as React.ChangeEvent<HTMLInputElement>);
-                  }}
-                  className="border-ring"
+                  onCheckedChange={(checked) => setAcceptCgu(Boolean(checked))}
+                  className="mt-0.5 border-ring"
                 />
-                <FieldDescription className="after:ml-1 after:text-red-500 after:content-['*']">
-                  Accepter nos{" "}
-                  <a
-                    href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:cursor-pointer underline"
-                  >
-                    <span>CGU</span>
-                  </a>
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          </div>
+              </span>
 
-          <div className="grid gap-2">
-            <span className="before:mr-1 before:text-red-500 before:content-['*'] text-[14px] text-gray-500">
-              Champs obligatoires.
-            </span>
-          </div>
+              <span className="text-[12px] leading-relaxed text-ink-secondary">
+                J'accepte les{" "}
+                <a
+                  href="https://www.lumenjuris.com/conditions-generales-dutilisation/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-brand underline underline-offset-2"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  conditions générales d'utilisation
+                </a>{" "}
+                de Lumen Juris.
+              </span>
+            </div>
 
-          <div className="w-full h-px bg-border"></div>
-
-          <div className="grid gap-3">
             <Button
-              className="text-background border border-lumenjuris"
-              disabled={
-                submitLoading
-                  ? true
-                  : submitError
-                    ? true
-                    : submitCguError
-                      ? true
-                      : false
-              }
+              className="w-full text-background border border-lumenjuris"
+              disabled={submitLoading}
               type="submit"
               size="lg"
             >
-              <PenBoxIcon />
-              S'inscrire
+              {submitLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <PenBoxIcon className="h-4 w-4" />
+              )}
+              {submitLoading ? "Création en cours…" : "Créer mon compte"}
             </Button>
 
-            {feedback}
-
-            <div className="flex items-center gap-3">
-              <div className="w-full h-px bg-gray-300"></div>
-              <span className="text-gray-400">OU</span>
-              <div className="w-full h-px bg-gray-300"></div>
-            </div>
-            <button
-              className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris hover:bg-lumenjuris-background"
-              type="button"
-              onClick={handleSubmitGoogle}
-            >
-              <FcGoogle className="text-[20px]" />
-              S'inscrire avec Google
-            </button>
-          </div>
-        </section>
-      </form>
-    </div>
+            <p className="text-center text-[12.5px] text-ink-muted">
+              Déjà un compte ?{" "}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="font-semibold text-brand underline-offset-2 transition-colors hover:underline"
+              >
+                Se connecter
+              </button>
+            </p>
+          </form>
+        </div>
+      )}
+    </AuthPanelShell>
   );
 };
-
-export default SignupForm;

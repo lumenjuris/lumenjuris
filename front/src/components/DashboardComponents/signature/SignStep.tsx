@@ -64,7 +64,7 @@ export function SignStep(props: Props) {
 
   const { file, fields, signers, allSelfSigned, recipientFormValid, canSend, sending, sendError } = props;
   const selfFields = fields.filter((f) => f.signer === "self");
-  const selfColor = signers.find((s) => s.role === "self")?.hex ?? "bg-blue-primay";
+  const selfColor = signers.find((s) => s.role === "self")?.hex ?? "bg-blue-primary";
   const counterColor = signers.find((s) => s.role === "counterparty")?.hex ?? "#10b981";
 
   // Phase du guidage : elle suit l'avancement réel de la signature et de l'envoi.

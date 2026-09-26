@@ -57,7 +57,7 @@ export const ResetPassword = () => {
 
   useEffect(() => {
     if (!token && !reason) {
-      navigate("/inscription");
+      navigate("/dashboard");
     }
     if (reason) {
       setView("error");
@@ -161,7 +161,7 @@ export const ResetPassword = () => {
 
             <div className="space-y-3">
               <Link
-                to="/inscription"
+                to="/dashboard"
                 className="w-full h-10 gap-2 flex justify-center items-center border-2 p-2 rounded-lg font-semibold text-white bg-black hover:bg-black/80 transition-colors"
               >
                 Retour à la connexion
@@ -318,7 +318,7 @@ export const ResetPassword = () => {
             </div>
 
             <Link
-              to="/inscription"
+              to="/dashboard"
               className="w-full h-10 gap-2 flex justify-center items-center border-2 p-2 rounded-lg font-semibold text-white bg-black hover:bg-black/80 transition-colors"
             >
               Se connecter

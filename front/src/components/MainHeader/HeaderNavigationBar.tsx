@@ -5,6 +5,8 @@ import {
   LogOutIcon,
   AlertCircleIcon,
   HandCoinsIcon,
+  LogInIcon,
+  PenBoxIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,6 +20,10 @@ import { useState, useEffect, useCallback } from "react";
 import type { MouseEvent } from "react";
 
 import { useUserStore } from "../../store/userStore";
+import { useAuthPanelStore } from "../../store/authPanelStore";
+
+import { LoginForm } from "../auth/LoginForm";
+import { SignupForm} from "../auth/SignupForm"
 
 type NavigationClickHandler = (
   event?: MouseEvent<HTMLElement>,
@@ -92,8 +98,9 @@ function deriveOverallBadge(tab: NotificationItem[]): NotificationBadge {
  *    `/analyzer`), les liens admin-only (`/sandbox`, `/monitoring`), la cloche
  *    de notifications et le menu utilisateur (avatar, logout, mon compte, formules).
  *
- * 2. **Utilisateur non connecté** — affiche uniquement les liens `/souscription`
- *    et `/inscription`.
+ * 2. **Utilisateur non connecté** — affiche les boutons « Se connecter » et
+ *    « Inscrivez-vous », qui ouvrent les panneaux d'authentification (store
+ *    `authPanelStore`) plutôt qu'une page dédiée.
  *
  * 3. **Responsive** — deux rendus parallèles (mobile/tablette `< 768 px` vs
  *    desktop `≥ 768 px`) via Tailwind `lg:hidden` / `hidden lg:flex` :
@@ -141,8 +148,19 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
     if (onNavClick?.() === false) return;
 
     const success = await logoutUser();
-    if (success) navigate("/inscription");
+    if (success) navigate("/");
   };
+
+  // Les panneaux sont rendus ici mais pilotés par un store : l'accueil les
+  // ouvre aussi, quand un visiteur clique sur un module. Un seul à la fois,
+  // ils se superposeraient au même endroit de l'écran.
+  const panneauAuth = useAuthPanelStore((state) => state.panneau);
+  const presentationAuth = useAuthPanelStore((state) => state.presentation);
+  const ouvrirConnexion = useAuthPanelStore((state) => state.ouvrirConnexion);
+  const ouvrirInscription = useAuthPanelStore((state) => state.ouvrirInscription);
+  const basculerPanneauAuth = useAuthPanelStore((state) => state.basculerVers);
+  const fermerPanneauAuth = useAuthPanelStore((state) => state.fermer);
+
 
   return (
     <div className="flex items-center gap-1 lg:pr-2">
@@ -264,7 +282,48 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
             </DropdownMenu>
           </div>
         </section>
-      ) : null}
+      ) : (
+        // UTILISATEUR NON CONNECTE : les deux points d'entrée vers un compte.
+        // Sous 640 px, les deux libellés ne tiennent plus côte à côte dans la
+        // barre : on ne garde que les icônes, le titre du panneau prend le relais.
+        <section className="flex items-center gap-2">
+          <button
+            onClick={() => ouvrirConnexion()}
+            aria-label="Se connecter"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold text-ink-secondary transition-colors hover:border-brand/40 hover:text-brand sm:px-3"
+          >
+            <LogInIcon size={15} />
+            <span className="hidden sm:inline">Se connecter</span>
+          </button>
+
+          <button
+            onClick={() => ouvrirInscription()}
+            aria-label="Inscrivez-vous"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-hover sm:px-3"
+          >
+            <PenBoxIcon size={15} />
+            <span className="hidden sm:inline">Inscrivez-vous</span>
+          </button>
+        </section>
+      )}
+
+      {/* Les deux panneaux se placent eux-mêmes sous l'en-tête, et ne sont
+          jamais ouverts en même temps. */}
+      {panneauAuth === "connexion" && (
+        <LoginForm
+          onClose={fermerPanneauAuth}
+          onSwitchToSignup={() => basculerPanneauAuth("inscription")}
+          presentation={presentationAuth}
+        />
+      )}
+
+      {panneauAuth === "inscription" && (
+        <SignupForm
+          onClose={fermerPanneauAuth}
+          onSwitchToLogin={() => basculerPanneauAuth("connexion")}
+          presentation={presentationAuth}
+        />
+      )}
     </div>
   );
 };

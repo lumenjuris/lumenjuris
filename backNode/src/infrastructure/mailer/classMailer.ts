@@ -3,6 +3,7 @@ import nodemailer, { type SendMailOptions } from "nodemailer";
 import { templateVerifyAccount } from "./template/verifyAccount.js";
 import { templateResetPassword } from "./template/resetPassword.js";
 import { templateTwoFactor } from "./template/twoFactor.js";
+import { templateVerifyAccountCode } from "./template/verifyAccountCode.js";
 import { templateInvoiceEmail } from "./template/invoiceEmail.js";
 import { templateWelcomeFreemium } from "./template/welcomeFreemium.js";
 import { templateSignatureInvite } from "./template/signatureInvite.js";
@@ -22,15 +23,8 @@ export type MailAttachment = {
 };
 
 export type MailExtraOptions = {
-  /** Adresse(s) en copie. */
   cc?: string;
-  /**
-   * Adresse à laquelle les réponses doivent arriver. L'expéditeur technique
-   * est un no-reply de la plateforme : sans `replyTo`, une réponse du
-   * destinataire se perd. On y met l'e-mail de l'utilisateur concerné.
-   */
   replyTo?: string;
-  /** Pièces jointes. */
   attachments?: MailAttachment[];
 };
 
@@ -49,8 +43,7 @@ const MAILER_HOST = process.env.MAILER_HOST || "mail.lumenjuris.com";
 const MAILER_PORT = Number(process.env.MAILER_PORT || 465);
 
 /** Adresse affichee comme expediteur. Doit appartenir au domaine authentifie. */
-const MAILER_FROM =
-  process.env.MAILER_FROM || '"Lumen Juris" <no-reply@lumenjuris.com>';
+const MAILER_FROM = process.env.MAILER_FROM || '"Lumen Juris" <no-reply@lumenjuris.com>';
 
 const transporter = nodemailer.createTransport({
   host: MAILER_HOST,
@@ -280,6 +273,20 @@ export class Mailer {
     return this.send(
       this.createOption(html, "Activez votre compte Lumen Juris"),
       `Un email a été envoyé à votre adresse ${this.email}, veuillez consulter votre boîte de réception pour valider votre inscription.`,
+    );
+  }
+
+  async sendVerifyAccountCode(
+    code: string,
+    username?: string,
+  ): Promise<MailResult> {
+    const html = this.createHtmlFullContent(
+      templateVerifyAccountCode(code, username),
+    );
+
+    return this.send(
+      this.createOption(html, "Activez votre compte Lumen Juris"),
+      `Un code d'activation a été envoyé à ${this.email}. Il est valide 15 minutes.`,
     );
   }
 

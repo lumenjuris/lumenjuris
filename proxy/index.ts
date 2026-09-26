@@ -90,6 +90,7 @@ app.use("/api/delete-summarize-contract", summarizeContractRouter);
 
 
 app.get("/api/google", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/google`)});
+app.get("/api/microsoft", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/microsoft`)});
 
 
 // Health pour tester le serveur

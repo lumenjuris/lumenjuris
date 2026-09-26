@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Upload } from "lucide-react";
 
 import type { KpiCard } from "./types";
+import { useAuthPanelStore } from "../../../store/authPanelStore";
 
 interface Props {
   firstName: string;
+  /** Vrai quand la page est consultée sans compte : on présente l'outil. */
+  isGuest: boolean;
   /** Vrai tant que l'utilisateur n'a rien créé : le message d'accueil change. */
   isEmpty: boolean;
   /** Nombre d'éléments en attente, utilisé dans la phrase d'accroche. */
@@ -20,9 +23,11 @@ interface Props {
  * Les compteurs restent affichés en bas de l'en-tête, sous forme de pastilles
  * cliquables : ce sont des repères, pas le sujet de la page.
  */
-export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }: Props) {
+export function HeroHeader({ firstName, isGuest, isEmpty, pendingActions, kpis, loading }: Props) {
+  const ouvrirConnexion = useAuthPanelStore((state) => state.ouvrirConnexion);
+
   // Le prénom peut manquer (compte créé via OAuth sans profil complet).
-  const greeting = isEmpty
+  let greeting = isEmpty
     ? `Bienvenue${firstName ? `, ${firstName}` : ""}.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}.`;
 
@@ -31,6 +36,12 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
     subline = pendingActions > 0
       ? `${pendingActions} action${pendingActions > 1 ? "s vous attendent" : " vous attend"}. Reprenez où vous vous êtes arrêté.`
       : "Rien d'urgent aujourd'hui : tous vos contrats sont à jour.";
+  }
+
+  // Visiteur : pas de prénom ni de compteurs, on présente ce que fait l'outil.
+  if (isGuest) {
+    greeting = "Rédigez, négociez et faites signer vos contrats.";
+    subline = "Découvrez l'outil librement. La création d'un compte vous sera demandée au moment d'enregistrer votre premier contrat.";
   }
 
   const visibleKpis = kpis.filter((kpi) => !kpi.hideWhenZero || kpi.value > 0);
@@ -51,6 +62,17 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
             {greeting}
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/60">{subline}</p>
+
+          {isGuest && (
+            <button
+              type="button"
+              onClick={() => ouvrirConnexion()}
+              className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:border-white/50 hover:bg-white/10"
+            >
+              Se connecter ou créer un compte
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl lg:flex-1">

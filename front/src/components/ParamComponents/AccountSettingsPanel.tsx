@@ -31,6 +31,7 @@ import {
 import { AlertBanner } from "../common/AlertBanner";
 import { useState, useRef } from "react";
 import { SettingsSection } from "./SettingsSection";
+import { CurrentPasswordModal } from "./CurrentPasswordModal";
 
 import { fetchProxy } from "../../utils/fetchProxy";
 
@@ -123,6 +124,15 @@ export function AccountSettingsPanel({
   const [passwordDialogMode, setPasswordDialogMode] =
     useState<PasswordDialogMode>(null);
 
+  // Modale de ré-authentification : ouverte après le clic sur « Enregistrer le
+  // mot de passe », elle demande le mot de passe actuel avant d'envoyer la
+  // requête qui change réellement le mot de passe.
+  const [currentPasswordModalOpen, setCurrentPasswordModalOpen] =
+    useState(false);
+  const [currentPasswordError, setCurrentPasswordError] = useState<
+    string | null
+  >(null);
+
   const googleConnectionPanelMode =
     provider?.provider === "GOOGLE"
       ? (provider.googleConnectionPanelMode ?? "google_only")
@@ -195,6 +205,67 @@ export function AccountSettingsPanel({
       );
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  // Étape 1 du changement de mot de passe : on valide que les deux nouveaux
+  // mots de passe correspondent, puis on ouvre la modale de ré-authentification.
+  // La requête n'est PAS envoyée ici : elle attend le mot de passe actuel.
+  const handleRequestPasswordChange = (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (confirmPassword !== password) {
+      setSubmitError(true);
+      return;
+    }
+    setCurrentPasswordError(null);
+    setCurrentPasswordModalOpen(true);
+  };
+
+  // Étape 2 : le mot de passe actuel est confirmé, on envoie le changement.
+  const handleConfirmPasswordChange = async (currentPassword: string) => {
+    setSubmitLoading(true);
+    setCurrentPasswordError(null);
+    try {
+      const response = await fetchProxy("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, currentPassword }),
+        credentials: "include",
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.success) {
+        // Mot de passe actuel incorrect : on garde la modale ouverte avec le
+        // message, l'utilisateur corrige sans tout ressaisir.
+        if (payload?.reason === "wrong-current-password") {
+          setCurrentPasswordError(
+            payload?.message ?? "Le mot de passe actuel est incorrect.",
+          );
+          setSubmitLoading(false);
+          return;
+        }
+        setServerError(true);
+        setServerErrorMessage(
+          payload?.message ??
+            "Une erreur s'est produite, nous n'avons pas pu enregistrer votre mot de passe...",
+        );
+        setSubmitLoading(false);
+        return;
+      }
+
+      setCurrentPasswordModalOpen(false);
+      setSubmitSuccess(true);
+      setSuccessMessage("Votre mot de passe a bien été modifié.");
+      resetPasswordFields();
+    } catch (error) {
+      setServerError(true);
+      setServerErrorMessage(
+        "Une erreur s'est produite, nous n'avons pas pu enregistrer votre mot de passe...",
+      );
+      setSubmitLoading(false);
+      console.error(error);
     }
   };
 
@@ -412,9 +483,10 @@ export function AccountSettingsPanel({
           </div>
         )}
 
-        {/* Formulaire direct de changement de mot de passe */}
+        {/* Formulaire direct de changement de mot de passe : le clic ouvre la
+            modale de ré-authentification, l'envoi se fait après confirmation. */}
         <form
-          onSubmit={(e) => handleSubmitPassword(e, false)}
+          onSubmit={handleRequestPasswordChange}
           className="space-y-4 px-5 py-5 sm:px-6"
         >
           <div className="flex items-start gap-3">
@@ -638,6 +710,17 @@ export function AccountSettingsPanel({
           </form>
         </DialogContent>
       </Dialog>
+
+      <CurrentPasswordModal
+        open={currentPasswordModalOpen}
+        loading={submitLoading}
+        error={currentPasswordError}
+        onCancel={() => {
+          setCurrentPasswordModalOpen(false);
+          setCurrentPasswordError(null);
+        }}
+        onConfirm={handleConfirmPasswordChange}
+      />
 
       {/* Section 3 : Préférences */}
       <SettingsSection

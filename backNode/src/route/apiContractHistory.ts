@@ -48,10 +48,7 @@ routerContractHistory.get(
   },
 );
 
-routerContractHistory.post(
-  "/",
-  authMiddleware,
-  async (req: Request, res: Response) => {
+routerContractHistory.post("/",authMiddleware, async (req: Request, res: Response) => {
     console.log("PARAMS :", req.params.externalId);
     try {
       const item = await new ContractHistory().save(

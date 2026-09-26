@@ -7,6 +7,7 @@ import { EnterpriseSettingsPanel } from "../components/ParamComponents/Enterpris
 import { ParamLayout } from "../components/ParamComponents/ParamLayout";
 import { SubscriptionSettingsPanel } from "../components/ParamComponents/SubscriptionSettingsPanel";
 import { ConfirmationModal } from "../components/ui/ConfirmationModal";
+import { CurrentPasswordModal } from "../components/ParamComponents/CurrentPasswordModal";
 import { TwoFactorCodeModal } from "../components/ui/TwoFactorCodeModal";
 import type {
   AccountConfirmationModal,
@@ -25,6 +26,13 @@ import {
 import { useUserStore } from "../store/userStore";
 import { usePreferencesStore } from "../store/preferencesStore";
 import { fetchProxy } from "../utils/fetchProxy";
+
+/**
+ * Levée quand le serveur exige le mot de passe actuel (changement d'e-mail,
+ * désactivation de la 2FA…). Signale à l'appelant qu'il faut ouvrir la modale
+ * de ré-authentification plutôt qu'afficher une erreur.
+ */
+class ReauthRequiredError extends Error {}
 
 const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
   prenom: "",
@@ -68,6 +76,16 @@ export function ParamCompte() {
     useState(false);
   const [activeConfirmationModal, setActiveConfirmationModal] =
     useState<AccountConfirmationModal | null>(null);
+
+  // Modale de ré-authentification, partagée par les actions sensibles de cette
+  // page (changement d'e-mail, désactivation de la 2FA). L'action à rejouer une
+  // fois le mot de passe saisi est gardée dans une ref.
+  const [reauthModalOpen, setReauthModalOpen] = useState(false);
+  const [reauthLoading, setReauthLoading] = useState(false);
+  const [reauthError, setReauthError] = useState<string | null>(null);
+  const reauthActionRef = useRef<
+    ((currentPassword: string) => Promise<void>) | null
+  >(null);
   const isDyslexicModeEnabled = usePreferencesStore(
     (state) => state.isDyslexicMode,
   );
@@ -204,8 +222,11 @@ export function ParamCompte() {
 
   const persistAccountSettings = async ({
     includePassword = false,
+    currentPassword,
   }: {
     includePassword?: boolean;
+    /** Mot de passe actuel, requis par le serveur pour un changement d'e-mail. */
+    currentPassword?: string;
   } = {}) => {
     const nextPassword = accountPassword.trim();
 
@@ -224,14 +245,23 @@ export function ParamCompte() {
         nom: accountProfile.nom,
         email: accountProfile.email,
         ...(includePassword ? { password: nextPassword } : {}),
+        ...(currentPassword ? { currentPassword } : {}),
       }),
     });
-    const payload = (await response.json().catch(() => null)) as ApiResponse<{
-      profile: AccountProfile;
-      provider: AccountProvider;
-    }> | null;
+    const payload = (await response.json().catch(() => null)) as
+      | (ApiResponse<{
+          profile: AccountProfile;
+          provider: AccountProvider;
+        }> & { reason?: string })
+      | null;
 
     if (!response.ok || !payload?.success || !payload.data) {
+      // Le serveur réclame le mot de passe actuel (e-mail modifié) : on remonte
+      // une erreur typée pour ouvrir la modale de ré-authentification, sans
+      // afficher la bannière d'erreur générique.
+      if (payload?.reason === "wrong-current-password") {
+        throw new ReauthRequiredError(payload.message);
+      }
       setProfileUpdateError(true);
       throw new Error(
         payload?.message ||
@@ -251,6 +281,57 @@ export function ParamCompte() {
     if (includePassword) {
       setAccountPassword("");
     }
+  };
+
+  // Ouvre la modale de ré-authentification pour une action sensible : l'action
+  // reçoit le mot de passe actuel saisi et doit lever une erreur si le serveur
+  // le refuse (la modale reste alors ouverte avec le message).
+  const demanderMotDePasseActuel = (
+    action: (currentPassword: string) => Promise<void>,
+  ) => {
+    reauthActionRef.current = action;
+    setReauthError(null);
+    setReauthModalOpen(true);
+  };
+
+  const handleReauthConfirm = async (currentPassword: string) => {
+    if (!reauthActionRef.current) return;
+    setReauthLoading(true);
+    setReauthError(null);
+    try {
+      await reauthActionRef.current(currentPassword);
+      setReauthModalOpen(false);
+      reauthActionRef.current = null;
+    } catch (error) {
+      setReauthError(
+        error instanceof Error
+          ? error.message
+          : "Le mot de passe actuel est incorrect.",
+      );
+    } finally {
+      setReauthLoading(false);
+    }
+  };
+
+  // Désactivation de la 2FA : le serveur exige le mot de passe actuel, on le
+  // demande avant d'envoyer.
+  const disableTwoFactor = async (currentPassword: string) => {
+    const response = await fetchProxy("/api/user", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ twoFactorEnabled: false, currentPassword }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | (ApiResponse<unknown> & { reason?: string })
+      | null;
+
+    if (!response.ok || !payload?.success) {
+      throw new Error(
+        payload?.message ?? "Le mot de passe actuel est incorrect.",
+      );
+    }
+    setIsTwoFactorEnabled(false);
   };
 
   const handlePasswordBlur = () => {
@@ -284,22 +365,9 @@ export function ParamCompte() {
     if (checked) {
       setActiveConfirmationModal("two_factor");
       return;
-    } else if (!checked) {
-      try {
-        const response = await fetchProxy("/api/user", {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ twoFactorEnabled: false }),
-        });
-        const confirmResponse = await response.json();
-        if (response.ok || confirmResponse.success) {
-          setIsTwoFactorEnabled(false);
-        }
-      } catch (error) {
-        console.log("TWO FACTOR DISABLED ERROR :", error);
-      }
     }
+    // Désactivation : action sensible, on confirme par le mot de passe actuel.
+    demanderMotDePasseActuel(disableTwoFactor);
   };
 
   const handleResendTwoFactorCode = async () => {
@@ -376,6 +444,15 @@ export function ParamCompte() {
       void persistAccountSettings()
         .then(() => setProfileUpdateSuccess(true))
         .catch((error) => {
+          // E-mail modifié : le serveur réclame le mot de passe actuel. On
+          // ouvre la modale et on rejoue la mise à jour avec ce mot de passe.
+          if (error instanceof ReauthRequiredError) {
+            demanderMotDePasseActuel(async (currentPassword) => {
+              await persistAccountSettings({ currentPassword });
+              setProfileUpdateSuccess(true);
+            });
+            return;
+          }
           setProfileUpdateError(true);
           console.error(error);
         });
@@ -567,6 +644,18 @@ export function ParamCompte() {
         }}
         onVerify={handleTwoFactorCodeVerify}
         onResendMail={handleResendTwoFactorCode}
+      />
+
+      <CurrentPasswordModal
+        open={reauthModalOpen}
+        loading={reauthLoading}
+        error={reauthError}
+        onCancel={() => {
+          setReauthModalOpen(false);
+          setReauthError(null);
+          reauthActionRef.current = null;
+        }}
+        onConfirm={handleReauthConfirm}
       />
     </>
   );

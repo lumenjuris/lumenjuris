@@ -26,6 +26,11 @@ userRouter.post("/resend-verify", (req,res)=>{
 
 });
 
+// Activation d'un compte par code (utilisateur pas encore connecté).
+userRouter.post("/verify-code", (req, res) => {
+  relayToNode(req, res, "/user/verify-code");
+});
+
 userRouter.post("/auth/login", (req,res)=>{
     relayToNode(req,res, "/user/auth/login")
 });
@@ -86,4 +91,10 @@ userRouter.get("/auth/google", (req, res) => {
   console.log("[proxy/google] redirect vers :", `${BACKNODE_URL}/api/user/auth/google`);
   console.log("[proxy/google] cookies entrants :", req.headers.cookie);
   res.redirect(`${BACKNODE_URL}/auth/google`);
+});
+
+userRouter.get("/auth/microsoft", (req, res) => {
+  console.log("[proxy/microsoft] redirect vers :", `${BACKNODE_URL}/auth/microsoft`);
+  console.log("[proxy/microsoft] cookies entrants :", req.headers.cookie);
+  res.redirect(`${BACKNODE_URL}/auth/microsoft`);
 });

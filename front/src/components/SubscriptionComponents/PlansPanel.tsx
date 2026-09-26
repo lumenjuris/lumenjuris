@@ -6,6 +6,7 @@ import { cn } from "../../utils/shadcnUtils/cn";
 import { PageBanner } from "../common/PageBanner";
 
 import { useUserStore } from "../../store/userStore";
+import { useAuthPanelStore } from "../../store/authPanelStore";
 import type { BillingInterval, SubscriptionData } from "../../types/subscriptionData";
 import { toCheckoutPlanName, PENDING_CHECKOUT_KEY } from "../../utils/planMapping";
 import { fetchProxy } from "../../utils/fetchProxy";
@@ -125,6 +126,8 @@ export function PlansPanel() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const navigate = useNavigate();
   const userData = useUserStore((s) => s.userData);
+  const ouvrirConnexion = useAuthPanelStore((s) => s.ouvrirConnexion);
+  const ouvrirInscription = useAuthPanelStore((s) => s.ouvrirInscription);
 
   const interval: BillingInterval = yearly ? "yearly" : "monthly";
 
@@ -217,14 +220,17 @@ export function PlansPanel() {
   }, [startCheckout]);
 
   const handlePlanSelect = (plan: Plan) => {
-    // Non connecté : on mémorise le plan choisi (persistant à travers l'inscription)
-    // puis on envoie vers l'inscription. Au retour authentifié, le checkout reprend.
+    // Non connecté : on mémorise le plan choisi (persistant à travers la
+    // connexion) puis on ramène sur l'accueil en ouvrant le panneau de
+    // connexion, avec retour sur `/souscription`. Au retour authentifié, le
+    // checkout mémorisé reprend.
     if (!userData) {
       sessionStorage.setItem(
         PENDING_CHECKOUT_KEY,
         JSON.stringify({ name: plan.name, interval }),
       );
-      navigate("/inscription");
+      ouvrirConnexion("/souscription");
+      navigate("/dashboard");
       return;
     }
     // Connecté : on lance directement le paiement Stripe Checkout.
@@ -363,7 +369,9 @@ export function PlansPanel() {
                 )}
                 onClick={() => {
                   if (plan.free) {
-                    navigate("/inscription");
+                    // Offre gratuite : il suffit de créer un compte.
+                    ouvrirInscription("/dashboard");
+                    navigate("/dashboard");
                   } else {
                     handlePlanSelect(plan);
                   }

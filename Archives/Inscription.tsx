@@ -1,5 +1,5 @@
-import SignupForm from "../components/auth/SignupForm";
-import LoginForm from "../components/auth/LoginForm";
+import { SignupForm } from "../components/auth/SignupForm";
+import { LoginForm } from "../components/auth/LoginForm";
 import { VerifierBoiteMail } from "../components/auth/VerifierBoiteMail";
 import { MainHeader } from "../components/MainHeader/MainHeader";
 import { useUserStore } from "../store/userStore";
@@ -11,6 +11,13 @@ import { Button } from "../components/ui/Button";
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 
+
+/**
+ * Ancienne version du système d'authentification. 
+ * Page entière avec double vue pour connection/inscription
+ * Cette page a été retiré pour avoir quelque chose de plus subtil et moin lourd pour l'ergonomie des 
+ * utilisateurs.
+ */
 export function Inscription() {
   const [isLoginOnScreen, setIsLoginOnScreen] = useState(true);
 
@@ -66,66 +73,57 @@ export function Inscription() {
                 }}
               />
             ) : (<>
-            <section className="w-full flex items-center justify-between">
-              <div className="w-44 flex flex-col items-center gap-1">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="w-full bg-lumenjuris-background text-lumenjuris hover:text-white hover:bg-primary/90 disabled:bg-primary disabled:text-white disabled:opacity-80"
-                  disabled={isLoginOnScreen ? true : false}
-                  onClick={() => {
-                    setIsLoginOnScreen(true);
-                  }}
-                >
-                  Connectez-vous
-                </Button>
-              </div>
+              <section className="w-full flex items-center justify-between">
+                <div className="w-44 flex flex-col items-center gap-1">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="w-full bg-lumenjuris-background text-lumenjuris hover:text-white hover:bg-primary/90 disabled:bg-primary disabled:text-white disabled:opacity-80"
+                    disabled={isLoginOnScreen ? true : false}
+                    onClick={() => {
+                      setIsLoginOnScreen(true);
+                    }}
+                  >
+                    Connectez-vous
+                  </Button>
+                </div>
 
-              <div className="w-44 flex flex-col items-center gap-1">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="w-full bg-lumenjuris-background text-lumenjuris hover:text-white hover:bg-primary/90 disabled:bg-primary disabled:text-white disabled:opacity-80"
-                  disabled={isLoginOnScreen ? false : true}
-                  onClick={() => {
-                    setIsLoginOnScreen(false);
-                  }}
-                >
-                  Inscrivez-vous
-                </Button>
-              </div>
-            </section>
-            <div className="w-full h-px bg-border"></div>
-            <>
-              {isLoginOnScreen ? (
-                <LoginForm
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  forgotPassword={forgotPassword}
-                  setForgotPassword={setForgotPassword}
-                  emailSent={emailSent}
-                  setEmailSent={setEmailSent}
-                />
-              ) : (
-                <SignupForm
-                  lastName={lastName}
-                  setLastName={setLastName}
-                  firstName={firstName}
-                  setFirstName={setFirstName}
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  acceptCgu={acceptCgu}
-                  setAcceptCgu={setAcceptCgu}
-                  confirmPassword={confirmPassword}
-                  setConfirmPassword={setConfirmPassword}
-                  onInscrit={setEmailAVerifier}
-                />
-              )}
-            </>
+                <div className="w-44 flex flex-col items-center gap-1">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="w-full bg-lumenjuris-background text-lumenjuris hover:text-white hover:bg-primary/90 disabled:bg-primary disabled:text-white disabled:opacity-80"
+                    disabled={isLoginOnScreen ? false : true}
+                    onClick={() => {
+                      setIsLoginOnScreen(false);
+                    }}
+                  >
+                    Inscrivez-vous
+                  </Button>
+                </div>
+              </section>
+              <div className="w-full h-px bg-border"></div>
+              <>
+                {isLoginOnScreen ? (
+                  <LoginForm />
+                ) : (
+                  <SignupForm
+                    lastName={lastName}
+                    setLastName={setLastName}
+                    firstName={firstName}
+                    setFirstName={setFirstName}
+                    email={email}
+                    setEmail={setEmail}
+                    password={password}
+                    setPassword={setPassword}
+                    acceptCgu={acceptCgu}
+                    setAcceptCgu={setAcceptCgu}
+                    confirmPassword={confirmPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    onInscrit={setEmailAVerifier}
+                  />
+                )}
+              </>
             </>)}
           </div>
         </div>
