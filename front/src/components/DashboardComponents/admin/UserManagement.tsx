@@ -55,6 +55,8 @@ export function UserManagement() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Avertissement renvoyé par le backend (ex : plan changé malgré un abonnement Stripe actif).
+  const [notice, setNotice] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
   const [savingPlanId, setSavingPlanId] = useState<number | null>(null);
@@ -112,13 +114,15 @@ export function UserManagement() {
     if (newPlan === u.plan) return;
     setSavingPlanId(u.idUser);
     setError("");
+    setNotice("");
     setUsers((prev) => prev.map((x) => (x.idUser === u.idUser ? {...x, plan: newPlan } : x)));
     try {
-      await fetchProxy(`/api/admin/users/${u.idUser}/plan`, {
+      const res = await fetchProxy(`/api/admin/users/${u.idUser}/plan`, {
         method: "PATCH", credentials: "include",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({plan: newPlan}),
-      }).then(json<unknown>);
+      }).then(json<{ warning?: string }>);
+      if (res?.warning) setNotice(res.warning);
       setSavedPlanId(u.idUser);
       setTimeout(() => setSavedPlanId(null), 1500);
     } catch (e) {
@@ -179,6 +183,12 @@ export function UserManagement() {
       {error && (
         <div className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
           <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 px-4 py-3 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> {notice}
         </div>
       )}
 

@@ -170,7 +170,7 @@ export function OverviewSection() {
         <KpiTile icon={<Activity className="w-4 h-4" />} label="Actifs J-1" value={users.active.d1} sub="(IA)" />
         <KpiTile icon={<Activity className="w-4 h-4" />} label="Actifs J-7" value={users.active.d7} sub="(IA)" />
         <KpiTile icon={<Activity className="w-4 h-4" />} label="Actifs J-30" value={users.active.d30} sub="(IA)" />
-        <KpiTile icon={<TrendingUp className="w-4 h-4" />} label="Conversion" value={`${conversion.rate}%`} sub={`${conversion.withActiveSub}/${conversion.total} abonnés`} accent />
+        <KpiTile icon={<TrendingUp className="w-4 h-4" />} label="Conversion" value={`${conversion.rate}%`} sub={`${conversion.withActiveSub}/${conversion.total} abonnés payants`} accent />
       </div>
 
       {/* Coût LLM du jour */}

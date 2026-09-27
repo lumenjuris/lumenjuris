@@ -39,6 +39,8 @@ export interface CompanyResult {
   nom_raison_sociale?: string | null;
   sigle?: string | null;
   nature_juridique?: string | null;
+  /** "A" active, "C" cessée. */
+  etat_administratif?: string | null;
   activite_principale?: string | null;
   section_activite_principale?: string | null;
   siege?: CompanyEtablissement | null;

@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response, Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { Enterprise } from "../services/classEnterprise.js";
+import { capitalSocial, inpiConfigure } from "../services/classInpi.js";
 
 const routerEnterprise: Router = express.Router();
 
@@ -20,6 +21,20 @@ routerEnterprise.get("/insee/:siren", async (req: Request, res: Response) => {
       message:
         "Une erreur est survenue lors de la récupération des données INSEE.",
     });
+  }
+});
+
+// Capital social d'une entreprise (registre INPI), pour préremplir les contrats.
+routerEnterprise.get("/capital/:siren", async (req: Request, res: Response) => {
+  if (!inpiConfigure()) {
+    return res.status(503).json({ success: false, message: "Registre INPI non configuré." });
+  }
+  try {
+    const capital = await capitalSocial(String(req.params.siren ?? ""));
+    return res.status(capital ? 200 : 404).json({ success: Boolean(capital), data: { capital } });
+  } catch (err) {
+    console.error(err);
+    return res.status(502).json({ success: false, message: "Registre INPI indisponible." });
   }
 });
 

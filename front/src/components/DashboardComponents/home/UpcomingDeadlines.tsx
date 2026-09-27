@@ -2,12 +2,15 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import { EmptyHint } from "./EmptyHint";
+import { GuestPreview } from "./GuestPreview";
 import { SectionCard, SectionSkeleton } from "./SectionCard";
 import type { DeadlineCard } from "./types";
 
 interface Props {
   items: DeadlineCard[];
   loading: boolean;
+  /** Vrai quand la page est consultée sans compte. */
+  isGuest: boolean;
 }
 
 /**
@@ -17,23 +20,36 @@ interface Props {
  * Il vit dans la colonne de droite : la mise en page reste étroite (pastille de
  * date + titre), le lien de fin de ligne se réduit à un chevron.
  */
-export function UpcomingDeadlines({ items, loading }: Props) {
+export function UpcomingDeadlines({ items, loading, isGuest }: Props) {
   return (
     <SectionCard
       eyebrow="Agenda"
       title="Échéances à venir"
       headerRight={
+        isGuest ? undefined : (
         <Link
           to="/contratheque?vue=echeances"
           className="text-[12.5px] font-semibold text-blue-primary hover:underline"
         >
           Calendrier
         </Link>
+        )
       }
     >
-      {loading && <SectionSkeleton rows={2} />}
+      {isGuest && (
+        <GuestPreview
+          description="Les dates clés sont extraites automatiquement de vos contrats : vous n'avez pas à tenir d'agenda à part."
+          examples={[
+            "Fins de contrat et reconductions tacites",
+            "Délais de préavis à respecter",
+            "Obligations d'information à date fixe",
+          ]}
+        />
+      )}
 
-      {!loading && items.length > 0 && (
+      {!isGuest && loading && <SectionSkeleton rows={2} />}
+
+      {!isGuest && !loading && items.length > 0 && (
         <div className="flex flex-col border-t border-line-subtle">
           {items.map((item) => (
             <Link
@@ -67,7 +83,9 @@ export function UpcomingDeadlines({ items, loading }: Props) {
         </div>
       )}
 
-      {!loading && items.length === 0 && <EmptyHint>Aucune échéance à venir.</EmptyHint>}
+      {!isGuest && !loading && items.length === 0 && (
+        <EmptyHint>Aucune échéance à venir.</EmptyHint>
+      )}
     </SectionCard>
   );
 }

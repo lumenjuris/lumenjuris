@@ -34,6 +34,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "@azure/msal-node": "^7.0.0",
     "@prisma/adapter-mariadb": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "archiver": "^8.0.0",

@@ -144,8 +144,14 @@ export function useEnterpriseSettings(
     isEditingEnterprise || !hasEnterpriseDisplayData(enterpriseSettings);
   const canTriggerInseePrefill = normalizedLookupSiren.length === 9;
 
-  const handlePrefillFromSiren = async () => {
-    if (!canTriggerInseePrefill) {
+  /**
+   * Remplit la fiche depuis les données publiques. `sirenDirect` vient de la
+   * recherche par nom : l'entreprise choisie dans les suggestions fournit son
+   * SIREN, sans avoir à le taper.
+   */
+  const handlePrefillFromSiren = async (sirenDirect?: string) => {
+    const siren = (sirenDirect ?? inseeLookupSiren).replace(/\D/g, "");
+    if (siren.length !== 9) {
       setInseePrefillError("Le SIREN doit contenir exactement 9 chiffres.");
       return;
     }
@@ -162,7 +168,7 @@ export function useEnterpriseSettings(
       setEnterpriseDraft(cloneEnterpriseSettings(enterpriseSettings));
 
       const response = await fetchProxy(
-        `/api/enterprise/insee/${encodeURIComponent(normalizedLookupSiren)}`,
+        `/api/enterprise/insee/${encodeURIComponent(siren)}`,
         {
           credentials: "include",
           signal: abortController.signal,
@@ -195,7 +201,7 @@ export function useEnterpriseSettings(
           })) ?? current.idccSelections,
         selectedIdccKey: payload.data?.selectedIdccKey ?? null,
       }));
-      setInseeLookupSiren(payload.data?.siren ?? normalizedLookupSiren);
+      setInseeLookupSiren(payload.data?.siren ?? siren);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;

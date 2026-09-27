@@ -48,7 +48,8 @@ app.use(
       /^http:\/\/127\.0\.0\.1:\d+$/,
       /^https:\/\/.*\.odns\.fr$/,
       "http://localhost:5173",
-      "https://beta.lumenjuris.com"
+      "https://beta.lumenjuris.com",
+      "https://app.lumenjuris.com"
     ],
     credentials: true,
   }),
@@ -89,6 +90,7 @@ app.use("/api/delete-summarize-contract", summarizeContractRouter);
 
 
 app.get("/api/google", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/google`)});
+app.get("/api/microsoft", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/microsoft`)});
 
 
 // Health pour tester le serveur

@@ -36,6 +36,7 @@ enum EnvelopeStatus {
 
 enum AuthProvider {
   GOOGLE
+  MICROSOFT
 }
 
 enum SubscriptionStatus {
@@ -195,7 +196,7 @@ model User {
 
 // --- AUTH VIA PROVIDER ---
 
-/// Compte tiers OAuth (Google). Stocke le providerId et l'avatar pour la connexion via provider externe.
+/// Compte tiers OAuth (Google, Microsoft). Stocke le providerId et l'avatar pour la connexion via provider externe.
 model AuthProviderAccount {
   idAuthProvider Int          @id @default(autoincrement())
   providerId     String       @unique

@@ -3,6 +3,7 @@ import { Download, Info } from "lucide-react";
 import { calculerIndemniteLegale } from "../../utils/dashboard/calculerIndemnitees";
 import type { TypeContrat, ResultatCalculIndemnite, MotifRupture } from "../../types/calculIndemnitees";
 import { AlertBanner } from "../common/AlertBanner";
+import { PageBanner } from "../common/PageBanner";
 
 const MOTIF_VERS_RAISON_RESILIATION: Record<string, MotifRupture> = {
   personnel: "standard",
@@ -74,12 +75,12 @@ export function Calculateur() {
   };
 
   return (
-    <div className="mx-auto w-full space-y-6 max-w-5xl">
+    <div className="mx-auto w-full space-y-6 max-w-7xl">
 
-      <div>
-        <h1 className="text-2xl font-bold text-ink tracking-tight">Simulateur d'indemnité légale de licenciement</h1>
-        <p className="text-sm text-ink-muted mt-1">Estimation basée sur le Code du travail français</p>
-      </div>
+      <PageBanner
+        title="Simulateur d'indemnité de licenciement"
+        subtitle="Estimation basée sur le Code du travail français."
+      />
 
       {alertError && (
         <AlertBanner

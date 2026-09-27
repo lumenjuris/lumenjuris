@@ -4,15 +4,20 @@ import { fetchProxy } from "../utils/fetchProxy";
 interface PreferencesState {
   isDyslexicMode: boolean;
   isEmailNotifications: boolean;
+  /** Téléphone professionnel, repris pour préremplir les contrats. */
+  telephone: string | null;
   loadPreferences: () => Promise<void>;
   setDyslexicMode: (value: boolean) => Promise<void>;
   setEmailNotifications: (value: boolean) => Promise<void>;
+  setTelephone: (value: string) => Promise<boolean>;
   reset: () => void;
 }
 
-async function updateAccountParameters(accountParameters: {
+/** Le serveur fusionne avec l'existant : on n'envoie que ce qui change. */
+async function updateAccountParameters(accountParameters: Partial<{
   emailNotifications: boolean;
-}) {
+  telephone: string | null;
+}>) {
   const res = await fetchProxy("/api/user/preferences", {
     method: "PUT",
     credentials: "include",
@@ -39,7 +44,7 @@ async function updatePreferenceUI(preferenceUI: { dyslexicMode: boolean }) {
  * Les préférences sont réparties sur deux endpoints distincts :
  *
  * - **`/api/user/preferences`** (`accountParameters`) — paramètres de compte :
- *   notifications email.
+ *   notifications email, téléphone professionnel.
  * - **`/api/user/preferences/ui`** (`preferenceUI`) — préférences d'interface :
  *   mode dyslexique.
  *
@@ -52,7 +57,7 @@ async function updatePreferenceUI(preferenceUI: { dyslexicMode: boolean }) {
  * à la valeur précédente si la requête échoue. La valeur finale est ensuite
  * synchronisée depuis la réponse serveur pour garantir la cohérence.
  *
- * **`reset`** : remet les valeurs aux défauts applicatifs (`false` / `true`).
+ * **`reset`** : remet les valeurs aux défauts applicatifs.
  * À appeler à la déconnexion pour ne pas exposer les préférences d'un autre compte.
  *
  * @example
@@ -64,6 +69,7 @@ async function updatePreferenceUI(preferenceUI: { dyslexicMode: boolean }) {
 export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   isDyslexicMode: false,
   isEmailNotifications: true,
+  telephone: null,
 
   loadPreferences: async () => {
     try {
@@ -79,6 +85,7 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
               isEmailNotifications:
                 dataAccount.data?.accountParameters?.emailNotifications !==
                 false,
+              telephone: dataAccount.data?.accountParameters?.telephone ?? null,
             }
           : {}),
         ...(resUI.ok && dataUI?.success
@@ -123,5 +130,19 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
     }
   },
 
-  reset: () => set({ isDyslexicMode: false, isEmailNotifications: true }),
+  setTelephone: async (value: string) => {
+    const previous = get().telephone;
+    set({ telephone: value.trim() || null });
+    const { ok, data } = await updateAccountParameters({
+      telephone: value,
+    }).catch(() => ({ ok: false, data: null }));
+    if (!ok || !data?.success) {
+      set({ telephone: previous });
+      return false;
+    }
+    set({ telephone: data.data?.accountParameters?.telephone ?? null });
+    return true;
+  },
+
+  reset: () => set({ isDyslexicMode: false, isEmailNotifications: true, telephone: null }),
 }));

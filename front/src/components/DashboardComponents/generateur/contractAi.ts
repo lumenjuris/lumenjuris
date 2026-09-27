@@ -15,9 +15,18 @@ export interface WizardQuestion {
   hint?: string;
 }
 
+/** Importance d'un champ à remplir : pilote l'affichage (optionnels repliés). */
+export type ImportanceChamp = "obligatoire" | "recommande" | "optionnel";
+
 export interface DraftVariable {
   id: string;
   label: string;
+  importance?: ImportanceChamp;
+}
+
+function lireImportance(v: unknown): ImportanceChamp | undefined {
+  const s = typeof v === "string" ? v.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "") : "";
+  return s === "obligatoire" || s === "recommande" || s === "optionnel" ? s : undefined;
 }
 export interface DraftSection {
   heading?: string;
@@ -72,7 +81,7 @@ export async function generateContractQuestions(title: string): Promise<WizardQu
   const prompt =
     `Tu aides un professionnel à préparer un contrat de type « ${title.trim()} ». Il n'est PAS juriste : ` +
     `dirigeant, commerçant, indépendant, responsable RH… ` +
-    `Pose-lui les 4 à 7 questions qui décident du CONTENU de CE contrat : les règles et les clauses qui ` +
+    `Pose-lui les 4 à 5 questions qui décident du CONTENU de CE contrat : les règles et les clauses qui ` +
     `changent vraiment d'un contrat de ce type à l'autre (ex. selon le contrat : comment le paiement est ` +
     `organisé, ce qui se passe en cas de retard, comment et à quelles conditions on peut y mettre fin, qui ` +
     `est responsable en cas de problème, exclusivité, confidentialité, propriété de ce qui est produit, ` +
@@ -80,23 +89,22 @@ export async function generateContractQuestions(title: string): Promise<WizardQu
     `INTERDIT : toute question qui demande une information à saisir — nom ou identité d'une partie, adresse, ` +
     `date, montant, prix, durée chiffrée, nombre. Ces informations seront des champs à remplir dans l'éditeur ` +
     `et ne doivent JAMAIS faire l'objet d'une question. ` +
-    `LANGAGE : des mots de tous les jours, des phrases courtes, une seule idée par question, vouvoiement. ` +
-    `Aucun jargon juridique ; si un terme juridique est vraiment indispensable, explique-le en quelques mots ` +
-    `entre parenthèses. ` +
-    `FORMAT : "type":"choice", avec 2 à 4 options courtes, concrètes et mutuellement exclusives qui disent ` +
-    `la conséquence pratique de chaque choix ; le "hint" explique en une phrase simple à quoi sert la ` +
-    `question (ou reste vide si c'est évident). ` +
+    `LANGAGE : des mots de tous les jours, une seule idée par question, vouvoiement. Aucun jargon juridique. ` +
+    `CONCISION IMPÉRATIVE — l'utilisateur doit tout lire d'un coup d'œil : chaque question tient en 10 mots ` +
+    `maximum ; chaque option en 6 mots maximum, sans explication ni tiret de précision ; le "hint" reste VIDE, ` +
+    `sauf si la question est incompréhensible sans lui (alors 10 mots maximum). ` +
+    `FORMAT : "type":"choice", avec 2 à 3 options concrètes et mutuellement exclusives. ` +
     `RÈGLE ABSOLUE SUR LES OPTIONS : chaque option proposée doit être LICITE en droit français. Ne propose JAMAIS ` +
     `une option contraire à une règle d'ordre public ou manifestement illégale (par exemple : durée ou renouvellement ` +
     `d'essai au-delà des maxima légaux, clause de non-concurrence sans contrepartie financière, délai de paiement ` +
     `au-delà du plafond légal, renonciation à un droit auquel on ne peut pas renoncer). Quand la loi fixe un plafond ` +
     `ou un plancher, toutes les options restent dans les limites légales et la plus proche de la limite le rappelle ` +
-    `(ex. « 2 mois — le maximum autorisé »). ` +
-    `Réponds UNIQUEMENT en JSON : un tableau de 4 à 7 objets ` +
+    `en deux mots (ex. « 2 mois (maximum légal) »). ` +
+    `Réponds UNIQUEMENT en JSON : un tableau de 4 à 5 objets ` +
     `{"question": string, "type": "choice", "hint": string, "options": [string, …]}. Aucun texte hors JSON. ` +
     `Exemples de forme (le contenu doit être adapté au contrat demandé, pas recopié) : ` +
-    `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin de la mission","Un acompte au départ, le reste à la fin"]} ` +
-    `{"question":"Le client peut-il arrêter le contrat avant la fin ?","type":"choice","hint":"Cela fixe ce qui se passe si l'un de vous veut s'arrêter en cours de route.","options":["Oui, à tout moment, avec un préavis","Oui, mais seulement en cas de faute grave","Non, le contrat va jusqu'à son terme"]}.`;
+    `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin","Acompte puis solde"]} ` +
+    `{"question":"Peut-on arrêter le contrat avant la fin ?","type":"choice","hint":"","options":["Oui, avec un préavis","Seulement en cas de faute","Non, jusqu'au terme"]}.`;
   const out = await callOpenAi52(prompt, "high", "low", "gpt-5.4-nano");
   let arr: unknown;
   try { arr = JSON.parse(extractJson(out)); } catch { arr = null; }
@@ -129,9 +137,12 @@ function parseDraft(out: string, title: string): ContractDraft {
       const variables = Array.isArray(j.variables)
         ? (j.variables as unknown[])
             .map((v) => {
-              const o = v as { id?: unknown; label?: unknown };
+              const o = v as { id?: unknown; label?: unknown; importance?: unknown };
               const id = typeof o.id === "string" ? o.id.trim() : "";
-              return id ? { id, label: typeof o.label === "string" && o.label.trim() ? o.label.trim() : id } : null;
+              if (!id) return null;
+              const label = typeof o.label === "string" && o.label.trim() ? o.label.trim() : id;
+              const importance = lireImportance(o.importance);
+              return importance ? { id, label, importance } : { id, label };
             })
             .filter((v): v is DraftVariable => v !== null)
         : [];
@@ -211,8 +222,17 @@ function blocParties(parties: PartyIdentity[] = []): string {
 const FORMAT_JSON_CONTRAT =
   `Emploie des VARIABLES au format {{snake_case}} pour TOUTES les données factuelles à remplir ` +
   `(parties, adresses, dates, montants…). ` +
+  // Noms normalisés : ils permettent de préremplir automatiquement chaque
+  // partie (profil de l'utilisateur, base SIRENE) sans deviner.
+  `NOMMAGE DES CHAMPS D'UNE PARTIE : <role>_<donnee>, où <role> désigne la partie en un mot ` +
+  `(ex. prestataire, client, bailleur, preneur, vendeur, acheteur, employeur, salarie) et <donnee> est ` +
+  `EXACTEMENT l'un de : denomination, forme_juridique, capital, siren, siret, adresse, code_postal, ville, ` +
+  `rcs, representant, qualite, email, telephone (ex. prestataire_siret, client_adresse). ` +
+  `IMPORTANCE de chaque variable : "obligatoire" (le contrat n'est pas valable ou pas exécutable sans elle), ` +
+  `"recommande" (utile, souvent attendu) ou "optionnel" (précision facultative). ` +
   `Réponds UNIQUEMENT en JSON : ` +
-  `{"title": string en MAJUSCULES, "variables": [{"id": "snake_case", "label": "Libellé lisible"}], ` +
+  `{"title": string en MAJUSCULES, "variables": [{"id": "snake_case", "label": "Libellé lisible", ` +
+  `"importance": "obligatoire" | "recommande" | "optionnel"}], ` +
   `"sections": [{"heading": "Article 1 – …", "content": "… {{variable}} …"}]}. ` +
   `Inclure un préambule (heading « Préambule ») et une dernière section « Signatures ». ` +
   `Chaque variable utilisée dans un content DOIT figurer dans "variables". Aucun texte hors JSON.`;

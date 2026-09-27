@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { fetchProxy } from "../../utils/fetchProxy";
+import { BannerAction, PageBanner } from "../common/PageBanner";
 import { relativeTime } from "../../utils/format/relativeTime";
 
 type Message = { role: "user" | "bot" | "error"; text: string };
@@ -178,7 +179,17 @@ export function ChatJuridique() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] gap-0 overflow-hidden rounded-card border border-line shadow-card max-w-7xl mx-auto w-full">
+    <div className="mx-auto w-full max-w-7xl space-y-4">
+    <PageBanner
+      title="Chat juridique"
+      subtitle="Posez vos questions de droit : réponses sourcées, conversations conservées."
+      actions={
+        <BannerAction onClick={createConversation} icon={<Plus />}>
+          Nouvelle conversation
+        </BannerAction>
+      }
+    />
+    <div className="flex h-[calc(100vh-15rem)] min-h-[26rem] gap-0 overflow-hidden rounded-card border border-line shadow-card w-full">
       {/* liste des conversations */}
       <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex-col hidden lg:flex">
         <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -382,6 +393,7 @@ export function ChatJuridique() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

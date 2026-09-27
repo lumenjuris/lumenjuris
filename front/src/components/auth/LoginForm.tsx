@@ -3,119 +3,117 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/InputGroup";
 import { Field, FieldLabel, FieldDescription } from "../ui/Field";
-import { EyeOffIcon, EyeIcon, SendIcon, LogInIcon } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
+import {
+  EyeOffIcon,
+  EyeIcon,
+  SendIcon,
+  LogInIcon,
+  MailIcon,
+  PencilIcon,
+} from "lucide-react";
 
-import { AlertBanner } from "../common/AlertBanner";
+import { AlertBanner, type AlertVariant } from "../common/AlertBanner";
 import { TwoFactorCodeModal } from "../ui/TwoFactorCodeModal";
 import { useUserStore } from "../../store/userStore";
+import type { PresentationPanneau } from "../../store/authPanelStore";
+import { consommerDestination } from "../../utils/destinationApresConnexion";
 
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { fetchProxy } from "../../utils/fetchProxy";
+import { ConnectGoogle } from "./ConnectGoogle";
+import { ConnectMicrosoft } from "./ConnectMicrosoft";
+import { AuthPanelShell } from "./AuthPanelShell";
 
-interface LoginFormProps {
-  email: string;
-  setEmail: React.Dispatch<React.SetStateAction<string>>;
-  password: string;
-  setPassword: React.Dispatch<React.SetStateAction<string>>;
-  forgotPassword: boolean;
-  setForgotPassword: React.Dispatch<React.SetStateAction<boolean>>;
-  emailSent: boolean;
-  setEmailSent: React.Dispatch<React.SetStateAction<boolean>>;
+
+
+/** Une bannière du panneau, décrite dans le tableau `alertes` du composant. */
+interface Alerte {
+  id: string;
+  visible: boolean;
+  variant: AlertVariant;
+  title: string;
+  detail: string;
+  duration: number;
+  onClose: () => void;
+  complement?: React.ReactNode;
 }
 
-const PROXY_URL: string =
-  import.meta.env.VITE_URL_PROXY || "http://localhost:3000";
+interface LoginFormProps {
+  onClose: () => void;
+  onSwitchToSignup: () => void;
+  presentation: PresentationPanneau;
+}
 
 /**
- * Formulaire de connexion gérant trois flux d'authentification distincts :
+ * Panneau de connexion affiché depuis l'en-tête, au moment où l'utilisateur a
+ * besoin d'un compte. Il porte lui-même sa présentation : une carte flottante
+ * ancrée sous le bouton « Se connecter », montée via un portail pour ne pas
+ * déformer la barre de navigation.
  *
- * 1. **Email / mot de passe** — appelle `POST /api/user/auth/login`. En cas de
- *    succès, vérifie deux conditions avant de naviguer :
- *    - Le compte doit être vérifié (`isVerified`). Sinon, une alerte invite
- *      l'utilisateur à cliquer sur le lien reçu par email.
- *    - Si le 2FA est activé (`twoFactorRequired`), ouvre `TwoFactorCodeModal`
- *      plutôt que de naviguer immédiatement.
+ * La connexion par e-mail se fait en deux étapes : on demande d'abord
+ * l'adresse, puis seulement le mot de passe. L'adresse reste affichée à la
+ * seconde étape, en lecture seule, avec un bouton « Changer d'email » pour
+ * revenir en arrière.
  *
- * 2. **Google OAuth** — redirige `window.location` vers `PROXY_URL/api/google`.
- *    Le proxy gère le callback et pose le cookie JWT, puis redirige vers `/analyzer`.
- *
- * 3. **Mot de passe oublié** — bascule le rendu vers un formulaire minimaliste
- *    (contrôlé par `forgotPassword`) qui appelle `POST /api/user/auth/forgotpassword`.
- *    L'envoi est best-effort : aucune erreur serveur n'est exposée à l'utilisateur
- *    pour ne pas révéler l'existence d'un compte.
- *
- * @param email            Valeur contrôlée du champ email.
- * @param setEmail         Setter du champ email.
- * @param password         Valeur contrôlée du champ mot de passe.
- * @param setPassword      Setter du champ mot de passe.
- * @param forgotPassword   `true` lorsque le formulaire est en mode "mot de passe oublié".
- * @param setForgotPassword Bascule entre le formulaire de connexion et celui de réinitialisation.
- * @param emailSent        `true` après l'envoi de l'email de réinitialisation, affiche une alerte de succès.
- * @param setEmailSent     Setter de l'état `emailSent`.
+ * Il gère les trois flux d'authentification : e-mail / mot de passe (avec 2FA
+ * et compte non vérifié), Google OAuth, et mot de passe oublié. Le bouton
+ * Microsoft n'est qu'une maquette, sa route serveur n'existe pas encore.
  */
-const LoginForm = ({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  forgotPassword,
-  setForgotPassword,
-  emailSent,
-  setEmailSent,
+export const LoginForm = ({
+  onClose,
+  onSwitchToSignup,
+  presentation,
 }: LoginFormProps) => {
+
   const [showPassword, setShowPassword] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState(false);
   const [submitForgotError, setSubmitForgotError] = useState(false);
   const [serverError, setServerError] = useState(false);
-  const [serverErrorMessage, setServerErrorMessage] = useState(
-    "Une erreur est survenue, veuillez réessayer...",
-  );
+  const [serverErrorMessage, setServerErrorMessage] = useState("Une erreur est survenue, veuillez réessayer...");
   const [isBanned, setIsBanned] = useState(false);
   const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState("");
   const [verificationError, setVerificationError] = useState(false);
-  const verificationErrorMessage =
-    "Pour valider votre compte veuillez cliquer sur le lien qui vous a été envoyé par e-mail.";
+  const verificationErrorMessage = "Pour valider votre compte veuillez cliquer sur le lien qui vous a été envoyé par e-mail.";
 
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [showRateLimitLogin, setShowRateLimitLogin] = useState(false);
-
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const navigate = useNavigate();
   const { fetchUser } = useUserStore();
   const location = useLocation();
   const locationState = location.state as { plan?: object } | null;
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  // La connexion se fait en deux temps : on demande l'adresse, puis seulement
+  // le mot de passe. L'adresse reste affichée à la seconde étape, en lecture,
+  // pour que l'utilisateur voie sous quel compte il se connecte.
+  const [etape, setEtape] = useState<"email" | "motDePasse">("email");
+
+
+  // Retour à la saisie de l'adresse : on repose le curseur dans le champ, sans
+  // quoi l'utilisateur devrait cliquer dedans pour corriger. Le champ est
+  // retrouvé par son id : le composant Input partagé n'est pas un forwardRef,
+  // une ref React ne l'atteindrait pas.
   useEffect(() => {
-    setForgotPassword(false);
-    setEmailSent(false);
-
-    const errorParam = searchParams.get("error");
-    const reasonParam = searchParams.get("reason");
-
-    const isBannedFromUrl = errorParam === "banned" || reasonParam === "banned";
-
-    if ( isBannedFromUrl) {
-      setIsBanned(true);
-
-      if (isBannedFromUrl){
-        const newParams = new URLSearchParams(searchParams);
-        newParams.delete("error");
-        newParams.delete("reason");
-        setSearchParams(newParams, {replace: true});
-      }
+    if (etape === "email" && email) {
+      document.getElementById("email")?.focus();
     }
-  }, [searchParams]);
+  }, [etape]);
+
+
+
 
   //Handle de la connexion d'un user
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     if (!email || !password) {
       setSubmitError(true);
       return;
@@ -168,7 +166,7 @@ const LoginForm = ({
         setServerError(true);
         setServerErrorMessage(
           dataResponse.message ||
-            "Une erreur est survenue, veuillez réessayer...",
+          "Une erreur est survenue, veuillez réessayer...",
         );
         setSubmitLoading(false);
         return;
@@ -188,11 +186,15 @@ const LoginForm = ({
       }
 
       await fetchUser();
-      locationState?.plan
-        ? navigate("/souscription", {
-            state: { plan: locationState?.plan || null },
-          })
-        : navigate("/dashboard");
+      // La destination est lue avant la fermeture : `onClose` l'efface, pour
+      // qu'un abandon ne détourne pas la connexion suivante.
+      const destination = consommerDestination();
+      onClose();
+      if (locationState?.plan) {
+        navigate("/souscription", { state: { plan: locationState.plan } });
+      } else {
+        navigate(destination ?? "/dashboard");
+      }
     } catch (error) {
       setServerError(true);
       setSubmitLoading(false);
@@ -214,7 +216,9 @@ const LoginForm = ({
     }
 
     await fetchUser();
-    navigate("/dashboard");
+    const destination = consommerDestination();
+    onClose();
+    navigate(destination ?? "/dashboard");
   };
 
   const handleTwoFactorCancel = async () => {
@@ -226,10 +230,7 @@ const LoginForm = ({
     }).catch(() => null);
   };
 
-  // Connexion via Google
-  const handleSubmitGoogle = () => {
-    window.location.href = `${PROXY_URL}/api/user/auth/google`;
-  };
+
 
   const handleSubmitForgotPassword = async (
     event: React.FormEvent<HTMLFormElement>,
@@ -275,6 +276,33 @@ const LoginForm = ({
     }
   };
 
+  /**
+   * Un seul bouton de soumission pour les deux étapes : à la première il fait
+   * avancer vers le mot de passe, à la seconde il lance la connexion.
+   */
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (etape === "motDePasse") {
+      void handleSubmit(event);
+      return;
+    }
+
+    event.preventDefault();
+    if (!email) {
+      setSubmitError(true);
+      return;
+    }
+    setEtape("motDePasse");
+  };
+
+
+
+  /** Retour à la saisie de l'adresse : le mot de passe déjà tapé n'a plus lieu d'être. */
+  const handleChangerEmail = () => {
+    setPassword("");
+    setShowPassword(false);
+    setEtape("email");
+  };
+
   const handleChangeEmail = (event: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(event.target.value);
   };
@@ -283,216 +311,288 @@ const LoginForm = ({
     setPassword(event.target.value);
   };
 
+  // Toutes les bannières du panneau sont décrites ici plutôt que répétées dans
+  // le JSX : elles ne diffèrent que par leur condition d'affichage, leur texte
+  // et ce qu'il faut remettre à zéro en les fermant. L'ordre du tableau est
+  // celui de l'affichage.
+  const alertes: Alerte[] = [
+    {
+      id: "champsManquants",
+      visible: submitError,
+      variant: "error",
+      title: "Champs manquants !",
+      detail: "Vérifiez votre adresse e-mail et votre mot de passe.",
+      duration: 8000,
+      onClose: () => setSubmitError(false),
+    },
+    {
+      id: "emailManquant",
+      visible: submitForgotError,
+      variant: "error",
+      title: "E-mail manquant !",
+      detail:
+        "Pour réinitialiser votre mot de passe veuillez renseigner votre adresse e-mail.",
+      duration: 8000,
+      onClose: () => {
+        setForgotPassword(true);
+        setSubmitForgotError(false);
+      },
+    },
+    {
+      id: "tropDeDemandesReinitialisation",
+      visible: showRateLimitModal,
+      variant: "error",
+      title: "Trop de requêtes !",
+      detail:
+        "Vous avez demandé à réinitialiser votre mot de passe de trop nombreuses fois, veuillez attendre 15 minutes.",
+      duration: 12000,
+      onClose: () => setShowRateLimitModal(false),
+    },
+    {
+      id: "tropDeTentativesConnexion",
+      visible: showRateLimitLogin,
+      variant: "error",
+      title: "Trop de tentatives de connexion",
+      detail:
+        "Par sécurité, les tentatives sont bloquées pendant 15 minutes. Réessayez ensuite, ou utilisez « Mot de passe oublié ? » si vous ne le retrouvez pas.",
+      duration: 15000,
+      onClose: () => setShowRateLimitLogin(false),
+    },
+    {
+      id: "compteBloque",
+      visible: isBanned,
+      variant: "error",
+      title: "Votre compte a été bloqué",
+      detail:
+        "Votre compte a été bloqué par les services de modération, si vous ne comprenez pas les raisons vous pouvez nous contacter par email à l'adresse contact@lumenjuris.com",
+      duration: 15000,
+      onClose: () => setIsBanned(false),
+    },
+    {
+      id: "erreurServeur",
+      visible: serverError,
+      variant: "error",
+      title: "Connexion impossible !",
+      detail: serverErrorMessage,
+      duration: 8000,
+      onClose: () => {
+        setServerError(false);
+        setSubmitLoading(false);
+      },
+    },
+    {
+      id: "compteNonValide",
+      visible: verificationError,
+      variant: "error",
+      title: "Votre compte n'a pas été validé !",
+      detail: verificationErrorMessage,
+      duration: 10000,
+      onClose: () => {
+        setVerificationError(false);
+        setSubmitLoading(false);
+      },
+    },
+    {
+      id: "emailReinitialisationEnvoye",
+      visible: emailSent,
+      variant: "success",
+      title: "E-mail envoyé !",
+      detail:
+        "Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation dans quelques instants.",
+      duration: 12000,
+      onClose: () => {
+        setEmailSent(false);
+        setSubmitLoading(false);
+      },
+      complement: (
+        <p className="text-[12.5px] leading-relaxed text-ink-muted">
+          Pensez à vérifier vos spams si vous ne recevez rien dans quelques
+          minutes.
+        </p>
+      ),
+    },
+  ];
+
+
+
   return (
-    <div className="flex flex-col gap-5">
-      {submitError && (
-        <AlertBanner
-          title="Champs manquants !"
-          variant="error"
-          detail="Vérifiez votre adresse e-mail et votre mot de passe."
-          duration={8000}
-          onClose={() => setSubmitError(false)}
-        />
-      )}
-      {submitForgotError && (
-        <AlertBanner
-          title="E-mail manquant !"
-          variant="error"
-          detail="Pour réinitialiser votre mot de passe veuillez renseigner votre adresse e-mail."
-          duration={8000}
-          onClose={() => {
-            setForgotPassword(true);
-            setSubmitForgotError(false);
-          }}
-        />
-      )}
+    <>
+      <AuthPanelShell
+        id="login-panel-title"
+        titre={forgotPassword ? "Mot de passe oublié" : "Connexion"}
+        presentation={presentation}
+        onClose={onClose}
+        largeur={360}
+      >
+        <div className="flex flex-col gap-4">
+          {alertes
+            .filter((alerte) => alerte.visible)
+            .map(({ id, visible: _visible, complement, ...proprietes }) => (
+              <section key={id} className="flex flex-col gap-4">
+                <AlertBanner {...proprietes} />
+                {complement}
+              </section>
+            ))}
 
-      {showRateLimitModal && (
-        <AlertBanner
-          title="Trop de requêtes !"
-          variant="error"
-          detail="Vous avez demandé à réinitialiser votre mot de passe de trop nombreuses fois, veuillez attendre 15 minutes."
-          duration={12000}
-          onClose={() => {
-            setShowRateLimitModal(false);
-          }}
-        />
-      )}
-
-      {showRateLimitLogin && (
-        <AlertBanner
-          title="Trop de tentatives de connexion"
-          variant="error"
-          detail="Par sécurité, les tentatives sont bloquées pendant 15 minutes. Réessayez ensuite, ou utilisez « Mot de passe oublié ? » si vous ne le retrouvez pas."
-          duration={15000}
-          onClose={() => setShowRateLimitLogin(false)}
-        />
-      )}
-
-      {isBanned && (
-        <AlertBanner 
-        title="Votre compte a été bloqué"
-        variant="error"
-        detail="Votre compte a été bloqué par les services de modération, si vous ne comprenez pas les raisons vous pouvez nous contacter par email à l'adresse contact@lumenjuris.com"
-        duration={15000}
-        onClose={()=> {
-          setIsBanned(false);
-        }}
-        />
-      )
-
-      }
-
-      {serverError && (
-        <AlertBanner
-          title="Connexion impossible !"
-          variant="error"
-          detail={serverErrorMessage}
-          duration={8000}
-          onClose={() => {
-            setServerError(false);
-            setSubmitLoading(false);
-          }}
-        />
-      )}
-
-      {verificationError && (
-        <AlertBanner
-          title="Votre compte n'a pas été validé !"
-          variant="error"
-          detail={verificationErrorMessage}
-          duration={10000}
-          onClose={() => {
-            setVerificationError(false);
-            setSubmitLoading(false);
-          }}
-        />
-      )}
-
-      { emailSent &&  (
-        <section className="flex flex-col gap-2">
-          <AlertBanner
-            title="E-mail envoyé !"
-            variant="success"
-            detail="Si un compte est associé à cette adresse, vous recevrez un lien de réinitialisation dans quelques instants."
-            duration={12000}
-            onClose={() => {
-              setEmailSent(false);
-              setSubmitLoading(false);
-            }}
-          />
-          <p className="text-gray-500 text-[14px]">
-            Pensez à vérifier vos spams si vous ne recevez rien dans quelques
-            minutes.
-          </p>
-        </section>
-      )}
-
-      {forgotPassword === true ? (
-        <div className="flex flex-col gap-6">
-          <h2>Réinitialisez votre mot de passe :</h2>
-          <form onSubmit={handleSubmitForgotPassword}>
-            <section className="flex flex-col gap-6">
+          {forgotPassword ? (
+            <form
+              onSubmit={handleSubmitForgotPassword}
+              className="flex flex-col gap-2"
+            >
               <Field>
-                <FieldDescription className="text-gray-500">
+                <FieldDescription className="text-[12.5px] leading-relaxed text-ink-muted">
                   Saisissez l'adresse e-mail associée à votre compte. Vous
                   recevrez un lien pour créer un nouveau mot de passe.
                 </FieldDescription>
                 <Input
-                  id="email"
+                  id="forgot-email"
                   type="email"
+                  autoFocus
                   placeholder="Votre e-mail de connexion"
                   value={email}
                   onChange={handleChangeEmail}
                 />
               </Field>
 
-              <div className="w-full h-px bg-border"></div>
-
-              <div className="grid gap-2">
-                <Button
-                  className="text-background border border-lumenjuris"
-                  disabled={submitLoading || submitForgotError}
-                  type="submit"
-                  size="lg"
-                >
-                  Envoyer
-                  <SendIcon />
-                </Button>
-              </div>
-            </section>
-          </form>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <section className="flex flex-col gap-6">
-            <div className="grid gap-2">
-              <Field>
-                <FieldLabel htmlFor="email">E-mail</FieldLabel>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Saisissez votre e-mail de connexion"
-                  value={email}
-                  onChange={handleChangeEmail}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-2">
-              <Field className="max-w-sm">
-                <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
-                <InputGroup>
-                  <InputGroupInput
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Saisissez votre mot de passe"
-                    value={password}
-                    onChange={handleChangePassword}
-                  />
-                  <InputGroupAddon
-                    align="inline-end"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="hover:cursor-pointer"
-                  >
-                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                  </InputGroupAddon>
-                </InputGroup>
-              </Field>
-            </div>
-
-            <div className="w-full h-px bg-border"></div>
-
-            <div className="grid gap-3">
               <Button
-                className="text-background border border-lumenjuris"
-                disabled={submitLoading || submitError}
+                className="w-full text-background border border-lumenjuris"
+                disabled={submitLoading || submitForgotError}
                 type="submit"
                 size="lg"
               >
-                <LogInIcon />
-                Se connecter
+                <SendIcon className="h-4 w-4" />
+                Envoyer
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-full h-px bg-gray-300"></div>
-                <span className="text-gray-400">OU</span>
-                <div className="w-full h-px bg-gray-300"></div>
-              </div>
+
               <button
-                className="w-full h-10 border border-lumenjuris text-sm font-medium inline-flex justify-center items-center gap-2 rounded-md text-lumenjuris hover:bg-lumenjuris-background"
                 type="button"
-                onClick={handleSubmitGoogle}
+                className="w-fit self-center text-[12.5px] text-ink-muted underline-offset-2 transition-colors hover:text-brand hover:underline"
+                onClick={() => setForgotPassword(false)}
               >
-                <FcGoogle className="text-[20px]" />
-                Se connecter avec Google
+                Revenir à la connexion
               </button>
-              <Button variant="ghost" onClick={() => setForgotPassword(true)}>
+            </form>
+          ) : (
+            <form onSubmit={handleFormSubmit} className="flex flex-col gap-2">
+
+              <ConnectGoogle />
+              <ConnectMicrosoft />
+              <div className="flex items-center gap-2">
+                <div className="h-px w-full bg-line" />                
+              </div>
+              {etape === "email" && (
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="email" className="text-[13px]">
+                      E-mail
+                    </FieldLabel>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoFocus
+                      autoComplete="email"
+                      placeholder="Saisissez votre e-mail de connexion"
+                      value={email}
+                      onChange={handleChangeEmail}
+                    />
+                  </Field>
+
+                  <Button
+                    className="w-full text-background border border-lumenjuris"
+                    disabled={submitLoading || !email}
+                    type="submit"
+                    size="lg"
+                  >
+                    <MailIcon className="h-4 w-4" />
+                    Continuer avec l'email
+                  </Button>
+                </>
+              )}
+
+              {/* Le mot de passe n'apparaît qu'une fois l'adresse validée. */}
+              {etape === "motDePasse" && (
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="password" className="text-[13px]">
+                      Mot de passe
+                    </FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        autoFocus
+                        placeholder="Saisissez votre mot de passe"
+                        value={password}
+                        onChange={handleChangePassword}
+                      />
+                      <InputGroupAddon
+                        align="inline-end"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="hover:cursor-pointer"
+                      >
+                        {showPassword ? (
+                          <EyeOffIcon className="h-4 w-4" />
+                        ) : (
+                          <EyeIcon className="h-4 w-4" />
+                        )}
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </Field>
+
+                  <Button
+                    className="w-full text-background border border-lumenjuris"
+                    disabled={submitLoading || submitError || !password}
+                    type="submit"
+                    size="lg"
+                  >
+                    <LogInIcon className="h-4 w-4" />
+                    Se connecter
+                  </Button>
+
+                                  <div className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface-subtle px-3 py-2">
+                  <MailIcon className="h-4 w-4 shrink-0 text-ink-subtle" />
+                  <span className="flex-1 truncate text-[13px] font-medium text-ink" title={email}>
+                    {email}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleChangerEmail}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-semibold text-brand transition-colors hover:bg-white"
+                  >
+                    <PencilIcon className="h-3 w-3" />
+                    Changer d'email
+                  </button>
+                </div>
+                </>
+              )}
+
+
+
+
+              {/* CTA  forgotpassword && signup*/}
+              <button
+                type="button"
+                className="w-fit self-center text-[12.5px] text-ink-muted underline-offset-2 transition-colors hover:text-brand hover:underline"
+                onClick={() => setForgotPassword(true)}
+              >
                 Mot de passe oublié ?
-              </Button>
-            </div>
-          </section>
-        </form>
-      )}
+              </button>
+
+              <p className="text-center text-[12.5px] text-ink-muted">
+                Pas encore de compte ?{" "}
+                <button
+                  type="button"
+                  onClick={onSwitchToSignup}
+                  className="font-semibold text-brand underline-offset-2 transition-colors hover:underline"
+                >
+                  Inscrivez-vous
+                </button>
+              </p>
+            </form>
+          )}
+        </div>
+      </AuthPanelShell>
+
 
       <TwoFactorCodeModal
         open={twoFactorModalOpen}
@@ -502,8 +602,6 @@ const LoginForm = ({
           void handleTwoFactorCancel();
         }}
       />
-    </div>
+    </>
   );
 };
-
-export default LoginForm;

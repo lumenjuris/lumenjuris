@@ -16,7 +16,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-
+import { AnalysisHistoryTable } from "./conformite/AnalysisHistoryTable";
 import {
   loadContractHistoryIndex,
   loadContractHistorySnapshot,
@@ -26,8 +26,35 @@ import {
 import { contractApi } from "./contratheque/api";
 import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
 import { QuotaLimitModal } from "../common/QuotaLimitModal";
-import { AnalysisHistoryTable } from "./conformite/AnalysisHistoryTable";
-import { formatDate, getRiskLevel, getRiskStyles } from "./conformite/riskLevel";
+import { BannerAction, PageBanner } from "../common/PageBanner";
+
+type RiskLevel = "Élevé" | "Moyen" | "Faible" | "—";
+
+function getRiskLevel(score?: number): RiskLevel {
+  if (score === undefined || score === null) return "—";
+  if (score >= 60) return "Élevé";
+  if (score >= 30) return "Moyen";
+  return "Faible";
+}
+
+function getRiskStyles(level: RiskLevel): string {
+  switch (level) {
+    case "Élevé": return "text-danger-dark border-danger/20 bg-danger-light";
+    case "Moyen": return "text-warning-dark border-warning/20 bg-warning-light";
+    case "Faible": return "text-success-dark border-success/20 bg-success-light";
+    default: return "text-ink-subtle border-line bg-surface-muted";
+  }
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 function avgScore(items: ContractHistoryItem[]): number {
   const scored = items.filter((i) => i.overallRiskScore !== undefined);
@@ -166,59 +193,17 @@ export function Conformite() {
   return (
     <>
       <div className="lg:col-span-3 space-y-6 mx-auto w-full max-w-7xl">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 bg-blue-primary px-5 py-6 sm:px-8 sm:py-8 rounded-2xl">
-          <div className="text-left">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
-              Analyse de conformité
-            </h2>
-            <p className="text-sm text-gray-primary leading-relaxed mt-1">
-              Vérifiez la conformité juridique de vos documents.
-            </p>
-          </div>
-          <button
-            onClick={handleNewAnalysis}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1 will-change-transform backface-invisible shadow-sm shrink-0 self-start sm:self-end"
-          >
-            <Plus className="text-base font-normal" /> Nouvelle analyse
-          </button>
+        {/* Title + CTA */}
+        <PageBanner
+          title="Analyse de conformité"
+          subtitle="Vérifiez la conformité juridique de vos documents."
+          actions={
+            <BannerAction onClick={handleNewAnalysis} icon={<Plus />}>
+              Nouvelle analyse
+            </BannerAction>
+          }
+        />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="hidden"
-            onChange={handleFileChosen}
-          />
-        </div>
-{/* 
-        <div className="my-4 pl-4 border-l-2 border-blue-primary">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-blue-primary mb-2">
-            Pourquoi utiliser l'Analyzer ?
-          </h3>
-
-          <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 font-bold select-none">•</span>
-              <span>
-                <strong className="font-semibold text-slate-800">Diagnostic & Score de risque :</strong> Chaque clause est analysée et assortie d'un score visuel pour repérer instantanément les points de vigilance.
-              </span>
-            </li>
-
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 font-bold select-none">•</span>
-              <span>
-                <strong className="font-semibold text-slate-800">Modifications concrètes :</strong> L'outil propose des réécritures adaptées et vous explique en détail la justification de chaque changement.
-              </span>
-            </li>
-
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 font-bold select-none">•</span>
-              <span>
-                <strong className="font-semibold text-slate-800">Suggestions de clauses :</strong> Bénéficiez de recommandations de clauses à ajouter pour combler les manques et protéger au mieux vos intérêts.
-              </span>
-            </li>
-          </ul>
-        </div> */}
 
         {/* KPI */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -231,6 +216,17 @@ export function Conformite() {
             accent="#059669"
           />
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={handleFileChosen}
+        />
+
+
+
 
         {/* Search + Filter */}
         <div className="flex flex-col md:flex-row gap-2.5">
@@ -261,115 +257,115 @@ export function Conformite() {
 
         {/* Historique des analyses : cartes sur mobile, tableau sur desktop. */}
         <div className="md:hidden bg-white border border-line rounded-card shadow-card">
-            {/* ── Vue Mobile (Cartes / Liste) ── */}
-            <div className="md:hidden divide-y divide-line-subtle">
-              {filtered.length > 0 ? (
-                filtered.map((item) => {
-                  const level = getRiskLevel(item.overallRiskScore);
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-4 space-y-3 hover:bg-surface-subtle/60 transition-all cursor-pointer"
-                      onClick={() => handleOpenAnalyzer(item.id)}
-                    >
-                      {/* Entête Carte : Icône + Nom + Status + Actions */}
-                      <div className="flex items-start justify-between gap-2 whitespace-nowrap">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
-                            <FileText className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-ink truncate">
-                              {item.fileName}
-                            </p>
-                            <p className="text-xs text-ink-subtle mt-0.5">
-                              {item.status === "analyzed" ? "Analysé" : "En cours"}
-                              {item.activePatchCount > 0 ? ` · ${item.activePatchCount} modif.` : ""}
-                              <span className="ml-1 text-ink-placeholder">• {formatDate(item.createdAt)}</span>
-                            </p>
-                          </div>
+          {/* ── Vue Mobile (Cartes / Liste) ── */}
+          <div className="md:hidden divide-y divide-line-subtle">
+            {filtered.length > 0 ? (
+              filtered.map((item) => {
+                const level = getRiskLevel(item.overallRiskScore);
+                return (
+                  <div
+                    key={item.id}
+                    className="p-4 space-y-3 hover:bg-surface-subtle/60 transition-all cursor-pointer"
+                    onClick={() => handleOpenAnalyzer(item.id)}
+                  >
+                    {/* Entête Carte : Icône + Nom + Status + Actions */}
+                    <div className="flex items-start justify-between gap-2 whitespace-nowrap">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-panel bg-surface-subtle border border-line flex items-center justify-center text-ink-subtle shrink-0">
+                          <FileText className="w-4 h-4" />
                         </div>
-
-                        {/* Actions rapide sur mobile */}
-                        <div
-                          className="relative flex items-center gap-1 shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => handleAddToContratheque(item)}
-                            disabled={addState[item.id] === "saving"}
-                            title={
-                              addState[item.id] === "done"
-                                ? "Ajouté à la contrathèque"
-                                : "Ajouter à la contrathèque"
-                            }
-                            className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
-                          >
-                            {addState[item.id] === "done" ? (
-                              <Check className="w-4 h-4 text-success stroke-[1.5]" />
-                            ) : addState[item.id] === "saving" ? (
-                              <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
-                            ) : (
-                              <FolderPlus className="w-4 h-4 stroke-[1.5]" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
-                            className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
-                          >
-                            <MoreVertical className="w-4 h-4 stroke-[1.5]" />
-                          </button>
-
-                          {openMenuId === item.id && (
-                            <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                Supprimer
-                              </button>
-                              <button
-                                onClick={() => handleOpenAnalyzer(item.id)}
-                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Ouvrir
-                              </button>
-                            </div>
-                          )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink truncate">
+                            {item.fileName}
+                          </p>
+                          <p className="text-xs text-ink-subtle mt-0.5">
+                            {item.status === "analyzed" ? "Analysé" : "En cours"}
+                            {item.activePatchCount > 0 ? ` · ${item.activePatchCount} modif.` : ""}
+                            <span className="ml-1 text-ink-placeholder">• {formatDate(item.createdAt)}</span>
+                          </p>
                         </div>
                       </div>
 
-                      {/* Pied Carte : Informations secondaires (Clauses & Priorité) */}
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-line-subtle/50">
-                        <div className="flex items-center gap-1.5 text-ink-subtle">
-                          <span>Clauses :</span>
-                          <span className="font-semibold text-ink">{item.clausesCount ?? "—"}</span>
-                        </div>
-                        <div>
-                          {level !== "—" ? (
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-chip border text-[10px] font-semibold tracking-wide ${getRiskStyles(level)}`}
-                            >
-                              {level}
-                            </span>
+                      {/* Actions rapide sur mobile */}
+                      <div
+                        className="relative flex items-center gap-1 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => handleAddToContratheque(item)}
+                          disabled={addState[item.id] === "saving"}
+                          title={
+                            addState[item.id] === "done"
+                              ? "Ajouté à la contrathèque"
+                              : "Ajouter à la contrathèque"
+                          }
+                          className="p-1.5 text-ink-subtle hover:text-brand transition-all duration-200 rounded-lg hover:bg-surface-muted disabled:opacity-50 transform hover:-translate-y-0.5"
+                        >
+                          {addState[item.id] === "done" ? (
+                            <Check className="w-4 h-4 text-success stroke-[1.5]" />
+                          ) : addState[item.id] === "saving" ? (
+                            <Loader2 className="w-4 h-4 animate-spin stroke-[1.5]" />
                           ) : (
-                            <span className="text-xs text-ink-placeholder">—</span>
+                            <FolderPlus className="w-4 h-4 stroke-[1.5]" />
                           )}
-                        </div>
+                        </button>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
+                          className="p-1.5 text-ink-subtle hover:text-ink-secondary transition-colors rounded-lg hover:bg-surface-muted"
+                        >
+                          <MoreVertical className="w-4 h-4 stroke-[1.5]" />
+                        </button>
+
+                        {openMenuId === item.id && (
+                          <div className="absolute right-0 top-8 z-10 bg-white border border-line rounded-panel shadow-card-md py-1 min-w-[140px]">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Supprimer
+                            </button>
+                            <button
+                              onClick={() => handleOpenAnalyzer(item.id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-brand hover:bg-brand/10 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Ouvrir
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="px-6 py-12 text-center text-ink-subtle italic text-sm">
-                  {history.length === 0
-                    ? "Aucun document analysé pour le moment."
-                    : "Aucun résultat pour cette recherche."}
-                </div>
-              )}
-            </div>
+
+                    {/* Pied Carte : Informations secondaires (Clauses & Priorité) */}
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-line-subtle/50">
+                      <div className="flex items-center gap-1.5 text-ink-subtle">
+                        <span>Clauses :</span>
+                        <span className="font-semibold text-ink">{item.clausesCount ?? "—"}</span>
+                      </div>
+                      <div>
+                        {level !== "—" ? (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-chip border text-[10px] font-semibold tracking-wide ${getRiskStyles(level)}`}
+                          >
+                            {level}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-ink-placeholder">—</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-6 py-12 text-center text-ink-subtle italic text-sm">
+                {history.length === 0
+                  ? "Aucun document analysé pour le moment."
+                  : "Aucun résultat pour cette recherche."}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="hidden md:block">
@@ -381,18 +377,26 @@ export function Conformite() {
             addState={addState}
           />
         </div>
+
+        <Toaster position="top-right" />
+        {
+          analyzerLimitOpen && (
+            <QuotaLimitModal
+              title="Limite d'analyses atteinte"
+              message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
+              onClose={() => setAnalyzerLimitOpen(false)}
+            />
+          )
+        }
       </div>
-      <Toaster position="top-right" />
-      {analyzerLimitOpen && (
-        <QuotaLimitModal
-          title="Limite d'analyses atteinte"
-          message="Votre formule ne permet plus d'analyser de contrat ce mois-ci. Passez à une formule supérieure pour continuer."
-          onClose={() => setAnalyzerLimitOpen(false)}
-        />
-      )}
     </>
   );
 }
+
+
+
+
+
 
 /** Petite carte KPI — même gabarit que la bibliothèque de clauses. */
 function KpiCard({

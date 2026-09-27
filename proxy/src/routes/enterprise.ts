@@ -31,3 +31,11 @@ enterpriseRouter.get("/insee/:siren", auth, (req, res) => {
 });
 
 
+
+enterpriseRouter.get("/capital/:siren", auth, (req, res) => {
+  const siren = String(req.params.siren ?? "");
+  if (!/^[0-9]{9}$/.test(siren)) {
+    return res.status(400).json({ success: false, message: "SIREN invalide." });
+  }
+  relayToNode(req, res, `/enterprise/capital/${siren}`);
+});

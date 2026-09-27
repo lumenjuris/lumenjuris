@@ -3,7 +3,10 @@ import type { Request, Response, Router } from "express";
 import { User } from "../services/classUser.js";
 import { Token } from "../services/classToken.js";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
-import { createCookieAuth } from "../securite/cookieAuth.js";
+import {
+  createCookieAuth,
+  createPendingTwoFactorCookie,
+} from "../securite/cookieAuth.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { Google } from "../services/classGoogle.js";
@@ -11,6 +14,7 @@ import { Enterprise } from "../services/classEnterprise.js";
 import { Subscription } from "../services/classSubscription.js";
 import { normalizeAccountParameters } from "../utils/normalizeAccountParameters.js";
 import { normalizePreferenceUI } from "../utils/normalizePreferenceUI.js";
+import { validatePasswordStrength } from "../utils/passwordPolicy.js";
 import { getUserFullExport } from "../services/getUserData.js";
 import { readLog, writeLog } from "./apiFeedback.js";
 import { hashToken } from "../services/encryption.js";
@@ -19,6 +23,7 @@ import {
   loginLimiter,
   registerLimiter,
   forgotPasswordLimiter,
+  twoFactorLimiter,
 } from "../securite/limiter.js";
 const routerUser: Router = express.Router();
 
@@ -87,11 +92,11 @@ routerUser.post(
         });
       }
 
-      if (!password || typeof password !== "string" || password.length < 8) {
+      const forcePassword = validatePasswordStrength(password);
+      if (!forcePassword.valide) {
         return res.status(400).json({
           success: false,
-          message:
-            "Un mot de passe d'au moins 8 caractères est requis pour la création d'un compte.",
+          message: forcePassword.message,
         });
       }
 
@@ -129,8 +134,8 @@ routerUser.post(
       }
 
       const { idUser } = createdUser.data;
-      const token = await new Token().createToken(idUser, "verifyAccount");
-      const url = `${process.env.HOST}/user/verify/${token.token}`;
+      // Activation par code (saisi dans le formulaire) plutôt que par lien.
+      const codeResult = await new Token().createVerifyAccountCode(idUser);
 
       if (
         enterprise &&
@@ -156,12 +161,14 @@ routerUser.post(
       // formulaire plus longtemps.
       const MAIL_ATTENTE_MS = 1500;
 
-      const envoi = new Mailer(email)
-        .sendVerifyAccount(url, `${prenom} ${nom}`)
-        .catch((err) => {
-          console.error("Envoi de l'email de vérification échoué:", err);
-          return { success: false as const };
-        });
+      const envoi = codeResult.success
+        ? new Mailer(email)
+            .sendVerifyAccountCode(codeResult.code, `${prenom} ${nom}`)
+            .catch((err) => {
+              console.error("Envoi du code d'activation échoué:", err);
+              return { success: false as const };
+            })
+        : Promise.resolve({ success: false as const });
 
       const resultat = await Promise.race([
         envoi,
@@ -175,7 +182,7 @@ routerUser.post(
         return res.status(200).json({
           success: true,
           mailSent: "pending",
-          message: `Votre compte a été créé. L'email de vérification part à l'instant vers ${email} : consultez votre boîte de réception, et vos spams.`,
+          message: `Votre compte a été créé. Le code d'activation part à l'instant vers ${email} : consultez votre boîte de réception, et vos spams.`,
         });
       }
 
@@ -187,8 +194,8 @@ routerUser.post(
           success: false,
           mailSent: false,
           message:
-            "Votre compte a bien été créé, mais l'e-mail de vérification n'a pas pu être envoyé. " +
-            "Utilisez le lien de renvoi depuis la page de vérification, ou contactez contact@lumenjuris.com.",
+            "Votre compte a bien été créé, mais le code d'activation n'a pas pu être envoyé. " +
+            "Utilisez le bouton de renvoi, ou contactez contact@lumenjuris.com.",
         });
       }
 
@@ -229,19 +236,19 @@ routerUser.post("/resend-verify", forgotPasswordLimiter, async (req: Request, re
       return res.status(200).json({ success: true });
     }
 
-    const token = await new Token().createToken(user.idUser, "verifyAccount");
+    const codeResult = await new Token().createVerifyAccountCode(user.idUser);
 
-    const verifyUrl = `${process.env.HOST}/user/verify/${token.token}`;
+    if (codeResult.success) {
+      const prenom = user.prenom;
+      const nom = user.nom;
+      // Envoi en arriere-plan : la reponse ne depend plus de la poignee de main
+      // SMTP (environ 1 seconde vers o2switch, plus la remise du message).
+      void new Mailer(user.email)
+        .sendVerifyAccountCode(codeResult.code, `${prenom} ${nom}`)
+        .catch((err) => console.error("Renvoi du code d'activation échoué:", err));
+    }
 
-    const prenom = user.prenom;
-    const nom = user.nom;
-    // Envoi en arriere-plan : la reponse ne depend plus de la poignee de main
-    // SMTP (environ 1 seconde vers o2switch, plus la remise du message).
-    void new Mailer(user.email)
-      .sendVerifyAccount(verifyUrl, `${prenom} ${nom}`)
-      .catch((err) => console.error("Renvoi de l'email de vérification échoué:", err));
-
-    return res.status(200).json({ success: true, message: "L'e-mail de vérification a bien été envoyé. " })
+    return res.status(200).json({ success: true, message: "Un nouveau code d'activation a été envoyé." })
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "L'e-mail de vérification n'a pas pu être envoyé." })
@@ -293,6 +300,124 @@ routerUser.get(
 );
 
 /**
+ * Activation d'un compte par code (nouveau flux) : l'utilisateur saisit dans le
+ * formulaire le code reçu par e-mail. En cas de succès, le compte passe
+ * `isVerified` et la session est ouverte, l'utilisateur poursuit sa navigation.
+ *
+ * Limité en fréquence : le code n'a que 6 chiffres, il se forcerait par balayage
+ * sans plafond.
+ */
+routerUser.post(
+  "/verify-code",
+  twoFactorLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const { email, code } = req.body;
+
+      if (
+        typeof email !== "string" ||
+        typeof code !== "string" ||
+        !email ||
+        !code
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Une adresse e-mail et un code sont requis.",
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim() },
+        select: {
+          idUser: true,
+          email: true,
+          role: true,
+          isVerified: true,
+          twoFactorEnabled: true,
+        },
+      });
+
+      // Réponse volontairement identique à « code invalide » quand l'utilisateur
+      // n'existe pas : on ne révèle pas quelles adresses sont inscrites.
+      if (!user) {
+        return res.status(400).json({ success: false, message: "Code invalide." });
+      }
+
+      if (user.isVerified) {
+        return res.status(200).json({
+          success: true,
+          alreadyVerified: true,
+          message: "Ce compte est déjà activé. Vous pouvez vous connecter.",
+        });
+      }
+
+      const tokenEntry = await prisma.token.findFirst({
+        where: {
+          tokenHash: hashToken(code),
+          userId: user.idUser,
+          type: "verifyAccount",
+        },
+      });
+
+      if (!tokenEntry) {
+        return res.status(400).json({ success: false, message: "Code invalide." });
+      }
+
+      if (tokenEntry.status === "USED") {
+        return res
+          .status(400)
+          .json({ success: false, message: "Ce code a déjà été utilisé." });
+      }
+
+      if (tokenEntry.expiresAt < new Date() || tokenEntry.status === "EXPIRED") {
+        await prisma.token.update({
+          where: { idToken: tokenEntry.idToken },
+          data: { status: "EXPIRED" },
+        });
+        return res.status(400).json({
+          success: false,
+          message: "Ce code a expiré. Demandez-en un nouveau.",
+        });
+      }
+
+      await prisma.$transaction([
+        prisma.token.update({
+          where: { idToken: tokenEntry.idToken },
+          data: { status: "USED" },
+        }),
+        prisma.user.update({
+          where: { idUser: user.idUser },
+          data: { isVerified: true },
+        }),
+      ]);
+
+      // Comme l'ancien lien de validation : on active la formule Freemium et on
+      // ouvre la session pour que l'utilisateur poursuive sans se reconnecter.
+      new Subscription().activateFreemium(user.idUser).catch(console.error);
+      createCookieAuth(user.idUser, user.role, res);
+
+      return res.status(200).json({
+        success: true,
+        message: "Votre compte a été activé.",
+        data: {
+          idUser: user.idUser,
+          email: user.email,
+          role: user.role,
+          isVerified: true,
+          twoFactorEnabled: user.twoFactorEnabled,
+        },
+      });
+    } catch (err) {
+      console.error("Erreur lors de l'activation par code:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Une erreur est survenue lors de l'activation du compte.",
+      });
+    }
+  },
+);
+
+/**
  * Endpoint utilisateur pour se deconnecter
  */
 
@@ -305,9 +430,9 @@ routerUser.post(
         .cookie("authLumenJuris", "", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          //sameSite: "strict",
-          // Doit matcher le domaine posé à la connexion, sinon le logout
+          // Mêmes attributs qu'à la pose (voir cookieAuth) : sinon le logout
           // vide un cookie qui n'existe pas et la session reste active.
+          sameSite: "lax",
           domain: process.env.COOKIE_DOMAIN || undefined,
           path: "/",
           maxAge: 0,
@@ -364,9 +489,6 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
       })
     }
 
-    // Compte non valide : aucune session n'est ouverte. Sans ce controle, le
-    // cookie etait pose malgre le refus affiche par le front, et il suffisait
-    // d'aller sur /dashboard pour entrer sans avoir valide son adresse.
     if (!logUser.data.isVerified) {
       return res.status(403).json({
         success: false,
@@ -375,10 +497,6 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
           "Votre compte n'est pas encore validé. Cliquez sur le lien reçu par email pour l'activer.",
       });
     }
-
-    // Le role vient du compte : le figer a "USER" retirait ses droits a un
-    // administrateur des qu'il se connectait par ce formulaire.
-    createCookieAuth(logUser.data.idUser, logUser.data.role, res);
 
 
     if (logUser.data.twoFactorEnabled) {
@@ -396,12 +514,10 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
           );
       }
 
-      if (codeResult.success && codeResult.code) {
-        await new Mailer(logUser.data.email).sendTwoFactor(
-          codeResult.code,
-          logUser.data.email,
-        );
-      }
+      // Cookie d'attente uniquement : la session complète n'est ouverte qu'à la
+      // validation du code, par /two-factor/verify. Sans cela, il suffisait de
+      // fermer la fenêtre de saisie pour être déjà connecté.
+      createPendingTwoFactorCookie(logUser.data.idUser, logUser.data.role, res);
 
       return res.status(200).json({
         success: true,
@@ -410,6 +526,11 @@ routerUser.post("/auth/login", loginLimiter, async (req: Request, res: Response)
         data: logUser.data,
       });
     }
+
+    // Pas de second facteur : l'identité est vérifiée, on ouvre la session.
+    // Le role vient du compte : le figer a "USER" retirait ses droits a un
+    // administrateur des qu'il se connectait par ce formulaire.
+    createCookieAuth(logUser.data.idUser, logUser.data.role, res);
 
     return res.status(200).json({
       success: true,
@@ -487,15 +608,64 @@ routerUser.get("/get", authMiddleware, async (req: Request, res: Response) => {
 routerUser.put("/", authMiddleware, async (req: Request, res: Response) => {
   try {
     const idUser = Number(req.idUser);
-    const { email, nom, prenom, password, twoFactorEnabled } = req.body ?? {};
+    const { email, nom, prenom, password, currentPassword, twoFactorEnabled } =
+      req.body ?? {};
+
+    const nouveauMotDePasse =
+      typeof password === "string" ? password.trim() : "";
+
+    // Un nouveau mot de passe doit respecter la même politique qu'à
+    // l'inscription.
+    if (nouveauMotDePasse) {
+      const forcePassword = validatePasswordStrength(nouveauMotDePasse);
+      if (!forcePassword.valide) {
+        return res.status(400).json({
+          success: false,
+          message: forcePassword.message,
+        });
+      }
+    }
+
+    // On lit l'état actuel pour savoir si la mise à jour touche quelque chose
+    // de sensible : changer le mot de passe, changer l'e-mail, ou désactiver la
+    // double authentification. Chacune de ces actions exige de reconfirmer le
+    // mot de passe actuel — sans quoi un cookie volé suffisait à prendre le
+    // compte (nouveau mot de passe, e-mail détourné, 2FA coupée).
+    const compteActuel = await prisma.user.findUnique({
+      where: { idUser },
+      select: { email: true, twoFactorEnabled: true },
+    });
+
+    const changeEmail =
+      typeof email === "string" &&
+      email.trim() !== "" &&
+      email.trim() !== compteActuel?.email;
+    const desactive2FA =
+      twoFactorEnabled === false && compteActuel?.twoFactorEnabled === true;
+    const changementSensible =
+      Boolean(nouveauMotDePasse) || changeEmail || desactive2FA;
+
+    if (changementSensible) {
+      // Un compte Google sans mot de passe (`hasPassword` faux) n'a rien à
+      // confirmer : il ne peut de toute façon pas changer de mot de passe ici.
+      const controle = await new User().verifyPassword(
+        idUser,
+        typeof currentPassword === "string" ? currentPassword : "",
+      );
+      if (controle.hasPassword && !controle.valid) {
+        return res.status(400).json({
+          success: false,
+          reason: "wrong-current-password",
+          message: "Le mot de passe actuel est incorrect.",
+        });
+      }
+    }
 
     const update = await new User().update(idUser, {
       ...(typeof email === "string" ? { email } : {}),
       ...(typeof nom === "string" ? { nom } : {}),
       ...(typeof prenom === "string" ? { prenom } : {}),
-      ...(typeof password === "string" && password.trim()
-        ? { password: password.trim() }
-        : {}),
+      ...(nouveauMotDePasse ? { password: nouveauMotDePasse } : {}),
       ...(typeof twoFactorEnabled === "boolean" ? { twoFactorEnabled } : {}),
     });
 
@@ -587,9 +757,20 @@ routerUser.put(
   async (req: Request, res: Response) => {
     try {
       const idUser = Number(req.idUser);
-      const accountParameters = normalizeAccountParameters(
-        req.body?.accountParameters,
-      );
+
+      // Fusion avec les paramètres déjà enregistrés : chaque écran n'envoie
+      // que ce qu'il modifie (les notifications d'un côté, le téléphone de
+      // l'autre). Sans fusion, régler les notifications effaçait le téléphone.
+      const existant = await prisma.userPreference.findUnique({
+        where: { userId: idUser },
+        select: { accountParameters: true },
+      });
+      const estObjet = (v: unknown): v is Record<string, unknown> =>
+        !!v && typeof v === "object" && !Array.isArray(v);
+      const accountParameters = normalizeAccountParameters({
+        ...(estObjet(existant?.accountParameters) ? existant.accountParameters : {}),
+        ...(estObjet(req.body?.accountParameters) ? req.body.accountParameters : {}),
+      });
 
       await prisma.userPreference.upsert({
         where: { userId: idUser },
@@ -734,6 +915,7 @@ routerUser.post(
 
 routerUser.post(
   "/two-factor/verify",
+  twoFactorLimiter,
   authMiddleware,
   async (req: Request, res: Response) => {
     try {
@@ -789,6 +971,11 @@ routerUser.post(
           data: { twoFactorEnabled: true },
         }),
       ]);
+
+      // Code validé : on échange le cookie d'attente (posé à la connexion)
+      // contre un vrai cookie de session. Sur l'enrôlement depuis le profil,
+      // la session était déjà complète : on la reconduit, sans effet de bord.
+      createCookieAuth(idUser, req.role ?? "USER", res);
 
       return res.status(200).json({
         success: true,
@@ -976,6 +1163,14 @@ routerUser.post(
       });
 
       if (user) {
+        // Une nouvelle demande invalide les précédentes : sans cela, tous les
+        // liens de réinitialisation encore valides restaient utilisables en
+        // parallèle. Seul le dernier lien envoyé doit fonctionner.
+        await prisma.token.updateMany({
+          where: { userId: user.idUser, type: "forgotPassword", status: "ACTIVE" },
+          data: { status: "EXPIRED" },
+        });
+
         const token = await new Token().createToken(
           user.idUser,
           "forgotPassword",
@@ -1045,6 +1240,17 @@ routerUser.post("/updatepassword", async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: "Un token et un mot de passe sont requis.",
+      });
+    }
+
+    // Même exigence de robustesse qu'à l'inscription : sans ce contrôle, la
+    // réinitialisation acceptait n'importe quel mot de passe, y compris un seul
+    // caractère.
+    const forcePassword = validatePasswordStrength(password);
+    if (!forcePassword.valide) {
+      return res.status(400).json({
+        success: false,
+        message: forcePassword.message,
       });
     }
 

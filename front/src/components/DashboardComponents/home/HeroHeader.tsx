@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Upload } from "lucide-react";
 
 import type { KpiCard } from "./types";
+import { useAuthPanelStore } from "../../../store/authPanelStore";
 
 interface Props {
   firstName: string;
+  /** Vrai quand la page est consultée sans compte : on présente l'outil. */
+  isGuest: boolean;
   /** Vrai tant que l'utilisateur n'a rien créé : le message d'accueil change. */
   isEmpty: boolean;
   /** Nombre d'éléments en attente, utilisé dans la phrase d'accroche. */
@@ -20,9 +23,11 @@ interface Props {
  * Les compteurs restent affichés en bas de l'en-tête, sous forme de pastilles
  * cliquables : ce sont des repères, pas le sujet de la page.
  */
-export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }: Props) {
+export function HeroHeader({ firstName, isGuest, isEmpty, pendingActions, kpis, loading }: Props) {
+  const ouvrirConnexion = useAuthPanelStore((state) => state.ouvrirConnexion);
+
   // Le prénom peut manquer (compte créé via OAuth sans profil complet).
-  const greeting = isEmpty
+  let greeting = isEmpty
     ? `Bienvenue${firstName ? `, ${firstName}` : ""}.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}.`;
 
@@ -31,6 +36,12 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
     subline = pendingActions > 0
       ? `${pendingActions} action${pendingActions > 1 ? "s vous attendent" : " vous attend"}. Reprenez où vous vous êtes arrêté.`
       : "Rien d'urgent aujourd'hui : tous vos contrats sont à jour.";
+  }
+
+  // Visiteur : pas de prénom ni de compteurs, on présente ce que fait l'outil.
+  if (isGuest) {
+    greeting = "Rédigez, négociez et faites signer vos contrats.";
+    subline = "Découvrez l'outil librement. La création d'un compte vous sera demandée au moment d'enregistrer votre premier contrat.";
   }
 
   const visibleKpis = kpis.filter((kpi) => !kpi.hideWhenZero || kpi.value > 0);
@@ -43,18 +54,28 @@ export function HeroHeader({ firstName, isEmpty, pendingActions, kpis, loading }
       <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(97,146,214,0.35)_0%,rgba(97,146,214,0)_70%)]" />
       <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(214,178,102,0.18)_0%,rgba(214,178,102,0)_70%)]" />
 
-      <div className="relative flex flex-col gap-7 px-6 pb-7 pt-7 sm:px-8 sm:pt-9">
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <span className="text-2xs font-semibold uppercase tracking-[0.18em] text-[#d6b266]">
-            Lumen Juris
-          </span>
-          <h1 className="font-serif text-3xl font-normal leading-tight tracking-tight text-white sm:text-[40px]">
+      {/* Sur écran large, la salutation et les deux actions tiennent sur une
+          seule rangée : l'en-tête occupe deux fois moins de hauteur. */}
+      <div className="relative flex flex-col gap-4 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-1.5 lg:max-w-sm">
+          <h1 className="font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[28px]">
             {greeting}
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/60">{subline}</p>
+
+          {isGuest && (
+            <button
+              type="button"
+              onClick={() => ouvrirConnexion()}
+              className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:border-white/50 hover:bg-white/10"
+            >
+              Se connecter ou créer un compte
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl lg:flex-1">
           <PrimaryAction
             to="/contrat-generation?section=scratch"
             icon={Sparkles}
@@ -116,7 +137,7 @@ function PrimaryAction({ to, icon: Icon, title, description, emphasis }: ActionP
   return (
     <Link
       to={to}
-      className={`group flex items-start gap-3.5 rounded-[18px] px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 ${cardStyle}`}
+      className={`group flex items-start gap-3.5 rounded-2xl px-4 py-3 transition-colors ${cardStyle}`}
     >
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] ${iconStyle}`}>
         <Icon className="h-[18px] w-[18px]" />

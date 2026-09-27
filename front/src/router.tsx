@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ContractAnalysis from "./page/ContractAnalysis";
 
-import { MainLayout } from "./components/DashboardComponents/MainLayout";
+import { MainLayout } from "./components/MainLayout";
 import { Generateur } from "./components/DashboardComponents/Generateur";
 import { Signature } from "./components/DashboardComponents/Signature";
 import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
@@ -21,7 +21,6 @@ import { ComprendreContrat } from "./components/DashboardComponents/ComprendreCo
 import { Dashboard } from "./page/Dashboard";
 import { VerifyAccount } from "./page/VerifyAccount";
 import { ResetPassword } from "./page/ResetPassword";
-import { Inscription } from "./page/Inscription";
 import { Sandbox } from "./page/Sandbox";
 import { ParamCompte } from "./page/ParamCompte";
 import { Monitoring } from "./page/Monitoring";
@@ -32,6 +31,7 @@ import { ConfirmDeleteAccountPage } from "./page/DeleteAccount";
 
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import { RequireAuth } from "./components/auth/RequireAuth";
+import { useRetourConnexionExterne } from "./components/auth/useRetourConnexionExterne";
 import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
 import { SignerPage } from "./page/SignerPage";
@@ -39,6 +39,8 @@ import { SignerPage } from "./page/SignerPage";
 import { usePageLoaded } from "./hooks/usePageLoaded";
 import { Loader } from "./components/common/Loader";
 import { PublicLayout } from "./components/DashboardComponents/PublicLayout";
+
+
 
 export function App() {
   //Hook pour détecter le chargement complet de la page
@@ -56,6 +58,9 @@ export function App() {
       void fetchUser();
     }
   }, [authStatus, fetchUser]);
+
+  // Retour de Google : on reprend la page que l'utilisateur voulait ouvrir.
+  useRetourConnexionExterne();
 
   useEffect(() => {
     if (authStatus === "authenticated") {
@@ -75,29 +80,33 @@ export function App() {
   }, [pageReady]);
 
 
-  if (showLoaderPage) return <Loader label="Chargement de l'application en cours ..." />
+  if (showLoaderPage) return <Loader />
 
 
-  //Point d'entrée de l'application dynamique selon l'auth de l'user depuis le authStatus
-  const HomeRedirect = () => {
-    return authStatus === "authenticated" ? (
-      <Navigate to="/dashboard" replace />
-    ) : (
-      <Navigate to="/inscription" replace />
-    );
-  };
-
+  // L'accueil n'est plus une redirection selon l'authentification : `/` rend
+  // directement le tableau de bord, qui s'adapte lui-même au visiteur.
   return (
     <>
       <ScrollToTop />
 
-      <Routes>
-        <Route element={<RequireAuth> <MainLayout />  </RequireAuth>}>
-          {/* Entrée principale de l'application sur le dashboard avec direction selon state de l'auth User*/}
-          <Route path="/" element={<HomeRedirect />} />
 
-          {/* Sous-ensemble (charge panneau latéral et header) */}
+
+      <Routes>
+        {/* ------------------------------------------------------------------
+            Pages ouvertes à tous, avec le menu latéral et l'en-tête.
+            L'accueil est visible sans compte : c'est la vitrine de l'outil,
+            la connexion est demandée au moment d'utiliser une fonctionnalité.
+           ------------------------------------------------------------------ */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
+
+        {/* ------------------------------------------------------------------
+            Pages qui n'ont aucun sens sans compte : elles n'affichent que des
+            données personnelles. Elles gardent le menu latéral et l'en-tête.
+           ------------------------------------------------------------------ */}
+        <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
           <Route path="/generateur" element={<Generateur />} />
 
           {/* En attente d'implémentation, décommenter le lien dans MainLayout pour réimplémenter */}
@@ -118,34 +127,29 @@ export function App() {
           <Route path="/chatjuridique" element={<ChatJuridique />} />
           <Route path="/calculateur" element={<Calculateur />} />
           {/* désactiver en attente d'amélioration de cet outil
-          <Route path="/veille" element={<Veille />} />
-           */}
+            <Route path="/veille" element={<Veille />} />
+             */}
           <Route path="/conformite" element={<Conformite />} />
           <Route path="/comprendre-contrat" element={<ComprendreContrat />} />
           <Route path="/mon-compte" element={<ParamCompte />} />
           <Route path="/analyzer" element={<ContractAnalysis />} />
-
-
-          {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
-          <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-          <Route path="/subscription/failed" element={<SubscriptionFailed />} />
-
-
-          {/* Page de gestion d'un cluster pour les multi user
-          <Route path="/cluster" element={<ClusterUserPage />} /> EN COURS DE DEV
-          */}
-
           <Route path="/monitoring" element={<Monitoring />} />
         </Route>
 
 
+        {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
+        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+        <Route path="/subscription/failed" element={<SubscriptionFailed />} />
 
-        <Route
-          path="/sandbox" element={<RequireAuth>{" "}<Sandbox />{" "}</RequireAuth>} />
-        <Route path="/inscription" element={<Inscription />} />
+
+        {/* Page de gestion d'un cluster pour les multi user
+          <Route path="/cluster" element={<ClusterUserPage />} /> EN COURS DE DEV
+          */}
 
 
-        <Route path="/monitoring" element={<RequireAuth>{" "} <Monitoring />{" "} </RequireAuth>} />
+
+        <Route path="/sandbox" element={<RequireAuth>{" "}<Sandbox />{" "}</RequireAuth>} />
+
 
         <Route path="/verify-account" element={<VerifyAccount />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -157,11 +161,8 @@ export function App() {
         {/* Page publique de signature pour le cocontractant — sans auth */}
         <Route path="/signer/:token" element={<SignerPage />} />
 
-
         {/* Route pour les formulaire et l'achat d'un plan */}
         <Route path="/souscription" element={<Subscription />} />
-
-
 
         {/* Page publique de négociation pour un invité externe — sans auth */}
         <Route path="/negociation-invite/:token" element={<NegotiationGuest />} />

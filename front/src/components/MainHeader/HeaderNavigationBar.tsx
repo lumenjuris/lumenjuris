@@ -1,13 +1,13 @@
 // UI //
 import {
-  LogInIcon,
   User,
   Bell,
   LogOutIcon,
   AlertCircleIcon,
   HandCoinsIcon,
+  LogInIcon,
+  PenBoxIcon,
 } from "lucide-react";
-import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +15,15 @@ import {
   DropdownMenuItem
 } from "../ui/DropDownMenu";
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import type { MouseEvent } from "react";
 
 import { useUserStore } from "../../store/userStore";
+import { useAuthPanelStore } from "../../store/authPanelStore";
+
+import { LoginForm } from "../auth/LoginForm";
+import { SignupForm } from "../auth/SignupForm"
 
 type NavigationClickHandler = (
   event?: MouseEvent<HTMLElement>,
@@ -94,8 +98,9 @@ function deriveOverallBadge(tab: NotificationItem[]): NotificationBadge {
  *    `/analyzer`), les liens admin-only (`/sandbox`, `/monitoring`), la cloche
  *    de notifications et le menu utilisateur (avatar, logout, mon compte, formules).
  *
- * 2. **Utilisateur non connecté** — affiche uniquement les liens `/souscription`
- *    et `/inscription`.
+ * 2. **Utilisateur non connecté** — affiche les boutons « Se connecter » et
+ *    « Inscrivez-vous », qui ouvrent les panneaux d'authentification (store
+ *    `authPanelStore`) plutôt qu'une page dédiée.
  *
  * 3. **Responsive** — deux rendus parallèles (mobile/tablette `< 768 px` vs
  *    desktop `≥ 768 px`) via Tailwind `lg:hidden` / `hidden lg:flex` :
@@ -114,12 +119,10 @@ function deriveOverallBadge(tab: NotificationItem[]): NotificationBadge {
  *                   (logout, mon compte…). Retourner `false` annule la navigation.
  */
 const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const { userData, isConnected, userAvatarUrl, logoutUser } = useUserStore();
 
-  const [isMobile, setIsMobile] = useState(false);
   const [notificationTab, setNotificationTab] = useState<NotificationItem[]>(
     [],
   );
@@ -138,15 +141,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
   }, [userData]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
     fetchNotificationData();
   }, [fetchNotificationData]);
 
@@ -154,8 +148,19 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
     if (onNavClick?.() === false) return;
 
     const success = await logoutUser();
-    if (success) navigate("/inscription");
+    if (success) navigate("/");
   };
+
+  // Les panneaux sont rendus ici mais pilotés par un store : l'accueil les
+  // ouvre aussi, quand un visiteur clique sur un module. Un seul à la fois,
+  // ils se superposeraient au même endroit de l'écran.
+  const panneauAuth = useAuthPanelStore((state) => state.panneau);
+  const presentationAuth = useAuthPanelStore((state) => state.presentation);
+  const ouvrirConnexion = useAuthPanelStore((state) => state.ouvrirConnexion);
+  const ouvrirInscription = useAuthPanelStore((state) => state.ouvrirInscription);
+  const basculerPanneauAuth = useAuthPanelStore((state) => state.basculerVers);
+  const fermerPanneauAuth = useAuthPanelStore((state) => state.fermer);
+
 
   return (
     <div className="flex items-center gap-1 lg:pr-2">
@@ -248,13 +253,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4 py-2 flex flex-col items-start gap-2"
               >
                 <DropdownMenuItem
-                  onClick={handleUserLogout}
-                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
-                >
-                  <LogOutIcon size={16} />
-                  Déconnexion
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onClick={() => {
                     if (onNavClick?.() === false) return;
                     navigate("/mon-compte");
@@ -273,83 +271,58 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                   <HandCoinsIcon size={16} />
                   Formules
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleUserLogout}
+                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
+                >
+                  <LogOutIcon size={16} />
+                  Déconnexion
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </section>
       ) : (
-        <nav className="flex items-center gap-1 pr-2">
-          {isMobile ? (
-            <>
-              <Link to="/souscription">
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  className={
-                    pathname === "/souscription"
-                      ? " text-gray-500 tracking-wide font-semibold hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <HandCoinsIcon
-                    className={pathname === "/souscription" ? "size-6" : ""}
-                  />
-                </Button>
-              </Link>
-              <Link to="/inscription">
-                <Button
-                  variant="ghost"
-                  size="icon-lg"
-                  className={
-                    pathname === "/inscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <LogInIcon
-                    className={pathname === "/inscription" ? "size-6" : ""}
-                  />
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              {" "}
-              <Link to="/souscription">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={
-                    pathname === "/souscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <HandCoinsIcon
-                    className={pathname === "/souscription" ? "size-5" : ""}
-                  />
-                  Tarifs
-                </Button>
-              </Link>
-              <Link to="/inscription">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={
-                    pathname === "/inscription"
-                      ? " text-gray-500 tracking-wide font-semibold text-[16px] hover:cursor-default"
-                      : "text-gray-400 hover:bg-lumenjuris-background"
-                  }
-                >
-                  <LogInIcon
-                    className={pathname === "/inscription" ? "size-5" : ""}
-                  />
-                  Se connecter
-                </Button>
-              </Link>
-            </>
-          )}
-        </nav>
+        // UTILISATEUR NON CONNECTE : les deux points d'entrée vers un compte.
+        // Sous 640 px, les deux libellés ne tiennent plus côte à côte dans la
+        // barre : on ne garde que les icônes, le titre du panneau prend le relais.
+        <section className="flex items-center gap-2">
+          <button
+            onClick={() => ouvrirConnexion()}
+            aria-label="Se connecter"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold text-ink-secondary transition-colors hover:border-brand/40 hover:text-brand sm:px-3"
+          >
+            <LogInIcon size={15} />
+            <span className="hidden sm:inline">Se connecter</span>
+          </button>
+
+          <button
+            onClick={() => ouvrirInscription()}
+            aria-label="Inscrivez-vous"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-hover sm:px-3"
+          >
+            <PenBoxIcon size={15} />
+            <span className="hidden sm:inline">Inscrivez-vous</span>
+          </button>
+        </section>
+      )}
+
+      {/* Les deux panneaux se placent eux-mêmes sous l'en-tête, et ne sont
+          jamais ouverts en même temps. */}
+      {panneauAuth === "connexion" && (
+        <LoginForm
+          onClose={fermerPanneauAuth}
+          onSwitchToSignup={() => basculerPanneauAuth("inscription")}
+          presentation={presentationAuth}
+        />
+      )}
+
+      {panneauAuth === "inscription" && (
+        <SignupForm
+          onClose={fermerPanneauAuth}
+          onSwitchToLogin={() => basculerPanneauAuth("connexion")}
+          presentation={presentationAuth}
+        />
       )}
     </div>
   );

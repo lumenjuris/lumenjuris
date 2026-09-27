@@ -4,6 +4,7 @@ import "dotenv/config";
 import cookieParser from "cookie-parser";
 import path from "path";
 import routerGoogleAuth from "./src/route/authGoogle.js";
+import microsoftRouter from "./src/route/authMicrosoft.js";
 import routerLlm from "./src/route/apiLlm.js";
 import routerUser from "./src/route/apiUser.js";
 import routerEnterprise from "./src/route/apiEnterprise.js";
@@ -46,7 +47,7 @@ const HOST_PROXY: string =
   process.env.HOST_PROXY ||
   (process.env.NODE_ENV == "dev"
     ? "http://localhost:3000"
-    : "https://proxy.lumenjuris.com");
+    : "https://app.proxy.lumenjuris.com");
 
 const app = express();
 
@@ -80,13 +81,20 @@ app.use(cors({
   credentials: true,
 }),
 );
+// Doit rester AVANT les limiteurs : sans ce réglage, req.ip vaut l'adresse du
+// proxy pour tout le monde et les quotas sont partagés par tous les utilisateurs.
+// (Une seule clé valide : "trust proxy" avec une espace ; "trust-proxy" ne fait
+// rien.)
+app.set("trust proxy", 1);
+
 // Rate-limiter global, SAUF le webhook Stripe : Stripe peut envoyer des rafales
 // d'events (renouvellements groupés) et un 429 déclencherait des rejeux inutiles.
+// Appliqué une seule fois : un second app.use(globalLimiter) nu frappait TOUT,
+// y compris le webhook, ce qui annulait cette exemption et doublait le décompte.
 app.use((req, res, next) => {
   if (req.path.startsWith("/billing/stripe/webhook")) return next();
   return globalLimiter(req, res, next);
 });
-app.set("trust-proxy", 1);
 
 // Frontière de sécurité : backNode n'accepte QUE les requêtes portant la clé
 // interne (posée par le proxy et le cron). Sans elle, un appel direct pourrait
@@ -94,14 +102,10 @@ app.set("trust-proxy", 1);
 // OAuth Google et /health, atteintes directement par le navigateur, sont
 // exemptées dans le middleware.
 app.use(internalApiKeyMiddleware);
-// Doit rester AVANT les limiteurs : sans ce reglage, req.ip vaut l'adresse du
-// proxy pour tout le monde et les quotas sont partages par tous les utilisateurs.
-app.set("trust proxy", 1);
-app.use(globalLimiter);
-// app.use(internalApiKeyMiddleware);
 app.use(addErrorFeedbackLogger);
 
 app.use("/", routerGoogleAuth);
+app.use("/", microsoftRouter);
 app.use("/llm", routerLlm);
 app.use("/user", routerUser);
 app.use("/enterprise", routerEnterprise);

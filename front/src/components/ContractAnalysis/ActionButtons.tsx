@@ -6,6 +6,7 @@ import { ContractAnalysis } from "../../types";
 import { AnalysisContext } from "../../types/contextualAnalysis";
 import { AlertBanner } from "../common/AlertBanner";
 import { isAnalyzerQuotaExhausted } from "../../utils/analyzerQuota";
+import { BANNER_ACTION_CLASS } from "../common/PageBanner";
 interface ActionButtonsProps {
   onShareReport: () => void;
   isProcessed: boolean;
@@ -50,8 +51,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   }, [])
 
 
-  const btnPrimary = "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-900 bg-blue-primary text-white rounded-xl shadow-sm disabled:opacity-50 transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85";
-  const btnGhostDisabled = "inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-slate-400 bg-white/5 border border-white/5 rounded-xl cursor-not-allowed opacity-50 shrink-0 hover:-translate-y-0.5";
+  // Ces boutons vivent dans le bandeau bleu : même style que tous les boutons d'en-tête.
+  const btnPrimary = BANNER_ACTION_CLASS;
+  const btnGhostDisabled = BANNER_ACTION_CLASS;
 
   const [suggestedClausesError, setSuggestedClausesError] = useState(false);
 
@@ -69,7 +71,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 
 
   return (
-    <div className="pb-2 flex justif-space gap-2 flex-col sm:flex-row ">
+    <div className="flex flex-wrap items-center gap-2.5">
       {suggestedClausesError && (
         <div className="mb-4">
           <AlertBanner
@@ -92,7 +94,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           className={btnPrimary}
           title="Voir les clauses suggérées"
         >
-          <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
+          <Lightbulb />
           <span>{isLoadingSuggested ? "Analyse..." : "Clauses suggérées"}</span>
         </button>
       )}
@@ -104,13 +106,13 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           className={btnPrimary}
           title={!enoughtCredit ? "Relancer une nouvelle analyse complète" : "Vos crédits d'analyse de contrat sont épuisés"}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRelaunchingAnalysis ? "animate-spin text-blue-400" : ""}`} />
+          <RefreshCw className={isRelaunchingAnalysis ? "animate-spin" : ""} />
           <span>{isRelaunchingAnalysis ? "Analyse..." : "Relancer"}</span>
         </button>
       )}
 
       <button onClick={onShareReport} className={btnPrimary} title="Partager le rapport">
-        <Share2 className="w-3.5 h-3.5" />
+        <Share2 />
         <span>Partager</span>
       </button>
 
@@ -129,7 +131,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           className={isProcessed ? btnPrimary : btnGhostDisabled}
           title="Exporter le document en .docx"
         >
-          <FileText className="w-4 h-4 text-blue-600" />
+          <FileText />
           <span>Export Word</span>
         </button>
       )}

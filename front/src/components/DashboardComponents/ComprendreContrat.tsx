@@ -3,11 +3,11 @@ import { COMPLETION_ANIMATION_MS, LoadingZoneAnalyzer } from "../common/LoadingZ
 import { useContractAnalysis } from "../../hooks/useContractAnalysis";
 import { ContractSummary, ContractSummuryList, ClauseItem, summarizeContract, deleteSummarizeContract } from "../../utils/contractSummarizer";
 import { fetchProxy } from "../../utils/fetchProxy";
-import { Clock, Trash2 } from "lucide-react";
+import { Clock, FileText, Plus, Trash2 } from "lucide-react";
 import { relativeTime } from "../../utils/format/relativeTime";
 import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
-import { PageBanner } from "../common/PageBanner";
+import { BannerAction, PageBanner } from "../common/PageBanner";
 
 const formatParty = (partie: any) => {
   if (!partie) return "Partie non identifiée";
@@ -196,82 +196,15 @@ export function ComprendreContrat() {
 
   return (
 
-    <div className="flex flex-col lg:flex-row gap-6 mx-auto w-full max-w-7xl">
-      <div className="order-2 w-full lg:order-1 lg:w-64 lg:shrink-0">
-        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-white shadow-card max-h-[60vh] lg:max-h-[calc(100vh-9rem)]">
-          {/* En-tête */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
-            <p className="text-sm font-semibold text-gray-900">Historique</p>
-          </div>
-
-          {/* Liste ou état vide */}
-          {!contractsList || contractsList.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center px-4 py-10">
-              <p className="text-center text-xs text-gray-400">
-                Aucun contrat analysé.
-              </p>
-            </div>
-          ) : (
-            <ul className="flex-1 space-y-1 overflow-auto px-3 py-3">
-              {contractsList.map((contract: ContractSummuryList) => (
-                <li key={contract.idSummary}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleSelectContract(contract.idSummary)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && handleSelectContract(contract.idSummary)
-                    }
-                    className={`group flex w-full cursor-pointer items-start justify-between gap-2 rounded-xl px-3 py-3 text-left transition-colors ${selectedContract?.idSummary === contract.idSummary
-                      ? "border border-brand/20 bg-brand-light"
-                      : "hover:bg-gray-50"
-                      }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`truncate text-sm font-medium ${selectedContract?.idSummary === contract.idSummary
-                          ? "text-brand"
-                          : "text-gray-700"
-                          }`}
-                      >
-                        {contract.fileName}
-                      </p>
-                      <div className="mt-1 flex items-center gap-1">
-                        <Clock className="h-3 w-3 shrink-0 text-gray-400" />
-                        <span className="text-[11px] text-gray-400">
-                          {relativeTime(contract.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => openDeleteModal(contract.idSummary, e)}
-                      title="Supprimer"
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-      <div className="order-1 flex-1 min-w-0 space-y-6 lg:order-2">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
         <PageBanner
           title="Analyse et compréhension de contrat"
           subtitle="Obtenez une synthèse claire de vos documents : points d'attention, niveau de risque et obligations clés."
           actions={
             /* Bouton blanc à droite : ouvre directement l'explorateur de fichiers */
-            <button
-              onClick={openFilePicker}
-              disabled={isLoadingContract}
-              className="inline-flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-3 bg-white text-gray-900 text-sm font-medium rounded-xl hover:bg-gray-100
-               transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-sm shrink-0
-               disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            >
-              <span className="text-base font-normal">+</span> Analysez un contrat
-            </button>
+            <BannerAction onClick={openFilePicker} disabled={isLoadingContract} icon={<Plus />}>
+              Analyser un contrat
+            </BannerAction>
           }
         />
         <input
@@ -603,12 +536,71 @@ export function ComprendreContrat() {
             )}
           </div>
         ) : (
-          <div className="mt-8 border-t border-gray-100 pt-8 text-center text-gray-400">
-            <p className="text-sm">Sélectionnez un contrat dans la liste ci-dessus ou analysez-en un nouveau.</p>
-          </div>
+          null
         )}
 
-      </div>
+        {/* Historique : tous les contrats déjà analysés, en liste sous
+            l'analyse, comme sur les autres fonctionnalités. */}
+        <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <table className="w-full text-left">
+            <thead className="bg-blue-primary text-[10px] font-semibold uppercase tracking-widest text-white">
+              <tr>
+                <th className="px-6 py-4">Contrats analysés</th>
+                <th className="px-4 py-4">Date</th>
+                <th className="px-6 py-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line-subtle">
+              {contractsList && contractsList.length > 0 ? (
+                contractsList.map((contract: ContractSummuryList) => {
+                  const actif = selectedContract?.idSummary === contract.idSummary;
+                  return (
+                    <tr
+                      key={contract.idSummary}
+                      onClick={() => {
+                        handleSelectContract(contract.idSummary);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`group cursor-pointer transition-colors ${actif ? "bg-brand-light" : "hover:bg-slate-50"}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-panel border border-line bg-surface-subtle text-blue-700">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <p className={`max-w-md truncate text-sm font-medium ${actif ? "text-brand" : "text-ink"}`}>
+                            {contract.fileName}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          {relativeTime(contract.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={(e) => openDeleteModal(contract.idSummary, e)}
+                          title="Supprimer"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-subtle transition-colors hover:bg-danger-light hover:text-danger"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-sm italic text-ink-subtle">
+                    Aucun contrat analysé pour le moment.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
     </div>
   );
 }

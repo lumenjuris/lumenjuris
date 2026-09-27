@@ -4,7 +4,7 @@ import { fetchProxy } from "../../../utils/fetchProxy";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { EnvelopeTable } from "./EnvelopeTable";
 import type { EnvelopeDTO, EnvelopeStatus, ResendState } from "./EnvelopeTable";
-import { PageBanner } from "../../common/PageBanner";
+import { BannerAction, PageBanner } from "../../common/PageBanner";
 
 interface Stats {
   total: number;
@@ -201,12 +201,9 @@ function Header({ onNewContract }: { onNewContract: () => void }) {
       title="Signature électronique"
       subtitle="Suivez l'avancement de vos contrats à signer."
       actions={
-        <button
-          onClick={onNewContract}
-          className="shrink-0 flex w-full lg:w-auto items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-primary text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 will-change-transform shadow-card"
-        >
-          <Plus className="w-4 h-4" /> Envoyer pour signature
-        </button>
+        <BannerAction onClick={onNewContract} icon={<Plus />}>
+          Envoyer pour signature
+        </BannerAction>
       }
     />
   );

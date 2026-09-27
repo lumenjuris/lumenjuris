@@ -6,7 +6,8 @@ import { cn } from "../../utils/shadcnUtils/cn";
 import { PageBanner } from "../common/PageBanner";
 
 import { useUserStore } from "../../store/userStore";
-import type { BillingInterval } from "../../types/subscriptionData";
+import { useAuthPanelStore } from "../../store/authPanelStore";
+import type { BillingInterval, SubscriptionData } from "../../types/subscriptionData";
 import { toCheckoutPlanName, PENDING_CHECKOUT_KEY } from "../../utils/planMapping";
 import { fetchProxy } from "../../utils/fetchProxy";
 
@@ -125,8 +126,42 @@ export function PlansPanel() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const navigate = useNavigate();
   const userData = useUserStore((s) => s.userData);
+  const ouvrirConnexion = useAuthPanelStore((s) => s.ouvrirConnexion);
+  const ouvrirInscription = useAuthPanelStore((s) => s.ouvrirInscription);
 
   const interval: BillingInterval = yearly ? "yearly" : "monthly";
+
+  // Formule en cours de l'utilisateur connecté : repérée dans le bandeau et
+  // sur la carte de l'offre correspondante.
+  const [formule, setFormule] = useState<SubscriptionData | null>(null);
+  useEffect(() => {
+    if (!userData) return;
+    fetchProxy("/api/billing/subscription", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        const sub = (body?.success ? body.data?.subscription : null) as SubscriptionData | null;
+        if (!sub) return;
+        setFormule(sub);
+        // On ouvre la grille sur la périodicité de l'abonnement en cours.
+        if (sub.interval) setYearly(sub.interval === "yearly");
+      })
+      .catch(() => undefined);
+  }, [userData]);
+  // "Pro_annuel" -> carte "Pro" ; "Freemium" -> carte "Free".
+  const carteActuelle = formule
+    ? formule.planName === "Freemium"
+      ? "Free"
+      : formule.planName.split("_")[0]
+    : null;
+  const libelleFormule = formule
+    ? formule.planName === "Freemium"
+      ? "Free"
+      : formule.planName === "Betatesteur"
+        ? "Bêta-testeur"
+        : formule.planName.replace("_", " · ")
+    : null;
+  const estActuelle = (plan: Plan) =>
+    carteActuelle === plan.name && (plan.free || formule?.interval === interval);
 
   /**
    * Démarre un paiement : demande une session Stripe Checkout au backend puis
@@ -185,14 +220,17 @@ export function PlansPanel() {
   }, [startCheckout]);
 
   const handlePlanSelect = (plan: Plan) => {
-    // Non connecté : on mémorise le plan choisi (persistant à travers l'inscription)
-    // puis on envoie vers l'inscription. Au retour authentifié, le checkout reprend.
+    // Non connecté : on mémorise le plan choisi (persistant à travers la
+    // connexion) puis on ouvre le panneau de connexion par-dessus la page des
+    // formules — sans quitter la page, pour garder le contexte des offres. Le
+    // panneau retient `/souscription` comme destination : au retour authentifié,
+    // le checkout mémorisé reprend automatiquement.
     if (!userData) {
       sessionStorage.setItem(
         PENDING_CHECKOUT_KEY,
         JSON.stringify({ name: plan.name, interval }),
       );
-      navigate("/inscription");
+      ouvrirConnexion("/souscription");
       return;
     }
     // Connecté : on lance directement le paiement Stripe Checkout.
@@ -204,15 +242,19 @@ export function PlansPanel() {
 
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="flex flex-col mb-2">
-        <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Tarifs</h3>
-        <p className="mt-1 text-sm text-ink-muted">Tarification adaptée à votre organisation</p>
-      </div>
+    <div className="mx-auto w-full max-w-7xl pb-6">
       {/* ── En-tête + toggle mensuel/annuel ── */}
       <PageBanner
         title="Accéder à nos outils"
         subtitle="Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout moment."
+        badges={
+          libelleFormule && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-300/30">
+              <Check className="h-3.5 w-3.5" /> Votre formule : {libelleFormule}
+              {formule?.status && formule.status !== "ACTIVE" ? " (inactive)" : ""}
+            </span>
+          )
+        }
         actions={
           <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle p-1 text-sm shadow-sm">
             <button
@@ -261,14 +303,16 @@ export function PlansPanel() {
       <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
+          const actuelle = estActuelle(plan);
           return (
             <div
               key={plan.name}
               className={cn(
-                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300",
+                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300 bg-white",
                 plan.highlight
                   ? "z-10 border-brand/30 bg-blue-primary shadow-[0_20px_45px_-15px_rgba(44,58,94,0.45)] ring-1 ring-brand/20 lg:-translate-y-3 lg:scale-[1.03]"
                   : "border-line shadow-sm hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)]",
+                actuelle && "ring-2 ring-emerald-500",
               )}
             >
               {/* Liseré supérieur lumineux sur l'offre mise en avant */}
@@ -276,7 +320,12 @@ export function PlansPanel() {
                 <span className="absolute inset-x-8 top-0 h-1 rounded-full bg-gradient-to-r from-brand/0 via-brand to-brand/0" />
               )}
 
-              {plan.badge && (
+              {actuelle ? (
+                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-md">
+                  <Check className="h-3 w-3" />
+                  Votre formule actuelle
+                </span>
+              ) : plan.badge && (
                 <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-md">
                   <Sparkles className="h-3 w-3" />
                   {plan.badge}
@@ -311,7 +360,7 @@ export function PlansPanel() {
 
               <Button
                 variant={plan.highlight ? "default" : "outline"}
-                disabled={checkoutLoadingPlan === plan.name}
+                disabled={checkoutLoadingPlan === plan.name || actuelle}
                 className={cn(
                   "mt-6 w-full",
                   plan.highlight
@@ -320,13 +369,15 @@ export function PlansPanel() {
                 )}
                 onClick={() => {
                   if (plan.free) {
-                    navigate("/inscription");
+                    // Offre gratuite : il suffit de créer un compte.
+                    ouvrirInscription("/dashboard");
+                    navigate("/dashboard");
                   } else {
                     handlePlanSelect(plan);
                   }
                 }}
               >
-                {checkoutLoadingPlan === plan.name ? "Redirection…" : plan.cta}
+                {actuelle ? "Formule actuelle" : checkoutLoadingPlan === plan.name ? "Redirection…" : plan.cta}
               </Button>
 
               <div className="border border-t-blue-title-card-sub mt-6"></div>
@@ -369,18 +420,19 @@ export function PlansPanel() {
         })}
       </div>
 
-      
+
       <div className="mt-4">
-        <span className="text-3xl font-bold tracking-tight text-blue-primary">
+        <span className="text-3xl font-bold tracking-tight text-blue-primary ">
           Sur devis
         </span>
         <p className="mt-1 text-sm text-ink-muted">
           Tarification adaptée à votre organisation
         </p>
       </div>
+
       {/* ── Offre Enterprise : bandeau pleine largeur ── */}
       {PLANS.filter((plan) => plan.contactOnly).map((plan) => {
-          const heading = plan.features.find((f) => {
+        const heading = plan.features.find((f) => {
           const clean = f.trim().toLowerCase();
           return clean.endsWith("plus :") || clean.endsWith("inclus :");
         });
@@ -389,54 +441,55 @@ export function PlansPanel() {
 
         return (
           <div
-  key={plan.name}
-  className="mt-2 rounded-2xl border border-brand/20 p-6 shadow-sm transition-shadow hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)] px-12"
->
-  {/* Utilisation d'une grille 3 colonnes sur grands écrans avec un gap-x-8 uniforme */}
-  <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-3 lg:items-start">
-    
-    {/* Colonne 1 : Infos & CTA */}
-    <div className="lg:col-span-1">
-      <span className="text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
-        sur mesure :
-      </span>
-      <h3 className="mt-2 text-xl font-bold text-ink">{plan.name}</h3>
-      <p className="mt-1 text-sm text-ink-muted">{plan.tagline}</p>
-      <Button
-        className="mt-5 w-full bg-brand text-white shadow-sm hover:bg-brand-hover sm:w-auto"
-        onClick={() => {
-          window.location.href = "mailto:contact@lumenjuris.com";
-        }}
-      >
-        {plan.cta}
-      </Button>
-    </div>
+            key={plan.name}
+            className="bg-white mt-2 rounded-2xl border border-brand/20 p-6 shadow-sm transition-shadow hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)] px-12"
+          >
+            {/* Utilisation d'une grille 3 colonnes sur grands écrans avec un gap-x-8 uniforme */}
+            <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-3 lg:items-start ">
 
-    {/* Colonnes 2 et 3 : Fonctionnalités */}
-    <div className="lg:col-span-2">
-      {heading && (
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
-          {heading}
-        </p>
-      )}
+              {/* Colonne 1 : Infos & CTA */}
+              <div className="lg:col-span-1 ">
+                <span className="text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
+                  sur mesure :
+                </span>
+                <h3 className="mt-2 text-xl font-bold text-ink">{plan.name}</h3>
+                <p className="mt-1 text-sm text-ink-muted">{plan.tagline}</p>
+                <Button
+                  className="mt-5 w-full bg-brand text-white shadow-sm hover:bg-brand-hover sm:w-auto"
+                  onClick={() => {
+                    window.location.href = "mailto:contact@lumenjuris.com";
+                  }}
+                >
+                  {plan.cta}
+                </Button>
+              </div>
 
-      {/* Grille interne à 2 colonnes réutilisant exactement le même gap-x-8 */}
-      <ul className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-        {listFeatures.map((f, i) => (
-          <li key={`${plan.name}-${i}`} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
-              <Check className="h-3 w-3" strokeWidth={3} />
-            </span>
-            <span className="text-ink-secondary">{f}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+              {/* Colonnes 2 et 3 : Fonctionnalités */}
+              <div className="lg:col-span-2">
+                {heading && (
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
+                    {heading}
+                  </p>
+                )}
 
-  </div>
-</div>
+                {/* Grille interne à 2 colonnes réutilisant exactement le même gap-x-8 */}
+                <ul className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                  {listFeatures.map((f, i) => (
+                    <li key={`${plan.name}-${i}`} className="flex items-start gap-2.5">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                      <span className="text-ink-secondary">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+            </div>
+          </div>
         );
       })}
+
 
       {/* ── FAQ ── */}
       <div className="flex flex-col mb-2 mt-6">

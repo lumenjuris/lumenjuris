@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,17 +15,20 @@ import {
   Sparkles,
   ShieldHalf,
   MessagesSquare,
-  Eye
+  Eye,
+  HandCoins
 } from "lucide-react";
 
-import { MainHeader } from "../MainHeader/MainHeader";
-import { FeedbackWidget } from "../common/FeedbackWidget";
-import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
-import { useLegalWatchStore } from "../../store/legalWatchStore";
-import { LumenJurisLogo } from "../common/LumenJurisLogo";
-import { useUserStore } from "../../store/userStore";
+import { MainHeader } from "./MainHeader/MainHeader";
+import { FeedbackWidget } from "./common/FeedbackWidget";
+import { useTemplateNotificationStore } from "../store/templateNotificationStore";
+import { useLegalWatchStore } from "../store/legalWatchStore";
+import { LumenJurisLogo } from "./common/LumenJurisLogo";
+import { useUserStore } from "../store/userStore";
+import { useDemandeConnexion } from "./auth/useDemandeConnexion";
+import { useLayoutStore } from "../store/layoutStore";
 
-import { ErrorBoundary } from "../ContractAnalysis/ErrorBoundary";
+import { ErrorBoundary } from "./ContractAnalysis/ErrorBoundary";
 
 interface NavSubItem {
   icon: React.ElementType;
@@ -40,6 +43,8 @@ interface NavItem {
   path: string;
   notificationKey?: string;
   children?: NavSubItem[];
+  /** Page consultable sans compte : le clic n'ouvre pas le panneau de connexion. */
+  estPublic?: boolean;
 }
 
 interface NavSection {
@@ -51,7 +56,7 @@ const navSections: NavSection[] = [
   {
     // Pas de catégorie pour l'accueil
     items: [
-      { icon: LayoutDashboard, label: "Accueil", path: "/dashboard" }
+      { icon: LayoutDashboard, label: "Accueil", path: "/dashboard", estPublic: true }
     ],
   },
   {
@@ -85,6 +90,15 @@ const navSections: NavSection[] = [
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
   },
+  {
+    category: "ABONNEMENT",
+    // Section sans catégorie, placée en bas : c'est une page vitrine/conversion,
+    // pas un outil du quotidien. Publique pour que même un visiteur puisse
+    // consulter les offres (le clic ne déclenche pas le panneau de connexion).
+    items: [
+      { icon: HandCoins, label: "Formules", path: "/souscription", estPublic: true },
+    ],
+  },
 ];
 
 // Breakpoint Tailwind `md` = 768px. On garde la même valeur en JS pour rester cohérent.
@@ -92,6 +106,7 @@ const MOBILE_BREAKPOINT = 768;
 
 function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: () => void }) {
   const location = useLocation();
+  const demanderConnexion = useDemandeConnexion();
   const pulse = useTemplateNotificationStore((s) => s.pulse);
   const pendingCount = useTemplateNotificationStore((s) => s.pendingCount);
 
@@ -103,7 +118,10 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
     <li>
       <NavLink
         to={child.path}
-        onClick={onNavigate}
+        onClick={(event) => {
+          demanderConnexion(event, child.path);
+          onNavigate();
+        }}
         className={`relative flex w-full items-center gap-2 rounded-md px-2 py-2 sm:py-1.5 text-sm transition-colors ${isActive
           ? "bg-white/15 text-white font-medium"
           : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -126,6 +144,14 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
 
 function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
   const location = useLocation();
+  const demanderConnexion = useDemandeConnexion();
+
+  // Un visiteur qui clique sur une page réservée voit le panneau de connexion
+  // plutôt qu'un renvoi silencieux vers l'accueil.
+  const handleNavClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (!item.estPublic) demanderConnexion(event, item.path);
+    onNavigate();
+  };
   const legalWatchUnread = useLegalWatchStore((s) => s.unreadCount);
   const badgeCount = item.notificationKey === "legalWatchUnread" ? legalWatchUnread : 0;
   const hasChildren = !!item.children?.length;
@@ -142,7 +168,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
         <>
           <NavLink
             to={item.path}
-            onClick={onNavigate}
+            onClick={handleNavClick}
             className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isParentActive
               ? "bg-white/15 text-white font-medium"
               : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -166,7 +192,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
         <NavLink
           to={item.path}
           end={item.path === "/dashboard"}
-          onClick={onNavigate}
+          onClick={handleNavClick}
           className={({ isActive }) =>
             `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isActive
               ? "bg-white/15 text-white font-medium"
@@ -191,18 +217,27 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
   );
 }
 
+
+
 export function MainLayout({ children }: { children?: React.ReactNode }) {
   const userData = useUserStore((s) => s.userData);
+  const authStatus = useUserStore((s) => s.authStatus);
   const isAdmin = userData?.profile?.role === "ADMIN";
   const location = useLocation();
+
   const refreshUnreadCount = useLegalWatchStore((s) => s.refreshUnreadCount);
 
+
+
   // Pastille veille juridique : chargée à l'ouverture, rafraîchie toutes les 5 min.
+  // Réservée aux utilisateurs connectés : l'accueil est désormais visible sans
+  // compte, et cet appel répondrait 401 pour un visiteur.
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     refreshUnreadCount();
     const interval = setInterval(refreshUnreadCount, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [refreshUnreadCount]);
+  }, [authStatus, refreshUnreadCount]);
 
   // sidebarOpen pilote à la fois :
   // - le drawer mobile/tablette (overlay)
@@ -220,6 +255,25 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
     mql.addEventListener("change", handleChange);
     return () => mql.removeEventListener("change", handleChange);
   }, []);
+
+  // Contrat ouvert dans l'éditeur : on replie le menu pour laisser la place au
+  // document, puis on le remet comme il était en quittant l'éditeur. Sur
+  // mobile, le menu est déjà un tiroir fermé par défaut : rien à faire.
+  const editeurPleinEcran = useLayoutStore((s) => s.editeurPleinEcran);
+  const menuAvantEditeur = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (window.innerWidth < MOBILE_BREAKPOINT) return;
+    if (editeurPleinEcran) {
+      menuAvantEditeur.current = sidebarOpen;
+      setSidebarOpen(false);
+    } else if (menuAvantEditeur.current !== null) {
+      setSidebarOpen(menuAvantEditeur.current);
+      menuAvantEditeur.current = null;
+    }
+    // L'état du menu est lu au moment du basculement, pas suivi en continu :
+    // l'utilisateur reste libre de le rouvrir pendant qu'il édite.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editeurPleinEcran]);
 
   // Bloque le scroll du body quand le drawer mobile est ouvert
   useEffect(() => {
@@ -243,7 +297,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
 
   return (
-    <div className="flex min-h-screen w-full bg-white">
+    <div className="flex min-h-screen w-full">
       {/* ── Overlay mobile/tablette ── */}
       {sidebarOpen && (
         <div
@@ -264,7 +318,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         {/* Logo + bouton fermeture */}
         <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <Link to="/dashboard" className="flex items-center" onClick={handleNavigate}>
-            <LumenJurisLogo variant="dark" height={30} />
+            <LumenJurisLogo variant="dark" height={44} />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -314,7 +368,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         />
 
 
-        <main className="flex-1 p-4 sm:p-5 lg:p-7">
+        <main className="lj-main flex-1 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-3">
           <ErrorBoundary key={location.pathname}>
             {children ?? <Outlet />}
           </ErrorBoundary>

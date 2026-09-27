@@ -4,6 +4,21 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 interface AuthPayload extends JwtPayload {
   userId: number;
   role: string;
+  /**
+   * Présent et vrai tant que la connexion attend le second facteur. Un tel
+   * jeton n'ouvre pas la session : il n'atteint que les routes ci-dessous.
+   */
+  twoFactorPending?: boolean;
+}
+
+/**
+ * Routes accessibles avec un jeton d'attente 2FA : la saisie / le renvoi du
+ * code, et la déconnexion (pour annuler proprement). Tout le reste est refusé
+ * tant que le second facteur n'est pas validé.
+ */
+function estAutoriseePendantAttente2FA(req: Request): boolean {
+  const chemin = req.originalUrl.split("?")[0];
+  return chemin.includes("/two-factor") || chemin.endsWith("/auth/logout");
 }
 
 export function proxyAuthMiddleware( req: Request, res: Response, next: NextFunction): void {
@@ -23,13 +38,10 @@ export function proxyAuthMiddleware( req: Request, res: Response, next: NextFunc
   const token = cookieToken ?? bearerToken;
 
   if (!token) {
-    // Mode dev local : laisser passer sans token (POC complément Word).
-    // En production, le comportement reste inchangé (401).
-    console.log("Token absent dans le authMiddleware du proxy")
-    if (process.env.NODE_ENV !== "production") {
-      next();
-      return;
-    }
+    // Aucun jeton : accès refusé, en dev comme en prod. Le laissez-passer « dev »
+    // qui existait ici était un fail-open : la moindre valeur de NODE_ENV autre
+    // que "production" ouvrait toutes les routes protégées. Le complément Word
+    // s'authentifie par un Bearer (traité plus haut), il n'en dépendait pas.
     res.status(401).json({ success: false, message: "Unauthorized" });
     return;
   }
@@ -40,6 +52,23 @@ export function proxyAuthMiddleware( req: Request, res: Response, next: NextFunc
     res.locals.userId = payload.userId;
     res.locals.role = payload.role ?? "USER";
 
+    // Connexion en attente du second facteur : le jeton ne vaut que pour les
+    // routes 2FA. On NE rafraîchit PAS le cookie ici — le rafraîchissement
+    // reposerait un jeton sans le marqueur d'attente et rouvrirait la faille.
+    // Le vrai cookie de session est délivré par /two-factor/verify, une fois le
+    // code validé.
+    if (payload.twoFactorPending === true) {
+      if (!estAutoriseePendantAttente2FA(req)) {
+        res.status(401).json({
+          success: false,
+          message: "Second facteur requis pour accéder à cette ressource.",
+        });
+        return;
+      }
+      next();
+      return;
+    }
+
     const refreshed = jwt.sign(
       { userId: payload.userId, role: res.locals.role },
       process.env.JWT_SECRET!,
@@ -48,14 +77,14 @@ export function proxyAuthMiddleware( req: Request, res: Response, next: NextFunc
     res.cookie("authLumenJuris", refreshed, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       domain: process.env.COOKIE_DOMAIN || undefined,
       path: "/",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
     next();
-  } catch(err){
-    console.log("Une erreur est survenue lors du authMiddleware du proxy, error : ", err)
+  } catch {
     res
       .status(401)
       .json({ success: false, message: "Token invalide ou expiré" });

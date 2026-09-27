@@ -3,6 +3,7 @@ import nodemailer, { type SendMailOptions } from "nodemailer";
 import { templateVerifyAccount } from "./template/verifyAccount.js";
 import { templateResetPassword } from "./template/resetPassword.js";
 import { templateTwoFactor } from "./template/twoFactor.js";
+import { templateVerifyAccountCode } from "./template/verifyAccountCode.js";
 import { templateInvoiceEmail } from "./template/invoiceEmail.js";
 import { templateWelcomeFreemium } from "./template/welcomeFreemium.js";
 import { templateSignatureInvite } from "./template/signatureInvite.js";
@@ -22,15 +23,8 @@ export type MailAttachment = {
 };
 
 export type MailExtraOptions = {
-  /** Adresse(s) en copie. */
   cc?: string;
-  /**
-   * Adresse à laquelle les réponses doivent arriver. L'expéditeur technique
-   * est un no-reply de la plateforme : sans `replyTo`, une réponse du
-   * destinataire se perd. On y met l'e-mail de l'utilisateur concerné.
-   */
   replyTo?: string;
-  /** Pièces jointes. */
   attachments?: MailAttachment[];
 };
 
@@ -49,8 +43,7 @@ const MAILER_HOST = process.env.MAILER_HOST || "mail.lumenjuris.com";
 const MAILER_PORT = Number(process.env.MAILER_PORT || 465);
 
 /** Adresse affichee comme expediteur. Doit appartenir au domaine authentifie. */
-const MAILER_FROM =
-  process.env.MAILER_FROM || '"Lumen Juris" <no-reply@lumenjuris.com>';
+const MAILER_FROM = process.env.MAILER_FROM || '"Lumen Juris" <no-reply@lumenjuris.com>';
 
 const transporter = nodemailer.createTransport({
   host: MAILER_HOST,
@@ -176,19 +169,25 @@ export class Mailer {
 
 
   private createHtmlHeader(): string {
+    // Charte : navy profond + un filet doré discret comme signe de qualité.
+    // Le filet or fin en haut de l'en-tête sombre est la signature « qualité »
+    // de la marque, à utiliser avec parcimonie (jamais en aplat).
+/*     <tr>
+      <td style="height:4px; line-height:4px; font-size:0; background-color:#D6B266;">&nbsp;</td>
+    </tr> */
     return `
       <tr>
-        <td style="background-color:#0B1F3A; padding:28px 40px;">
+        <td style="background-color:#0A2540; padding:26px 40px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td width="34" style="width:34px; padding-right:10px;" valign="middle">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="26" height="26" aria-label="Lumen Juris" role="img" style="display:block;">
-                  <circle cx="16" cy="16" r="13" fill="none" stroke="#5B9DF5" stroke-width="2"></circle>
-                  <circle cx="16" cy="16" r="4.5" fill="#5B9DF5"></circle>
+                  <circle cx="16" cy="16" r="13" fill="none" stroke="#2563EB" stroke-width="2"></circle>
+                  <circle cx="16" cy="16" r="4.5" fill="#2563EB"></circle>
                 </svg>
               </td>
-              <td valign="middle" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; font-size:20px; letter-spacing:-0.3px; white-space:nowrap;">
-                <span style="font-weight:700; color:#FFFFFF;">Lumen</span><span style="font-weight:400; color:#9CB8E8;"> Juris</span>
+              <td valign="middle" style="font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; font-size:20px; letter-spacing:-0.3px; white-space:nowrap;">
+                <span style="font-weight:700; color:#FFFFFF;">Lumen</span><span style="font-weight:400; color:#8FA9CE;"> Juris</span>
               </td>
             </tr>
           </table>
@@ -202,7 +201,7 @@ export class Mailer {
 
     return `
       <tr>
-        <td style="padding:32px 40px 24px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+        <td style="padding:32px 40px 24px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                    font-size:14px; line-height:1.6; color:#374151;">
           Cordialement,<br>
           <strong style="color:#111827;">L'équipe Lumen Juris</strong>
@@ -210,18 +209,18 @@ export class Mailer {
       </tr>
 
       <tr>
-        <td style="background-color:#f7f9fc; padding:24px 40px; border-top:2px solid #e8edf5;">
+        <td style="background-color:#f4f6fa; padding:24px 40px; border-top:1px solid #e5e7eb;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="text-align:center; padding-bottom:12px;">
                 <a href="https://lumenjuris.com"
-                   style="color:#0D6EFD; text-decoration:none; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+                   style="color:#2563EB; text-decoration:none; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                           font-size:13px; font-weight:600;">
                   lumenjuris.com
                 </a>
                 <span style="color:#c7ced9; font-size:13px; padding:0 10px;">&middot;</span>
                 <a href="mailto:contact@lumenjuris.com"
-                   style="color:#6b7280; text-decoration:none; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+                   style="color:#6b7280; text-decoration:none; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                           font-size:13px;">
                   contact@lumenjuris.com
                 </a>
@@ -242,21 +241,26 @@ export class Mailer {
   }
 
   private createHtmlFullContent(htmlContent: string): string {
+    // Polices de la charte : Inter (corps/UI) et Newsreader (titres éditoriaux).
+    // Les clients mail modernes (Apple Mail, iOS) chargent ces polices Google ;
+    // les autres retombent proprement sur Georgia (serif) et les polices système.
     return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:wght@400;500&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0; padding:0; background-color:#f0efff;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0efff; padding:32px 16px;">
+<body style="margin:0; padding:0; background-color:#f4f6fa;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa; padding:32px 16px;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0"
                style="max-width:600px; width:100%; background-color:#ffffff;
-                      border-radius:12px; overflow:hidden;
-                      box-shadow:0 4px 24px rgba(113,106,249,0.10), 0 1px 4px rgba(0,0,0,0.06);">
+                      border-radius:16px; overflow:hidden;
+                      box-shadow:0 18px 40px -28px rgba(16,24,40,0.35), 0 1px 3px rgba(16,24,40,0.06);">
           ${this.createHtmlHeader()}
           ${htmlContent}
           ${this.createHtmlFooter()}
@@ -269,6 +273,7 @@ export class Mailer {
   }
 
 
+  //Ancienne version d'activation vers url backend
   async sendVerifyAccount(
     verificationLink: string,
     username: string,
@@ -280,6 +285,22 @@ export class Mailer {
     return this.send(
       this.createOption(html, "Activez votre compte Lumen Juris"),
       `Un email a été envoyé à votre adresse ${this.email}, veuillez consulter votre boîte de réception pour valider votre inscription.`,
+    );
+  }
+
+
+  //Verification de compte par code
+  async sendVerifyAccountCode(
+    code: string,
+    username?: string,
+  ): Promise<MailResult> {
+    const html = this.createHtmlFullContent(
+      templateVerifyAccountCode(code, username),
+    );
+
+    return this.send(
+      this.createOption(html, "Votre code pour activer le compte Lumen Juris"),
+      `Un code d'activation a été envoyé à ${this.email}. Il est valide 15 minutes.`,
     );
   }
 
@@ -329,7 +350,7 @@ export class Mailer {
     return this.send(
       this.createOption(
         html,
-        "Bienvenue sur Lumen Juris — votre formule Freemium est activée",
+        "Bienvenue sur Lumen Juris",
       ),
     );
   }

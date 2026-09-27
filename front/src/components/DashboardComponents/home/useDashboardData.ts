@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { useUserStore } from "../../../store/userStore";
 import { contractApi } from "../contratheque/api";
 import { negotiationApi } from "../negotiation/api";
 import { DEADLINE_SHORT, daysUntil } from "../contratheque/types";
@@ -416,6 +417,12 @@ function buildQuotas(raw: RawData): QuotaBar[] {
 /** Tout ce dont la page d'accueil a besoin pour s'afficher. */
 export interface DashboardData {
   loading: boolean;
+  /**
+   * Vrai quand la page est consultée sans compte. Les blocs affichent alors une
+   * présentation de l'outil au lieu de données personnelles, et aucun appel
+   * réseau n'est lancé.
+   */
+  isGuest: boolean;
   /** Vrai quand l'utilisateur n'a encore ni contrat, ni signature, ni négociation. */
   isEmpty: boolean;
   kpis: KpiCard[];
@@ -434,11 +441,28 @@ export interface DashboardData {
 }
 
 export function useDashboardData(): DashboardData {
+  const authStatus = useUserStore((state) => state.authStatus);
+  const isGuest = authStatus === "unauthenticated";
+  // Tant que le cookie est en cours de vérification, on reste en chargement :
+  // ça évite d'afficher l'accueil visiteur une seconde avant l'accueil connecté.
+  const checkingSession = authStatus === "idle" || authStatus === "loading";
+
   const [raw, setRaw] = useState<RawData>(EMPTY_RAW);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+
+    // Visiteur : toutes ces APIs répondraient 401, on ne les appelle pas.
+    if (isGuest) {
+      setRaw(EMPTY_RAW);
+      setLoading(false);
+      return;
+    }
+    if (checkingSession) {
+      setLoading(true);
+      return;
+    }
 
     async function load() {
       const [contractStats, contracts, deadlines, envelopes, negotiations, billing] =
@@ -470,7 +494,7 @@ export function useDashboardData(): DashboardData {
 
     void load();
     return () => { cancelled = true; };
-  }, []);
+  }, [isGuest, checkingSession]);
 
   return useMemo(() => {
     const queue = buildQueue(raw);
@@ -480,6 +504,7 @@ export function useDashboardData(): DashboardData {
 
     return {
       loading,
+      isGuest,
       isEmpty:
         !loading
         && contracts === 0
@@ -501,5 +526,5 @@ export function useDashboardData(): DashboardData {
         alerts: alerts.length,
       },
     };
-  }, [raw, loading]);
+  }, [raw, loading, isGuest]);
 }
