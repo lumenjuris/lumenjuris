@@ -5,7 +5,7 @@ import {
   BookOpen, Sparkles, ChevronLeft, ChevronRight,
   Briefcase, ClipboardList, FileText, Shield,
   UploadCloud, Lock, CheckCircle2,
-  Loader2, AlertCircle, Search,
+  Loader2, AlertCircle, Search, X, Save,
 } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
@@ -21,8 +21,7 @@ import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
 import { CreatedContractTable } from "./generateur/CreatedContractTable";
 import { CreerDeZeroCard, GenerateurHub } from "./generateur/GenerateurHub";
-import { createPortal } from "react-dom";
-import { PageBanner, BannerAction } from "../common/PageBanner";
+import { PageBanner } from "../common/PageBanner";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
   type CreatedContract,
@@ -596,6 +595,36 @@ function VariableListPanel({
   );
 }
 
+/**
+ * Bouton de la barre d'outils collée au contrat : icône + mot court, même
+ * esprit que la barre de l'éditeur de contrat généré (SmartCddEditor).
+ */
+function ToolbarAction({ icon: Icon, iconClassName, label, short, onClick, disabled = false, highlight = false }: {
+  icon: React.ElementType;
+  iconClassName?: string;
+  label: string;
+  short?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${highlight
+        ? "text-white bg-brand hover:bg-brand-hover"
+        : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
+        }`}
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${iconClassName ?? ""}`} />
+      {short && <span>{short}</span>}
+    </button>
+  );
+}
+
 // ─── Import ───────────────────────────────────────────────────────────────────
 
 type ImportStep = "form" | "processing" | "review";
@@ -671,13 +700,13 @@ function AnalysisProgressBanner({ done, total, fieldCount }: { done: number; tot
 function ImportSection({
   onSaved,
   onReviewDisplayed,
-  actionsSlot,
+  onBack,
 }: {
   onSaved?: (templateId: string, andContinue: boolean) => void;
   /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
-  /** Zone du bandeau de la page où afficher les boutons de la relecture. */
-  actionsSlot?: HTMLElement | null;
+  /** Retour à l'écran précédent (Générateur de contrat). */
+  onBack?: () => void;
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<ImportStep>("form");
@@ -949,26 +978,12 @@ function ImportSection({
     }
 
     return (
-      <div className="w-full space-y-4 pr-4">
-        {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
-
-        {/* Boutons affichés en haut à droite, dans le bandeau de la page */}
-        {actionsSlot && createPortal(
-          <>
-            <BannerAction onClick={resetImport} disabled={saving}>
-              Annuler
-            </BannerAction>
-            {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
-                Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
-            <BannerAction onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta}>
-              Enregistrer
-            </BannerAction>
-            {/* Enregistrer + poursuivre le tunnel de génération */}
-            <BannerAction onClick={() => void handleSaveStructure(true)} disabled={saving || !savedMeta}>
-              {saving ? "Enregistrement…" : "Enregistrer et générer"}
-            </BannerAction>
-          </>,
-          actionsSlot,
+      <div className="w-full space-y-4">
+        {/* Fil d'ariane discret : même esprit que l'éditeur de contrat généré, sans bandeau bleu. */}
+        {onBack && (
+          <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-medium text-ink-subtle transition-colors hover:text-brand">
+            <ChevronLeft className="h-3.5 w-3.5" /> Générateur de contrat
+          </button>
         )}
 
         {analysis && (
@@ -989,18 +1004,37 @@ function ImportSection({
         )}
 
         {/* Contrat (toute la largeur restante) + champs détectés (largeur fixe). Chaque colonne défile seule. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:h-[calc(100vh-17rem)] lg:min-h-[520px]">
-          <div
-            ref={documentScrollRef}
-            className="h-[55vh] lg:h-full overflow-y-auto rounded-card border border-line bg-white px-6 py-6 shadow-card sm:px-8"
-          >
-            <VariableSelector
-              structure={structure}
-              essentialVars={essentialVars}
-              highlightedVar={highlightedVar}
-              onVariableClick={handleDocumentVariableClick}
-              onVariableHover={setHoveredVar}
-            />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:h-[calc(100vh-14rem)] lg:min-h-[520px]">
+          {/* Carte du contrat : barre d'outils collée en tête, comme l'éditeur du contrat généré. */}
+          <div className="flex h-[65vh] min-h-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card lg:h-full">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 border-b border-line-subtle px-3 py-2 sm:px-4">
+              <ToolbarAction icon={X} short="Annuler" label="Annuler l'import" onClick={resetImport} disabled={saving} />
+              {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
+                  Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
+              <ToolbarAction icon={Save} short="Enregistrer" label="Enregistrer le modèle" onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta} />
+              {/* Enregistrer + poursuivre le tunnel de génération */}
+              <ToolbarAction
+                icon={saving ? Loader2 : Sparkles}
+                iconClassName={saving ? "animate-spin" : undefined}
+                short={saving ? "Enregistrement…" : "Enregistrer et générer"}
+                label="Enregistrer le modèle et l'utiliser pour générer un contrat"
+                onClick={() => void handleSaveStructure(true)}
+                disabled={saving || !savedMeta}
+                highlight
+              />
+            </div>
+            <div
+              ref={documentScrollRef}
+              className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8"
+            >
+              <VariableSelector
+                structure={structure}
+                essentialVars={essentialVars}
+                highlightedVar={highlightedVar}
+                onVariableClick={handleDocumentVariableClick}
+                onVariableHover={setHoveredVar}
+              />
+            </div>
           </div>
           <VariableListPanel
             variables={variableSummaries}
@@ -1019,6 +1053,12 @@ function ImportSection({
 
   return (
     <div className="space-y-4 w-full max-w-4xl mx-auto">
+      {onBack && (
+        <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-medium text-ink-subtle transition-colors hover:text-brand">
+          <ChevronLeft className="h-3.5 w-3.5" /> Générateur de contrat
+        </button>
+      )}
+
       {/* Carte unique : dépôt + détails (homogène avec les autres écrans) */}
       <div className="rounded-card border border-line bg-white shadow-card p-6 space-y-5">
         {/* Zone de dépôt — react-dropzone (clic + drag), compacte */}
@@ -1223,8 +1263,6 @@ export function Generateur() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
   const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
-  // Zone du bandeau où l'import place ses boutons.
-  const [importActionsSlot, setImportActionsSlot] = useState<HTMLDivElement | null>(null);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1365,7 +1403,8 @@ export function Generateur() {
   }
 
   // Les éditeurs document-first (form, blank, useCustom) ont leur propre retour : pas de bannière.
-  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom";
+  // L'import a lui aussi son propre fil d'ariane, dans le même esprit que ces éditeurs.
+  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom" && section !== "import";
 
   // Contrat ouvert dans l'éditeur : le menu latéral se replie pour laisser
   // toute la largeur au document, et revient en quittant l'éditeur.
@@ -1383,8 +1422,6 @@ export function Generateur() {
           backLink={{ label: "Générateur de contrat", onClick: goHub }}
           title={LABELS[section]}
           subtitle={SUBS[section]}
-          // Emplacement des boutons de la relecture d'un import (Annuler, Enregistrer…).
-          actions={section === "import" ? <div ref={setImportActionsSlot} className="flex flex-wrap items-center gap-2.5 empty:hidden" /> : undefined}
         />
       )}
 
@@ -1407,7 +1444,7 @@ export function Generateur() {
           <ImportSection
             onSaved={handleTemplateSaved}
             onReviewDisplayed={setIsImportReviewDisplayed}
-            actionsSlot={importActionsSlot}
+            onBack={goHub}
           />
         </div>
       )}
