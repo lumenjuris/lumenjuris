@@ -21,7 +21,8 @@ import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
 import { CreatedContractTable } from "./generateur/CreatedContractTable";
 import { CreerDeZeroCard, GenerateurHub } from "./generateur/GenerateurHub";
-import { PageBanner } from "../common/PageBanner";
+import { createPortal } from "react-dom";
+import { PageBanner, BannerAction } from "../common/PageBanner";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
   type CreatedContract,
@@ -265,7 +266,14 @@ function LibrarySection({
 
 type ContentToken =
   | { type: "text"; value: string }
-  | { type: "var"; name: string; text: string };
+  | { type: "var"; name: string; text: string }
+  | { type: "pending"; text: string };
+
+/**
+ * Marqueur provisoire d'un emplacement vide pas encore nommé par l'IA, pendant
+ * l'import (jamais enregistré). Même valeur dans proxy/src/routes/template.ts.
+ */
+const PENDING_VARIABLE_NAME = "__IMPORT_EN_COURS__";
 
 /**
  * Découpe le contenu en tokens.
@@ -286,7 +294,9 @@ function tokenizeContent(content: string): ContentToken[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     if (m.index > last) tokens.push({ type: "text", value: content.slice(last, m.index) });
-    if (m[1] !== undefined && m[2] !== undefined) {
+    if (m[1] === PENDING_VARIABLE_NAME && m[2] !== undefined) {
+      tokens.push({ type: "pending", text: m[2] });
+    } else if (m[1] !== undefined && m[2] !== undefined) {
       // Si le texte d'origine est vide ou whitespace, fallback sur le nom humanisé
       const text = m[2].trim() ? m[2] : humanizeVar(m[1]);
       tokens.push({ type: "var", name: m[1], text });
@@ -439,6 +449,17 @@ function VariableSelector({
                 <p className="whitespace-pre-line text-[13px] text-ink-secondary leading-relaxed">
                   {cl.tokens.map((t, i) => {
                     if (t.type === "text") return <span key={i}>{t.value}</span>;
+                    if (t.type === "pending") {
+                      return (
+                        <span
+                          key={i}
+                          title="Champ en cours d'identification"
+                          className="inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] bg-surface-muted text-ink-subtle animate-pulse"
+                        >
+                          {t.text}
+                        </span>
+                      );
+                    }
                     const isEssential = essentialVars.has(t.name);
                     const isHighlighted = highlightedVar === t.name;
                     const variableLabel = getVariableLabel(structure, t.name);
@@ -483,12 +504,15 @@ function VariableListPanel({
   onToggleVar,
   onShowVar,
   onHoverVar,
+  isAnalysing,
 }: {
   variables: VariableSummary[];
   essentialVars: Set<string>;
   highlightedVar: string | null;
   /** Champ cliqué dans le contrat, à faire apparaître dans la liste s'il est caché. */
   variableToReveal: { name: string } | null;
+  /** Vrai tant que l'IA identifie encore des champs. */
+  isAnalysing: boolean;
   onToggleVar: (name: string) => void;
   onShowVar: (name: string) => void;
   onHoverVar: (name: string | null) => void;
@@ -563,7 +587,7 @@ function VariableListPanel({
 
         {variables.length === 0 && (
           <li className="px-3 py-8 text-center text-xs text-ink-subtle">
-            Aucun champ détecté dans ce contrat.
+            {isAnalysing ? "Recherche des champs du contrat…" : "Aucun champ détecté dans ce contrat."}
           </li>
         )}
       </ul>
@@ -575,17 +599,81 @@ function VariableListPanel({
 
 type ImportStep = "form" | "processing" | "review";
 
-/** Style des boutons d'action de la relecture (Annuler, Enregistrer, Enregistrer et générer). */
-const REVIEW_ACTION_BUTTON =
-  "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-primary rounded-xl shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85 disabled:opacity-50";
+/** Document préparé par le relais : il le relit à chaque étape de l'import. */
+interface PreparedImportDocument {
+  paragraphs: string[];
+  placeholders: Record<string, { originalText: string; hint: string | null }>;
+}
+
+/** Paragraphes analysés ensemble par l'IA (numéros à partir de 1, bornes incluses). */
+interface AnalysisPart {
+  first: number;
+  last: number;
+}
+
+/** Analyse d'une partie : le front la garde telle quelle et la renvoie au relais. */
+type PartExtraction = Record<string, unknown>;
+
+/** Appelle une étape de l'import (/api/template/import/…) et renvoie ses données. */
+async function postImportStep<T>(step: "prepare" | "analyse" | "assemble" | "finalize", body: unknown): Promise<T> {
+  const res = await fetchProxy(`/api/template/import/${step}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string; data?: T };
+  if (!res.ok || !payload.success || !payload.data) throw new Error(payload.message || "Import échoué");
+  return payload.data;
+}
+
+/** Analyse d'une partie, avec un second essai en cas d'échec ; null si les deux échouent. */
+async function analysePartWithRetry(importDocument: PreparedImportDocument, part: AnalysisPart): Promise<PartExtraction | null> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { extraction } = await postImportStep<{ extraction: PartExtraction }>("analyse", { document: importDocument, part });
+      return extraction;
+    } catch (error) {
+      console.warn(`Analyse des paragraphes ${part.first} à ${part.last} échouée (essai ${attempt}) :`, error);
+    }
+  }
+  return null;
+}
+
+/** Bandeau d'avancement pendant que l'IA identifie les champs du contrat. */
+function AnalysisProgressBanner({ done, total, fieldCount }: { done: number; total: number; fieldCount: number }) {
+  // Un peu d'avancement dès le départ : la barre ne reste pas vide pendant la première partie.
+  const percent = total > 0 ? Math.max(10, Math.round((done / total) * 100)) : 100;
+  return (
+    <div role="status" className="space-y-2 rounded-card border border-brand/20 bg-brand-light px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="flex items-center gap-2 font-semibold text-ink">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />
+          {done < total ? "L'IA identifie les champs du contrat…" : "Enregistrement du modèle…"}
+        </span>
+        <span className="text-ink-muted">
+          {fieldCount} champ{fieldCount > 1 ? "s" : ""} trouvé{fieldCount > 1 ? "s" : ""}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-brand transition-all duration-700" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="text-[11px] text-ink-muted">
+        Vous pouvez déjà parcourir le contrat et décocher les champs inutiles. L'enregistrement sera possible à la fin de l'analyse.
+      </p>
+    </div>
+  );
+}
 
 function ImportSection({
   onSaved,
   onReviewDisplayed,
+  actionsSlot,
 }: {
   onSaved?: (templateId: string, andContinue: boolean) => void;
   /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
+  /** Zone du bandeau de la page où afficher les boutons de la relecture. */
+  actionsSlot?: HTMLElement | null;
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -597,6 +685,14 @@ function ImportSection({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  /** Avancement de l'analyse IA, affiché pendant la relecture ; null une fois le modèle enregistré. */
+  const [analysis, setAnalysis] = useState<{ done: number; total: number } | null>(null);
+  /** Vrai si une partie du contrat n'a pas pu être analysée. */
+  const [analysisIncomplete, setAnalysisIncomplete] = useState(false);
+  // Chaque import a son numéro : les réponses d'un import annulé ou remplacé sont ignorées.
+  const importRunRef = useRef(0);
+  // Champs déjà proposés à l'utilisateur, pour ne cocher d'office que les nouveaux.
+  const knownVarsRef = useRef<Set<string>>(new Set());
 
   // Relecture : champ choisi (clic) et champ survolé, surlignés dans les deux colonnes.
   const [activeVar, setActiveVar] = useState<string | null>(null);
@@ -610,6 +706,16 @@ function ImportSection({
     () => (structure ? listVariableSummaries(structure) : []),
     [structure],
   );
+
+  // Tous les champs détectés sont conservés par défaut, y compris ceux qui
+  // arrivent pendant l'analyse ; un champ que l'utilisateur a décoché le reste.
+  useEffect(() => {
+    if (!structure) return;
+    const newVars = extractAllVariables(structure).filter((varName) => !knownVarsRef.current.has(varName));
+    if (newVars.length === 0) return;
+    newVars.forEach((varName) => knownVarsRef.current.add(varName));
+    setEssentialVars((prev) => new Set([...prev, ...newVars]));
+  }, [structure]);
 
   function toggleEssentialVar(name: string) {
     setEssentialVars((prev) => {
@@ -654,9 +760,12 @@ function ImportSection({
   }
 
   function resetImport() {
+    importRunRef.current += 1; // abandonne l'import en cours
+    knownVarsRef.current = new Set();
     setStep("form"); setFile(null); setName("");
     setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
     setSaveError(""); setActiveVar(null); setHoveredVar(null);
+    setAnalysis(null); setAnalysisIncomplete(false);
   }
 
   const onDropAccepted = useCallback((files: File[]) => { if (files[0]) setFile(files[0]); }, []);
@@ -672,40 +781,83 @@ function ImportSection({
 
   async function handleImport() {
     if (!file || !name.trim()) return;
+    const runId = ++importRunRef.current;
+    const isCurrentRun = () => runId === importRunRef.current;
+    knownVarsRef.current = new Set();
+    setEssentialVars(new Set());
+    setAnalysisIncomplete(false);
     setStep("processing");
     setError("");
     try {
-      const base64 = await fileToBase64(file);
-      const res = await fetchProxy("/api/template/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          fileBase64: base64,
-          mimeType: file.type,
-          filename: file.name,
-          name: name.trim(),
-        }),
-      });
-      const data = await res.json() as { success: boolean; message?: string; data?: ContractTemplateDTO };
-      if (!res.ok || !data.success || !data.data) {
-        throw new Error(data.message || "Import échoué");
-      }
-      setSavedMeta(data.data);
+      const fileBase64 = await fileToBase64(file);
 
-      // Charger la structure
-      const detailRes = await fetchProxy(`/api/template/${data.data.id}`, { credentials: "include" });
-      const detail = await detailRes.json() as { success: boolean; data?: { meta: ContractTemplateDTO; structure: TemplateStructure } };
-      if (!detail.success || !detail.data) {
-        throw new Error("Modèle importé, mais son aperçu n'a pas pu être chargé. Retrouvez-le dans votre bibliothèque.");
-      }
-      setStructure(detail.data.structure);
-      // Par défaut, TOUTES les variables présentes dans le contenu sont pré-sélectionnées.
-      // On extrait depuis le contenu réel (et pas uniquement detectedVariables qui peut être incomplet).
-      setEssentialVars(new Set(extractAllVariables(detail.data.structure)));
+      // 1. Lecture du document : le contrat s'affiche aussitôt, ses emplacements vides « en cours ».
+      const prepared = await postImportStep<{
+        document: PreparedImportDocument;
+        parts: AnalysisPart[];
+        structure: TemplateStructure;
+      }>("prepare", { fileBase64, mimeType: file.type, filename: file.name });
+      if (!isCurrentRun()) return;
+      const { document: importDocument, parts } = prepared;
+      setStructure(prepared.structure);
+      setAnalysis({ done: 0, total: parts.length });
       setStep("review");
+
+      // 2. Toutes les parties sont analysées en même temps ; l'aperçu se complète à chaque partie terminée.
+      const extractions: Array<PartExtraction | null> = parts.map(() => null);
+      const pendingIndexes = new Set(parts.map((_, index) => index));
+      let failedPartCount = 0;
+      let previewRequestId = 0;
+
+      const refreshPreview = async () => {
+        const requestId = ++previewRequestId;
+        try {
+          const preview = await postImportStep<{ structure: TemplateStructure }>("assemble", {
+            document: importDocument,
+            extractions,
+            pendingParts: parts.filter((_, index) => pendingIndexes.has(index)),
+          });
+          // Un aperçu plus ancien qu'un autre déjà demandé ne doit pas l'écraser.
+          if (isCurrentRun() && requestId === previewRequestId) setStructure(preview.structure);
+        } catch {
+          // Aperçu intermédiaire : l'assemblage final suffit.
+        }
+      };
+
+      await Promise.all(
+        parts.map(async (part, index) => {
+          extractions[index] = await analysePartWithRetry(importDocument, part);
+          if (!isCurrentRun()) return;
+          if (!extractions[index]) failedPartCount += 1;
+          pendingIndexes.delete(index);
+          setAnalysis({ done: parts.length - pendingIndexes.size, total: parts.length });
+          if (pendingIndexes.size > 0) void refreshPreview();
+        }),
+      );
+      if (!isCurrentRun()) return;
+      if (parts.length > 0 && failedPartCount === parts.length) {
+        throw new Error("L'analyse du contrat a échoué. Réessayez.");
+      }
+
+      // 3. Assemblage définitif et enregistrement du modèle.
+      previewRequestId += 1; // les aperçus encore en route sont périmés
+      const finalized = await postImportStep<{ meta: ContractTemplateDTO; structure: TemplateStructure }>("finalize", {
+        fileBase64,
+        filename: file.name,
+        name: name.trim(),
+        document: importDocument,
+        extractions,
+      });
+      if (!isCurrentRun()) return;
+      setSavedMeta(finalized.meta);
+      setStructure(finalized.structure);
+      setAnalysisIncomplete(failedPartCount > 0);
+      setAnalysis(null);
     } catch (e: unknown) {
+      if (!isCurrentRun()) return;
       setError(e instanceof Error ? e.message : "Erreur lors de l'import");
+      setAnalysis(null);
+      setStructure(null);
       setStep("form");
     }
   }
@@ -753,21 +905,16 @@ function ImportSection({
           <Loader2 className="w-7 h-7 text-brand animate-spin stroke-[1.5]" />
         </div>
         <div className="space-y-1.5">
-          <p className="text-sm font-bold text-ink">Analyse en cours…</p>
-          <p className="text-xs text-ink-subtle">Extraction du texte puis structuration par IA. Cela peut prendre 30 à 60 secondes.</p>
-        </div>
-        <div className="flex gap-1.5">
-          {["Extraction du document", "Structuration IA", "Sauvegarde"].map((s, i) => (
-            <span key={i} className="text-[10px] font-medium text-ink-subtle bg-surface-muted px-2.5 py-1 rounded-chip">{s}</span>
-          ))}
+          <p className="text-sm font-bold text-ink">Lecture du document…</p>
+          <p className="text-xs text-ink-subtle">Le contrat s'affiche dans quelques secondes ; ses champs se compléteront ensuite au fil de l'analyse.</p>
         </div>
       </div>
     );
   }
 
-  if (step === "review" && structure && savedMeta) {
+  if (step === "review" && structure) {
 
-    if (saved) {
+    if (saved && savedMeta) {
       return (
         <div className="flex flex-col items-center justify-center py-20 gap-5 text-center max-w-lg mx-auto">
           <div className="w-20 h-20 rounded-card bg-success-light flex items-center justify-center">
@@ -795,19 +942,35 @@ function ImportSection({
       <div className="w-full space-y-4 pr-4">
         {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            Annuler
-          </button>
-          {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
-          <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            Enregistrer
-          </button>
-          {/* Enregistrer + poursuivre le tunnel de génération */}
-          <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            {saving ? "Enregistrement…" : "Enregistrer et générer"}
-          </button>
-        </div>
+        {/* Boutons affichés en haut à droite, dans le bandeau de la page */}
+        {actionsSlot && createPortal(
+          <>
+            <BannerAction onClick={resetImport} disabled={saving}>
+              Annuler
+            </BannerAction>
+            {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
+                Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
+            <BannerAction onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta}>
+              Enregistrer
+            </BannerAction>
+            {/* Enregistrer + poursuivre le tunnel de génération */}
+            <BannerAction onClick={() => void handleSaveStructure(true)} disabled={saving || !savedMeta}>
+              {saving ? "Enregistrement…" : "Enregistrer et générer"}
+            </BannerAction>
+          </>,
+          actionsSlot,
+        )}
+
+        {analysis && (
+          <AnalysisProgressBanner done={analysis.done} total={analysis.total} fieldCount={variableSummaries.length} />
+        )}
+
+        {analysisIncomplete && (
+          <div role="alert" className="flex items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-3 rounded-xl">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            Une partie du contrat n'a pas pu être analysée : certains champs n'ont peut-être pas été détectés.
+          </div>
+        )}
 
         {saveError && (
           <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
@@ -837,6 +1000,7 @@ function ImportSection({
             onToggleVar={toggleEssentialVar}
             onShowVar={showVariableInDocument}
             onHoverVar={setHoveredVar}
+            isAnalysing={analysis !== null}
           />
         </div>
       </div>
@@ -1072,6 +1236,8 @@ export function Generateur() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
   const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
+  // Zone du bandeau où l'import place ses boutons.
+  const [importActionsSlot, setImportActionsSlot] = useState<HTMLDivElement | null>(null);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1189,7 +1355,7 @@ export function Generateur() {
 
   const SUBS: Record<Exclude<Section, null>, string> = {
     library: "",
-    import: "Importez un contrat existant pour le transformer en modèle réutilisable.",
+    import: "",
     form: "Renseignez les informations pour personnaliser votre contrat.",
     useCustom: "",
     scratch: "Générez un contrat sur-mesure en répondant à quelques questions.",
@@ -1230,6 +1396,8 @@ export function Generateur() {
           backLink={{ label: "Générateur de contrat", onClick: goHub }}
           title={LABELS[section]}
           subtitle={SUBS[section]}
+          // Emplacement des boutons de la relecture d'un import (Annuler, Enregistrer…).
+          actions={section === "import" ? <div ref={setImportActionsSlot} className="flex flex-wrap items-center gap-2.5 empty:hidden" /> : undefined}
         />
       )}
 
@@ -1249,7 +1417,11 @@ export function Generateur() {
       {section === "library" && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
       {section === "import" && (
         <div className="w-full flex justify-center">
-          <ImportSection onSaved={handleTemplateSaved} onReviewDisplayed={setIsImportReviewDisplayed} />
+          <ImportSection
+            onSaved={handleTemplateSaved}
+            onReviewDisplayed={setIsImportReviewDisplayed}
+            actionsSlot={importActionsSlot}
+          />
         </div>
       )}
       {section === "form" && (
