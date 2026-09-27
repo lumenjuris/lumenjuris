@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import {
@@ -10,7 +10,8 @@ import {
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
 import { useLayoutStore } from "../../store/layoutStore";
-import { SmartCddEditor } from "./cdd/smart/SmartCddEditor";
+import { SmartCddEditor, ToolbarAction } from "./cdd/smart/SmartCddEditor";
+import { CONTRACT_DOCUMENT_CLASS, CONTRACT_DOCUMENT_PADDING_CLASS, CONTRACT_TOOLBAR_CLASS } from "./cdd/smart/documentTypography";
 import type { ContractModel, VariableDef, BlockDef } from "../../contractEngine/types";
 import { cddAccroissementModel } from "../../contractEngine/models/cddAccroissement";
 import { cdiModel } from "../../contractEngine/models/cdi";
@@ -405,97 +406,97 @@ function isElementVisibleIn(container: HTMLElement, element: HTMLElement): boole
   return elementBox.top >= containerBox.top && elementBox.bottom <= containerBox.bottom;
 }
 
-/** Texte du contrat avec les variables surlignées et cliquables. */
+/**
+ * Texte du contrat avec les variables surlignées et cliquables.
+ * Même rendu que l'éditeur de contrat (titre, intertitres, paragraphes, typographie),
+ * pour que « Enregistrer et générer » ne change pas l'aspect du document.
+ */
 function VariableSelector({
   structure,
+  title,
   essentialVars,
   highlightedVar,
   onVariableClick,
   onVariableHover,
 }: {
   structure: TemplateStructure;
+  /** Titre du document (nom du modèle), affiché comme dans l'éditeur. */
+  title?: string;
   essentialVars: Set<string>;
   highlightedVar: string | null;
   onVariableClick: (name: string) => void;
   onVariableHover: (name: string | null) => void;
 }) {
-  // Le découpage du texte ne dépend que de la structure : on ne le refait pas
-  // à chaque survol (important pour les contrats longs).
+  // Même découpage que l'éditeur (templateToModel puis buildInitialHtml) : l'intitulé
+  // de la clause en première ligne, un double saut de ligne ouvre un nouveau paragraphe.
+  // Fait une seule fois par structure, pas à chaque survol (contrats longs).
   const tokenizedSections = useMemo(
     () =>
-      (structure.sections ?? []).map((section) => ({
-        title: section.title,
-        clauses: (section.clauses ?? []).map((clause) => ({
-          id: clause.id,
-          title: clause.title,
-          tokens: tokenizeContent(clause.content),
-        })),
-      })),
+      (structure.sections ?? []).map((section) => {
+        const body = (section.clauses ?? [])
+          .map((clause) => (clause.title?.trim() ? clause.title.trim() + "\n" : "") + (clause.content ?? ""))
+          .join("\n\n");
+        return {
+          title: section.title,
+          paragraphs: body.split(/\n{2,}/).filter((paragraph) => paragraph.trim()).map(tokenizeContent),
+        };
+      }),
     [structure],
   );
 
   return (
-    <div className="space-y-6">
-      {tokenizedSections.map((sec, si) => (
-        <section key={si} className="space-y-3">
-          <h4 className="text-[13px] font-bold text-ink tracking-tight">{sec.title}</h4>
-          <div className="space-y-3">
-            {sec.clauses.map((cl) => (
-              <div key={cl.id} className="space-y-1.5">
-                {cl.title && (
-                  <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wide">{cl.title}</p>
-                )}
-                <p className="whitespace-pre-line text-[13px] text-ink-secondary leading-relaxed">
-                  {cl.tokens.map((t, i) => {
-                    if (t.type === "text") return <span key={i}>{t.value}</span>;
-                    if (t.type === "pending") {
-                      return (
-                        <span
-                          key={i}
-                          title="Champ en cours d'identification"
-                          className="mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium bg-surface-muted text-ink-subtle animate-pulse"
-                        >
-                          {t.text}
-                        </span>
-                      );
-                    }
-                    const isEssential = essentialVars.has(t.name);
-                    const isHighlighted = highlightedVar === t.name;
-                    const variableLabel = getVariableLabel(structure, t.name);
-                    // Emplacement encore vide (".....", "____") : dans la génération de contrat,
-                    // ce même texte est un placeholder de <input>, que le navigateur affiche en gris
-                    // clair — pas dans la couleur du champ. On reproduit ce gris ici (même teinte que
-                    // le placeholder : ink-subtle = gris-400) pour que les deux écrans soient identiques.
-                    const isBlank = isBlankPlaceholder(t.text);
+    // Même empilement que l'éditeur (EditorContent puis .ProseMirror) : la classe
+    // .ProseMirror porte la taille, l'interligne et la couleur du texte (index.css).
+    <div className={CONTRACT_DOCUMENT_CLASS}>
+      <div className="ProseMirror">
+        {title && <h2>{title}</h2>}
+        {tokenizedSections.map((sec, si) => (
+          <Fragment key={si}>
+            {sec.title && <h3>{sec.title}</h3>}
+            {sec.paragraphs.map((tokens, pi) => (
+              <p key={pi} className="whitespace-pre-line">
+                {tokens.map((t, i) => {
+                  if (t.type === "text") return <span key={i}>{t.value}</span>;
+                  if (t.type === "pending") {
                     return (
-                      <button
+                      <span
                         key={i}
-                        type="button"
-                        data-variable={t.name}
-                        onClick={() => onVariableClick(t.name)}
-                        onMouseEnter={() => onVariableHover(t.name)}
-                        onMouseLeave={() => onVariableHover(null)}
-                        title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
-                        className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium transition-all ${isEssential
-                          // Même jaune que les champs de la génération de contrat (VariableNode)
-                          ? `bg-amber-100 ring-1 ring-amber-300/80 hover:bg-amber-200/80 ${isBlank ? "text-ink-subtle" : "text-amber-800"}`
-                          : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
-                          } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                        title="Champ en cours d'identification"
+                        className="mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium bg-surface-muted text-ink-subtle animate-pulse"
                       >
-                        {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
-                        {isBlank ? variableLabel : t.text}
-                      </button>
+                        {t.text}
+                      </span>
                     );
-                  })}
-                </p>
-              </div>
+                  }
+                  const isEssential = essentialVars.has(t.name);
+                  const isHighlighted = highlightedVar === t.name;
+                  const variableLabel = getVariableLabel(structure, t.name);
+                  const isBlank = isBlankPlaceholder(t.text);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      data-variable={t.name}
+                      onClick={() => onVariableClick(t.name)}
+                      onMouseEnter={() => onVariableHover(t.name)}
+                      onMouseLeave={() => onVariableHover(null)}
+                      title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
+                      className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium transition-all ${isEssential
+                        // Même jaune et même texte gris que les champs de la génération de contrat (VariableNode)
+                        ? "bg-amber-100 text-ink-subtle ring-1 ring-amber-300/80 hover:bg-amber-200/80"
+                        : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
+                        } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                    >
+                      {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
+                      {isBlank ? variableLabel : t.text}
+                    </button>
+                  );
+                })}
+              </p>
             ))}
-          </div>
-          {si < tokenizedSections.length - 1 && (
-            <div className="pt-2 border-b border-line-subtle" />
-          )}
-        </section>
-      ))}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 }
@@ -536,18 +537,23 @@ function VariableListPanel({
   }, [variableToReveal]);
 
   return (
-    <div className="flex flex-col min-h-0 lg:h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
-      <div className="shrink-0 space-y-2.5 border-b border-line-subtle px-4 py-3">
+    // Hauteur limitée à l'écran (comme la colonne de l'éditeur) : seule la liste défile.
+    <div className="flex flex-col min-h-0 lg:max-h-[calc(100vh-4rem)] bg-white rounded-2xl border border-line shadow-card overflow-hidden">
+      <div className="shrink-0 space-y-2.5 px-4 pt-4 pb-1">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-ink">Champs détectés</h3>
-          <span className="text-xs text-ink-subtle">
-            <span className="font-semibold text-amber-800">{keptCount}</span> / {variables.length} conservé{keptCount > 1 ? "s" : ""}
+          {/* Même intitulé que « Champs à compléter » dans l'éditeur de contrat */}
+          <h3 className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">Champs détectés</h3>
+          <span
+            title={`${keptCount} champ${keptCount > 1 ? "s" : ""} conservé${keptCount > 1 ? "s" : ""} sur ${variables.length}`}
+            className="whitespace-nowrap text-xs text-ink-subtle"
+          >
+            <span className="font-semibold text-amber-800">{keptCount}</span> / {variables.length}
           </span>
         </div>
 
       </div>
 
-      <ul ref={listRef} className="flex-1 space-y-0.5 overflow-y-auto p-2 max-h-[55vh] lg:max-h-none">
+      <ul ref={listRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2 max-h-[55vh] lg:max-h-none">
         {variables.map((variable) => {
           const isKept = essentialVars.has(variable.name);
           const isHighlighted = highlightedVar === variable.name;
@@ -600,36 +606,6 @@ function VariableListPanel({
   );
 }
 
-/**
- * Bouton de la barre d'outils collée au contrat : icône + mot court, même
- * esprit que la barre de l'éditeur de contrat généré (SmartCddEditor).
- */
-function ToolbarAction({ icon: Icon, iconClassName, label, short, onClick, disabled = false, highlight = false }: {
-  icon: React.ElementType;
-  iconClassName?: string;
-  label: string;
-  short?: string;
-  onClick: () => void;
-  disabled?: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${highlight
-        ? "text-white bg-brand hover:bg-brand-hover"
-        : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
-        }`}
-    >
-      <Icon className={`h-4 w-4 shrink-0 ${iconClassName ?? ""}`} />
-      {short && <span>{short}</span>}
-    </button>
-  );
-}
-
 // ─── Import ───────────────────────────────────────────────────────────────────
 
 type ImportStep = "form" | "processing" | "review";
@@ -648,6 +624,11 @@ interface AnalysisPart {
 
 /** Analyse d'une partie : le front la garde telle quelle et la renvoie au relais. */
 type PartExtraction = Record<string, unknown>;
+
+/** Icône d'enregistrement en cours (pour les boutons de la barre d'outils). */
+function SpinningLoader({ className }: { className?: string }) {
+  return <Loader2 className={`${className ?? ""} animate-spin`} />;
+}
 
 /** Nom de modèle tiré du nom de fichier : "NDA_Inserm-v2.docx" → "NDA Inserm v2". */
 function toModelNameFromFilename(filename: string): string {
@@ -745,6 +726,10 @@ function ImportSection({
     [structure],
   );
 
+  // Titre du document : le nom du modèle en majuscules, exactement comme l'éditeur
+  // l'affichera après « Enregistrer et générer » (voir templateToModel).
+  const documentTitle = (savedMeta?.name || (file ? toModelNameFromFilename(file.name) : "")).toUpperCase();
+
   // Tous les champs détectés sont conservés par défaut, y compris ceux qui
   // arrivent pendant l'analyse ; un champ que l'utilisateur a décoché le reste.
   useEffect(() => {
@@ -795,7 +780,8 @@ function ImportSection({
     const lastShown = lastShownOccurrenceRef.current;
     const nextIndex = lastShown.name === name ? (lastShown.index + 1) % occurrences.length : 0;
     lastShownOccurrenceRef.current = { name, index: nextIndex };
-    scrollElementToCenter(container, occurrences[nextIndex]);
+    // Le contrat défile avec la page (comme dans l'éditeur) : c'est la page qu'on fait défiler.
+    occurrences[nextIndex].scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function resetImport() {
@@ -1015,42 +1001,45 @@ function ImportSection({
 
         {/* Champs détectés (largeur fixe, à gauche) + contrat (toute la largeur restante, à droite).
             Chaque colonne défile seule. */}
-        {/* Mêmes proportions de colonnes que l'éditeur de contrat généré (SmartCddEditor). */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] lg:h-[calc(100vh-14rem)] lg:min-h-[520px]">
-          <VariableListPanel
-            variables={variableSummaries}
-            essentialVars={essentialVars}
-            highlightedVar={highlightedVar}
-            variableToReveal={variableToReveal}
-            onToggleVar={toggleEssentialVar}
-            onShowVar={showVariableInDocument}
-            onHoverVar={setHoveredVar}
-            isAnalysing={analysis !== null}
-          />
-          {/* Carte du contrat : barre d'outils collée en tête, comme l'éditeur du contrat généré. */}
-          <div className="flex h-[65vh] min-h-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card lg:h-full">
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 border-b border-line-subtle px-3 py-2 sm:px-4">
-              <ToolbarAction icon={X} short="Annuler" label="Annuler l'import" onClick={resetImport} disabled={saving} />
-              {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
-                  Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
-              <ToolbarAction icon={Save} short="Enregistrer" label="Enregistrer le modèle" onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta} />
-              {/* Enregistrer + poursuivre le tunnel de génération */}
-              <ToolbarAction
-                icon={saving ? Loader2 : Sparkles}
-                iconClassName={saving ? "animate-spin" : undefined}
-                short={saving ? "Enregistrement…" : "Enregistrer et générer"}
-                label="Enregistrer le modèle et l'utiliser pour générer un contrat"
-                onClick={() => void handleSaveStructure(true)}
-                disabled={saving || !savedMeta}
-                highlight
-              />
+        {/* Même gabarit que l'éditeur de contrat généré (SmartCddEditor) : colonne des
+            champs collante à gauche, carte du contrat à droite ; c'est la page qui défile,
+            la barre d'outils blanche reste collée en haut. */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+          <aside className="self-start lg:sticky lg:top-12">
+            <VariableListPanel
+              variables={variableSummaries}
+              essentialVars={essentialVars}
+              highlightedVar={highlightedVar}
+              variableToReveal={variableToReveal}
+              onToggleVar={toggleEssentialVar}
+              onShowVar={showVariableInDocument}
+              onHoverVar={setHoveredVar}
+              isAnalysing={analysis !== null}
+            />
+          </aside>
+
+          <div className="min-w-0 rounded-2xl border border-line bg-white shadow-card">
+            <div className={`${CONTRACT_TOOLBAR_CLASS} justify-end`}>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <ToolbarAction icon={X} short="Annuler" label="Annuler l'import" onClick={resetImport} disabled={saving} />
+                {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
+                    Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
+                <ToolbarAction icon={Save} short="Enregistrer" label="Enregistrer le modèle" onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta} />
+                {/* Enregistrer + poursuivre le tunnel de génération */}
+                <ToolbarAction
+                  icon={saving ? SpinningLoader : Sparkles}
+                  short={saving ? "Enregistrement…" : "Enregistrer et générer"}
+                  label="Enregistrer le modèle et l'utiliser pour générer un contrat"
+                  onClick={() => void handleSaveStructure(true)}
+                  disabled={saving || !savedMeta}
+                  highlight
+                />
+              </div>
             </div>
-            <div
-              ref={documentScrollRef}
-              className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8"
-            >
+            <div ref={documentScrollRef} className={CONTRACT_DOCUMENT_PADDING_CLASS}>
               <VariableSelector
                 structure={structure}
+                title={documentTitle}
                 essentialVars={essentialVars}
                 highlightedVar={highlightedVar}
                 onVariableClick={handleDocumentVariableClick}
