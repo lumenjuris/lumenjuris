@@ -454,7 +454,7 @@ function VariableSelector({
                         <span
                           key={i}
                           title="Champ en cours d'identification"
-                          className="inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] bg-surface-muted text-ink-subtle animate-pulse"
+                          className="mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium bg-surface-muted text-ink-subtle animate-pulse"
                         >
                           {t.text}
                         </span>
@@ -472,9 +472,9 @@ function VariableSelector({
                         onMouseEnter={() => onVariableHover(t.name)}
                         onMouseLeave={() => onVariableHover(null)}
                         title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
-                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all ${isEssential
+                        className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium transition-all ${isEssential
                           // Même jaune que les champs de la génération de contrat (VariableNode)
-                          ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300/80 hover:bg-amber-200/80 font-medium"
+                          ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300/80 hover:bg-amber-200/80"
                           : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
                           } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
                       >
@@ -664,9 +664,6 @@ function AnalysisProgressBanner({ done, total, fieldCount }: { done: number; tot
       <div className="h-1.5 overflow-hidden rounded-full bg-white">
         <div className="h-full rounded-full bg-brand transition-all duration-700" style={{ width: `${percent}%` }} />
       </div>
-      <p className="text-[11px] text-ink-muted">
-        Vous pouvez déjà parcourir le contrat et décocher les champs inutiles. L'enregistrement sera possible à la fin de l'analyse.
-      </p>
     </div>
   );
 }
