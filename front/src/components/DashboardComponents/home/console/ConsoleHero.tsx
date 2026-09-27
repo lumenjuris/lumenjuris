@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, Upload } from "lucide-react";
 
 import { Seal } from "./Seal";
-import { ThemeToggle } from "./ThemeToggle";
-
+/* import { ThemeToggle } from "./ThemeToggle";
+ */
 interface Props {
   firstName: string;
   /** Vrai tant que l'utilisateur n'a rien créé : le message d'accueil change. */
@@ -44,7 +44,7 @@ export function ConsoleHero({ firstName, isEmpty, pendingActions }: Props) {
       <div className="filet" />
       <div className="halo a" />
       <div className="halo b" />
-      <ThemeToggle />
+      {/*       <ThemeToggle /> */}
       <div className="hero-in">
         <div className="hero-left">
           <div className="hero-eye"><Seal size={16} />{todayLabel()}</div>

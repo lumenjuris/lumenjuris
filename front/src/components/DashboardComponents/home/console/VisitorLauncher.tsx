@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 import { Seal } from "./Seal";
-import { ThemeToggle } from "./ThemeToggle";
+/* import { ThemeToggle } from "./ThemeToggle";*/
 import { useDemandeConnexion } from "../../../auth/useDemandeConnexion";
 
 /** Suggestions qui remplissent le champ de génération au clic. */
@@ -67,16 +67,16 @@ export function VisitorLauncher() {
         <div className="filet" />
         <div className="halo a" />
         <div className="halo b" />
-        <ThemeToggle />
+        {/* <ThemeToggle /> ACTIVATION DU SWITCH MODE SOMBRE/CLAIR DESACTIVE LE TEMPS D AVOIR PASSER TOUTE L APP AU MODE SOMBRE*/}
         <div className="hero-in">
-          <div className="hero-left">
+          <div className="">
             <div className="hero-eye"><Seal size={16} />Espace de travail</div>
-            <h1>Un contrat à traiter&nbsp;? Commencez ici.</h1>
-            <p className="sub">Générez, importez ou analysez un document dès maintenant. La connexion n'est demandée qu'au moment d'enregistrer.</p>
+            <h1>Vos contrats méritent mieux que des heures de gestion.</h1>
+            <p className="sub">Analysez, rédigez, signez et pilotez vos contrats depuis un seul espace.</p>
           </div>
           <div className="hero-visual" aria-hidden="true">
             <Seal size={150} className="bigseal" />
-            <div className="fcard"><span className="fi"><Check className="ic" style={{ width: 17, height: 17 }} /></span><span><b>Contrat prêt</b><span>en moins de 30 s</span></span></div>
+            <div className="fcard"><span className="fi"><Check className="ic" style={{ width: 17, height: 17 }} /></span><span><b>Lumen Juris</b><span>Mettez en lumière le juridique</span></span></div>
           </div>
         </div>
       </div>
@@ -127,8 +127,6 @@ export function VisitorLauncher() {
 
       <div className="allhead">
         <span className="eyebrow">Tous les outils</span>
-        <span className="hr" />
-        <span className="note"><Lock className="ic" style={{ width: 12, height: 12, display: "inline", verticalAlign: "-2px" }} /> Survolez une carte pour un aperçu</span>
       </div>
 
       <div className="mods">
@@ -146,7 +144,7 @@ export function VisitorLauncher() {
         <span className="r"><Check className="ic" />Conforme RGPD</span>
         <span className="r"><Lock className="ic" />Données chiffrées</span>
         <span className="r"><Check className="ic" />Hébergé en France</span>
-        <span className="r"><Check className="ic" />Signature conforme eIDAS</span>
+        {/* <span className="r"><Check className="ic" />Signature conforme eIDAS</span> */}
       </div>
     </>
   );

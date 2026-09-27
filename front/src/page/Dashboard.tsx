@@ -6,7 +6,7 @@ import { usePageThemeScope } from "../hooks/usePageThemeScope";
 import { InfoBanner } from "../components/DashboardComponents/home/InfoBanner";
 import { AccountRedirectNotice } from "../components/DashboardComponents/home/AccountRedirectNotice";
 import { ConsoleHero } from "../components/DashboardComponents/home/console/ConsoleHero";
-import { ConsoleKpis } from "../components/DashboardComponents/home/console/ConsoleKpis";
+/* import { ConsoleKpis } from "../components/DashboardComponents/home/console/ConsoleKpis"; */
 import { WorkQueue } from "../components/DashboardComponents/home/console/WorkQueue";
 import { AgendaCard } from "../components/DashboardComponents/home/console/AgendaCard";
 import { CreditsCard } from "../components/DashboardComponents/home/console/CreditsCard";
@@ -56,7 +56,7 @@ export function Dashboard() {
               <ConsoleSkeleton />
             ) : (
               <>
-                <ConsoleKpis kpis={data.kpis} />
+                {/* <ConsoleKpis kpis={data.kpis} /> */}
                 <div className="cols">
                   <WorkQueue items={data.queue} />
                   <div className="rail">

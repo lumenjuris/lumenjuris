@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { /* Link, */ useNavigate } from "react-router-dom";
+import { /* ArrowRight, */ ChevronRight } from "lucide-react";
 
 import type { QueueGroup, QueueItem } from "../types";
 
@@ -37,7 +37,7 @@ export function WorkQueue({ items }: { items: QueueItem[] }) {
           <span className="eyebrow">Priorité</span>
           <h3>À traiter</h3>
         </div>
-        <Link to="/contratheque" className="seeall">Contrathèque <ArrowRight className="ic" style={{ width: 14, height: 14 }} /></Link>
+        {/* <Link to="/contratheque" className="seeall">Contrathèque <ArrowRight className="ic" style={{ width: 14, height: 14 }} /></Link> */}
       </div>
 
       <div className="ftabs">
