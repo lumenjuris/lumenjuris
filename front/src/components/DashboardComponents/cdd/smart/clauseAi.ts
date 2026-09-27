@@ -25,9 +25,11 @@ export async function instructClause(
   clauseText: string,
   instruction: string,
 ): Promise<string> {
+  // gpt-5.4-nano : modèle très rapide ; réflexion « medium » pour une modification
+  // juridiquement soignée sans allonger sensiblement l'attente.
   const out = await callOpenAi52(
     clauseInstructionPrompt(clauseText, instruction),
-    "none",
+    "medium",
     "medium",
     "gpt-5.4-nano",
   );
