@@ -472,9 +472,10 @@ function VariableSelector({
                         onMouseEnter={() => onVariableHover(t.name)}
                         onMouseLeave={() => onVariableHover(null)}
                         title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
-                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${isEssential
-                          ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
-                          : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
+                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all ${isEssential
+                          // Même jaune que les champs de la génération de contrat (VariableNode)
+                          ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300/80 hover:bg-amber-200/80 font-medium"
+                          : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
                           } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
                       >
                         {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
@@ -536,7 +537,7 @@ function VariableListPanel({
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-ink">Champs détectés</h3>
           <span className="text-xs text-ink-subtle">
-            <span className="font-semibold text-success-dark">{keptCount}</span> / {variables.length} conservé{keptCount > 1 ? "s" : ""}
+            <span className="font-semibold text-amber-800">{keptCount}</span> / {variables.length} conservé{keptCount > 1 ? "s" : ""}
           </span>
         </div>
 
@@ -614,6 +615,12 @@ interface AnalysisPart {
 /** Analyse d'une partie : le front la garde telle quelle et la renvoie au relais. */
 type PartExtraction = Record<string, unknown>;
 
+/** Nom de modèle tiré du nom de fichier : "NDA_Inserm-v2.docx" → "NDA Inserm v2". */
+function toModelNameFromFilename(filename: string): string {
+  const withoutExtension = filename.replace(/\.[^/.]+$/, "");
+  return withoutExtension.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim() || "Modèle importé";
+}
+
 /** Appelle une étape de l'import (/api/template/import/…) et renvoie ses données. */
 async function postImportStep<T>(step: "prepare" | "analyse" | "assemble" | "finalize", body: unknown): Promise<T> {
   const res = await fetchProxy(`/api/template/import/${step}`, {
@@ -676,7 +683,6 @@ function ImportSection({
   actionsSlot?: HTMLElement | null;
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
   const [step, setStep] = useState<ImportStep>("form");
   const [error, setError] = useState("");
   const [savedMeta, setSavedMeta] = useState<ContractTemplateDTO | null>(null);
@@ -762,13 +768,20 @@ function ImportSection({
   function resetImport() {
     importRunRef.current += 1; // abandonne l'import en cours
     knownVarsRef.current = new Set();
-    setStep("form"); setFile(null); setName("");
+    setStep("form"); setFile(null);
     setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
     setSaveError(""); setActiveVar(null); setHoveredVar(null);
     setAnalysis(null); setAnalysisIncomplete(false);
   }
 
-  const onDropAccepted = useCallback((files: File[]) => { if (files[0]) setFile(files[0]); }, []);
+  // Dépose = déclenche l'import directement : pas de nom à saisir, le nom du
+  // fichier (sans son extension) sert de nom de modèle.
+  const onDropAccepted = useCallback((files: File[]) => {
+    const droppedFile = files[0];
+    if (!droppedFile) return;
+    setFile(droppedFile);
+    void handleImport(droppedFile, toModelNameFromFilename(droppedFile.name));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropAccepted,
     accept: {
@@ -779,8 +792,7 @@ function ImportSection({
     multiple: false,
   });
 
-  async function handleImport() {
-    if (!file || !name.trim()) return;
+  async function handleImport(importFile: File, modelName: string) {
     const runId = ++importRunRef.current;
     const isCurrentRun = () => runId === importRunRef.current;
     knownVarsRef.current = new Set();
@@ -789,14 +801,14 @@ function ImportSection({
     setStep("processing");
     setError("");
     try {
-      const fileBase64 = await fileToBase64(file);
+      const fileBase64 = await fileToBase64(importFile);
 
       // 1. Lecture du document : le contrat s'affiche aussitôt, ses emplacements vides « en cours ».
       const prepared = await postImportStep<{
         document: PreparedImportDocument;
         parts: AnalysisPart[];
         structure: TemplateStructure;
-      }>("prepare", { fileBase64, mimeType: file.type, filename: file.name });
+      }>("prepare", { fileBase64, mimeType: importFile.type, filename: importFile.name });
       if (!isCurrentRun()) return;
       const { document: importDocument, parts } = prepared;
       setStructure(prepared.structure);
@@ -843,8 +855,8 @@ function ImportSection({
       previewRequestId += 1; // les aperçus encore en route sont périmés
       const finalized = await postImportStep<{ meta: ContractTemplateDTO; structure: TemplateStructure }>("finalize", {
         fileBase64,
-        filename: file.name,
-        name: name.trim(),
+        filename: importFile.name,
+        name: modelName,
         document: importDocument,
         extractions,
       });
@@ -858,6 +870,7 @@ function ImportSection({
       setError(e instanceof Error ? e.message : "Erreur lors de l'import");
       setAnalysis(null);
       setStructure(null);
+      setFile(null); // on peut redéposer un document directement
       setStep("form");
     }
   }
@@ -1043,23 +1056,10 @@ function ImportSection({
               </div>
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold text-ink-secondary">Glissez-déposez votre document</p>
-                <p className="text-xs text-ink-subtle">ou cliquez pour parcourir — PDF ou Word</p>
+                <p className="text-xs text-ink-subtle">ou cliquez pour parcourir — PDF ou Word. L'analyse démarre aussitôt.</p>
               </div>
             </div>
           )}
-        </div>
-
-        <div className="border-t border-line-subtle" />
-
-        {/* Nom du modèle — le type de contrat est déduit automatiquement par l'IA */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-widest">Nom du modèle *</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="ex. NDA Inserm Transfert"
-            className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder"
-          />
         </div>
       </div>
 
@@ -1070,16 +1070,6 @@ function ImportSection({
           {error}
         </div>
       )}
-
-      {/* CTA */}
-      <button
-        disabled={!file || !name.trim()}
-        onClick={handleImport}
-        className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-semibold py-3 rounded-xl transition-colors shadow-card disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Sparkles className="w-4 h-4" />
-        Analyser et créer le modèle
-      </button>
 
       {/* Confidentialité — pied discret */}
       <p className="flex items-center justify-center gap-1.5 text-[11px] text-ink-subtle">
