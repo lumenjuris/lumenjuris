@@ -38,7 +38,6 @@ export function Dashboard() {
         {/* Un compte bloqué est renvoyé ici après une tentative de connexion :
             le message doit rester visible avant tout le reste. */}
         <AccountRedirectNotice />
-
         {data.isGuest ? (
           <VisitorLauncher />
         ) : (

@@ -9,6 +9,7 @@ import { Seal } from "./Seal";
 /* import { ThemeToggle } from "./ThemeToggle";*/
 import { useDemandeConnexion } from "../../../auth/useDemandeConnexion";
 
+
 /** Suggestions qui remplissent le champ de génération au clic. */
 const CHIPS: { label: string; fill: string }[] = [
   { label: "Prestation de service", fill: "un contrat de prestation de service pour une mission de 3 mois" },
