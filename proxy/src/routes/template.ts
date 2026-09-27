@@ -17,7 +17,11 @@ export const templateRouter: Router = Router();
 // ─── Routes ────────────────────────────────────────────────────────────────────
 const id = (req: Request) => encodeURIComponent(req.params.externalId as string);
 
-templateRouter.post("/import", auth, handleTemplateImport);
+// Import d'un contrat en modèle, en plusieurs étapes (voir « Import d'un contrat → modèle »).
+templateRouter.post("/import/prepare", auth, handleImportPrepare);
+templateRouter.post("/import/analyse", auth, handleImportAnalyse);
+templateRouter.post("/import/assemble", auth, handleImportAssemble);
+templateRouter.post("/import/finalize", auth, handleImportFinalize);
 
 templateRouter.get("/", auth, (req, res) => relayToNode(req, res, "/template"));
 templateRouter.get("/:externalId", auth, (req, res) =>
@@ -238,22 +242,48 @@ async function handleTemplateGenerate(
 
 // ─── Import d'un contrat → modèle ──────────────────────────────────────────────
 //
-// Fonctionnement :
-// 1. Le texte extrait est découpé en paragraphes numérotés.
-// 2. Les emplacements vides d'un modèle vierge ("....", "…", "____", "[à compléter]")
-//    sont repérés par le code et remplacés par des repères numérotés [[P1]], [[P2]]…
-// 3. L'IA ne réécrit PAS le contrat : elle renvoie seulement
+// L'import se fait en plusieurs requêtes, pour que le front affiche le contrat
+// tout de suite puis ses champs au fur et à mesure :
+// 1. « prepare » : le texte extrait est découpé en paragraphes numérotés. Les
+//    emplacements vides d'un modèle vierge ("....", "…", "____", "[à compléter]")
+//    sont repérés par le code et remplacés par des repères numérotés [[P1]],
+//    [[P2]]… Le document est coupé en quelques parties.
+// 2. « analyse » : une requête par partie, lancées en même temps par le front.
+//    L'IA lit tout le contrat (pour nommer les champs de façon cohérente) mais
+//    ne répond que pour sa partie. Elle ne réécrit PAS le contrat : elle renvoie
+//    seulement, une information par ligne,
 //    - les numéros des paragraphes qui sont des titres (pour découper en sections),
 //    - un nom pour chaque repère [[Pn]] (modèle vierge),
 //    - les variables avec leurs valeurs exactes (contrat déjà rempli).
-// 4. Le code découpe les sections et place lui-même les marqueurs
-//    <<NOM_VARIABLE|texte original>> dans le texte.
-// Avantages : réponse IA très courte (donc rapide et peu coûteuse) et texte du
-// contrat garanti identique à l'original.
+// 3. « assemble » (aperçu, à chaque partie terminée) puis « finalize »
+//    (enregistrement) : le code découpe les sections et place lui-même les
+//    marqueurs <<NOM_VARIABLE|texte original>> dans le texte.
+// Avantages : c'est l'écriture de sa réponse qui prend le temps de l'IA ; une
+// réponse compacte, partagée entre plusieurs appels simultanés, arrive vite. Et
+// le texte du contrat est garanti identique à l'original.
 
 /** Taille max du texte envoyé à l'IA. Le découpage et les marqueurs s'appliquent
  *  quand même à tout le document. */
 const MAX_CHARS_SENT_TO_AI = 150_000;
+
+/** Taille max du document que le front renvoie aux étapes suivantes. */
+const MAX_DOCUMENT_CHARS = 2_000_000;
+
+/** Nombre max de parties analysées en même temps (le moteur Python accepte 5 appels IA simultanés). */
+const MAX_ANALYSIS_PARTS = 4;
+
+/** Volume de travail visé par partie : un document court reste en une seule partie. */
+const TARGET_PART_WEIGHT = 3_000;
+
+/** Poids d'un repère [[Pn]] dans le découpage : chaque repère ajoute une ligne à la réponse de l'IA. */
+const PLACEHOLDER_WEIGHT = 400;
+
+/**
+ * Nom du marqueur provisoire d'un emplacement vide pas encore nommé par l'IA :
+ * affiché « en cours » par le front pendant l'analyse, jamais enregistré.
+ * Même valeur dans front/src/components/DashboardComponents/Generateur.tsx.
+ */
+const PENDING_VARIABLE_NAME = "__IMPORT_EN_COURS__";
 
 const EXTRACT_VARIABLES_PROMPT_BASE = `Tu reçois le texte d'un contrat. Chaque paragraphe est précédé de son numéro, au format "12| texte du paragraphe".
 Ta mission : repérer les informations propres à CE contrat, qu'un juriste devra compléter ou modifier pour réutiliser le document comme modèle, et repérer les paragraphes qui sont des titres.
@@ -264,17 +294,16 @@ Le document peut être :
 - un contrat DÉJÀ REMPLI : les informations sont écrites en toutes lettres ;
 - un mélange des deux.
 
-Réponds UNIQUEMENT avec un JSON valide, sans markdown, au format :
-{
-  "contractType": "Type de contrat en quelques mots",
-  "headingLines": [3, 8, 15],
-  "placeholders": [
-    { "id": "P1", "name": "DENOMINATION_APPORTEUR", "label": "Dénomination de l'apporteur", "type": "text" }
-  ],
-  "variables": [
-    { "name": "DENOMINATION_PRESTATAIRE", "label": "Dénomination du prestataire", "type": "text", "values": ["Alpha Conseil SAS", "ALPHA CONSEIL"] }
-  ]
-}
+FORMAT DE RÉPONSE : uniquement des lignes comme celles-ci, une information par ligne, champs séparés par "|", sans markdown ni phrase :
+TYPE|Type de contrat en quelques mots
+TITRES|3,8,15
+P1|DENOMINATION_APPORTEUR|Dénomination de l'apporteur|text
+VAL|DENOMINATION_PRESTATAIRE|Dénomination du prestataire|text|Alpha Conseil SAS|ALPHA CONSEIL
+- TYPE : une seule ligne.
+- TITRES : une seule ligne, numéros de paragraphes séparés par des virgules.
+- Une ligne par repère [[Pn]] à compléter (modèle vierge) : identifiant du repère, nom, libellé, type.
+- Une ligne VAL par information écrite en toutes lettres (contrat rempli) : nom, libellé, type, puis chaque forme de la valeur trouvée dans le texte.
+- N'écris jamais le caractère "|" dans un nom, un libellé ou une valeur.
 
 OÙ CHERCHER :
 - La désignation des parties ("Entre les soussignés", "ENTRE :", "ET :") et le préambule contiennent la plupart des variables : analyse-les EN ENTIER et en priorité, pour CHAQUE partie.
@@ -291,26 +320,26 @@ INFORMATIONS À REPÉRER :
 - les numéros d'articles, les titres, les numéros de page ;
 - les appellations génériques des parties ("le Prestataire", "la Société", "les Parties").
 
-RÈGLES POUR "placeholders" (modèle vierge) :
-- Donne une entrée pour CHAQUE repère [[Pn]] qui correspond à une information à compléter. Déduis le nom du texte qui entoure le repère : "dont le siège social est situé [[P2]]" → ADRESSE_SIEGE_APPORTEUR.
+RÈGLES POUR LES REPÈRES [[Pn]] (modèle vierge) :
+- Donne une ligne pour CHAQUE repère [[Pn]] qui correspond à une information à compléter. Déduis le nom du texte qui entoure le repère : "dont le siège social est situé [[P2]]" → ADRESSE_SIEGE_APPORTEUR.
 - Ignore un repère qui n'est pas une information à compléter (ex : points de suspension à la fin d'une énumération, points de conduite d'un sommaire).
 - Deux repères qui concernent des parties différentes ont des noms différents (ADRESSE_SIEGE_APPORTEUR et ADRESSE_SIEGE_SOCIETE).
 - Deux repères qui demandent exactement la même information pour la même partie ont le même nom.
 
-RÈGLES POUR "variables" (contrat rempli) :
+RÈGLES POUR LES LIGNES VAL (contrat rempli) :
 - Recopie chaque valeur EXACTEMENT comme dans le texte (majuscules, accents, ponctuation), sans le numéro de paragraphe.
 - La valeur ne contient que l'information elle-même : "15 000 euros" et non "pour un montant de 15 000 euros".
-- Si la même information apparaît sous plusieurs formes ("Alpha Conseil SAS", "ALPHA CONSEIL"), mets toutes les formes dans la même variable.
-- Une même valeur ne doit apparaître que dans UNE seule variable.
-- Ne mets jamais un repère [[Pn]] dans "values".
+- Si la même information apparaît sous plusieurs formes ("Alpha Conseil SAS", "ALPHA CONSEIL"), mets toutes les formes sur la même ligne.
+- Une même valeur ne doit apparaître que sur UNE seule ligne.
+- Ne mets jamais un repère [[Pn]] dans une valeur.
 
-RÈGLES POUR "name", "label" et "type" :
-- name : MAJUSCULES_AVEC_UNDERSCORES, sans accent, qui décrit l'information ET la partie concernée si besoin (DENOMINATION_CLIENT, ADRESSE_SIEGE_CLIENT, DATE_EFFET). Pas de suffixe _1, _2.
-- label : libellé court en français, lisible par un juriste.
+RÈGLES POUR LE NOM, LE LIBELLÉ ET LE TYPE :
+- nom : MAJUSCULES_AVEC_UNDERSCORES, sans accent, qui décrit l'information puis, si besoin, la partie concernée, toujours dans cet ordre (DENOMINATION_CLIENT et non CLIENT_DENOMINATION, ADRESSE_SIEGE_CLIENT, DATE_EFFET). Pas de suffixe _1, _2 ajouté pour distinguer deux champs. Pour la partie, reprends toujours son rôle tel que la désignation des parties le définit (ASSOCIE_1, SOCIETE, CLIENT, PRESTATAIRE…) : une même information porte ainsi le même nom partout dans le contrat, de l'en-tête aux annexes.
+- libellé : libellé court en français correct, lisible par un juriste, avec ses accents et ses apostrophes (ex : "Délai de convocation du comité", "Adresse de l'adhérent").
 - type : "text", "date", "number", "money" ou "duration".
 
-RÈGLES POUR "headingLines" :
-- Numéros des paragraphes qui sont des titres de parties ou d'articles (ex : "PRÉAMBULE", "ARTICLE 1 – OBJET"), dans l'ordre du texte.
+RÈGLES POUR TITRES :
+- Numéros des paragraphes qui sont des titres de parties, d'articles ou de sous-articles (ex : "PRÉAMBULE", "ARTICLE 1 – OBJET", "7.2 Notification", "ANNEXE 1 – RÉPARTITION DU CAPITAL"), dans l'ordre du texte.
 - N'inclus pas le titre principal du document.`;
 
 type VariableType = "text" | "date" | "number" | "money" | "duration";
@@ -340,6 +369,8 @@ interface AiExtractionResult {
   variables: ExtractedVariable[];
 }
 
+const EMPTY_EXTRACTION: AiExtractionResult = { contractType: null, headingLines: [], placeholders: [], variables: [] };
+
 /** Emplacement vide repéré par le code dans un modèle vierge. */
 interface BlankPlaceholder {
   /** Texte exact du document (ex : ". .. ; (forme juridique)"). */
@@ -348,16 +379,32 @@ interface BlankPlaceholder {
   hint: string | null;
 }
 
+/** Document préparé. Il fait l'aller-retour avec le front entre les étapes de l'import. */
 interface PreparedDocument {
   /** Paragraphes où chaque emplacement vide est remplacé par [[P1]], [[P2]]… */
   paragraphs: string[];
   /** Emplacement d'origine de chaque repère : "P1" → { originalText, hint }. */
-  placeholders: Map<string, BlankPlaceholder>;
+  placeholders: Record<string, BlankPlaceholder>;
+}
+
+/** Paragraphes analysés par un même appel à l'IA (numéros à partir de 1, bornes incluses). */
+interface AnalysisPart {
+  first: number;
+  last: number;
 }
 
 interface TemplateSection {
   title: string;
   clauses: Array<{ id: string; title: string; content: string; variables: string[] }>;
+}
+
+/** Erreur d'import, avec le code HTTP et le message à renvoyer au front. */
+class ImportError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
 /**
@@ -403,24 +450,26 @@ function splitIntoParagraphs(text: string): string[] {
 
 /** Découpe le texte en paragraphes et remplace les emplacements vides par des repères [[Pn]]. */
 function prepareDocument(text: string): PreparedDocument {
-  const placeholders = new Map<string, BlankPlaceholder>();
+  const placeholders: Record<string, BlankPlaceholder> = {};
+  let placeholderCount = 0;
 
   const paragraphs = splitIntoParagraphs(text).map((paragraph) =>
     paragraph.replace(
       BLANK_REGEX,
       (fullMatch: string, blank: string, parenthesisPart: string | undefined, hintText: string | undefined) => {
-        const id = `P${placeholders.size + 1}`;
+        placeholderCount += 1;
+        const id = `P${placeholderCount}`;
 
         // Une parenthèse de définition ("(ci-après « la Société »)") n'est pas une
         // indication de saisie : elle reste dans le texte, hors du repère.
         const isDefinition = hintText !== undefined && /«|ci-apr/i.test(hintText);
 
         if (parenthesisPart === undefined || hintText === undefined || isDefinition) {
-          placeholders.set(id, { originalText: blank, hint: null });
+          placeholders[id] = { originalText: blank, hint: null };
           return `[[${id}]]${parenthesisPart ?? ""}`;
         }
 
-        placeholders.set(id, { originalText: fullMatch, hint: hintText.trim() });
+        placeholders[id] = { originalText: fullMatch, hint: hintText.trim() };
         return `[[${id}]]`;
       },
     ),
@@ -429,23 +478,81 @@ function prepareDocument(text: string): PreparedDocument {
   return { paragraphs, placeholders };
 }
 
-/** Construit le texte envoyé à l'IA : "1| paragraphe", "2| paragraphe"… */
-function buildNumberedText(document: PreparedDocument): { numberedText: string; isTruncated: boolean } {
+/**
+ * Construit le texte envoyé à l'IA : "1| paragraphe", "2| paragraphe"…
+ * paragraphCount : nombre de paragraphes qui tiennent dans la limite envoyée à l'IA.
+ */
+function buildNumberedText(document: PreparedDocument): { numberedText: string; paragraphCount: number; isTruncated: boolean } {
   let numberedText = "";
   for (let index = 0; index < document.paragraphs.length; index++) {
     // Pour l'IA, l'indication est ajoutée dans le repère : [[P1 (forme juridique)]].
     const paragraphForAi = document.paragraphs[index].replace(PLACEHOLDER_TOKEN_REGEX, (token: string, id: string) => {
-      const hint = document.placeholders.get(id)?.hint;
+      const hint = document.placeholders[id]?.hint;
       return hint ? `[[${id} (${hint})]]` : token;
     });
 
     const numberedLine = `${index + 1}| ${paragraphForAi}\n`;
     if (numberedText.length + numberedLine.length > MAX_CHARS_SENT_TO_AI) {
-      return { numberedText, isTruncated: true };
+      return { numberedText, paragraphCount: index, isTruncated: true };
     }
     numberedText += numberedLine;
   }
-  return { numberedText, isTruncated: false };
+  return { numberedText, paragraphCount: document.paragraphs.length, isTruncated: false };
+}
+
+/**
+ * Découpe les paragraphes à analyser en parties de volume de travail proche.
+ * Le volume compte le texte et surtout les repères [[Pn]] : chacun allonge la
+ * réponse de l'IA, qui est ce qui prend le plus de temps.
+ */
+function splitIntoParts(paragraphs: string[]): AnalysisPart[] {
+  const weights = paragraphs.map(
+    (paragraph) => paragraph.length + PLACEHOLDER_WEIGHT * (paragraph.match(PLACEHOLDER_TOKEN_REGEX)?.length ?? 0),
+  );
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  const partCount = Math.min(MAX_ANALYSIS_PARTS, paragraphs.length, Math.max(1, Math.round(totalWeight / TARGET_PART_WEIGHT)));
+
+  const parts: AnalysisPart[] = [];
+  let first = 1;
+  let accumulatedWeight = 0;
+  weights.forEach((weight, index) => {
+    accumulatedWeight += weight;
+    const isLastParagraph = index === weights.length - 1;
+    const reachesNextBoundary = accumulatedWeight >= (totalWeight * (parts.length + 1)) / partCount;
+    if (isLastParagraph || (reachesNextBoundary && parts.length < partCount - 1)) {
+      parts.push({ first, last: index + 1 });
+      first = index + 2;
+    }
+  });
+  return parts;
+}
+
+/** Identifiants des repères [[Pn]] présents dans les paragraphes des parties données. */
+function placeholderIdsIn(document: PreparedDocument, parts: AnalysisPart[]): Set<string> {
+  const ids = new Set<string>();
+  for (const part of parts) {
+    for (const paragraph of document.paragraphs.slice(part.first - 1, part.last)) {
+      for (const match of paragraph.matchAll(PLACEHOLDER_TOKEN_REGEX)) ids.add(match[1]);
+    }
+  }
+  return ids;
+}
+
+/** Consignes de périmètre quand le document est analysé en plusieurs parties. */
+function buildPartInstructions(part: AnalysisPart, analysedParagraphCount: number): { scope: string; reminder: string } {
+  if (part.first === 1 && part.last >= analysedParagraphCount) return { scope: "", reminder: "" };
+
+  const range = `${part.first} à ${part.last}`;
+  return {
+    scope: `
+
+PÉRIMÈTRE : le contrat est analysé en plusieurs morceaux, en même temps. Tu traites UNIQUEMENT les paragraphes ${range} (inclus). Le reste du texte sert seulement à comprendre le contexte : qui sont les parties, et quels noms leur donner.
+- TYPE : toujours, pour le contrat entier.
+- TITRES : seulement les numéros de ${range}.
+- Repères [[Pn]] : seulement ceux présents dans les paragraphes ${range}.
+- Lignes VAL : seulement les informations présentes dans les paragraphes ${range}.`,
+    reminder: `\n\nRAPPEL : réponds uniquement pour les paragraphes ${range}.`,
+  };
 }
 
 /** Transforme "Nom de la société" ou "nom_société" en "NOM_DE_LA_SOCIETE". */
@@ -458,72 +565,140 @@ function toVariableName(rawName: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-/** Lit nom, libellé et type d'une variable renvoyée par l'IA (null si le nom est vide). */
-function readVariableDefinition(rawVariable: any): VariableDefinition | null {
-  const name = toVariableName(String(rawVariable?.name ?? ""));
+/** Lit nom, libellé et type d'une variable (null si le nom est vide). */
+function readVariableDefinition(rawName: unknown, rawLabel: unknown, rawType: unknown): VariableDefinition | null {
+  const name = toVariableName(String(rawName ?? ""));
   if (!name) return null;
-  const type = ALLOWED_VARIABLE_TYPES.includes(rawVariable?.type) ? rawVariable.type : "text";
-  const label = String(rawVariable?.label ?? "").trim() || name;
+  const typeText = String(rawType ?? "").trim().toLowerCase();
+  const type = ALLOWED_VARIABLE_TYPES.find((allowedType) => allowedType === typeText) ?? "text";
+  const label = String(rawLabel ?? "").trim() || name;
   return { name, label, type };
 }
 
-/** Lit la réponse de l'IA et ne garde que les données exploitables. */
+/**
+ * Garde les valeurs exploitables. On écarte les valeurs trop courtes, sans lettre
+ * ni chiffre, ou contenant les caractères des marqueurs / repères (elles
+ * casseraient le texte).
+ */
+function cleanValues(rawValues: unknown[]): string[] {
+  return rawValues
+    .map((value) => String(value ?? "").replace(/\s+/g, " ").trim())
+    .filter((value) => value.length >= 2 && /[\p{L}\p{N}]/u.test(value) && !/<<|>>|\||\[\[|\]\]/.test(value));
+}
+
+/**
+ * Lit la réponse de l'IA (une information par ligne, champs séparés par "|") et
+ * ne garde que les données exploitables. Aucune ligne reconnue : réponse inutilisable.
+ */
 function parseAiExtraction(rawContent: string): AiExtractionResult {
-  const cleaned = rawContent
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "")
-    .trim();
-  const parsed = JSON.parse(cleaned) as {
-    contractType?: unknown;
-    headingLines?: unknown;
-    placeholders?: unknown;
-    variables?: unknown;
-  };
+  const extraction: AiExtractionResult = { contractType: null, headingLines: [], placeholders: [], variables: [] };
+  const variablesByName = new Map<string, ExtractedVariable>();
+  let recognizedLineCount = 0;
 
-  const headingLines = Array.isArray(parsed.headingLines)
-    ? parsed.headingLines.filter((line): line is number => Number.isInteger(line))
-    : [];
+  for (const line of rawContent.split(/\r?\n/)) {
+    const fields = line.split("|").map((field) => field.trim());
+    const kind = (fields[0] ?? "").replace(/^[-*•\s]+/, "").toUpperCase();
 
-  // Repères [[Pn]] nommés par l'IA.
-  const placeholders: NamedPlaceholder[] = [];
-  const rawPlaceholders = Array.isArray(parsed.placeholders) ? parsed.placeholders : [];
-  for (const rawPlaceholder of rawPlaceholders) {
-    const id = String(rawPlaceholder?.id ?? "").trim();
-    const definition = readVariableDefinition(rawPlaceholder);
-    if (/^P\d+$/.test(id) && definition) placeholders.push({ id, ...definition });
+    if (kind === "TYPE" && fields[1]) {
+      extraction.contractType ??= fields[1];
+    } else if (kind === "TITRES") {
+      extraction.headingLines.push(
+        ...(fields[1] ?? "").split(/[^0-9]+/).map(Number).filter((lineNumber) => lineNumber > 0),
+      );
+    } else if (/^P\d+$/.test(kind)) {
+      const definition = readVariableDefinition(fields[1], fields[2], fields[3]);
+      if (!definition) continue;
+      extraction.placeholders.push({ id: kind, ...definition });
+    } else if (kind === "VAL") {
+      const definition = readVariableDefinition(fields[1], fields[2], fields[3]);
+      const values = cleanValues(fields.slice(4));
+      if (!definition || values.length === 0) continue;
+
+      // Si l'IA donne deux fois le même nom, on fusionne les valeurs.
+      const existing = variablesByName.get(definition.name);
+      if (existing) {
+        existing.values.push(...values);
+      } else {
+        variablesByName.set(definition.name, { ...definition, values });
+      }
+    } else {
+      continue;
+    }
+    recognizedLineCount += 1;
   }
 
-  // Variables à valeurs. Si l'IA renvoie deux fois le même nom, on fusionne les valeurs.
+  if (recognizedLineCount === 0) throw new ImportError(422, "La réponse de l'IA est illisible.");
+  extraction.variables = Array.from(variablesByName.values());
+  return extraction;
+}
+
+/** Ne garde que ce qui revient à la partie analysée : les titres et les repères de ses paragraphes. */
+function keepPartOnly(extraction: AiExtractionResult, document: PreparedDocument, part: AnalysisPart): AiExtractionResult {
+  const partPlaceholderIds = placeholderIdsIn(document, [part]);
+  return {
+    ...extraction,
+    headingLines: extraction.headingLines.filter((lineNumber) => lineNumber >= part.first && lineNumber <= part.last),
+    placeholders: extraction.placeholders.filter((placeholder) => partPlaceholderIds.has(placeholder.id)),
+    // Les valeurs d'un contrat rempli sont gardées : elles sont recherchées dans tout le texte.
+  };
+}
+
+/** Forme comparable d'une valeur : casse, espaces et apostrophes ne comptent pas. */
+function normalizeValue(value: string): string {
+  return value.toLowerCase().replace(/['’‘`]/g, "'").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Réunit les analyses des parties, dans l'ordre du document, sans qu'une même
+ * information apparaisse sous deux noms : le premier nom rencontré est gardé
+ * - pour les mêmes mots dans un autre ordre (DENOMINATION_SOCIETE / SOCIETE_DENOMINATION),
+ * - pour une valeur déjà rattachée à une variable par une partie précédente.
+ */
+function mergeExtractions(extractions: AiExtractionResult[]): AiExtractionResult {
+  const merged: AiExtractionResult = { contractType: null, headingLines: [], placeholders: [], variables: [] };
+  const placeholderIds = new Set<string>();
   const variablesByName = new Map<string, ExtractedVariable>();
-  const rawVariables = Array.isArray(parsed.variables) ? parsed.variables : [];
-  for (const rawVariable of rawVariables) {
-    const definition = readVariableDefinition(rawVariable);
-    if (!definition) continue;
+  const variableNameByValue = new Map<string, string>();
 
-    const values: string[] = (Array.isArray(rawVariable?.values) ? rawVariable.values : [])
-      .map((value: unknown) => String(value ?? "").replace(/\s+/g, " ").trim())
-      // On écarte les valeurs trop courtes, sans lettre ni chiffre, ou contenant
-      // les caractères des marqueurs / repères (elles casseraient le texte).
-      .filter((value: string) => value.length >= 2 && /[\p{L}\p{N}]/u.test(value) && !/<<|>>|\||\[\[|\]\]/.test(value));
-    if (values.length === 0) continue;
+  const nameByWordSet = new Map<string, string>();
+  const harmonizeName = (name: string): string => {
+    const wordSet = name.split("_").sort().join("_");
+    const knownName = nameByWordSet.get(wordSet);
+    if (knownName) return knownName;
+    nameByWordSet.set(wordSet, name);
+    return name;
+  };
 
-    const existing = variablesByName.get(definition.name);
-    if (existing) {
-      existing.values.push(...values);
-    } else {
-      variablesByName.set(definition.name, { ...definition, values });
+  for (const extraction of extractions) {
+    merged.contractType ??= extraction.contractType;
+    merged.headingLines.push(...extraction.headingLines);
+
+    for (const placeholder of extraction.placeholders) {
+      if (placeholderIds.has(placeholder.id)) continue;
+      placeholderIds.add(placeholder.id);
+      merged.placeholders.push({ ...placeholder, name: harmonizeName(placeholder.name) });
+    }
+
+    for (const variable of extraction.variables) {
+      const knownName = variable.values
+        .map((value) => variableNameByValue.get(normalizeValue(value)))
+        .find((name) => name !== undefined);
+      const name = knownName ?? harmonizeName(variable.name);
+
+      const existing = variablesByName.get(name);
+      if (existing) {
+        existing.values.push(...variable.values);
+      } else {
+        variablesByName.set(name, { ...variable, values: [...variable.values] });
+      }
+      for (const value of variable.values) {
+        if (!variableNameByValue.has(normalizeValue(value))) variableNameByValue.set(normalizeValue(value), name);
+      }
     }
   }
 
-  return {
-    contractType: typeof parsed.contractType === "string" && parsed.contractType.trim()
-      ? parsed.contractType.trim()
-      : null,
-    headingLines,
-    placeholders,
-    variables: Array.from(variablesByName.values()),
-  };
+  merged.variables = Array.from(variablesByName.values());
+  return merged;
 }
 
 /**
@@ -611,16 +786,19 @@ function insertVariableMarkers(content: string, variables: ExtractedVariable[]):
 /**
  * Remet le texte d'origine à la place des repères [[Pn]] :
  * - repère nommé par l'IA → marqueur <<NOM|texte d'origine>>
+ * - repère d'une partie pas encore analysée → marqueur provisoire « en cours »
  * - repère ignoré par l'IA → texte d'origine tel quel
  */
 function replacePlaceholderTokens(
   content: string,
   document: PreparedDocument,
   placeholderNames: Map<string, string>,
+  pendingPlaceholderIds: Set<string> = new Set(),
 ): string {
   return content.replace(PLACEHOLDER_TOKEN_REGEX, (token: string, id: string) => {
-    const placeholder = document.placeholders.get(id);
+    const placeholder = document.placeholders[id];
     if (!placeholder) return token;
+    if (pendingPlaceholderIds.has(id)) return `<<${PENDING_VARIABLE_NAME}|${placeholder.originalText}>>`;
     const variableName = placeholderNames.get(id);
     return variableName ? `<<${variableName}|${placeholder.originalText}>>` : placeholder.originalText;
   });
@@ -630,19 +808,26 @@ function replacePlaceholderTokens(
 function listVariablesInContent(content: string): string[] {
   const names = new Set<string>();
   for (const match of content.matchAll(/<<([A-Z0-9_]+)\|/g)) {
-    if (match[1]) names.add(match[1]);
+    if (match[1] && match[1] !== PENDING_VARIABLE_NAME) names.add(match[1]);
   }
   return Array.from(names);
 }
 
-/** Assemble la structure du modèle (même format que celui attendu par le front et backNode). */
-function buildTemplateStructure(document: PreparedDocument, extraction: AiExtractionResult) {
+/**
+ * Assemble la structure du modèle (même format que celui attendu par le front et backNode).
+ * pendingPlaceholderIds : repères des parties pas encore analysées, affichés « en cours ».
+ */
+function buildTemplateStructure(
+  document: PreparedDocument,
+  extraction: AiExtractionResult,
+  pendingPlaceholderIds: Set<string> = new Set(),
+) {
   const placeholderNames = new Map(extraction.placeholders.map((placeholder) => [placeholder.id, placeholder.name]));
 
   const sections: TemplateSection[] = buildSections(document.paragraphs, extraction.headingLines).map(
     (section, index) => {
       const contentWithValueMarkers = insertVariableMarkers(section.paragraphs.join("\n"), extraction.variables);
-      const content = replacePlaceholderTokens(contentWithValueMarkers, document, placeholderNames);
+      const content = replacePlaceholderTokens(contentWithValueMarkers, document, placeholderNames, pendingPlaceholderIds);
       // Les titres ne reçoivent pas de marqueur : on y remet seulement le texte d'origine.
       const title = replacePlaceholderTokens(section.title, document, new Map());
       return {
@@ -672,115 +857,223 @@ function buildTemplateStructure(document: PreparedDocument, extraction: AiExtrac
   };
 }
 
-async function handleTemplateImport(
-  req: Request,
-  res: Response,
-): Promise<void> {
-  const { fileBase64, mimeType, filename, name, contractType } =
-    req.body as {
-      fileBase64?: string;
-      mimeType?: string;
-      filename?: string;
-      name?: string;
-      contractType?: string;
-    };
+// ─── Lecture des données renvoyées par le front ────────────────────────────────
 
-  if (!fileBase64 || !filename || !name) {
+/** Relit le document préparé renvoyé par le front (null s'il est invalide ou trop grand). */
+function readPreparedDocument(raw: any): PreparedDocument | null {
+  const paragraphs: unknown = raw?.paragraphs;
+  if (!Array.isArray(paragraphs) || !paragraphs.every((paragraph) => typeof paragraph === "string")) return null;
+  const totalChars = paragraphs.reduce((sum: number, paragraph: string) => sum + paragraph.length, 0);
+  if (totalChars > MAX_DOCUMENT_CHARS) return null;
+
+  const placeholders: Record<string, BlankPlaceholder> = {};
+  for (const [id, placeholder] of Object.entries((raw?.placeholders ?? {}) as Record<string, any>)) {
+    if (!/^P\d+$/.test(id) || typeof placeholder?.originalText !== "string") continue;
+    placeholders[id] = {
+      originalText: placeholder.originalText,
+      hint: typeof placeholder.hint === "string" ? placeholder.hint : null,
+    };
+  }
+  return { paragraphs, placeholders };
+}
+
+/** Relit une partie (null si ses bornes ne correspondent pas au document). */
+function readPart(raw: any, document: PreparedDocument): AnalysisPart | null {
+  const first = Number(raw?.first);
+  const last = Number(raw?.last);
+  const isValid = Number.isInteger(first) && Number.isInteger(last) && first >= 1 && last >= first && last <= document.paragraphs.length;
+  return isValid ? { first, last } : null;
+}
+
+/** Relit une analyse de partie renvoyée par le front, en la revalidant comme une réponse de l'IA. */
+function readExtraction(raw: any): AiExtractionResult | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const placeholders: NamedPlaceholder[] = [];
+  for (const rawPlaceholder of Array.isArray(raw.placeholders) ? raw.placeholders : []) {
+    const id = String(rawPlaceholder?.id ?? "");
+    const definition = readVariableDefinition(rawPlaceholder?.name, rawPlaceholder?.label, rawPlaceholder?.type);
+    if (/^P\d+$/.test(id) && definition) placeholders.push({ id, ...definition });
+  }
+
+  const variables: ExtractedVariable[] = [];
+  for (const rawVariable of Array.isArray(raw.variables) ? raw.variables : []) {
+    const definition = readVariableDefinition(rawVariable?.name, rawVariable?.label, rawVariable?.type);
+    const values = cleanValues(Array.isArray(rawVariable?.values) ? rawVariable.values : []);
+    if (definition && values.length > 0) variables.push({ ...definition, values });
+  }
+
+  return {
+    contractType: typeof raw.contractType === "string" && raw.contractType.trim() ? raw.contractType.trim() : null,
+    headingLines: Array.isArray(raw.headingLines)
+      ? raw.headingLines.filter((lineNumber: unknown): lineNumber is number => Number.isInteger(lineNumber))
+      : [],
+    placeholders,
+    variables,
+  };
+}
+
+/** Relit les analyses des parties, dans l'ordre du document (les parties sans résultat sont ignorées). */
+function readExtractions(raw: unknown): AiExtractionResult[] {
+  return (Array.isArray(raw) ? raw : [])
+    .map(readExtraction)
+    .filter((extraction): extraction is AiExtractionResult => extraction !== null);
+}
+
+// ─── Étapes de l'import ────────────────────────────────────────────────────────
+
+/** Extrait le texte du fichier via le moteur Python. */
+async function extractDocumentText(fileBase64: string, mimeType: string | undefined, filename: string): Promise<string> {
+  const formData = new FormData();
+  formData.append(
+    "file",
+    new Blob([Buffer.from(fileBase64, "base64")], { type: mimeType || "application/octet-stream" }),
+    filename,
+  );
+  const extractRes = await fetch(`${BACKEND_URL}/extract-document-text`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!extractRes.ok) throw new ImportError(502, "Extraction du document échouée.");
+
+  const extractData = (await extractRes.json()) as { text?: string };
+  if (!extractData.text?.trim()) throw new ImportError(422, "Aucun texte extrait du document.");
+  return extractData.text;
+}
+
+/** Fait analyser une partie du document par l'IA. */
+async function analysePart(
+  document: PreparedDocument,
+  part: AnalysisPart,
+  userId: number | undefined,
+): Promise<AiExtractionResult> {
+  const { numberedText, paragraphCount } = buildNumberedText(document);
+  const { scope, reminder } = buildPartInstructions(part, paragraphCount);
+  const prompt = `${EXTRACT_VARIABLES_PROMPT_BASE}${scope}\n\nTEXTE DU CONTRAT :\n${numberedText}${reminder}`;
+
+  const aiRes = await fetch(`${BACKEND_URL}/openai-chat-5`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt,
+      // « low » plutôt que « medium » : même qualité sur nos essais, réponse bien plus rapide.
+      reasoning: "low",
+      verbosity: "low",
+      model: "gpt-5.2",
+    }),
+  });
+  if (!aiRes.ok) throw new ImportError(502, "Analyse IA échouée.");
+  const aiData = (await aiRes.json()) as { content?: string; openai_tokens?: unknown };
+
+  if (aiData.openai_tokens && userId) {
+    await logOpenAiTokens({ openai_tokens: aiData.openai_tokens } as any, userId);
+  }
+  return keepPartOnly(parseAiExtraction(aiData.content ?? ""), document, part);
+}
+
+/** Répond au front après l'échec d'une étape de l'import. */
+function sendImportError(res: Response, step: string, error: unknown): void {
+  if (error instanceof ImportError) {
+    res.status(error.status).json({ success: false, message: error.message });
+    return;
+  }
+  console.error(`[template/import/${step}] error:`, (error as Error)?.message);
+  if (!res.headersSent)
+    res.status(500).json({ success: false, message: "Erreur interne lors de l'import." });
+}
+
+/** Étape 1 : lit le fichier, repère les emplacements vides et découpe le document en parties. */
+async function handleImportPrepare(req: Request, res: Response): Promise<void> {
+  const { fileBase64, mimeType, filename } = req.body as {
+    fileBase64?: string;
+    mimeType?: string;
+    filename?: string;
+  };
+  if (!fileBase64 || !filename) {
+    res.status(400).json({ success: false, message: "fileBase64 et filename sont requis." });
+    return;
+  }
+
+  try {
+    const startedAt = Date.now();
+    const document = prepareDocument(await extractDocumentText(fileBase64, mimeType, filename));
+    if (document.paragraphs.length === 0) throw new ImportError(422, "Aucun texte extrait du document.");
+
+    const { paragraphCount, isTruncated } = buildNumberedText(document);
+    if (isTruncated) {
+      console.warn(`[template/import] document long : seuls les ${MAX_CHARS_SENT_TO_AI} premiers caractères sont analysés par l'IA.`);
+    }
+    const parts = splitIntoParts(document.paragraphs.slice(0, paragraphCount));
+
+    // Aperçu immédiat : le texte complet, ses emplacements vides marqués « en cours ».
+    const structure = buildTemplateStructure(document, EMPTY_EXTRACTION, placeholderIdsIn(document, parts));
+    console.log(`[template/import] document lu en ${Date.now() - startedAt} ms : ${document.paragraphs.length} paragraphes, ${parts.length} partie(s) à analyser`);
+    res.json({ success: true, data: { document, parts, structure } });
+  } catch (e) {
+    sendImportError(res, "prepare", e);
+  }
+}
+
+/** Étape 2 : analyse d'une partie par l'IA (le front lance toutes les parties en même temps). */
+async function handleImportAnalyse(req: Request, res: Response): Promise<void> {
+  const document = readPreparedDocument(req.body?.document);
+  const part = document && readPart(req.body?.part, document);
+  if (!document || !part) {
+    res.status(400).json({ success: false, message: "document et part valides sont requis." });
+    return;
+  }
+
+  try {
+    const startedAt = Date.now();
+    const extraction = await analysePart(document, part, res.locals.userId as number | undefined);
+    console.log(`[template/import] paragraphes ${part.first} à ${part.last} analysés en ${Date.now() - startedAt} ms`);
+    res.json({ success: true, data: { extraction } });
+  } catch (e) {
+    sendImportError(res, "analyse", e);
+  }
+}
+
+/** Étape 3 : aperçu avec les parties déjà analysées ; celles encore en cours restent marquées « en cours ». */
+function handleImportAssemble(req: Request, res: Response): void {
+  const document = readPreparedDocument(req.body?.document);
+  if (!document) {
+    res.status(400).json({ success: false, message: "document valide requis." });
+    return;
+  }
+
+  try {
+    const pendingParts = (Array.isArray(req.body?.pendingParts) ? req.body.pendingParts : [])
+      .map((rawPart: unknown) => readPart(rawPart, document))
+      .filter((part: AnalysisPart | null): part is AnalysisPart => part !== null);
+    const extraction = mergeExtractions(readExtractions(req.body?.extractions));
+    const structure = buildTemplateStructure(document, extraction, placeholderIdsIn(document, pendingParts));
+    res.json({ success: true, data: { structure } });
+  } catch (e) {
+    sendImportError(res, "assemble", e);
+  }
+}
+
+/** Étape 4 : assemblage définitif et enregistrement du modèle. */
+async function handleImportFinalize(req: Request, res: Response): Promise<void> {
+  const { fileBase64, filename, name, contractType } = req.body as {
+    fileBase64?: string;
+    filename?: string;
+    name?: string;
+    contractType?: string;
+  };
+  const document = readPreparedDocument(req.body?.document);
+  if (!fileBase64 || !filename || !name || !document) {
     res.status(400).json({
       success: false,
-      message: "fileBase64, filename et name sont requis.",
+      message: "fileBase64, filename, name et document sont requis.",
     });
     return;
   }
 
   try {
-    console.time("[template/import] total");
-    // 1. Extraction du texte via Python
-    console.time("[template/import] extraction du texte");
-    const buffer = Buffer.from(fileBase64, "base64");
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new Blob([buffer], { type: mimeType || "application/octet-stream" }),
-      filename,
-    );
-    const extractRes = await fetch(`${BACKEND_URL}/extract-document-text`, {
-      method: "POST",
-      body: formData,
-    });
-    console.timeEnd("[template/import] extraction du texte");
-    if (!extractRes.ok) {
-      res
-        .status(502)
-        .json({ success: false, message: "Extraction du document échouée." });
-      return;
-    }
-    const extractData = (await extractRes.json()) as {
-      success?: boolean;
-      text?: string;
-    };
-    if (!extractData.text) {
-      res
-        .status(422)
-        .json({ success: false, message: "Aucun texte extrait du document." });
-      return;
-    }
+    const extraction = mergeExtractions(readExtractions(req.body?.extractions));
+    const structure = buildTemplateStructure(document, extraction);
 
-    // 2. Repérage des titres et des variables par l'IA (réponse courte, pas de réécriture)
-    const preparedDocument = prepareDocument(extractData.text);
-    const { numberedText, isTruncated } = buildNumberedText(preparedDocument);
-    if (isTruncated) {
-      console.warn(`[template/import] document long : seuls les ${MAX_CHARS_SENT_TO_AI} premiers caractères sont analysés par l'IA.`);
-    }
-
-    const fullPrompt = `${EXTRACT_VARIABLES_PROMPT_BASE}\n\nTEXTE DU CONTRAT :\n${numberedText}`;
-
-    console.time("[template/import] analyse IA");
-    const aiRes = await fetch(`${BACKEND_URL}/openai-chat-5`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: fullPrompt,
-        reasoning: "medium",
-        verbosity: "low",
-        model: "gpt-5.2",
-      }),
-    });
-    console.timeEnd("[template/import] analyse IA");
-    if (!aiRes.ok) {
-      res
-        .status(502)
-        .json({ success: false, message: "Analyse IA échouée." });
-      return;
-    }
-    const aiData = (await aiRes.json()) as {
-      content?: string;
-      openai_tokens?: unknown;
-    };
-
-    let extraction: AiExtractionResult;
-    try {
-      extraction = parseAiExtraction(aiData.content ?? "");
-    } catch {
-      res.status(422).json({
-        success: false,
-        message: "La réponse AI n'est pas un JSON valide.",
-      });
-      return;
-    }
-
-    // 3. Découpage en sections + placement des marqueurs par le code
-    const structure = buildTemplateStructure(preparedDocument, extraction);
-
-    // Log tokens
-    if (aiData.openai_tokens && res.locals.userId) {
-      await logOpenAiTokens(
-        { openai_tokens: aiData.openai_tokens } as any,
-        res.locals.userId as number,
-      );
-    }
-
-    // 4. Sauvegarde backNode
     const saveRes = await fetch(`${BACKNODE_URL}/template`, {
       method: "POST",
       headers: {
@@ -802,20 +1095,15 @@ async function handleTemplateImport(
         structure,
       }),
     });
-    const saved = await saveRes.json();
-    if (saveRes.ok)
-      void trackFeature(
-        "import_template",
-        res.locals.userId as number | undefined,
-      );
-    console.timeEnd("[template/import] total");
-    res.status(saveRes.ok ? 201 : saveRes.status).json(saved);
-  } catch (e: any) {
-    console.error("[template/import] error:", e.message);
-    if (!res.headersSent)
-      res
-        .status(500)
-        .json({ success: false, message: "Erreur interne lors de l'import." });
+    const saved = (await saveRes.json()) as { success?: boolean; data?: unknown };
+    if (!saveRes.ok) {
+      res.status(saveRes.status).json(saved);
+      return;
+    }
+
+    void trackFeature("import_template", res.locals.userId as number | undefined);
+    res.status(201).json({ success: true, data: { meta: saved.data, structure } });
+  } catch (e) {
+    sendImportError(res, "finalize", e);
   }
 }
-
