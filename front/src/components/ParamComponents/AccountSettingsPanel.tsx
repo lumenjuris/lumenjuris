@@ -7,6 +7,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/InputGroup";
 import { SettingsToggleRow } from "../ui/SettingsToggleRow";
+import { useThemeStore } from "../../store/themeStore";
 import {
   Dialog,
   DialogClose,
@@ -729,6 +730,7 @@ export function AccountSettingsPanel({
         description="Adaptez l'affichage et les communications à vos besoins."
       >
         <div className="space-y-3 px-5 py-5 sm:px-6">
+          {/* <ThemeSettingRow /> */}
           <SettingsToggleRow
             label="Mode dyslexique"
             description="Utilise une police et un espacement adaptés pour faciliter la lecture."
@@ -796,5 +798,22 @@ export function AccountSettingsPanel({
         </div>
       </SettingsSection>
     </div>
+  );
+}
+
+/**
+ * Ligne de réglage du thème sombre. Branchée sur le thème global de
+ * l'application : la bascule s'applique partout et la préférence est conservée.
+ */
+function ThemeSettingRow() {
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  return (
+    <SettingsToggleRow
+      label="Thème sombre"
+      description="Passe l'interface en sombre. S'applique à toute l'application."
+      checked={theme === "dark"}
+      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+    />
   );
 }

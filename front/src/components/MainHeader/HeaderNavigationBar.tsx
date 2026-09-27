@@ -23,7 +23,7 @@ import { useUserStore } from "../../store/userStore";
 import { useAuthPanelStore } from "../../store/authPanelStore";
 
 import { LoginForm } from "../auth/LoginForm";
-import { SignupForm} from "../auth/SignupForm"
+import { SignupForm } from "../auth/SignupForm"
 
 type NavigationClickHandler = (
   event?: MouseEvent<HTMLElement>,
@@ -253,13 +253,6 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 className="min-w-28 bg-lumenjuris-sidebar ring-lumenjuris/60 font-medium text-sm px-4 py-2 flex flex-col items-start gap-2"
               >
                 <DropdownMenuItem
-                  onClick={handleUserLogout}
-                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
-                >
-                  <LogOutIcon size={16} />
-                  Déconnexion
-                </DropdownMenuItem>
-                <DropdownMenuItem
                   onClick={() => {
                     if (onNavClick?.() === false) return;
                     navigate("/mon-compte");
@@ -277,6 +270,13 @@ const HeaderNavigationBar = ({ onNavClick }: HeaderNavBarProps) => {
                 >
                   <HandCoinsIcon size={16} />
                   Formules
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleUserLogout}
+                  className="cursor-pointer inline-flex justify-center items-center gap-1 py-1 text-gray-400 hover:text-white transition-all delay-100"
+                >
+                  <LogOutIcon size={16} />
+                  Déconnexion
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

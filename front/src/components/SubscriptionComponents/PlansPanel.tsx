@@ -221,16 +221,16 @@ export function PlansPanel() {
 
   const handlePlanSelect = (plan: Plan) => {
     // Non connecté : on mémorise le plan choisi (persistant à travers la
-    // connexion) puis on ramène sur l'accueil en ouvrant le panneau de
-    // connexion, avec retour sur `/souscription`. Au retour authentifié, le
-    // checkout mémorisé reprend.
+    // connexion) puis on ouvre le panneau de connexion par-dessus la page des
+    // formules — sans quitter la page, pour garder le contexte des offres. Le
+    // panneau retient `/souscription` comme destination : au retour authentifié,
+    // le checkout mémorisé reprend automatiquement.
     if (!userData) {
       sessionStorage.setItem(
         PENDING_CHECKOUT_KEY,
         JSON.stringify({ name: plan.name, interval }),
       );
       ouvrirConnexion("/souscription");
-      navigate("/dashboard");
       return;
     }
     // Connecté : on lance directement le paiement Stripe Checkout.
@@ -300,7 +300,7 @@ export function PlansPanel() {
       )}
 
       {/* ── Grille des 3 offres principales ── */}
-      <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           const actuelle = estActuelle(plan);
@@ -308,7 +308,7 @@ export function PlansPanel() {
             <div
               key={plan.name}
               className={cn(
-                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300",
+                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300 bg-white",
                 plan.highlight
                   ? "z-10 border-brand/30 bg-blue-primary shadow-[0_20px_45px_-15px_rgba(44,58,94,0.45)] ring-1 ring-brand/20 lg:-translate-y-3 lg:scale-[1.03]"
                   : "border-line shadow-sm hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)]",
@@ -420,18 +420,19 @@ export function PlansPanel() {
         })}
       </div>
 
-      
+
       <div className="mt-4">
-        <span className="text-3xl font-bold tracking-tight text-blue-primary">
+        <span className="text-3xl font-bold tracking-tight text-blue-primary ">
           Sur devis
         </span>
         <p className="mt-1 text-sm text-ink-muted">
           Tarification adaptée à votre organisation
         </p>
       </div>
+
       {/* ── Offre Enterprise : bandeau pleine largeur ── */}
       {PLANS.filter((plan) => plan.contactOnly).map((plan) => {
-          const heading = plan.features.find((f) => {
+        const heading = plan.features.find((f) => {
           const clean = f.trim().toLowerCase();
           return clean.endsWith("plus :") || clean.endsWith("inclus :");
         });
@@ -440,54 +441,55 @@ export function PlansPanel() {
 
         return (
           <div
-  key={plan.name}
-  className="mt-2 rounded-2xl border border-brand/20 p-6 shadow-sm transition-shadow hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)] px-12"
->
-  {/* Utilisation d'une grille 3 colonnes sur grands écrans avec un gap-x-8 uniforme */}
-  <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-3 lg:items-start">
-    
-    {/* Colonne 1 : Infos & CTA */}
-    <div className="lg:col-span-1">
-      <span className="text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
-        sur mesure :
-      </span>
-      <h3 className="mt-2 text-xl font-bold text-ink">{plan.name}</h3>
-      <p className="mt-1 text-sm text-ink-muted">{plan.tagline}</p>
-      <Button
-        className="mt-5 w-full bg-brand text-white shadow-sm hover:bg-brand-hover sm:w-auto"
-        onClick={() => {
-          window.location.href = "mailto:contact@lumenjuris.com";
-        }}
-      >
-        {plan.cta}
-      </Button>
-    </div>
+            key={plan.name}
+            className="bg-white mt-2 rounded-2xl border border-brand/20 p-6 shadow-sm transition-shadow hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)] px-12"
+          >
+            {/* Utilisation d'une grille 3 colonnes sur grands écrans avec un gap-x-8 uniforme */}
+            <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-3 lg:items-start ">
 
-    {/* Colonnes 2 et 3 : Fonctionnalités */}
-    <div className="lg:col-span-2">
-      {heading && (
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
-          {heading}
-        </p>
-      )}
+              {/* Colonne 1 : Infos & CTA */}
+              <div className="lg:col-span-1 ">
+                <span className="text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
+                  sur mesure :
+                </span>
+                <h3 className="mt-2 text-xl font-bold text-ink">{plan.name}</h3>
+                <p className="mt-1 text-sm text-ink-muted">{plan.tagline}</p>
+                <Button
+                  className="mt-5 w-full bg-brand text-white shadow-sm hover:bg-brand-hover sm:w-auto"
+                  onClick={() => {
+                    window.location.href = "mailto:contact@lumenjuris.com";
+                  }}
+                >
+                  {plan.cta}
+                </Button>
+              </div>
 
-      {/* Grille interne à 2 colonnes réutilisant exactement le même gap-x-8 */}
-      <ul className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-        {listFeatures.map((f, i) => (
-          <li key={`${plan.name}-${i}`} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
-              <Check className="h-3 w-3" strokeWidth={3} />
-            </span>
-            <span className="text-ink-secondary">{f}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+              {/* Colonnes 2 et 3 : Fonctionnalités */}
+              <div className="lg:col-span-2">
+                {heading && (
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
+                    {heading}
+                  </p>
+                )}
 
-  </div>
-</div>
+                {/* Grille interne à 2 colonnes réutilisant exactement le même gap-x-8 */}
+                <ul className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                  {listFeatures.map((f, i) => (
+                    <li key={`${plan.name}-${i}`} className="flex items-start gap-2.5">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      </span>
+                      <span className="text-ink-secondary">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+            </div>
+          </div>
         );
       })}
+
 
       {/* ── FAQ ── */}
       <div className="flex flex-col mb-2 mt-6">

@@ -7,7 +7,7 @@ export function internalApiKeyMiddleware(
 ) {
 
   const expected = process.env.INTERNAL_API_KEY;
-  const EXEMPT_PATHS = ["/health", "/auth/google", "/auth/google/callback", "/billing/stripe/webhook", "/user/verify", "/user/resetpassword"];
+  const EXEMPT_PATHS = ["/health", "/auth/google", "/auth/google/callback", "/auth/microsoft", "/billing/stripe/webhook", "/user/verify", "/user/resetpassword"];
   // Correspondance sur une frontière de chemin : le chemin doit être exactement
   // une route exemptée, ou commencer par elle SUIVIE d'un "/". Un simple
   // startsWith exemptait aussi "/user/verifyXyz", plus large que voulu.

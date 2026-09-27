@@ -1,4 +1,4 @@
-import { MainLayout } from "../components/DashboardComponents/MainLayout";
+import { MainLayout } from "../components/MainLayout";
 import { PlansPanel } from "../components/SubscriptionComponents/PlansPanel";
 
 export function Subscription() {

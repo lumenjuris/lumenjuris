@@ -15,19 +15,20 @@ import {
   Sparkles,
   ShieldHalf,
   MessagesSquare,
-  Eye
+  Eye,
+  HandCoins
 } from "lucide-react";
 
-import { MainHeader } from "../MainHeader/MainHeader";
-import { FeedbackWidget } from "../common/FeedbackWidget";
-import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
-import { useLegalWatchStore } from "../../store/legalWatchStore";
-import { LumenJurisLogo } from "../common/LumenJurisLogo";
-import { useUserStore } from "../../store/userStore";
-import { useDemandeConnexion } from "../auth/useDemandeConnexion";
-import { useLayoutStore } from "../../store/layoutStore";
+import { MainHeader } from "./MainHeader/MainHeader";
+import { FeedbackWidget } from "./common/FeedbackWidget";
+import { useTemplateNotificationStore } from "../store/templateNotificationStore";
+import { useLegalWatchStore } from "../store/legalWatchStore";
+import { LumenJurisLogo } from "./common/LumenJurisLogo";
+import { useUserStore } from "../store/userStore";
+import { useDemandeConnexion } from "./auth/useDemandeConnexion";
+import { useLayoutStore } from "../store/layoutStore";
 
-import { ErrorBoundary } from "../ContractAnalysis/ErrorBoundary";
+import { ErrorBoundary } from "./ContractAnalysis/ErrorBoundary";
 
 interface NavSubItem {
   icon: React.ElementType;
@@ -87,6 +88,15 @@ const navSections: NavSection[] = [
       { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
+    ],
+  },
+  {
+    category: "ABONNEMENT",
+    // Section sans catégorie, placée en bas : c'est une page vitrine/conversion,
+    // pas un outil du quotidien. Publique pour que même un visiteur puisse
+    // consulter les offres (le clic ne déclenche pas le panneau de connexion).
+    items: [
+      { icon: HandCoins, label: "Formules", path: "/souscription", estPublic: true },
     ],
   },
 ];
@@ -218,7 +228,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
   const refreshUnreadCount = useLegalWatchStore((s) => s.refreshUnreadCount);
 
 
-  
+
   // Pastille veille juridique : chargée à l'ouverture, rafraîchie toutes les 5 min.
   // Réservée aux utilisateurs connectés : l'accueil est désormais visible sans
   // compte, et cet appel répondrait 401 pour un visiteur.
@@ -287,7 +297,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
 
   return (
-    <div className="flex min-h-screen w-full bg-white">
+    <div className="flex min-h-screen w-full">
       {/* ── Overlay mobile/tablette ── */}
       {sidebarOpen && (
         <div
@@ -358,7 +368,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
         />
 
 
-        <main className="flex-1 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-3">
+        <main className="lj-main flex-1 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-3">
           <ErrorBoundary key={location.pathname}>
             {children ?? <Outlet />}
           </ErrorBoundary>

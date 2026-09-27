@@ -25,6 +25,7 @@ import {
 
 import { useUserStore } from "../store/userStore";
 import { usePreferencesStore } from "../store/preferencesStore";
+import { usePageThemeScope } from "../hooks/usePageThemeScope";
 import { fetchProxy } from "../utils/fetchProxy";
 
 /**
@@ -45,6 +46,8 @@ const EMPTY_ACCOUNT_PROFILE: AccountProfile = {
 export function ParamCompte() {
   const location = useLocation();
   const navigate = useNavigate();
+  // Active l'habillage sombre de la page Paramètres (voir theme.css).
+  usePageThemeScope("settings");
 
   // Paramètres d'URL posés par le portail Stripe à son retour
   // (return_url = /mon-compte?tab=subscription&from=portal).
