@@ -703,7 +703,8 @@ function ImportSection({
   onBack,
 }: {
   onSaved?: (templateId: string, andContinue: boolean) => void;
-  /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
+  /** Prévient la page quand l'écran d'édition (après dépôt du fichier) est affiché :
+   *  bandeau bleu masqué et menu latéral replié, comme les autres éditeurs. */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
   /** Retour à l'écran précédent (Générateur de contrat). */
   onBack?: () => void;
@@ -762,12 +763,13 @@ function ImportSection({
   // Un nouvel objet à chaque clic, pour que la liste réagisse même si c'est le même champ.
   const [variableToReveal, setVariableToReveal] = useState<{ name: string } | null>(null);
 
-  // La page s'élargit pendant la relecture (même largeur que la contrathèque).
-  const isReviewDisplayed = step === "review" && !saved;
+  // Dès qu'un fichier est déposé (lecture, relecture, confirmation) : bandeau bleu
+  // masqué, menu latéral replié — seul l'écran de dépôt initial garde le bandeau.
+  const isReviewDisplayed = step !== "form";
   useEffect(() => {
     onReviewDisplayed?.(isReviewDisplayed);
   }, [isReviewDisplayed]);
-  // En quittant la section, la page reprend sa largeur normale.
+  // En quittant la section, la page reprend son affichage normal.
   useEffect(() => () => onReviewDisplayed?.(false), []);
 
   /** Clic sur un champ dans le contrat : on le conserve / retire et on le désigne dans la liste. */
@@ -978,7 +980,7 @@ function ImportSection({
     }
 
     return (
-      <div className="w-full space-y-4">
+      <div className="mx-auto w-full max-w-6xl space-y-4">
         {/* Fil d'ariane discret : même esprit que l'éditeur de contrat généré, sans bandeau bleu. */}
         {onBack && (
           <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-medium text-ink-subtle transition-colors hover:text-brand">
@@ -1003,8 +1005,20 @@ function ImportSection({
           </div>
         )}
 
-        {/* Contrat (toute la largeur restante) + champs détectés (largeur fixe). Chaque colonne défile seule. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:h-[calc(100vh-14rem)] lg:min-h-[520px]">
+        {/* Champs détectés (largeur fixe, à gauche) + contrat (toute la largeur restante, à droite).
+            Chaque colonne défile seule. */}
+        {/* Mêmes proportions de colonnes que l'éditeur de contrat généré (SmartCddEditor). */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] lg:h-[calc(100vh-14rem)] lg:min-h-[520px]">
+          <VariableListPanel
+            variables={variableSummaries}
+            essentialVars={essentialVars}
+            highlightedVar={highlightedVar}
+            variableToReveal={variableToReveal}
+            onToggleVar={toggleEssentialVar}
+            onShowVar={showVariableInDocument}
+            onHoverVar={setHoveredVar}
+            isAnalysing={analysis !== null}
+          />
           {/* Carte du contrat : barre d'outils collée en tête, comme l'éditeur du contrat généré. */}
           <div className="flex h-[65vh] min-h-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card lg:h-full">
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 border-b border-line-subtle px-3 py-2 sm:px-4">
@@ -1036,29 +1050,14 @@ function ImportSection({
               />
             </div>
           </div>
-          <VariableListPanel
-            variables={variableSummaries}
-            essentialVars={essentialVars}
-            highlightedVar={highlightedVar}
-            variableToReveal={variableToReveal}
-            onToggleVar={toggleEssentialVar}
-            onShowVar={showVariableInDocument}
-            onHoverVar={setHoveredVar}
-            isAnalysing={analysis !== null}
-          />
         </div>
       </div>
     );
   }
 
   return (
+    // Écran de dépôt : le bandeau bleu de la page (avec son propre retour) est affiché.
     <div className="space-y-4 w-full max-w-4xl mx-auto">
-      {onBack && (
-        <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-medium text-ink-subtle transition-colors hover:text-brand">
-          <ChevronLeft className="h-3.5 w-3.5" /> Générateur de contrat
-        </button>
-      )}
-
       {/* Carte unique : dépôt + détails (homogène avec les autres écrans) */}
       <div className="rounded-card border border-line bg-white shadow-card p-6 space-y-5">
         {/* Zone de dépôt — react-dropzone (clic + drag), compacte */}
@@ -1403,12 +1402,13 @@ export function Generateur() {
   }
 
   // Les éditeurs document-first (form, blank, useCustom) ont leur propre retour : pas de bannière.
-  // L'import a lui aussi son propre fil d'ariane, dans le même esprit que ces éditeurs.
-  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom" && section !== "import";
+  // L'import garde le bandeau tant qu'aucun fichier n'est déposé (écran de dépôt),
+  // et bascule sur le même habillage que ces éditeurs une fois le fichier déposé.
+  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom" && !(section === "import" && isImportReviewDisplayed);
 
   // Contrat ouvert dans l'éditeur : le menu latéral se replie pour laisser
   // toute la largeur au document, et revient en quittant l'éditeur.
-  const estEditeur = section === "form" || section === "blank" || section === "useCustom";
+  const estEditeur = section === "form" || section === "blank" || section === "useCustom" || (section === "import" && isImportReviewDisplayed);
   const setEditeurPleinEcran = useLayoutStore((s) => s.setEditeurPleinEcran);
   useEffect(() => {
     setEditeurPleinEcran(estEditeur);
