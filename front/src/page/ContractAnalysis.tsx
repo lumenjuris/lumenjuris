@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
+import type { MissingClause } from "../utils/marketAnalysis";
 import { UploadZone } from "../components/ContractAnalysis/UploadZone";
 import { DocumentViewer, DocumentViewerRef } from "../components/ContractAnalysis/DocumentViewer";
 
@@ -48,7 +49,7 @@ import { useEnterpriseContext } from "../hooks/Analyzer/useEnterpriseContext";
 import { useContractHistory, TemporaryHistoryEntry } from "../hooks/Analyzer/useContractHistory";
 
 import { confirmLeavingUnfinishedAnalysis, RECENT_NAVIGATION_CONFIRM_MS, LEAVE_ANALYSIS_WARNING } from "../utils/aiAnalyser/confirmLeaving";
-import { handleAppendClause } from "../utils/aiAnalyser/handleAppendClause";
+import { handleAppendClause, revealAddedClause } from "../utils/aiAnalyser/handleAppendClause";
 import { contractApi } from "../components/DashboardComponents/contratheque/api";
 import { NegotiationDetail } from "../components/DashboardComponents/negotiation/types";
 import { ShareDialog } from "../components/DashboardComponents/negotiation/ShareDialog";
@@ -725,6 +726,14 @@ export default function ContractAnalysis() {
 
 
   //Ouverture de la modale de l'analyse de marché 
+  /** Ajout d'une clause suggérée : confirmation, puis on montre la clause dans le contrat. */
+  const appendSuggestedClause = (clause: MissingClause) => {
+    const clauseOpening = handleAppendClause(clause);
+    setShowMarketAnalysis(false); // les suggestions restent disponibles, sans nouvel appel IA
+    toast.success(`Clause « ${clause.nom} » ajoutée au contrat`);
+    revealAddedClause(clauseOpening);
+  };
+
   const handleMarketAnalysisClick = async () => {
     try {
       if (marketAnalysis) {
@@ -843,7 +852,8 @@ export default function ContractAnalysis() {
     */
   return (
     <>
-      <div className="-mx-4 -mb-4 sm:-mx-5 sm:-mb-5 lg:-mx-7 lg:-mb-7 px-4 pb-4 overflow-x-hidden">
+      {/* overflow-x-clip et non hidden : hidden bloquerait le panneau des risques « collant » */}
+      <div className="-mx-4 -mb-4 sm:-mx-5 sm:-mb-5 lg:-mx-7 lg:-mb-7 px-4 pb-4 overflow-x-clip">
         <div className="min-w-0 w-full">
           {!contract && isOpeningHistoryItem && (
             <div className="flex flex-col items-center justify-center gap-3 py-24 text-sm text-gray-500">
@@ -901,11 +911,12 @@ export default function ContractAnalysis() {
           {contract?.processed && !displayedIsProcessing && (
             <div className="max-w-7xl mx-auto">
 
+              {/* Bandeau compact : le contrat doit garder un maximum de place */}
               <PageBanner
-                className="mb-6"
+                compact
+                className="mb-4"
                 backLink={{ label: "Conformité", onClick: () => navigate("/conformite") }}
                 title="Analyse de conformité"
-                subtitle="Vérifiez la conformité juridique de vos documents."
                 actions={
                   <ActionButtons
                 onShareReport={() => void openShare()}
@@ -960,9 +971,10 @@ export default function ContractAnalysis() {
                   </div>
                 </div>
 
-                {/* Sidebar des risques à droite */}
+                {/* Sidebar des risques à droite : reste visible pendant le défilement du contrat,
+                    sa liste défile seule si elle dépasse la hauteur de l'écran. */}
                 {isFeatureEnabled("ENABLE_CLAUSES_SIDEBAR") && (
-                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4 justify-start">
+                  <div className="flex flex-col w-full md:w-80 border-gray-200 flex-shrink-0 gap-4 justify-start md:sticky md:top-4 md:max-h-[calc(100vh-2rem)]">
 
                     <ClausesSidebar
                       clauses={sortedClauses}
@@ -1042,7 +1054,7 @@ export default function ContractAnalysis() {
                 <MarketComparison
                   analysisResult={marketAnalysis}
                   isLoading={isMarketAnalysisLoading}
-                  onAppendClause={handleAppendClause}
+                  onAppendClause={appendSuggestedClause}
                 />
               </Suspense>
             </div>
