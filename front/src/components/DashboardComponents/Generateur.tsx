@@ -21,7 +21,8 @@ import { ScratchWizard } from "./generateur/ScratchFlow";
 import { TemplateTable } from "./generateur/TemplateTable";
 import { CreatedContractTable } from "./generateur/CreatedContractTable";
 import { CreerDeZeroCard, GenerateurHub } from "./generateur/GenerateurHub";
-import { PageBanner } from "../common/PageBanner";
+import { createPortal } from "react-dom";
+import { PageBanner, BannerAction } from "../common/PageBanner";
 import {
   loadCreatedContracts, addCreatedContract, removeCreatedContract,
   type CreatedContract,
@@ -598,10 +599,6 @@ function VariableListPanel({
 
 type ImportStep = "form" | "processing" | "review";
 
-/** Style des boutons d'action de la relecture (Annuler, Enregistrer, Enregistrer et générer). */
-const REVIEW_ACTION_BUTTON =
-  "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-primary rounded-xl shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85 disabled:opacity-50";
-
 /** Document préparé par le relais : il le relit à chaque étape de l'import. */
 interface PreparedImportDocument {
   paragraphs: string[];
@@ -670,10 +667,13 @@ function AnalysisProgressBanner({ done, total, fieldCount }: { done: number; tot
 function ImportSection({
   onSaved,
   onReviewDisplayed,
+  actionsSlot,
 }: {
   onSaved?: (templateId: string, andContinue: boolean) => void;
   /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
+  /** Zone du bandeau de la page où afficher les boutons de la relecture. */
+  actionsSlot?: HTMLElement | null;
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -942,20 +942,24 @@ function ImportSection({
       <div className="w-full space-y-4 pr-4">
         {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            Annuler
-          </button>
-          {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
-              Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
-          <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta} className={REVIEW_ACTION_BUTTON}>
-            Enregistrer
-          </button>
-          {/* Enregistrer + poursuivre le tunnel de génération */}
-          <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving || !savedMeta} className={REVIEW_ACTION_BUTTON}>
-            {saving ? "Enregistrement…" : "Enregistrer et générer"}
-          </button>
-        </div>
+        {/* Boutons affichés en haut à droite, dans le bandeau de la page */}
+        {actionsSlot && createPortal(
+          <>
+            <BannerAction onClick={resetImport} disabled={saving}>
+              Annuler
+            </BannerAction>
+            {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
+                Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
+            <BannerAction onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta}>
+              Enregistrer
+            </BannerAction>
+            {/* Enregistrer + poursuivre le tunnel de génération */}
+            <BannerAction onClick={() => void handleSaveStructure(true)} disabled={saving || !savedMeta}>
+              {saving ? "Enregistrement…" : "Enregistrer et générer"}
+            </BannerAction>
+          </>,
+          actionsSlot,
+        )}
 
         {analysis && (
           <AnalysisProgressBanner done={analysis.done} total={analysis.total} fieldCount={variableSummaries.length} />
@@ -1232,6 +1236,8 @@ export function Generateur() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
   const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
+  // Zone du bandeau où l'import place ses boutons.
+  const [importActionsSlot, setImportActionsSlot] = useState<HTMLDivElement | null>(null);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1349,7 +1355,7 @@ export function Generateur() {
 
   const SUBS: Record<Exclude<Section, null>, string> = {
     library: "",
-    import: "Importez un contrat existant pour le transformer en modèle réutilisable.",
+    import: "",
     form: "Renseignez les informations pour personnaliser votre contrat.",
     useCustom: "",
     scratch: "Générez un contrat sur-mesure en répondant à quelques questions.",
@@ -1390,6 +1396,8 @@ export function Generateur() {
           backLink={{ label: "Générateur de contrat", onClick: goHub }}
           title={LABELS[section]}
           subtitle={SUBS[section]}
+          // Emplacement des boutons de la relecture d'un import (Annuler, Enregistrer…).
+          actions={section === "import" ? <div ref={setImportActionsSlot} className="flex flex-wrap items-center gap-2.5 empty:hidden" /> : undefined}
         />
       )}
 
@@ -1409,7 +1417,11 @@ export function Generateur() {
       {section === "library" && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
       {section === "import" && (
         <div className="w-full flex justify-center">
-          <ImportSection onSaved={handleTemplateSaved} onReviewDisplayed={setIsImportReviewDisplayed} />
+          <ImportSection
+            onSaved={handleTemplateSaved}
+            onReviewDisplayed={setIsImportReviewDisplayed}
+            actionsSlot={importActionsSlot}
+          />
         </div>
       )}
       {section === "form" && (
