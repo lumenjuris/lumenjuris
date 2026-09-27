@@ -26,7 +26,7 @@ interface LoaderProps {
  * @returns 
  */
 export const Loader: React.FC<LoaderProps> = ({
-    label = 'Chargement...',
+    label = "Chargement de l'application en cours ...",
     color = '#1a6cf5',
     showLogo = true,
     fullScreen = true,
@@ -55,7 +55,7 @@ export const Loader: React.FC<LoaderProps> = ({
     return (
         <div
             role="status"
-            aria-label={label}
+            aria-label={label ?? 'Chargement…'}
             style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -101,16 +101,18 @@ export const Loader: React.FC<LoaderProps> = ({
                 }} />
             </div>
 
-            <span style={{
-                fontSize: 14,
-                fontWeight: 500,
-                color: '#6b7280',
-                animation: 'ljFade 1.8s ease-in-out infinite',
-            }}>
-                {label}
-            </span>
+            {label && (
+                <span style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: '#6b7280',
+                    animation: 'ljFade 1.8s ease-in-out infinite',
+                }}>
+                    {label}
+                </span>
+            )}
 
-            <div style={{ display: 'flex', gap: 6, marginTop: 20 }} aria-hidden="true">
+            <div style={{ display: 'flex', gap: 6, marginTop: label ? 20 : 0 }} aria-hidden="true">
                 {[0, 0.2, 0.4].map((delay, i) => (
                     <div key={i} style={{
                         width: 5,

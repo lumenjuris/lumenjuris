@@ -221,16 +221,16 @@ export function PlansPanel() {
 
   const handlePlanSelect = (plan: Plan) => {
     // Non connecté : on mémorise le plan choisi (persistant à travers la
-    // connexion) puis on ramène sur l'accueil en ouvrant le panneau de
-    // connexion, avec retour sur `/souscription`. Au retour authentifié, le
-    // checkout mémorisé reprend.
+    // connexion) puis on ouvre le panneau de connexion par-dessus la page des
+    // formules — sans quitter la page, pour garder le contexte des offres. Le
+    // panneau retient `/souscription` comme destination : au retour authentifié,
+    // le checkout mémorisé reprend automatiquement.
     if (!userData) {
       sessionStorage.setItem(
         PENDING_CHECKOUT_KEY,
         JSON.stringify({ name: plan.name, interval }),
       );
       ouvrirConnexion("/souscription");
-      navigate("/dashboard");
       return;
     }
     // Connecté : on lance directement le paiement Stripe Checkout.
@@ -300,7 +300,7 @@ export function PlansPanel() {
       )}
 
       {/* ── Grille des 3 offres principales ── */}
-      <div className="mt-8 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           const actuelle = estActuelle(plan);

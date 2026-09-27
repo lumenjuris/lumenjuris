@@ -730,7 +730,7 @@ export function AccountSettingsPanel({
         description="Adaptez l'affichage et les communications à vos besoins."
       >
         <div className="space-y-3 px-5 py-5 sm:px-6">
-          <ThemeSettingRow />
+          {/* <ThemeSettingRow /> */}
           <SettingsToggleRow
             label="Mode dyslexique"
             description="Utilise une police et un espacement adaptés pour faciliter la lecture."

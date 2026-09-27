@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import ContractAnalysis from "./page/ContractAnalysis";
 
-import { MainLayout } from "./components/DashboardComponents/MainLayout";
+import { MainLayout } from "./components/MainLayout";
 import { Generateur } from "./components/DashboardComponents/Generateur";
 import { Signature } from "./components/DashboardComponents/Signature";
 import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
@@ -80,7 +80,7 @@ export function App() {
   }, [pageReady]);
 
 
-  if (showLoaderPage) return <Loader label="Chargement de l'application en cours ..." />
+  if (showLoaderPage) return <Loader />
 
 
   // L'accueil n'est plus une redirection selon l'authentification : `/` rend
