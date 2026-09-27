@@ -1,0 +1,28 @@
+/**
+ * Habillage sombre global de l'application.
+ *
+ * Le switch (voir `store/themeStore.ts`) pose `data-theme="dark"` sur `<html>`
+ * partout. Ce fichier, chargé après Tailwind, fournit :
+ *  1. le chrome sombre (en-tête) sur toute l'app — la sidebar est déjà navy ;
+ *  2. une couche « surfaces sombres » réutilisable, aujourd'hui **limitée aux
+ *     pages déjà prêtes** (`data-lj-page="settings"`), pour ne rien casser
+ *     ailleurs. Le tableau de bord a son propre habillage (voir `console.css`).
+ *
+ * ▶ Pour étendre le sombre à toute l'application plus tard : dupliquer le bloc
+ *   « surfaces sombres » sans le garde `[data-lj-page="settings"]`, écran par
+ *   écran, puis retirer le garde une fois l'app auditée.
+ */
+
+/* ── 1. Chrome sombre (partout) ── */
+html[data-theme="dark"] .lj-appheader{background:#0f2036 !important;border-color:rgba(255,255,255,.08) !important}
+html[data-theme="dark"] .lj-appheader .text-ink-muted{color:#93A5C2}
+html[data-theme="dark"] .lj-appheader:hover .text-brand{color:#F0D08C}
+
+/* ── 2. Surfaces sombres réutilisables (pour l'instant : page Paramètres) ── */
+html[data-theme="dark"][data-lj-page="settings"] .lj-main{background:#0D1929}
+html[data-theme="dark"][data-lj-page="settings"] :is(.bg-white,.bg-surface,.bg-surface-subtle,.bg-gray-50,.bg-slate-50){background-color:#152539}
+html[data-theme="dark"][data-lj-page="settings"] :is(.bg-gray-100,.bg-surface-muted,.bg-slate-100){background-color:#1B2E48}
+html[data-theme="dark"][data-lj-page="settings"] :is(.border-gray-200,.border-gray-100,.border-gray-300,.border-line,.border-line-subtle){border-color:rgba(255,255,255,.10)}
+html[data-theme="dark"][data-lj-page="settings"] :is(.text-gray-900,.text-gray-800,.text-ink,.text-slate-800,.text-black){color:#E9F0FA}
+html[data-theme="dark"][data-lj-page="settings"] :is(.text-gray-700,.text-gray-600,.text-ink-secondary,.text-slate-700){color:#C2D0E6}
+html[data-theme="dark"][data-lj-page="settings"] :is(.text-gray-500,.text-gray-400,.text-ink-muted,.text-ink-subtle,.text-slate-500){color:#93A5C2}

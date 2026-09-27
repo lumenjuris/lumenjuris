@@ -1,59 +1,94 @@
+import "../components/DashboardComponents/home/console.css";
+
 import { useUserStore } from "../store/userStore";
 import { useDashboardData } from "../components/DashboardComponents/home/useDashboardData";
+import { usePageThemeScope } from "../hooks/usePageThemeScope";
 import { InfoBanner } from "../components/DashboardComponents/home/InfoBanner";
-import { HeroHeader } from "../components/DashboardComponents/home/HeroHeader";
-import { UpcomingDeadlines } from "../components/DashboardComponents/home/UpcomingDeadlines";
-import { TodayQueue } from "../components/DashboardComponents/home/TodayQueue";
-import { ModulesSection } from "../components/DashboardComponents/home/ModulesSection";
 import { AccountRedirectNotice } from "../components/DashboardComponents/home/AccountRedirectNotice";
+import { ConsoleHero } from "../components/DashboardComponents/home/console/ConsoleHero";
+import { ConsoleKpis } from "../components/DashboardComponents/home/console/ConsoleKpis";
+import { WorkQueue } from "../components/DashboardComponents/home/console/WorkQueue";
+import { AgendaCard } from "../components/DashboardComponents/home/console/AgendaCard";
+import { CreditsCard } from "../components/DashboardComponents/home/console/CreditsCard";
+import { RisksCard } from "../components/DashboardComponents/home/console/RisksCard";
+import { VisitorLauncher } from "../components/DashboardComponents/home/console/VisitorLauncher";
 
 /**
- * Page d'accueil (`/dashboard`).
+ * Page d'accueil (`/dashboard`) — « la console ».
  *
- * Compacte et organisée à l'horizontale : l'en-tête place la salutation à côté
- * des deux points d'entrée (générer / importer un contrat), puis la file de
- * travail et les échéances sont côte à côte sur écran large. (Le bloc
- * « Premiers pas » a été retiré : il faisait doublon avec ces deux entrées.)
+ * Deux visages selon la connexion :
+ *  - **Visiteur** : un lanceur d'outils qui amène à agir tout de suite.
+ *  - **Connecté** : un poste de pilotage — salutation, repères du portefeuille,
+ *    file « À traiter » et un rail (agenda, crédits, points de vigilance).
  *
+ * Le thème clair / sombre est global (voir `store/themeStore`) ; seul le fond
+ * « matière » pleine page est réservé au tableau de bord.
  * Toutes les données viennent d'un seul chargement (`useDashboardData`).
  */
 export function Dashboard() {
   const firstName = useUserStore((s) => s.userData?.profile?.prenom) ?? "";
+  // Réserve l'habillage sombre pleine page (fond « matière ») au tableau de bord.
+  usePageThemeScope("dashboard");
+
   const data = useDashboardData();
 
   return (
-    <div className="relative mx-auto flex w-full max-w-[1240px] flex-col gap-5">
-      {/* Halo très léger derrière le contenu, pour décoller la page du fond uni. */}
-      <div className="pointer-events-none absolute -top-16 left-1/2 -z-10 h-72 w-[680px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse,rgba(76,124,192,0.10)_0%,rgba(76,124,192,0)_70%)]" />
+    <div className="ljc">
+      <div className="wrap">
+        {/* Un compte bloqué est renvoyé ici après une tentative de connexion :
+            le message doit rester visible avant tout le reste. */}
+        <AccountRedirectNotice />
 
-      {/* Un compte bloqué est renvoyé ici par le serveur après une tentative
-          de connexion : le message doit être visible avant tout le reste. */}
-      <AccountRedirectNotice />
+        {data.isGuest ? (
+          <VisitorLauncher />
+        ) : (
+          <>
+            {/* Les annonces produit passent par une route authentifiée. */}
+            <InfoBanner />
 
-      {/* Les annonces produit passent par une route authentifiée : on ne les
-          demande pas pour un visiteur. */}
-      {!data.isGuest && <InfoBanner />}
+            <ConsoleHero
+              firstName={firstName}
+              isEmpty={data.isEmpty}
+              pendingActions={data.pendingActions}
+            />
 
-      <HeroHeader
-        firstName={firstName}
-        isGuest={data.isGuest}
-        isEmpty={data.isEmpty}
-        pendingActions={data.pendingActions}
-        kpis={data.kpis}
-        loading={data.loading}
-      />
-
-      {/* Les modules viennent juste après l'en-tête : pour un visiteur c'est la
-          présentation de l'outil, pour un utilisateur connecté ce sont des
-          raccourcis vers son travail. */}
-      <ModulesSection isGuest={data.isGuest} />
-
-      {/* Le titre « Lumen Juris » de bas de page a été retiré : le logo du menu
-          suffit à situer l'utilisateur, la page d'accueil reste utilitaire. */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <TodayQueue items={data.queue} loading={data.loading} isGuest={data.isGuest} />
-        <UpcomingDeadlines items={data.deadlines} loading={data.loading} isGuest={data.isGuest} />
+            {data.loading ? (
+              <ConsoleSkeleton />
+            ) : (
+              <>
+                <ConsoleKpis kpis={data.kpis} />
+                <div className="cols">
+                  <WorkQueue items={data.queue} />
+                  <div className="rail">
+                    <AgendaCard items={data.deadlines} />
+                    <CreditsCard quotas={data.quotas} planName={data.planName} />
+                    <RisksCard alerts={data.alerts} />
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Ossature affichée pendant le chargement des données du portefeuille. */
+function ConsoleSkeleton() {
+  const bar = { background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: 16 };
+  return (
+    <>
+      <div className="kpis" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => <div key={i} style={{ ...bar, height: 82 }} className="lj-pulse" />)}
+      </div>
+      <div className="cols" aria-hidden="true">
+        <div style={{ ...bar, height: 320 }} className="lj-pulse" />
+        <div className="rail">
+          <div style={{ ...bar, height: 150 }} className="lj-pulse" />
+          <div style={{ ...bar, height: 180 }} className="lj-pulse" />
+        </div>
+      </div>
+    </>
   );
 }

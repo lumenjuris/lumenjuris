@@ -20,7 +20,7 @@ interface MainHeaderProps {
 // le centre de la barre sans rien apporter au travail sur les contrats.
 export const MainHeader = ({ onNavClick, onToggleSidebar, rotatePannelLeft }: MainHeaderProps) => {
   return (
-    <header className={`h-12 border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4 pl-0`}>
+    <header className={`lj-appheader h-12 border-b border-line bg-white sticky top-0 z-10 flex items-center justify-between px-4 pl-0`}>
       <div className="flex items-center gap-3">
         {onToggleSidebar && (
           <button
