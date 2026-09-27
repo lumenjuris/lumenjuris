@@ -286,19 +286,7 @@ html[data-theme="dark"] .ljc .demo.sign path{stroke:var(--gold-bright)}
   .ljc .wrap>*{opacity:1!important;transform:none!important}
 }
 
-/* ══════════ Fond « matière » de la zone principale (page tableau de bord) ══════════ */
-/* Peint sur la zone principale partagée, mais réservé à la page tableau de bord
-   (`data-lj-page="dashboard"`) pour ne pas toucher les autres écrans. La grille
-   est accentuée pour rester perceptible. */
-html[data-lj-page="dashboard"] .lj-main{background-repeat:no-repeat;
-  background-size:100% 460px,30px 30px,30px 30px}
-html[data-lj-page="dashboard"] .lj-main{background-color:#EBEEF4;
-  background-image:
-    radial-gradient(1000px 460px at 50% -4%, rgba(40,72,106,.09), transparent 66%),
-    linear-gradient(rgba(23,37,64,.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23,37,64,.055) 1px, transparent 1px)}
-html[data-theme="dark"][data-lj-page="dashboard"] .lj-main{background-color:#0D1929;
-  background-image:
-    radial-gradient(1000px 460px at 50% -4%, rgba(107,155,242,.13), transparent 66%),
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)}
+/* ══════════ Fond « matière » ══════════ */
+/* Rien à peindre ici : le fond « matière » est global (posé sur le body, voir
+   `src/theme.css`). La zone principale reste transparente pour le laisser
+   apparaître. */

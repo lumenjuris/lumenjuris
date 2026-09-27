@@ -287,7 +287,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
 
   return (
-    <div className="flex min-h-screen w-full bg-white">
+    <div className="flex min-h-screen w-full">
       {/* ── Overlay mobile/tablette ── */}
       {sidebarOpen && (
         <div

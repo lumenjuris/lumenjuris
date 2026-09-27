@@ -1,8 +1,8 @@
 /**
- * Habillage sombre global de l'application.
- *
- * Le switch (voir `store/themeStore.ts`) pose `data-theme="dark"` sur `<html>`
- * partout. Ce fichier, chargé après Tailwind, fournit :
+ * Habillage global de l'application, piloté par `data-theme` sur `<html>`
+ * (voir `store/themeStore.ts`). Chargé après Tailwind. Il fournit :
+ *  0. le fond « matière » (quadrillage subtil) posé sur `<body>` — donc présent
+ *     sur TOUTES les pages, clair ou sombre, et changé d'un coup par le switch ;
  *  1. le chrome sombre (en-tête) sur toute l'app — la sidebar est déjà navy ;
  *  2. une couche « surfaces sombres » réutilisable, aujourd'hui **limitée aux
  *     pages déjà prêtes** (`data-lj-page="settings"`), pour ne rien casser
@@ -13,13 +13,30 @@
  *   écran, puis retirer le garde une fois l'app auditée.
  */
 
+/* ── 0. Fond « matière » global (quadrillage subtil, sur tout le body) ── */
+html[data-theme] body{
+  min-height:100vh;
+  background-repeat:repeat;
+  background-size:30px 30px, 30px 30px;
+  background-position:0 0;
+}
+html[data-theme="light"] body{background-color:#EBEEF4;
+  background-image:
+    linear-gradient(rgba(23,37,64,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23,37,64,.045) 1px, transparent 1px)}
+html[data-theme="dark"] body{background-color:#0D1929;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)}
+
 /* ── 1. Chrome sombre (partout) ── */
 html[data-theme="dark"] .lj-appheader{background:#0f2036 !important;border-color:rgba(255,255,255,.08) !important}
 html[data-theme="dark"] .lj-appheader .text-ink-muted{color:#93A5C2}
 html[data-theme="dark"] .lj-appheader:hover .text-brand{color:#F0D08C}
 
-/* ── 2. Surfaces sombres réutilisables (pour l'instant : page Paramètres) ── */
-html[data-theme="dark"][data-lj-page="settings"] .lj-main{background:#0D1929}
+/* ── 2. Surfaces sombres réutilisables (pour l'instant : page Paramètres) ──
+   Le fond de base est déjà géré par le body (section 0) ; ici on n'assombrit
+   que les surfaces (cartes, bordures, textes) de la page. */
 html[data-theme="dark"][data-lj-page="settings"] :is(.bg-white,.bg-surface,.bg-surface-subtle,.bg-gray-50,.bg-slate-50){background-color:#152539}
 html[data-theme="dark"][data-lj-page="settings"] :is(.bg-gray-100,.bg-surface-muted,.bg-slate-100){background-color:#1B2E48}
 html[data-theme="dark"][data-lj-page="settings"] :is(.border-gray-200,.border-gray-100,.border-gray-300,.border-line,.border-line-subtle){border-color:rgba(255,255,255,.10)}
