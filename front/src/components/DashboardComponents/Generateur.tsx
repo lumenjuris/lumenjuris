@@ -462,6 +462,11 @@ function VariableSelector({
                     const isEssential = essentialVars.has(t.name);
                     const isHighlighted = highlightedVar === t.name;
                     const variableLabel = getVariableLabel(structure, t.name);
+                    // Emplacement encore vide (".....", "____") : dans la génération de contrat,
+                    // ce même texte est un placeholder de <input>, que le navigateur affiche en gris
+                    // clair — pas dans la couleur du champ. On reproduit ce gris ici (même teinte que
+                    // le placeholder : ink-subtle = gris-400) pour que les deux écrans soient identiques.
+                    const isBlank = isBlankPlaceholder(t.text);
                     return (
                       <button
                         key={i}
@@ -473,12 +478,12 @@ function VariableSelector({
                         title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
                         className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium transition-all ${isEssential
                           // Même jaune que les champs de la génération de contrat (VariableNode)
-                          ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300/80 hover:bg-amber-200/80"
+                          ? `bg-amber-100 ring-1 ring-amber-300/80 hover:bg-amber-200/80 ${isBlank ? "text-ink-subtle" : "text-amber-800"}`
                           : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
                           } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
                       >
                         {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
-                        {isBlankPlaceholder(t.text) ? variableLabel : t.text}
+                        {isBlank ? variableLabel : t.text}
                       </button>
                     );
                   })}
@@ -931,7 +936,10 @@ function ImportSection({
         body: JSON.stringify({ structure: filteredStructure }),
       });
       if (!res.ok) throw new Error("save failed");
-      setSaved(true);
+      // "Enregistrer et générer" enchaîne aussitôt sur l'éditeur : on ne bascule
+      // pas sur l'écran de confirmation, pour que la relecture (champs détectés)
+      // soit ce qui réapparaît si l'utilisateur revient en arrière depuis l'éditeur.
+      if (!andContinue) setSaved(true);
       onSaved?.(savedMeta.id, andContinue);
     } catch {
       setSaveError("L'enregistrement du modèle a échoué. Réessayez.");
@@ -1262,6 +1270,10 @@ export function Generateur() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
   const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
+  // Modèle que « Enregistrer et générer » vient de créer : tant que l'éditeur ouvert
+  // est celui-là, on garde l'écran d'import en mémoire pour qu'un retour arrière
+  // ramène sur les champs détectés plutôt que sur un import vierge.
+  const [importedTemplateId, setImportedTemplateId] = useState<string | null>(null);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1310,6 +1322,8 @@ export function Generateur() {
   }
 
   function handleUseCustomTemplate(externalId: string) {
+    // Ouverture depuis la bibliothèque : sans lien avec un import en cours.
+    setImportedTemplateId(null);
     setSearchParams({ section: "useCustom", tpl: externalId });
   }
 
@@ -1360,7 +1374,10 @@ export function Generateur() {
     notifyAdded();
     if (andContinue) {
       // Tunnel continu : on enchaîne directement sur la génération du contrat,
-      // sans repasser par la bibliothèque.
+      // sans repasser par la bibliothèque. On retient le modèle : tant que
+      // l'éditeur ouvert est celui-ci, un retour arrière doit ramener sur les
+      // champs détectés de l'import, pas sur un écran d'import vierge.
+      setImportedTemplateId(templateId);
       setSearchParams({ section: "useCustom", tpl: templateId });
     } else {
       // Enregistrer seulement : on montre le modèle ajouté dans la bibliothèque.
@@ -1409,6 +1426,13 @@ export function Generateur() {
   // Contrat ouvert dans l'éditeur : le menu latéral se replie pour laisser
   // toute la largeur au document, et revient en quittant l'éditeur.
   const estEditeur = section === "form" || section === "blank" || section === "useCustom" || (section === "import" && isImportReviewDisplayed);
+
+  // L'écran d'import reste monté (état conservé) tant que l'éditeur ouvert par
+  // « Enregistrer et générer » est encore affiché : un retour arrière depuis
+  // celui-ci retrouve alors la relecture (champs détectés) telle quelle, au
+  // lieu d'un import remis à zéro.
+  const keepImportSectionMounted =
+    section === "import" || (section === "useCustom" && importedTemplateId !== null && useTemplateId === importedTemplateId);
   const setEditeurPleinEcran = useLayoutStore((s) => s.setEditeurPleinEcran);
   useEffect(() => {
     setEditeurPleinEcran(estEditeur);
@@ -1439,8 +1463,8 @@ export function Generateur() {
 
       {/* Sous-sections */}
       {section === "library" && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
-      {section === "import" && (
-        <div className="w-full flex justify-center">
+      {keepImportSectionMounted && (
+        <div className={section === "import" ? "w-full flex justify-center" : "hidden"}>
           <ImportSection
             onSaved={handleTemplateSaved}
             onReviewDisplayed={setIsImportReviewDisplayed}
