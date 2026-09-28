@@ -53,7 +53,8 @@ import { handleAppendClause, revealAddedClause } from "../utils/aiAnalyser/handl
 import { contractApi } from "../components/DashboardComponents/contratheque/api";
 import { NegotiationDetail } from "../components/DashboardComponents/negotiation/types";
 import { ShareDialog } from "../components/DashboardComponents/negotiation/ShareDialog";
-import { PageBanner } from "../components/common/PageBanner";
+import { BannerAction, PageBanner } from "../components/common/PageBanner";
+import { ClipboardCheck } from "lucide-react";
 
 
 const consumedNavigationUploadKeys = new Set<string>();
@@ -930,6 +931,15 @@ export default function ContractAnalysis() {
                 isRelaunchingAnalysis={displayedIsProcessing}
                 onSuggestedClauses={handleMarketAnalysisClick}
                 isLoadingSuggested={isMarketAnalysisLoading}
+                extraActions={isFeatureEnabled("ENABLE_PLAYBOOK") && contract?.content ? (
+                  <BannerAction
+                    icon={<ClipboardCheck />}
+                    title="Comparer ce contrat à vos règles de négociation"
+                    onClick={() => navigate("/analyse-playbook", { state: { playbookTexte: contract.content, playbookFichier: contract.fileName || "Contrat" } })}
+                  >
+                    Playbook
+                  </BannerAction>
+                ) : undefined}
                   />
                 }
               />

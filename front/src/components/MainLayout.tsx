@@ -16,8 +16,12 @@ import {
   ShieldHalf,
   MessagesSquare,
   Eye,
-  HandCoins
+  HandCoins,
+  ClipboardCheck,
+  ListChecks,
+  ScanSearch
 } from "lucide-react";
+import { isFeatureEnabled } from "../config/features";
 
 import { MainHeader } from "./MainHeader/MainHeader";
 import { FeedbackWidget } from "./common/FeedbackWidget";
@@ -45,6 +49,8 @@ interface NavItem {
   children?: NavSubItem[];
   /** Page consultable sans compte : le clic n'ouvre pas le panneau de connexion. */
   estPublic?: boolean;
+  /** Groupe dont les sous-pages ont leurs propres adresses : il reste ouvert sur chacune. */
+  matchPaths?: string[];
 }
 
 interface NavSection {
@@ -84,8 +90,25 @@ const navSections: NavSection[] = [
     category: "PILOTAGE",
     items: [
       { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
-      { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
-      { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+      ...(isFeatureEnabled("ENABLE_PLAYBOOK")
+        ? [
+            { icon: ListChecks, label: "Playbook", path: "/playbook" },
+            {
+              icon: ScanSearch,
+              label: "Analyse",
+              path: "/conformite",
+              matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
+              children: [
+                { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
+                { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook" },
+                { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+              ],
+            },
+          ]
+        : [
+            { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
+            { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+          ]),
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
@@ -155,7 +178,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
   const legalWatchUnread = useLegalWatchStore((s) => s.unreadCount);
   const badgeCount = item.notificationKey === "legalWatchUnread" ? legalWatchUnread : 0;
   const hasChildren = !!item.children?.length;
-  const isParentActive = location.pathname.startsWith(item.path);
+  const isParentActive = (item.matchPaths ?? [item.path]).some((p) => location.pathname.startsWith(p));
   const [hovered, setHovered] = useState(false);
   const open = hovered || isParentActive;
 
