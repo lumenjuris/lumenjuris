@@ -92,8 +92,6 @@ export function App() {
     <>
       <ScrollToTop />
 
-
-
       <Routes>
         {/* ------------------------------------------------------------------
             Pages ouvertes à tous, avec le menu latéral et l'en-tête.
