@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ClauseRecommendation, ClauseRisk } from "../types";
+import { downloadTextAsPdf, toExportBaseName } from "../utils/exportContract";
 
 export interface AppliedRecommendation {
   clauseId: string;
@@ -32,7 +33,7 @@ interface AppliedRecommendationsState {
   clearAllAppliedRecommendations: () => void;
   hasAnyAppliedRecommendations: () => boolean;
   generateWordDocument: (originalContent?: string, fileName?: string, htmlContent?: string) => void;
-  generatePDFDocument: (originalContent?: string, fileName?: string) => void;
+  generatePDFDocument: (originalContent?: string, fileName?: string, htmlContent?: string) => void;
 }
 
 // Applique chaque recommandation au contenu via regex tolérante aux espaces multiples/retours ligne.
@@ -53,6 +54,17 @@ function applyRecommendationsToContent(
       ? content.replace(re, newClauseText)
       : content.replace(originalClauseText, newClauseText);
   }, original);
+}
+
+// Texte d'un contenu HTML : un bloc (paragraphe, titre, élément de liste) par paragraphe.
+function htmlToPlainText(html: string): string {
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  parsed.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+  const blocks = Array.from(parsed.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,tr"))
+    .filter((el) => !el.parentElement?.closest("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,tr"))
+    .map((el) => (el.textContent || "").trim())
+    .filter(Boolean);
+  return blocks.length ? blocks.join("\n\n") : (parsed.body.textContent || "").trim();
 }
 
 export const useAppliedRecommendationsStore =
@@ -282,146 +294,26 @@ export const useAppliedRecommendationsStore =
       }
     },
 
+    // Même contenu que l'export Word (recommandations appliquées, clauses ajoutées),
+    // mis en page comme le PDF envoyé en signature.
     generatePDFDocument: async (
       originalContent?: string,
       fileName?: string,
+      htmlContent?: string,
     ) => {
       const appliedRecommendations = get().appliedRecommendations;
-      try {
-        const { jsPDF } = await import("jspdf");
-        const doc = new jsPDF();
-        const margin = 20;
-        let y = margin;
-        const pageWidth = doc.internal.pageSize.width;
-        const maxWidth = pageWidth - margin * 2;
-
-        if (originalContent && appliedRecommendations.length > 0) {
-          // Générer le PDF du document modifié avec les recommandations appliquées
-          const modifiedContent = applyRecommendationsToContent(
-            originalContent,
-            appliedRecommendations,
-          );
-
-          // En-tête
-          doc.setFontSize(16);
-          doc.text("DOCUMENT MODIFIÉ", margin, y);
-          y += 8;
-          doc.setFontSize(10);
-          doc.text(`Document : ${fileName || "Document"}`, margin, y);
-          y += 5;
-          doc.text(
-            `Modifié le : ${new Date().toLocaleString("fr-FR")}`,
-            margin,
-            y,
-          );
-          y += 5;
-          doc.text(
-            `${appliedRecommendations.length} modification(s) appliquée(s)`,
-            margin,
-            y,
-          );
-          y += 10;
-
-          // Liste des modifications
-          doc.setFontSize(12);
-          doc.text("MODIFICATIONS APPLIQUÉES :", margin, y);
-          y += 6;
-          doc.setFontSize(8);
-          appliedRecommendations.forEach((applied, idx) => {
-            if (y > 260) {
-              doc.addPage();
-              y = margin;
-            }
-            const modifText = `${idx + 1}. ${applied.originalClause.type} - ${applied.recommendation.title}`;
-            const lines = doc.splitTextToSize(modifText, maxWidth);
-            doc.text(lines, margin, y);
-            y += lines.length * 4 + 2;
-          });
-
-          y += 10;
-          if (y > 250) {
-            doc.addPage();
-            y = margin;
-          }
-
-          // Contenu modifié
-          doc.setFontSize(12);
-          doc.text("CONTENU MODIFIÉ :", margin, y);
-          y += 8;
-          doc.setFontSize(8);
-
-          const contentLines = doc.splitTextToSize(modifiedContent, maxWidth);
-          contentLines.forEach((line: string) => {
-            if (y > 280) {
-              doc.addPage();
-              y = margin;
-            }
-            doc.text(line, margin, y);
-            y += 4;
-          });
-
-          doc.save(
-            `${fileName ? fileName.replace(/\.[^/.]+$/, "") : "document"}_modifie.pdf`,
-          );
-        } else {
-          // Fallback : PDF des recommandations seulement
-          doc.setFontSize(18);
-          doc.text("Rapport des recommandations appliquées", margin, y);
-          y += 10;
-          doc.setFontSize(10);
-          doc.text(
-            `Généré le : ${new Date().toLocaleString("fr-FR")}`,
-            margin,
-            y,
-          );
-          y += 10;
-          doc.text(
-            `Nombre total : ${appliedRecommendations.length}`,
-            margin,
-            y,
-          );
-          y += 15;
-
-          appliedRecommendations.forEach((item, idx) => {
-            if (y > 260) {
-              doc.addPage();
-              y = margin;
-            }
-            doc.setFontSize(12);
-            doc.text(`Recommandation ${idx + 1}`, margin, y);
-            y += 6;
-            doc.setFontSize(8);
-
-            const wrap = (text: string, width: number) =>
-              doc.splitTextToSize(text, width);
-            const maxWidth = pageWidth - margin * 2 - 5;
-
-            const lines = [
-              `Clause originale : ${item.originalClause.type}`,
-              `Problème : ${item.originalClause.justification}`,
-              `Recommandation : ${item.recommendation.title}`,
-              `Texte suggéré : ${item.recommendation.clauseText}`,
-              `Avantages : ${item.recommendation.benefits}`,
-              `Réduction des risques : ${item.recommendation.riskReduction}`,
-              `Appliquée le : ${item.appliedAt.toLocaleString("fr-FR")}`,
-            ];
-            lines.forEach((t) => {
-              const splitted = wrap(t, maxWidth);
-              doc.text(splitted, margin + 5, y);
-              y += splitted.length * 4 + 2;
-              if (y > 260) {
-                doc.addPage();
-                y = margin;
-              }
-            });
-            y += 4;
-          });
-
-          doc.save("recommandations-appliquees.pdf");
-        }
-      } catch (e) {
-        console.error("jsPDF error", e);
-        get().generateWordDocument(originalContent, fileName);
+      let exportText: string;
+      if (htmlContent && !(appliedRecommendations.length > 0 && originalContent)) {
+        exportText = htmlToPlainText(htmlContent);
+      } else if (originalContent) {
+        exportText = appliedRecommendations.length > 0
+          ? applyRecommendationsToContent(originalContent, appliedRecommendations)
+          : originalContent;
+      } else {
+        return;
       }
+
+      const baseName = toExportBaseName(fileName);
+      downloadTextAsPdf(baseName, exportText, baseName);
     },
   }));
