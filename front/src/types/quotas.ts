@@ -41,7 +41,7 @@ export function readQuotaValue(
 /** Libellés FR des features à valeur (consommables). */
 export const NUMERIC_FEATURES: { key: keyof PlanQuotas; label: string }[] = [
   { key: "analyzer", label: "Analyses de contrat" },
-  { key: "signatureEnhanced", label: "Signatures avancées" },
+  { key: "signatureEnhanced", label: "Signatures électronique"},
   { key: "contrathequeLimit", label: "Contrathèque" },
 ];
 
