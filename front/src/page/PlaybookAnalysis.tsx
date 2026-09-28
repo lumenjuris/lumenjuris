@@ -1,14 +1,15 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  CheckCircle, ChevronDown, ClipboardCheck, Copy, Check, Download, FileText, Plus, RotateCcw, Trash2, Undo2, Wand2, X,
+  CheckCircle, ClipboardCheck, Copy, Check, Download, FileText, Plus, RotateCcw, Trash2, Undo2, Wand2, X,
 } from "lucide-react";
 import { extractDocumentContent } from "../utils/documentExtractor";
 import { downloadTextAsDocx, toExportBaseName } from "../utils/exportContract";
 import { playbookApi } from "../components/DashboardComponents/playbook/api";
 import { appliquerSuggestion, localiserPassage } from "../components/DashboardComponents/playbook/appliquerSuggestion";
 import { lirePlaybookCourant, memoriserPlaybookCourant } from "../components/DashboardComponents/playbook/playbookCourant";
+import { PlaybookEditor, type Surlignage } from "../components/DashboardComponents/playbook/PlaybookEditor";
 import { SEVERITY_LABEL } from "../components/DashboardComponents/playbook/types";
 import type {
   Compliance, PlaybookAnalysisSummary, PlaybookCheckResult, PlaybookFinding, PlaybookInfo,
@@ -95,7 +96,6 @@ export function PlaybookAnalysis() {
   /** Nouvelle rédaction retouchée par l'utilisateur avant application. */
   const [brouillons, setBrouillons] = useState<Record<string, string>>({});
   const [ouverte, setOuverte] = useState<PlaybookFinding | null>(null);
-  const [voirConformes, setVoirConformes] = useState(false);
   const [copie, setCopie] = useState(false);
 
   const chargerHistorique = useCallback(async () => {
@@ -120,7 +120,6 @@ export function PlaybookAnalysis() {
     setAppliquees({});
     setBrouillons({});
     setOuverte(null);
-    setVoirConformes(false);
     setErreurAnalyse("");
   }
 
@@ -271,10 +270,10 @@ export function PlaybookAnalysis() {
     allerAuPassage(f.rule_id);
   }
 
-  // Règles à traiter d'abord ; les conformes sont repliées en bas.
+  // Règles à traiter d'abord, puis les conformes.
   const aTraiter = useMemo(() => resultat?.findings.filter((f) => f.status !== "compliant") ?? [], [resultat]);
   const conformes = useMemo(() => resultat?.findings.filter((f) => f.status === "compliant") ?? [], [resultat]);
-  const ordre = useMemo(() => [...aTraiter, ...(voirConformes ? conformes : [])], [aTraiter, conformes, voirConformes]);
+  const ordre = useMemo(() => [...aTraiter, ...conformes], [aTraiter, conformes]);
   const restantAAppliquer = aTraiter.filter((f) => f.status === "non_compliant" && applicable(f) && !appliquees[f.rule_id]).length;
 
   // Clavier : ↑ ↓ pour passer d'une règle à l'autre, Entrée pour appliquer, Échap pour fermer.
@@ -303,25 +302,23 @@ export function PlaybookAnalysis() {
   }, [resultat, ordre, ouverte, appliquees, texte, brouillons]);
 
   // Passages à surligner dans le contrat (le texte modifié remplace le passage d'origine).
-  const segments = useMemo(() => {
+  const surlignages = useMemo<Surlignage[]>(() => {
     if (!resultat) return [];
-    const zones: { debut: number; fin: number; f: PlaybookFinding }[] = [];
+    const zones: Surlignage[] = [];
     for (const f of resultat.findings) {
       const passage = appliquees[f.rule_id] ?? f.contract_excerpt;
       const pos = passage ? localiserPassage(texte, passage) : null;
-      if (pos && !zones.some((z) => pos.debut < z.fin && z.debut < pos.fin)) zones.push({ ...pos, f });
+      if (!pos || zones.some((z) => pos.debut < z.fin && z.debut < pos.fin)) continue;
+      const couleur = appliquees[f.rule_id] ? "bleu" : f.status === "non_compliant" ? "rouge" : f.status === "to_check" ? "orange" : "vert";
+      zones.push({ ...pos, ruleId: f.rule_id, couleur });
     }
-    zones.sort((a, b) => a.debut - b.debut);
-    const out: { texte: string; f?: PlaybookFinding }[] = [];
-    let curseur = 0;
-    for (const z of zones) {
-      if (curseur < z.debut) out.push({ texte: texte.slice(curseur, z.debut) });
-      out.push({ texte: texte.slice(z.debut, z.fin), f: z.f });
-      curseur = z.fin;
-    }
-    out.push({ texte: texte.slice(curseur) });
-    return out;
+    return zones;
   }, [resultat, texte, appliquees]);
+
+  const clicRegle = useCallback((ruleId: string) => {
+    const f = resultat?.findings.find((x) => x.rule_id === ruleId);
+    if (f) setOuverte(f);
+  }, [resultat]);
 
   const nbAppliquees = Object.keys(appliquees).length;
   const aResultats = !!resultat && resultat.findings.length > 0;
@@ -431,21 +428,14 @@ export function PlaybookAnalysis() {
                 )}
               </div>
               <div className="p-6">
-                <div className="max-w-4xl mx-auto whitespace-pre-wrap text-sm leading-[30px] text-gray-800">
-                  {segments.map((s, i) =>
-                    s.f ? (
-                      <span
-                        key={i}
-                        id={`pb-passage-${s.f.rule_id}`}
-                        onClick={() => ouvrir(s.f!)}
-                        className={`${appliquees[s.f.rule_id] ? MODIFIEE.surligne : STATUT[s.f.status].surligne} cursor-pointer border-b-2 p-[1px] ${ouverte?.rule_id === s.f.rule_id ? "ring-2 ring-blue-primary" : ""}`}
-                      >
-                        {s.texte}
-                      </span>
-                    ) : (
-                      <Fragment key={i}>{s.texte}</Fragment>
-                    ),
-                  )}
+                <div className="max-w-4xl mx-auto">
+                  <PlaybookEditor
+                    texte={texte}
+                    surlignages={surlignages}
+                    actif={ouverte?.rule_id ?? null}
+                    onClickRegle={clicRegle}
+                    onChange={setTexte}
+                  />
                 </div>
               </div>
             </div>
@@ -492,18 +482,7 @@ export function PlaybookAnalysis() {
                   <p className="text-center text-sm font-medium text-green-700">Toutes les règles sont respectées.</p>
                 )}
                 {aTraiter.map(carteRegle)}
-                {conformes.length > 0 && (
-                  <>
-                    <button
-                      onClick={() => setVoirConformes((v) => !v)}
-                      className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                      {conformes.length} règle{conformes.length > 1 ? "s" : ""} conforme{conformes.length > 1 ? "s" : ""}
-                      <ChevronDown className={`h-4 w-4 transition-transform ${voirConformes ? "rotate-180" : ""}`} />
-                    </button>
-                    {voirConformes && conformes.map(carteRegle)}
-                  </>
-                )}
+                {conformes.map(carteRegle)}
               </div>
               <p className="border-t border-gray-100 px-4 py-2 text-[10px] text-gray-400">
                 ↑ ↓ pour naviguer · Entrée pour appliquer · Échap pour fermer
