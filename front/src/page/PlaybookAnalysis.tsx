@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  CheckCircle, ClipboardCheck, Copy, Check, Download, FileText, Plus, RotateCcw, Trash2, Undo2, Wand2, X,
+  CheckCircle, ClipboardCheck, Copy, Check, Download, Plus, RotateCcw, Undo2, Wand2, X,
 } from "lucide-react";
 import { extractDocumentContent } from "../utils/documentExtractor";
 import { downloadTextAsDocx, toExportBaseName } from "../utils/exportContract";
@@ -10,6 +10,7 @@ import { playbookApi } from "../components/DashboardComponents/playbook/api";
 import { appliquerSuggestion, localiserPassage } from "../components/DashboardComponents/playbook/appliquerSuggestion";
 import { lirePlaybookCourant, memoriserPlaybookCourant } from "../components/DashboardComponents/playbook/playbookCourant";
 import { PlaybookEditor, type Surlignage } from "../components/DashboardComponents/playbook/PlaybookEditor";
+import { PlaybookHistory } from "../components/DashboardComponents/playbook/PlaybookHistory";
 import { SEVERITY_LABEL } from "../components/DashboardComponents/playbook/types";
 import type {
   Compliance, PlaybookAnalysisSummary, PlaybookCheckResult, PlaybookFinding, PlaybookInfo,
@@ -59,11 +60,6 @@ const MODIFIEE = {
 
 /** Une suggestion peut s'appliquer au texte : il y a un passage cité et une nouvelle rédaction. */
 const applicable = (f: PlaybookFinding) => f.status !== "compliant" && !!f.contract_excerpt && !!f.replacement;
-
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(d);
-}
 
 /**
  * Page « Analyse playbook » : compare un contrat aux règles de négociation de
@@ -364,7 +360,7 @@ export function PlaybookAnalysis() {
           <div className="flex flex-wrap items-center gap-2">
             {choixPlaybook}
             <BannerAction onClick={() => inputRef.current?.click()} disabled={enCours} icon={<Plus />}>
-              Analyser un contrat
+              Nouvelle analyse
             </BannerAction>
           </div>
         }
@@ -488,11 +484,10 @@ export function PlaybookAnalysis() {
           </div>
         </div>
       ) : (
-        <Historique
+        <PlaybookHistory
           analyses={historique}
-          onOuvrir={(a) => void rouvrir(a)}
-          onSupprimer={setASupprimer}
-          onImporter={() => inputRef.current?.click()}
+          onOpen={(a) => void rouvrir(a)}
+          onDelete={setASupprimer}
         />
       )}
 
@@ -516,62 +511,6 @@ export function PlaybookAnalysis() {
         onConfirm={() => void supprimerAnalyse()}
         onCancel={() => setASupprimer(null)}
       />
-    </div>
-  );
-}
-
-/** Historique des analyses playbook, affiché avant tout import. */
-function Historique({
-  analyses, onOuvrir, onSupprimer, onImporter,
-}: {
-  analyses: PlaybookAnalysisSummary[] | null;
-  onOuvrir: (a: PlaybookAnalysisSummary) => void;
-  onSupprimer: (a: PlaybookAnalysisSummary) => void;
-  onImporter: () => void;
-}) {
-  if (analyses === null) {
-    return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 rounded-lg bg-gray-100 animate-pulse" />)}</div>;
-  }
-  if (analyses.length === 0) {
-    return (
-      <div className="mt-8 flex flex-col items-center gap-3 rounded-lg bg-gray-card p-10 border border-gray-300 text-center">
-        <ClipboardCheck className="h-6 w-6 text-blue-primary" />
-        <p className="text-sm text-gray-600">
-          <button onClick={onImporter} className="font-semibold text-blue-primary hover:underline">Analysez un contrat</button>{" "}
-          pour le comparer à vos règles. Vos règles se gèrent dans{" "}
-          <Link to="/playbook" className="font-semibold text-blue-primary hover:underline">Playbook</Link>.
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        Analyses récentes
-      </div>
-      <ul className="divide-y divide-gray-100">
-        {analyses.map((a) => (
-          <li key={a.id} className="group flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer" onClick={() => onOuvrir(a)}>
-            <FileText className="h-4 w-4 shrink-0 text-gray-400" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-gray-900">{a.fileName}</p>
-              <p className="text-xs text-gray-500">{formatDate(a.updatedAt)}{a.playbookName ? ` · ${a.playbookName}` : ""}</p>
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5">
-              {a.nonCompliant > 0 && <Compteur n={a.nonCompliant} label="non conforme" point="bg-red-500" style="text-red-700 bg-red-50 border-red-100" />}
-              {a.toCheck > 0 && <Compteur n={a.toCheck} label="à vérifier" invariable point="bg-orange-400" style="text-orange-700 bg-orange-50 border-orange-100" />}
-              {a.compliant > 0 && <Compteur n={a.compliant} label="conforme" point="bg-green-400" style="text-green-700 bg-green-50 border-green-100" />}
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); onSupprimer(a); }}
-              title="Supprimer"
-              className="rounded-lg p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
