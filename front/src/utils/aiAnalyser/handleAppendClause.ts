@@ -1,7 +1,11 @@
 import { useDocumentTextStore } from "../../store/documentTextStore";
 import { MissingClause } from "../marketAnalysis";
 
-export function handleAppendClause(clause: MissingClause): void {
+/**
+ * Ajoute une clause suggérée au contrat.
+ * Renvoie le début de la clause insérée (numéro et titre), pour la retrouver dans le document.
+ */
+export function handleAppendClause(clause: MissingClause): string {
   const store = useDocumentTextStore.getState();
 
   const {
@@ -41,6 +45,47 @@ export function handleAppendClause(clause: MissingClause): void {
 
   addClauseToTrack(clause.nom);
   setHtmlContent(finalContent);
+
+  const opening = clause.titreSuggestion?.trim() || cleanedBody.replace(/<[^>]*>/g, " ").slice(0, 60);
+  return `${header} ${opening}`.trim();
+}
+
+/** Durée de la mise en évidence d'une clause ajoutée. */
+const ADDED_CLAUSE_HIGHLIGHT_MS = 3500;
+
+/**
+ * Fait défiler le contrat jusqu'à la clause ajoutée et la met en évidence
+ * quelques secondes, sans toucher aux surlignages des risques qu'il contient.
+ */
+export function revealAddedClause(clauseOpening: string, attemptsLeft = 10): void {
+  const target = normalize(clauseOpening);
+  const paragraph = Array.from(document.querySelectorAll<HTMLElement>(".ProseMirror p"))
+    .find((element) => normalize(element.textContent ?? "").startsWith(target));
+
+  // Le contrat se met à jour juste après l'ajout : on réessaie un court instant.
+  if (!paragraph) {
+    if (attemptsLeft > 0) window.setTimeout(() => revealAddedClause(clauseOpening, attemptsLeft - 1), 100);
+    return;
+  }
+
+  paragraph.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  // Cadre posé par-dessus le paragraphe : l'éditeur redessine ses paragraphes
+  // et effacerait une mise en forme appliquée directement dessus.
+  const box = paragraph.getBoundingClientRect();
+  const overlay = document.createElement("div");
+  overlay.className = "lj-added-clause";
+  Object.assign(overlay.style, {
+    position: "absolute",
+    top: `${box.top + window.scrollY - 4}px`,
+    left: `${box.left + window.scrollX - 6}px`,
+    width: `${box.width + 12}px`,
+    height: `${box.height + 8}px`,
+    pointerEvents: "none",
+    zIndex: "20",
+  });
+  document.body.appendChild(overlay);
+  window.setTimeout(() => overlay.remove(), ADDED_CLAUSE_HIGHLIGHT_MS);
 }
 
 function getBaseContent(

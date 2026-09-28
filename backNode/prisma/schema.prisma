@@ -79,7 +79,7 @@ enum ContractStatus {
   ACTIVE // signé / actif
   TACIT_RENEWAL // en tacite reconduction
   EXPIRED // échu
-  TERMINATED  // résilié
+  TERMINATED // résilié
   CLOSED // clos
 }
 
@@ -147,7 +147,6 @@ enum ApprovalStatus {
 
 //==== CREATION DES MODELS ====
 
-
 // --- UTILISATEUR ---
 
 /// Compte utilisateur principal : identité, rôle, statut de vérification et bannissement.
@@ -192,6 +191,10 @@ model User {
   auditLogs        AuditLog[]
   clauses          Clause[]
   contractComments ContractComment[]
+
+  // Playbook (règles de négociation)
+  negotiationPlaybooks        NegotiationPlaybook[]
+  negotiationPlaybookAnalyses NegotiationPlaybookAnalysis[]
 }
 
 // --- AUTH VIA PROVIDER ---
@@ -219,8 +222,6 @@ model UserPreference {
   user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
 
-
-
 // --- ENTREPRISE ---
 
 /// Entreprise liée à un utilisateur : infos juridiques (SIREN, NAF, statut) issues de l'API Sirene.
@@ -241,8 +242,6 @@ model Enterprise {
   address Address?
 }
 
-
-
 /// Adresse postale d'une entreprise. Séparée pour normaliser les données géographiques.
 model Address {
   idAddress  Int     @id @default(autoincrement())
@@ -254,9 +253,6 @@ model Address {
   enterpriseId Int        @unique
   enterprise   Enterprise @relation(fields: [enterpriseId], references: [idEnterprise], onDelete: Cascade, onUpdate: Cascade)
 }
-
-
-
 
 // --- SECURITE ---
 
@@ -272,8 +268,6 @@ model Token {
   userId    Int
   user      User       @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
-
-
 
 // --- EVENTS ---
 
@@ -291,8 +285,6 @@ model Event {
   documentCustom DocumentCustom?
 }
 
-
-
 /// Document généré à la demande pour un utilisateur, rattaché à un Event.
 /// Contient le contenu du template rendu (type + HTML/texte).
 model DocumentCustom {
@@ -307,8 +299,6 @@ model DocumentCustom {
   eventId Int?   @unique
   event   Event? @relation(fields: [eventId], references: [idEvent])
 }
-
-
 
 /// Templates de documents globaux partagés (non liés à un utilisateur).
 /// Base de génération commune pour les documents standards de la plateforme.
@@ -335,19 +325,19 @@ model ChatHistory {
 /// Analyse de contrat sauvegardée : métadonnées claires (type, score, clauses) + snapshot chiffré.
 /// Permet de rouvrir et comparer des analyses précédentes sans relancer l'IA.
 model ContractHistory {
-  idHistory         Int      @id @default(autoincrement())
-  externalId        String   @unique
-  fileName          String
-  contractType      String?
-  overallRiskScore  Float?
-  wordCount         Int      @default(0)
-  clausesCount      Int      @default(0)
-  activePatchCount  Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  lastOpenedAt      DateTime @default(now())
+  idHistory        Int      @id @default(autoincrement())
+  externalId       String   @unique
+  fileName         String
+  contractType     String?
+  overallRiskScore Float?
+  wordCount        Int      @default(0)
+  clausesCount     Int      @default(0)
+  activePatchCount Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastOpenedAt     DateTime @default(now())
   // Snapshot complet (chiffré par l'extension Prisma) : contenu contrat + clauses + contexte + patches
-  snapshot          Json
+  snapshot         Json
 
   userId Int
   user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
@@ -467,7 +457,6 @@ model Plan {
   @@unique([name, interval])
 }
 
-
 /// Facture générée pour un abonnement, associée à une transaction Stripe.
 /// `status` : "PAID" (paiement réussi) ou "FAILED" (tentative échouée, montant non encaissé).
 model Facture {
@@ -501,16 +490,16 @@ model Llm {
 /// Template de contrat importé ou créé par un utilisateur : structure chiffrée + métadonnées.
 /// Base de la génération IA personnalisée (avec playbook de règles et notes doctrinales associées).
 model ContractTemplate {
-  idTemplate         Int      @id @default(autoincrement())
-  externalId         String   @unique
-  name               String
-  contractType       String?
-  sourceFilename     String?
-  sourceFilePath     String?
-  structure          Json // chiffré par l'extension Prisma
-  version            Int      @default(1)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  idTemplate     Int      @id @default(autoincrement())
+  externalId     String   @unique
+  name           String
+  contractType   String?
+  sourceFilename String?
+  sourceFilePath String?
+  structure      Json // chiffré par l'extension Prisma
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   userId         Int
   user           User              @relation(fields: [userId], references: [idUser], onDelete: Cascade)
@@ -658,10 +647,10 @@ model UserLlmUsage {
 model Contract {
   idContract       Int            @id @default(autoincrement())
   externalId       String         @unique
-  title            String  @db.Text // chiffré (voir encryptedFields.ts)
+  title            String         @db.Text // chiffré (voir encryptedFields.ts)
   contractType     String?
-  counterpartyName String? @db.Text // cocontractant — chiffré
-  responsibleName  String? @db.Text // responsable interne — chiffré
+  counterpartyName String?        @db.Text // cocontractant — chiffré
+  responsibleName  String?        @db.Text // responsable interne — chiffré
   status           ContractStatus @default(DRAFT)
 
   // Dates clés
@@ -709,13 +698,13 @@ model Contract {
   folderId Int?
   folder   Folder? @relation(fields: [folderId], references: [idFolder], onDelete: SetNull)
 
-  metadataFields    ContractMetadataField[]
-  amendments        Amendment[]
-  versions          ContractVersion[]
-  tags              ContractTag[]
-  auditLogs         AuditLog[]
-  comments          ContractComment[]
-  contractSummaries ContractSummary[]
+  metadataFields      ContractMetadataField[]
+  amendments          Amendment[]
+  versions            ContractVersion[]
+  tags                ContractTag[]
+  auditLogs           AuditLog[]
+  comments            ContractComment[]
+  contractSummaries   ContractSummary[]
   negotiationSessions NegotiationSession[]
 
   @@index([userId])
@@ -984,7 +973,7 @@ model NegotiationSession {
   auditLogs     NegotiationAudit[]
   fields        NegotiationField[]
 
-  contract      Contract        @relation(fields: [contractExternalId], references: [externalId], onDelete: Cascade)
+  contract Contract @relation(fields: [contractExternalId], references: [externalId], onDelete: Cascade)
 
   @@index([contractExternalId])
   @@index([ownerUserId])
@@ -1274,6 +1263,88 @@ model ContractSummary {
   // Relation optionnelle vers un contrat de la contrathèque
   contractId Int?
   contract   Contract? @relation(fields: [contractId], references: [idContract], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+// --- PLAYBOOK (RÈGLES DE NÉGOCIATION) ---
+
+enum NegotiationRuleType {
+  MAX
+  MIN
+  REQUIRED
+  FORBIDDEN
+  ALLOWED_VALUES
+  INSTRUCTION
+}
+
+enum NegotiationRuleSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// Ensemble de règles de négociation d'un utilisateur. `enterpriseId` et
+/// `contractType` préparent les playbooks d'organisation / par type de contrat.
+model NegotiationPlaybook {
+  idPlaybook   Int      @id @default(autoincrement())
+  externalId   String   @unique
+  name         String
+  contractType String?
+  isDefault    Boolean  @default(false)
+  enterpriseId Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId   Int
+  user     User                          @relation(fields: [userId], references: [idUser], onDelete: Cascade)
+  rules    NegotiationRule[]
+  analyses NegotiationPlaybookAnalysis[]
+
+  @@index([userId])
+}
+
+/// Règle interne comparée aux contrats analysés (ex : « cession droit à l'image : 24 mois maximum »).
+model NegotiationRule {
+  idRule        Int                     @id @default(autoincrement())
+  externalId    String                  @unique
+  name          String
+  category      String                  @default("Autre")
+  description   String?                 @db.Text
+  ruleType      NegotiationRuleType     @default(INSTRUCTION)
+  expectedValue String?                 @db.Text
+  unit          String?
+  severity      NegotiationRuleSeverity @default(MEDIUM)
+  suggestion    String?                 @db.Text
+  keywords      String?                 @db.Text
+  isActive      Boolean                 @default(true)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  playbookId Int
+  playbook   NegotiationPlaybook @relation(fields: [playbookId], references: [idPlaybook], onDelete: Cascade)
+
+  @@index([playbookId])
+}
+
+/// Analyse playbook enregistrée (historique) : texte du contrat, résultats et
+/// suggestions appliquées, dans un instantané chiffré.
+model NegotiationPlaybookAnalysis {
+  idAnalysis        Int      @id @default(autoincrement())
+  externalId        String   @unique
+  fileName          String   @db.Text // chiffré
+  compliantCount    Int      @default(0)
+  nonCompliantCount Int      @default(0)
+  toCheckCount      Int      @default(0)
+  snapshot          Json // chiffré : { text, originalText, result, applied }
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  playbookId Int?
+  playbook   NegotiationPlaybook? @relation(fields: [playbookId], references: [idPlaybook], onDelete: SetNull)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 
   @@index([userId])
 }

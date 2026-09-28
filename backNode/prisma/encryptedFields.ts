@@ -55,6 +55,7 @@ export const ENCRYPTED_FIELDS: Record<string, string[]> = {
 
     // ─── Analyse, modèles, génération, signature ───
     ContractHistory: ["snapshot"],
+    NegotiationPlaybookAnalysis: ["fileName", "snapshot"],
     ContractTemplate: ["structure"],
     GenerationLog: ["output"],
     SignatureEnvelope: [

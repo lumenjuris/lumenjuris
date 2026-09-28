@@ -1,16 +1,17 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import {
   BookOpen, Sparkles, ChevronLeft, ChevronRight,
   Briefcase, ClipboardList, FileText, Shield,
   UploadCloud, Lock, CheckCircle2,
-  Loader2, AlertCircle, Search,
+  Loader2, AlertCircle, Search, X, Save,
 } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
 import { useLayoutStore } from "../../store/layoutStore";
-import { SmartCddEditor } from "./cdd/smart/SmartCddEditor";
+import { SmartCddEditor, ToolbarAction } from "./cdd/smart/SmartCddEditor";
+import { CONTRACT_DOCUMENT_CLASS, CONTRACT_DOCUMENT_PADDING_CLASS, CONTRACT_TOOLBAR_CLASS } from "./cdd/smart/documentTypography";
 import type { ContractModel, VariableDef, BlockDef } from "../../contractEngine/types";
 import { cddAccroissementModel } from "../../contractEngine/models/cddAccroissement";
 import { cdiModel } from "../../contractEngine/models/cdi";
@@ -265,7 +266,14 @@ function LibrarySection({
 
 type ContentToken =
   | { type: "text"; value: string }
-  | { type: "var"; name: string; text: string };
+  | { type: "var"; name: string; text: string }
+  | { type: "pending"; text: string };
+
+/**
+ * Marqueur provisoire d'un emplacement vide pas encore nommé par l'IA, pendant
+ * l'import (jamais enregistré). Même valeur dans proxy/src/routes/template.ts.
+ */
+const PENDING_VARIABLE_NAME = "__IMPORT_EN_COURS__";
 
 /**
  * Découpe le contenu en tokens.
@@ -286,7 +294,9 @@ function tokenizeContent(content: string): ContentToken[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     if (m.index > last) tokens.push({ type: "text", value: content.slice(last, m.index) });
-    if (m[1] !== undefined && m[2] !== undefined) {
+    if (m[1] === PENDING_VARIABLE_NAME && m[2] !== undefined) {
+      tokens.push({ type: "pending", text: m[2] });
+    } else if (m[1] !== undefined && m[2] !== undefined) {
       // Si le texte d'origine est vide ou whitespace, fallback sur le nom humanisé
       const text = m[2].trim() ? m[2] : humanizeVar(m[1]);
       tokens.push({ type: "var", name: m[1], text });
@@ -396,80 +406,97 @@ function isElementVisibleIn(container: HTMLElement, element: HTMLElement): boole
   return elementBox.top >= containerBox.top && elementBox.bottom <= containerBox.bottom;
 }
 
-/** Texte du contrat avec les variables surlignées et cliquables. */
+/**
+ * Texte du contrat avec les variables surlignées et cliquables.
+ * Même rendu que l'éditeur de contrat (titre, intertitres, paragraphes, typographie),
+ * pour que « Enregistrer et générer » ne change pas l'aspect du document.
+ */
 function VariableSelector({
   structure,
+  title,
   essentialVars,
   highlightedVar,
   onVariableClick,
   onVariableHover,
 }: {
   structure: TemplateStructure;
+  /** Titre du document (nom du modèle), affiché comme dans l'éditeur. */
+  title?: string;
   essentialVars: Set<string>;
   highlightedVar: string | null;
   onVariableClick: (name: string) => void;
   onVariableHover: (name: string | null) => void;
 }) {
-  // Le découpage du texte ne dépend que de la structure : on ne le refait pas
-  // à chaque survol (important pour les contrats longs).
+  // Même découpage que l'éditeur (templateToModel puis buildInitialHtml) : l'intitulé
+  // de la clause en première ligne, un double saut de ligne ouvre un nouveau paragraphe.
+  // Fait une seule fois par structure, pas à chaque survol (contrats longs).
   const tokenizedSections = useMemo(
     () =>
-      (structure.sections ?? []).map((section) => ({
-        title: section.title,
-        clauses: (section.clauses ?? []).map((clause) => ({
-          id: clause.id,
-          title: clause.title,
-          tokens: tokenizeContent(clause.content),
-        })),
-      })),
+      (structure.sections ?? []).map((section) => {
+        const body = (section.clauses ?? [])
+          .map((clause) => (clause.title?.trim() ? clause.title.trim() + "\n" : "") + (clause.content ?? ""))
+          .join("\n\n");
+        return {
+          title: section.title,
+          paragraphs: body.split(/\n{2,}/).filter((paragraph) => paragraph.trim()).map(tokenizeContent),
+        };
+      }),
     [structure],
   );
 
   return (
-    <div className="space-y-6">
-      {tokenizedSections.map((sec, si) => (
-        <section key={si} className="space-y-3">
-          <h4 className="text-[13px] font-bold text-ink tracking-tight">{sec.title}</h4>
-          <div className="space-y-3">
-            {sec.clauses.map((cl) => (
-              <div key={cl.id} className="space-y-1.5">
-                {cl.title && (
-                  <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wide">{cl.title}</p>
-                )}
-                <p className="whitespace-pre-line text-[13px] text-ink-secondary leading-relaxed">
-                  {cl.tokens.map((t, i) => {
-                    if (t.type === "text") return <span key={i}>{t.value}</span>;
-                    const isEssential = essentialVars.has(t.name);
-                    const isHighlighted = highlightedVar === t.name;
-                    const variableLabel = getVariableLabel(structure, t.name);
+    // Même empilement que l'éditeur (EditorContent puis .ProseMirror) : la classe
+    // .ProseMirror porte la taille, l'interligne et la couleur du texte (index.css).
+    <div className={CONTRACT_DOCUMENT_CLASS}>
+      <div className="ProseMirror">
+        {title && <h2>{title}</h2>}
+        {tokenizedSections.map((sec, si) => (
+          <Fragment key={si}>
+            {sec.title && <h3>{sec.title}</h3>}
+            {sec.paragraphs.map((tokens, pi) => (
+              <p key={pi} className="whitespace-pre-line">
+                {tokens.map((t, i) => {
+                  if (t.type === "text") return <span key={i}>{t.value}</span>;
+                  if (t.type === "pending") {
                     return (
-                      <button
+                      <span
                         key={i}
-                        type="button"
-                        data-variable={t.name}
-                        onClick={() => onVariableClick(t.name)}
-                        onMouseEnter={() => onVariableHover(t.name)}
-                        onMouseLeave={() => onVariableHover(null)}
-                        title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
-                        className={`inline align-baseline mx-[1px] px-1 py-[1px] rounded-chip text-[13px] transition-all border-2 ${isEssential
-                          ? "bg-success-light text-success-dark border-success/50 border-dashed hover:bg-success-light/70 font-medium"
-                          : "bg-transparent text-ink-subtle border-transparent line-through hover:text-ink-secondary"
-                          } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                        title="Champ en cours d'identification"
+                        className="mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium bg-surface-muted text-ink-subtle animate-pulse"
                       >
-                        {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
-                        {isBlankPlaceholder(t.text) ? variableLabel : t.text}
-                      </button>
+                        {t.text}
+                      </span>
                     );
-                  })}
-                </p>
-              </div>
+                  }
+                  const isEssential = essentialVars.has(t.name);
+                  const isHighlighted = highlightedVar === t.name;
+                  const variableLabel = getVariableLabel(structure, t.name);
+                  const isBlank = isBlankPlaceholder(t.text);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      data-variable={t.name}
+                      onClick={() => onVariableClick(t.name)}
+                      onMouseEnter={() => onVariableHover(t.name)}
+                      onMouseLeave={() => onVariableHover(null)}
+                      title={isEssential ? `« ${variableLabel} » — cliquez pour le retirer du modèle` : `« ${variableLabel} » retiré — cliquez pour le conserver`}
+                      className={`mx-0.5 inline max-w-full text-ellipsis rounded-chip px-1.5 py-[1px] text-[13px] font-medium transition-all ${isEssential
+                        // Même jaune et même texte gris que les champs de la génération de contrat (VariableNode)
+                        ? "bg-amber-100 text-ink-subtle ring-1 ring-amber-300/80 hover:bg-amber-200/80"
+                        : "bg-transparent text-ink-subtle line-through hover:text-ink-secondary"
+                        } ${isHighlighted ? "ring-2 ring-brand/60 ring-offset-1" : ""}`}
+                    >
+                      {/* Emplacement vide ("....", "____") : on affiche le libellé, plus parlant */}
+                      {isBlank ? variableLabel : t.text}
+                    </button>
+                  );
+                })}
+              </p>
             ))}
-          </div>
-          {si < tokenizedSections.length - 1 && (
-            <div className="pt-2 border-b border-line-subtle" />
-          )}
-        </section>
-      ))}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 }
@@ -483,12 +510,15 @@ function VariableListPanel({
   onToggleVar,
   onShowVar,
   onHoverVar,
+  isAnalysing,
 }: {
   variables: VariableSummary[];
   essentialVars: Set<string>;
   highlightedVar: string | null;
   /** Champ cliqué dans le contrat, à faire apparaître dans la liste s'il est caché. */
   variableToReveal: { name: string } | null;
+  /** Vrai tant que l'IA identifie encore des champs. */
+  isAnalysing: boolean;
   onToggleVar: (name: string) => void;
   onShowVar: (name: string) => void;
   onHoverVar: (name: string | null) => void;
@@ -507,18 +537,23 @@ function VariableListPanel({
   }, [variableToReveal]);
 
   return (
-    <div className="flex flex-col min-h-0 lg:h-full bg-white rounded-card border border-line shadow-card overflow-hidden">
-      <div className="shrink-0 space-y-2.5 border-b border-line-subtle px-4 py-3">
+    // Hauteur limitée à l'écran (comme la colonne de l'éditeur) : seule la liste défile.
+    <div className="flex flex-col min-h-0 lg:max-h-[calc(100vh-4rem)] bg-white rounded-2xl border border-line shadow-card overflow-hidden">
+      <div className="shrink-0 space-y-2.5 px-4 pt-4 pb-1">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-ink">Champs détectés</h3>
-          <span className="text-xs text-ink-subtle">
-            <span className="font-semibold text-success-dark">{keptCount}</span> / {variables.length} conservé{keptCount > 1 ? "s" : ""}
+          {/* Même intitulé que « Champs à compléter » dans l'éditeur de contrat */}
+          <h3 className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-widest text-ink-subtle">Champs détectés</h3>
+          <span
+            title={`${keptCount} champ${keptCount > 1 ? "s" : ""} conservé${keptCount > 1 ? "s" : ""} sur ${variables.length}`}
+            className="whitespace-nowrap text-xs text-ink-subtle"
+          >
+            <span className="font-semibold text-amber-800">{keptCount}</span> / {variables.length}
           </span>
         </div>
 
       </div>
 
-      <ul ref={listRef} className="flex-1 space-y-0.5 overflow-y-auto p-2 max-h-[55vh] lg:max-h-none">
+      <ul ref={listRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2 max-h-[55vh] lg:max-h-none">
         {variables.map((variable) => {
           const isKept = essentialVars.has(variable.name);
           const isHighlighted = highlightedVar === variable.name;
@@ -563,7 +598,7 @@ function VariableListPanel({
 
         {variables.length === 0 && (
           <li className="px-3 py-8 text-center text-xs text-ink-subtle">
-            Aucun champ détecté dans ce contrat.
+            {isAnalysing ? "Recherche des champs du contrat…" : "Aucun champ détecté dans ce contrat."}
           </li>
         )}
       </ul>
@@ -575,20 +610,92 @@ function VariableListPanel({
 
 type ImportStep = "form" | "processing" | "review";
 
-/** Style des boutons d'action de la relecture (Annuler, Enregistrer, Enregistrer et générer). */
-const REVIEW_ACTION_BUTTON =
-  "inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-primary rounded-xl shadow-sm transition-all hover:-translate-y-0.5 hover:bg-blue-primary/85 disabled:opacity-50";
+/** Document préparé par le relais : il le relit à chaque étape de l'import. */
+interface PreparedImportDocument {
+  paragraphs: string[];
+  placeholders: Record<string, { originalText: string; hint: string | null }>;
+}
+
+/** Paragraphes analysés ensemble par l'IA (numéros à partir de 1, bornes incluses). */
+interface AnalysisPart {
+  first: number;
+  last: number;
+}
+
+/** Analyse d'une partie : le front la garde telle quelle et la renvoie au relais. */
+type PartExtraction = Record<string, unknown>;
+
+/** Icône d'enregistrement en cours (pour les boutons de la barre d'outils). */
+function SpinningLoader({ className }: { className?: string }) {
+  return <Loader2 className={`${className ?? ""} animate-spin`} />;
+}
+
+/** Nom de modèle tiré du nom de fichier : "NDA_Inserm-v2.docx" → "NDA Inserm v2". */
+function toModelNameFromFilename(filename: string): string {
+  const withoutExtension = filename.replace(/\.[^/.]+$/, "");
+  return withoutExtension.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim() || "Modèle importé";
+}
+
+/** Appelle une étape de l'import (/api/template/import/…) et renvoie ses données. */
+async function postImportStep<T>(step: "prepare" | "analyse" | "assemble" | "finalize", body: unknown): Promise<T> {
+  const res = await fetchProxy(`/api/template/import/${step}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string; data?: T };
+  if (!res.ok || !payload.success || !payload.data) throw new Error(payload.message || "Import échoué");
+  return payload.data;
+}
+
+/** Analyse d'une partie, avec un second essai en cas d'échec ; null si les deux échouent. */
+async function analysePartWithRetry(importDocument: PreparedImportDocument, part: AnalysisPart): Promise<PartExtraction | null> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const { extraction } = await postImportStep<{ extraction: PartExtraction }>("analyse", { document: importDocument, part });
+      return extraction;
+    } catch (error) {
+      console.warn(`Analyse des paragraphes ${part.first} à ${part.last} échouée (essai ${attempt}) :`, error);
+    }
+  }
+  return null;
+}
+
+/** Bandeau d'avancement pendant que l'IA identifie les champs du contrat. */
+function AnalysisProgressBanner({ done, total, fieldCount }: { done: number; total: number; fieldCount: number }) {
+  // Un peu d'avancement dès le départ : la barre ne reste pas vide pendant la première partie.
+  const percent = total > 0 ? Math.max(10, Math.round((done / total) * 100)) : 100;
+  return (
+    <div role="status" className="space-y-2 rounded-card border border-brand/20 bg-brand-light px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="flex items-center gap-2 font-semibold text-ink">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />
+          {done < total ? "L'IA identifie les champs du contrat…" : "Enregistrement du modèle…"}
+        </span>
+        <span className="text-ink-muted">
+          {fieldCount} champ{fieldCount > 1 ? "s" : ""} trouvé{fieldCount > 1 ? "s" : ""}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white">
+        <div className="h-full rounded-full bg-brand transition-all duration-700" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
 
 function ImportSection({
   onSaved,
   onReviewDisplayed,
+  onBack,
 }: {
   onSaved?: (templateId: string, andContinue: boolean) => void;
-  /** Prévient la page quand l'écran de relecture s'affiche (elle s'élargit alors). */
+  /** Prévient la page quand l'écran d'édition (après dépôt du fichier) est affiché :
+   *  bandeau bleu masqué et menu latéral replié, comme les autres éditeurs. */
   onReviewDisplayed?: (isDisplayed: boolean) => void;
+  /** Retour à l'écran précédent (Générateur de contrat). */
+  onBack?: () => void;
 } = {}) {
   const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
   const [step, setStep] = useState<ImportStep>("form");
   const [error, setError] = useState("");
   const [savedMeta, setSavedMeta] = useState<ContractTemplateDTO | null>(null);
@@ -597,6 +704,14 @@ function ImportSection({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  /** Avancement de l'analyse IA, affiché pendant la relecture ; null une fois le modèle enregistré. */
+  const [analysis, setAnalysis] = useState<{ done: number; total: number } | null>(null);
+  /** Vrai si une partie du contrat n'a pas pu être analysée. */
+  const [analysisIncomplete, setAnalysisIncomplete] = useState(false);
+  // Chaque import a son numéro : les réponses d'un import annulé ou remplacé sont ignorées.
+  const importRunRef = useRef(0);
+  // Champs déjà proposés à l'utilisateur, pour ne cocher d'office que les nouveaux.
+  const knownVarsRef = useRef<Set<string>>(new Set());
 
   // Relecture : champ choisi (clic) et champ survolé, surlignés dans les deux colonnes.
   const [activeVar, setActiveVar] = useState<string | null>(null);
@@ -611,6 +726,20 @@ function ImportSection({
     [structure],
   );
 
+  // Titre du document : le nom du modèle en majuscules, exactement comme l'éditeur
+  // l'affichera après « Enregistrer et générer » (voir templateToModel).
+  const documentTitle = (savedMeta?.name || (file ? toModelNameFromFilename(file.name) : "")).toUpperCase();
+
+  // Tous les champs détectés sont conservés par défaut, y compris ceux qui
+  // arrivent pendant l'analyse ; un champ que l'utilisateur a décoché le reste.
+  useEffect(() => {
+    if (!structure) return;
+    const newVars = extractAllVariables(structure).filter((varName) => !knownVarsRef.current.has(varName));
+    if (newVars.length === 0) return;
+    newVars.forEach((varName) => knownVarsRef.current.add(varName));
+    setEssentialVars((prev) => new Set([...prev, ...newVars]));
+  }, [structure]);
+
   function toggleEssentialVar(name: string) {
     setEssentialVars((prev) => {
       const next = new Set(prev);
@@ -624,12 +753,13 @@ function ImportSection({
   // Un nouvel objet à chaque clic, pour que la liste réagisse même si c'est le même champ.
   const [variableToReveal, setVariableToReveal] = useState<{ name: string } | null>(null);
 
-  // La page s'élargit pendant la relecture (même largeur que la contrathèque).
-  const isReviewDisplayed = step === "review" && !saved;
+  // Dès qu'un fichier est déposé (lecture, relecture, confirmation) : bandeau bleu
+  // masqué, menu latéral replié — seul l'écran de dépôt initial garde le bandeau.
+  const isReviewDisplayed = step !== "form";
   useEffect(() => {
     onReviewDisplayed?.(isReviewDisplayed);
   }, [isReviewDisplayed]);
-  // En quittant la section, la page reprend sa largeur normale.
+  // En quittant la section, la page reprend son affichage normal.
   useEffect(() => () => onReviewDisplayed?.(false), []);
 
   /** Clic sur un champ dans le contrat : on le conserve / retire et on le désigne dans la liste. */
@@ -650,16 +780,27 @@ function ImportSection({
     const lastShown = lastShownOccurrenceRef.current;
     const nextIndex = lastShown.name === name ? (lastShown.index + 1) % occurrences.length : 0;
     lastShownOccurrenceRef.current = { name, index: nextIndex };
-    scrollElementToCenter(container, occurrences[nextIndex]);
+    // Le contrat défile avec la page (comme dans l'éditeur) : c'est la page qu'on fait défiler.
+    occurrences[nextIndex].scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function resetImport() {
-    setStep("form"); setFile(null); setName("");
+    importRunRef.current += 1; // abandonne l'import en cours
+    knownVarsRef.current = new Set();
+    setStep("form"); setFile(null);
     setSavedMeta(null); setStructure(null); setEssentialVars(new Set()); setSaved(false);
     setSaveError(""); setActiveVar(null); setHoveredVar(null);
+    setAnalysis(null); setAnalysisIncomplete(false);
   }
 
-  const onDropAccepted = useCallback((files: File[]) => { if (files[0]) setFile(files[0]); }, []);
+  // Dépose = déclenche l'import directement : pas de nom à saisir, le nom du
+  // fichier (sans son extension) sert de nom de modèle.
+  const onDropAccepted = useCallback((files: File[]) => {
+    const droppedFile = files[0];
+    if (!droppedFile) return;
+    setFile(droppedFile);
+    void handleImport(droppedFile, toModelNameFromFilename(droppedFile.name));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropAccepted,
     accept: {
@@ -670,42 +811,85 @@ function ImportSection({
     multiple: false,
   });
 
-  async function handleImport() {
-    if (!file || !name.trim()) return;
+  async function handleImport(importFile: File, modelName: string) {
+    const runId = ++importRunRef.current;
+    const isCurrentRun = () => runId === importRunRef.current;
+    knownVarsRef.current = new Set();
+    setEssentialVars(new Set());
+    setAnalysisIncomplete(false);
     setStep("processing");
     setError("");
     try {
-      const base64 = await fileToBase64(file);
-      const res = await fetchProxy("/api/template/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          fileBase64: base64,
-          mimeType: file.type,
-          filename: file.name,
-          name: name.trim(),
-        }),
-      });
-      const data = await res.json() as { success: boolean; message?: string; data?: ContractTemplateDTO };
-      if (!res.ok || !data.success || !data.data) {
-        throw new Error(data.message || "Import échoué");
-      }
-      setSavedMeta(data.data);
+      const fileBase64 = await fileToBase64(importFile);
 
-      // Charger la structure
-      const detailRes = await fetchProxy(`/api/template/${data.data.id}`, { credentials: "include" });
-      const detail = await detailRes.json() as { success: boolean; data?: { meta: ContractTemplateDTO; structure: TemplateStructure } };
-      if (!detail.success || !detail.data) {
-        throw new Error("Modèle importé, mais son aperçu n'a pas pu être chargé. Retrouvez-le dans votre bibliothèque.");
-      }
-      setStructure(detail.data.structure);
-      // Par défaut, TOUTES les variables présentes dans le contenu sont pré-sélectionnées.
-      // On extrait depuis le contenu réel (et pas uniquement detectedVariables qui peut être incomplet).
-      setEssentialVars(new Set(extractAllVariables(detail.data.structure)));
+      // 1. Lecture du document : le contrat s'affiche aussitôt, ses emplacements vides « en cours ».
+      const prepared = await postImportStep<{
+        document: PreparedImportDocument;
+        parts: AnalysisPart[];
+        structure: TemplateStructure;
+      }>("prepare", { fileBase64, mimeType: importFile.type, filename: importFile.name });
+      if (!isCurrentRun()) return;
+      const { document: importDocument, parts } = prepared;
+      setStructure(prepared.structure);
+      setAnalysis({ done: 0, total: parts.length });
       setStep("review");
+
+      // 2. Toutes les parties sont analysées en même temps ; l'aperçu se complète à chaque partie terminée.
+      const extractions: Array<PartExtraction | null> = parts.map(() => null);
+      const pendingIndexes = new Set(parts.map((_, index) => index));
+      let failedPartCount = 0;
+      let previewRequestId = 0;
+
+      const refreshPreview = async () => {
+        const requestId = ++previewRequestId;
+        try {
+          const preview = await postImportStep<{ structure: TemplateStructure }>("assemble", {
+            document: importDocument,
+            extractions,
+            pendingParts: parts.filter((_, index) => pendingIndexes.has(index)),
+          });
+          // Un aperçu plus ancien qu'un autre déjà demandé ne doit pas l'écraser.
+          if (isCurrentRun() && requestId === previewRequestId) setStructure(preview.structure);
+        } catch {
+          // Aperçu intermédiaire : l'assemblage final suffit.
+        }
+      };
+
+      await Promise.all(
+        parts.map(async (part, index) => {
+          extractions[index] = await analysePartWithRetry(importDocument, part);
+          if (!isCurrentRun()) return;
+          if (!extractions[index]) failedPartCount += 1;
+          pendingIndexes.delete(index);
+          setAnalysis({ done: parts.length - pendingIndexes.size, total: parts.length });
+          if (pendingIndexes.size > 0) void refreshPreview();
+        }),
+      );
+      if (!isCurrentRun()) return;
+      if (parts.length > 0 && failedPartCount === parts.length) {
+        throw new Error("L'analyse du contrat a échoué. Réessayez.");
+      }
+
+      // 3. Assemblage définitif et enregistrement du modèle.
+      previewRequestId += 1; // les aperçus encore en route sont périmés
+      const finalized = await postImportStep<{ meta: ContractTemplateDTO; structure: TemplateStructure }>("finalize", {
+        fileBase64,
+        filename: importFile.name,
+        name: modelName,
+        document: importDocument,
+        extractions,
+      });
+      if (!isCurrentRun()) return;
+      setSavedMeta(finalized.meta);
+      setStructure(finalized.structure);
+      setAnalysisIncomplete(failedPartCount > 0);
+      setAnalysis(null);
     } catch (e: unknown) {
+      if (!isCurrentRun()) return;
       setError(e instanceof Error ? e.message : "Erreur lors de l'import");
+      setAnalysis(null);
+      setStructure(null);
+      setFile(null); // on peut redéposer un document directement
       setStep("form");
     }
   }
@@ -738,7 +922,10 @@ function ImportSection({
         body: JSON.stringify({ structure: filteredStructure }),
       });
       if (!res.ok) throw new Error("save failed");
-      setSaved(true);
+      // "Enregistrer et générer" enchaîne aussitôt sur l'éditeur : on ne bascule
+      // pas sur l'écran de confirmation, pour que la relecture (champs détectés)
+      // soit ce qui réapparaît si l'utilisateur revient en arrière depuis l'éditeur.
+      if (!andContinue) setSaved(true);
       onSaved?.(savedMeta.id, andContinue);
     } catch {
       setSaveError("L'enregistrement du modèle a échoué. Réessayez.");
@@ -753,21 +940,16 @@ function ImportSection({
           <Loader2 className="w-7 h-7 text-brand animate-spin stroke-[1.5]" />
         </div>
         <div className="space-y-1.5">
-          <p className="text-sm font-bold text-ink">Analyse en cours…</p>
-          <p className="text-xs text-ink-subtle">Extraction du texte puis structuration par IA. Cela peut prendre 30 à 60 secondes.</p>
-        </div>
-        <div className="flex gap-1.5">
-          {["Extraction du document", "Structuration IA", "Sauvegarde"].map((s, i) => (
-            <span key={i} className="text-[10px] font-medium text-ink-subtle bg-surface-muted px-2.5 py-1 rounded-chip">{s}</span>
-          ))}
+          <p className="text-sm font-bold text-ink">Lecture du document…</p>
+          <p className="text-xs text-ink-subtle">Le contrat s'affiche dans quelques secondes ; ses champs se compléteront ensuite au fil de l'analyse.</p>
         </div>
       </div>
     );
   }
 
-  if (step === "review" && structure && savedMeta) {
+  if (step === "review" && structure) {
 
-    if (saved) {
+    if (saved && savedMeta) {
       return (
         <div className="flex flex-col items-center justify-center py-20 gap-5 text-center max-w-lg mx-auto">
           <div className="w-20 h-20 rounded-card bg-success-light flex items-center justify-center">
@@ -792,22 +974,24 @@ function ImportSection({
     }
 
     return (
-      <div className="w-full space-y-4 pr-4">
-        {/* Barre d'actions en haut : toujours visible, les colonnes défilent en dessous */}
+      <div className="mx-auto w-full max-w-6xl space-y-4">
+        {/* Fil d'ariane discret : même esprit que l'éditeur de contrat généré, sans bandeau bleu. */}
+        {onBack && (
+          <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-medium text-ink-subtle transition-colors hover:text-brand">
+            <ChevronLeft className="h-3.5 w-3.5" /> Générateur de contrat
+          </button>
+        )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={resetImport} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            Annuler
-          </button>
-          {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide) */}
-          <button type="button" onClick={() => void handleSaveStructure(false)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            Enregistrer
-          </button>
-          {/* Enregistrer + poursuivre le tunnel de génération */}
-          <button type="button" onClick={() => void handleSaveStructure(true)} disabled={saving} className={REVIEW_ACTION_BUTTON}>
-            {saving ? "Enregistrement…" : "Enregistrer et générer"}
-          </button>
-        </div>
+        {analysis && (
+          <AnalysisProgressBanner done={analysis.done} total={analysis.total} fieldCount={variableSummaries.length} />
+        )}
+
+        {analysisIncomplete && (
+          <div role="alert" className="flex items-center gap-2 text-sm text-warning-dark bg-warning-light border border-warning/20 px-4 py-3 rounded-xl">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            Une partie du contrat n'a pas pu être analysée : certains champs n'ont peut-être pas été détectés.
+          </div>
+        )}
 
         {saveError && (
           <div role="alert" className="flex items-center gap-2 text-sm text-danger-dark bg-danger-light border border-danger/20 px-4 py-3 rounded-xl">
@@ -815,35 +999,61 @@ function ImportSection({
           </div>
         )}
 
-        {/* Contrat (toute la largeur restante) + champs détectés (largeur fixe). Chaque colonne défile seule. */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:h-[calc(100vh-17rem)] lg:min-h-[520px]">
-          <div
-            ref={documentScrollRef}
-            className="h-[55vh] lg:h-full overflow-y-auto rounded-card border border-line bg-white px-6 py-6 shadow-card sm:px-8"
-          >
-            <VariableSelector
-              structure={structure}
+        {/* Champs détectés (largeur fixe, à gauche) + contrat (toute la largeur restante, à droite).
+            Chaque colonne défile seule. */}
+        {/* Même gabarit que l'éditeur de contrat généré (SmartCddEditor) : colonne des
+            champs collante à gauche, carte du contrat à droite ; c'est la page qui défile,
+            la barre d'outils blanche reste collée en haut. */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+          <aside className="self-start lg:sticky lg:top-12">
+            <VariableListPanel
+              variables={variableSummaries}
               essentialVars={essentialVars}
               highlightedVar={highlightedVar}
-              onVariableClick={handleDocumentVariableClick}
-              onVariableHover={setHoveredVar}
+              variableToReveal={variableToReveal}
+              onToggleVar={toggleEssentialVar}
+              onShowVar={showVariableInDocument}
+              onHoverVar={setHoveredVar}
+              isAnalysing={analysis !== null}
             />
+          </aside>
+
+          <div className="min-w-0 rounded-2xl border border-line bg-white shadow-card">
+            <div className={`${CONTRACT_TOOLBAR_CLASS} justify-end`}>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <ToolbarAction icon={X} short="Annuler" label="Annuler l'import" onClick={resetImport} disabled={saving} />
+                {/* Enregistrer seulement (autorisé même sans variable — modèle statique valide).
+                    Pendant l'analyse, le modèle n'est pas encore enregistré : on attend la fin. */}
+                <ToolbarAction icon={Save} short="Enregistrer" label="Enregistrer le modèle" onClick={() => void handleSaveStructure(false)} disabled={saving || !savedMeta} />
+                {/* Enregistrer + poursuivre le tunnel de génération */}
+                <ToolbarAction
+                  icon={saving ? SpinningLoader : Sparkles}
+                  short={saving ? "Enregistrement…" : "Enregistrer et générer"}
+                  label="Enregistrer le modèle et l'utiliser pour générer un contrat"
+                  onClick={() => void handleSaveStructure(true)}
+                  disabled={saving || !savedMeta}
+                  highlight
+                />
+              </div>
+            </div>
+            <div ref={documentScrollRef} className={CONTRACT_DOCUMENT_PADDING_CLASS}>
+              <VariableSelector
+                structure={structure}
+                title={documentTitle}
+                essentialVars={essentialVars}
+                highlightedVar={highlightedVar}
+                onVariableClick={handleDocumentVariableClick}
+                onVariableHover={setHoveredVar}
+              />
+            </div>
           </div>
-          <VariableListPanel
-            variables={variableSummaries}
-            essentialVars={essentialVars}
-            highlightedVar={highlightedVar}
-            variableToReveal={variableToReveal}
-            onToggleVar={toggleEssentialVar}
-            onShowVar={showVariableInDocument}
-            onHoverVar={setHoveredVar}
-          />
         </div>
       </div>
     );
   }
 
   return (
+    // Écran de dépôt : le bandeau bleu de la page (avec son propre retour) est affiché.
     <div className="space-y-4 w-full max-w-4xl mx-auto">
       {/* Carte unique : dépôt + détails (homogène avec les autres écrans) */}
       <div className="rounded-card border border-line bg-white shadow-card p-6 space-y-5">
@@ -879,23 +1089,10 @@ function ImportSection({
               </div>
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold text-ink-secondary">Glissez-déposez votre document</p>
-                <p className="text-xs text-ink-subtle">ou cliquez pour parcourir — PDF ou Word</p>
+                <p className="text-xs text-ink-subtle">ou cliquez pour parcourir — PDF ou Word. L'analyse démarre aussitôt.</p>
               </div>
             </div>
           )}
-        </div>
-
-        <div className="border-t border-line-subtle" />
-
-        {/* Nom du modèle — le type de contrat est déduit automatiquement par l'IA */}
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-widest">Nom du modèle *</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="ex. NDA Inserm Transfert"
-            className="rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/40 focus:shadow-ring-brand transition-all placeholder:text-ink-placeholder"
-          />
         </div>
       </div>
 
@@ -906,16 +1103,6 @@ function ImportSection({
           {error}
         </div>
       )}
-
-      {/* CTA */}
-      <button
-        disabled={!file || !name.trim()}
-        onClick={handleImport}
-        className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-semibold py-3 rounded-xl transition-colors shadow-card disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <Sparkles className="w-4 h-4" />
-        Analyser et créer le modèle
-      </button>
 
       {/* Confidentialité — pied discret */}
       <p className="flex items-center justify-center gap-1.5 text-[11px] text-ink-subtle">
@@ -1072,6 +1259,10 @@ export function Generateur() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   // Relecture d'un import affichée : la page prend la largeur de la contrathèque.
   const [isImportReviewDisplayed, setIsImportReviewDisplayed] = useState(false);
+  // Modèle que « Enregistrer et générer » vient de créer : tant que l'éditeur ouvert
+  // est celui-là, on garde l'écran d'import en mémoire pour qu'un retour arrière
+  // ramène sur les champs détectés plutôt que sur un import vierge.
+  const [importedTemplateId, setImportedTemplateId] = useState<string | null>(null);
   const notifyAdded = useTemplateNotificationStore((s) => s.notifyAdded);
 
   // Titre du questionnaire « de zéro » — porté par l'URL pour survivre au
@@ -1120,6 +1311,8 @@ export function Generateur() {
   }
 
   function handleUseCustomTemplate(externalId: string) {
+    // Ouverture depuis la bibliothèque : sans lien avec un import en cours.
+    setImportedTemplateId(null);
     setSearchParams({ section: "useCustom", tpl: externalId });
   }
 
@@ -1170,7 +1363,10 @@ export function Generateur() {
     notifyAdded();
     if (andContinue) {
       // Tunnel continu : on enchaîne directement sur la génération du contrat,
-      // sans repasser par la bibliothèque.
+      // sans repasser par la bibliothèque. On retient le modèle : tant que
+      // l'éditeur ouvert est celui-ci, un retour arrière doit ramener sur les
+      // champs détectés de l'import, pas sur un écran d'import vierge.
+      setImportedTemplateId(templateId);
       setSearchParams({ section: "useCustom", tpl: templateId });
     } else {
       // Enregistrer seulement : on montre le modèle ajouté dans la bibliothèque.
@@ -1189,7 +1385,7 @@ export function Generateur() {
 
   const SUBS: Record<Exclude<Section, null>, string> = {
     library: "",
-    import: "Importez un contrat existant pour le transformer en modèle réutilisable.",
+    import: "",
     form: "Renseignez les informations pour personnaliser votre contrat.",
     useCustom: "",
     scratch: "Générez un contrat sur-mesure en répondant à quelques questions.",
@@ -1212,11 +1408,20 @@ export function Generateur() {
   }
 
   // Les éditeurs document-first (form, blank, useCustom) ont leur propre retour : pas de bannière.
-  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom";
+  // L'import garde le bandeau tant qu'aucun fichier n'est déposé (écran de dépôt),
+  // et bascule sur le même habillage que ces éditeurs une fois le fichier déposé.
+  const hasSectionBanner = section !== null && section !== "form" && section !== "blank" && section !== "useCustom" && !(section === "import" && isImportReviewDisplayed);
 
   // Contrat ouvert dans l'éditeur : le menu latéral se replie pour laisser
   // toute la largeur au document, et revient en quittant l'éditeur.
-  const estEditeur = section === "form" || section === "blank" || section === "useCustom";
+  const estEditeur = section === "form" || section === "blank" || section === "useCustom" || (section === "import" && isImportReviewDisplayed);
+
+  // L'écran d'import reste monté (état conservé) tant que l'éditeur ouvert par
+  // « Enregistrer et générer » est encore affiché : un retour arrière depuis
+  // celui-ci retrouve alors la relecture (champs détectés) telle quelle, au
+  // lieu d'un import remis à zéro.
+  const keepImportSectionMounted =
+    section === "import" || (section === "useCustom" && importedTemplateId !== null && useTemplateId === importedTemplateId);
   const setEditeurPleinEcran = useLayoutStore((s) => s.setEditeurPleinEcran);
   useEffect(() => {
     setEditeurPleinEcran(estEditeur);
@@ -1247,9 +1452,13 @@ export function Generateur() {
 
       {/* Sous-sections */}
       {section === "library" && <LibrarySection onUse={handleUseModel} onUseCustom={handleUseCustomTemplate} onCreate={handleCreate} onOpenCreated={handleOpenCreated} refreshKey={libraryRefreshKey} />}
-      {section === "import" && (
-        <div className="w-full flex justify-center">
-          <ImportSection onSaved={handleTemplateSaved} onReviewDisplayed={setIsImportReviewDisplayed} />
+      {keepImportSectionMounted && (
+        <div className={section === "import" ? "w-full flex justify-center" : "hidden"}>
+          <ImportSection
+            onSaved={handleTemplateSaved}
+            onReviewDisplayed={setIsImportReviewDisplayed}
+            onBack={goHub}
+          />
         </div>
       )}
       {section === "form" && (

@@ -16,6 +16,8 @@ import type { NegotiationDetail } from "./types";
 import { AlertBanner } from "../../common/AlertBanner";
 import { BANNER_ACTION_CLASS, PageBanner } from "../../common/PageBanner";
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
+import { ExportMenuButton } from "../../common/ExportMenuButton";
+import { downloadTextAsDocx, downloadTextAsPdf, toExportBaseName, type ExportFormat } from "../../../utils/exportContract";
 
 
 
@@ -97,6 +99,13 @@ export function NegotiationWorkspace() {
     }
     catch (e) { setVersionError(true); }
   }
+  async function exportSelectedVersion(format: ExportFormat) {
+    if (!data || !selectedVersion) return;
+    const baseName = toExportBaseName(`${data.title} - version ${selectedVersion.versionNumber}${selectedVersion.isFinal ? " validée" : ""}`);
+    if (format === "pdf") downloadTextAsPdf(data.title, selectedVersion.contentText, baseName);
+    else await downloadTextAsDocx(data.title, selectedVersion.contentText, baseName);
+  }
+
   async function validateDisplayed() {
     if (!data || !selectedVersion) return;
     setValidateModalOpen(true);
@@ -171,6 +180,13 @@ export function NegotiationWorkspace() {
                   </option>
                 ))}
               </select>
+            )}
+            {/* Export de la version affichée (la version validée, une fois la négociation terminée) */}
+            {selectedVersion && (
+              <ExportMenuButton
+                title="Exporter la version affichée du contrat"
+                onExport={(format) => void exportSelectedVersion(format)}
+              />
             )}
             {canEdit && data.status !== "CLOSED" && (
               <>

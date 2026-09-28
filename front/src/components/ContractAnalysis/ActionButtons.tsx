@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Share2, FileText, RefreshCw, Lightbulb } from "lucide-react";
+import { Share2, RefreshCw, Lightbulb } from "lucide-react";
+import { ExportMenuButton } from "../common/ExportMenuButton";
 import { useAppliedRecommendationsStore } from "../../store/appliedRecommendationsStore";
 import { AddToContrathequeButton } from "./AddToContrathequeButton";
 import { ContractAnalysis } from "../../types";
@@ -43,6 +44,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   const generateWordDocument = useAppliedRecommendationsStore(
     (s) => s.generateWordDocument,
   );
+  const generatePDFDocument = useAppliedRecommendationsStore(
+    (s) => s.generatePDFDocument,
+  );
 
   const [enoughtCredit, setEnoughtCredit] = useState<boolean>()
 
@@ -53,7 +57,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 
   // Ces boutons vivent dans le bandeau bleu : même style que tous les boutons d'en-tête.
   const btnPrimary = BANNER_ACTION_CLASS;
-  const btnGhostDisabled = BANNER_ACTION_CLASS;
 
   const [suggestedClausesError, setSuggestedClausesError] = useState(false);
 
@@ -118,23 +121,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 
       {extraActions}
 
-      {generateWordDocument && (
-        <button
-          onClick={() =>
-            generateWordDocument(
-              originalContent,
-              fileName,
-              htmlContent ?? undefined,
-            )
-          }
-          disabled={!isProcessed}
-          className={isProcessed ? btnPrimary : btnGhostDisabled}
-          title="Exporter le document en .docx"
-        >
-          <FileText />
-          <span>Export Word</span>
-        </button>
-      )}
+      <ExportMenuButton
+        disabled={!isProcessed}
+        title="Exporter le contrat corrigé"
+        onExport={(format) => {
+          const exportDocument = format === "pdf" ? generatePDFDocument : generateWordDocument;
+          exportDocument(originalContent, fileName, htmlContent ?? undefined);
+        }}
+      />
 
     </div>);
 
