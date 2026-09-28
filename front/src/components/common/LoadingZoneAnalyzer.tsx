@@ -80,6 +80,22 @@ const PHASE_CONFIG: Record<
             },
         ],
     },
+    // Utilisé par la page "Analyse playbook"
+    playbook: {
+        label: "Analyse playbook",
+        defaultDurationMs: 20000,
+        finalLabel: "Finalisation de l'analyse",
+        finalMessage: {
+            main: "Préparation des résultats",
+            sub: "Classement des écarts par importance",
+        },
+        messages: [
+            { main: "Lecture du contrat", sub: "Extraction du texte du document" },
+            { main: "Sélection de vos règles", sub: "Seules les règles qui concernent ce contrat sont retenues" },
+            { main: "Comparaison avec vos règles", sub: "Recherche des écarts avec vos positions habituelles" },
+            { main: "Rédaction des suggestions", sub: "Propositions de modification clause par clause" },
+        ],
+    },
 };
 
 

@@ -59,7 +59,7 @@ async function logTokens(
   }
 }
 
-async function callPythonOpenAi(
+export async function callPythonOpenAi(
   prompt: string,
   userId?: number,
 ): Promise<string> {

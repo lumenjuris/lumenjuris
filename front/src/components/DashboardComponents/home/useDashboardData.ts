@@ -368,7 +368,7 @@ const QUOTA_FEATURES: {
 }[] = [
   { key: "contrathequeLimit", label: "Contrats suivis" },
   { key: "analyzer", label: "Analyses de contrat" },
-  { key: "signatureEnhanced", label: "Signatures avancées" },
+  { key: "signatureEnhanced", label: "Signatures électronique " },
 ];
 
 /** À partir de ce pourcentage consommé, la jauge passe en orange. */

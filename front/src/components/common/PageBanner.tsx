@@ -21,6 +21,8 @@ type PageBannerProps = {
   /** Contenu libre affiché sous le titre (ex : barre d'actions secondaire). */
   children?: ReactNode;
   className?: string;
+  /** Bandeau réduit à une ligne (retour, titre, boutons), pour les écrans où le contenu doit avoir toute la place. */
+  compact?: boolean;
 };
 
 /**
@@ -38,6 +40,7 @@ export function PageBanner({
   actions,
   children,
   className,
+  compact = false,
 }: PageBannerProps) {
   return (
     <header
@@ -49,9 +52,9 @@ export function PageBanner({
       {/* Filet doré en haut de la carte, comme sur l'accueil */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,rgba(214,178,102,0.9)_0%,rgba(214,178,102,0.15)_34%,rgba(255,255,255,0)_70%)]" />
 
-      <div className="relative space-y-3 px-5 py-4 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-          <div className="min-w-0 space-y-1.5">
+      <div className={cn("relative space-y-3 px-5 sm:px-6", compact ? "py-2.5" : "py-4")}>
+        <div className={cn("flex flex-col lg:flex-row lg:items-center lg:justify-between", compact ? "gap-2.5 lg:gap-6" : "gap-4 lg:gap-8")}>
+          <div className={cn("min-w-0", compact ? "flex flex-wrap items-center gap-x-3 gap-y-1" : "space-y-1.5")}>
             {backLink && (
               <button
                 type="button"
@@ -65,7 +68,7 @@ export function PageBanner({
             )}
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="break-words font-serif text-2xl font-normal leading-tight tracking-tight text-white sm:text-[28px]">
+              <h1 className={cn("break-words font-serif font-normal leading-tight tracking-tight text-white", compact ? "text-xl" : "text-2xl sm:text-[28px]")}>
                 {title}
               </h1>
               {badges}

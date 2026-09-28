@@ -17,6 +17,8 @@ export const FEATURE_FLAGS = {
   ENABLE_PATCH_DIFF_COMPUTE: false,
   // Index trigram pour recherche robuste (fallback ultime)
   ENABLE_TRIGRAM_INDEX: false,
+  // Playbook (règles de négociation) : menu « Playbook » et « Analyse playbook »
+  ENABLE_PLAYBOOK: true,
 } as const;
 
 // Helper pour vérifier si une feature est activée

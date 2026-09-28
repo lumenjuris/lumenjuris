@@ -11,6 +11,9 @@ import { Calculateur } from "./components/DashboardComponents/Calculateur";
 import { Conformite } from "./components/DashboardComponents/Conformite";
 import { Contratheque } from "./page/Contratheque";
 import { ClausesLibrary } from "./components/DashboardComponents/clauses/ClausesLibrary";
+import { PlaybookRules } from "./components/DashboardComponents/playbook/PlaybookRules";
+import { PlaybookAnalysis } from "./page/PlaybookAnalysis";
+import { isFeatureEnabled } from "./config/features";
 import { UserManagement } from "./components/DashboardComponents/admin/UserManagement";
 import { NegotiationWorkspace } from "./components/DashboardComponents/negotiation/NegotiationWorkspace";
 import { NegotiationsList } from "./components/DashboardComponents/negotiation/NegotiationsList";
@@ -89,8 +92,6 @@ export function App() {
     <>
       <ScrollToTop />
 
-
-
       <Routes>
         {/* ------------------------------------------------------------------
             Pages ouvertes à tous, avec le menu latéral et l'en-tête.
@@ -121,6 +122,8 @@ export function App() {
           <Route path="/contratheque" element={<Contratheque />} />
           <Route path="/contratheque/:externalId" element={<Contratheque />} />
           <Route path="/clauses" element={<ClausesLibrary />} />
+          {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/playbook" element={<PlaybookRules />} />}
+          {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/analyse-playbook" element={<PlaybookAnalysis />} />}
           <Route path="/utilisateurs" element={<UserManagement />} />
           <Route path="/negociations" element={<NegotiationsList />} />
           <Route path="/negociation/:negotiationId" element={<NegotiationWorkspace />} />

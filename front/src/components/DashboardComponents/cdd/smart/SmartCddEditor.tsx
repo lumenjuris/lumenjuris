@@ -33,6 +33,7 @@ import { negotiationApi } from "../../negotiation/api";
 import { ShareContractPanel, guessSide, SIDE_CYCLE, type ShareMode } from "../../negotiation/ShareContractPanel";
 import type { FieldSide } from "../../negotiation/types";
 import { fetchProxy } from "../../../../utils/fetchProxy";
+import { CONTRACT_DOCUMENT_CLASS, CONTRACT_DOCUMENT_PADDING_CLASS, CONTRACT_TOOLBAR_CLASS } from "./documentTypography";
 
 const isEmptyClause = (c: string) => c.trim() === "Sans objet.";
 
@@ -958,7 +959,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         <div className="min-w-0 space-y-3">
           {/* Le contrat — entièrement éditable, avec sa barre de fonctions en en-tête */}
           <div className="rounded-2xl border border-line bg-white shadow-card">
-            <div className="sticky top-12 z-20 -mx-px -mt-px flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-line border-b-line-subtle bg-white px-4 py-2.5">
+            <div className={`${CONTRACT_TOOLBAR_CLASS} justify-between`}>
               {editor && (
                 <div className="flex shrink-0 items-center gap-1">
                   <FormatButton label="Gras" className={tbtn(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></FormatButton>
@@ -1006,19 +1007,13 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
               onMouseMove={onMouseMove}
               onMouseLeave={() => setHover(null)}
               onMouseDownCapture={assignMode ? onAssignMouseDown : undefined}
-              className="relative min-h-[60vh] px-10 pb-10 pt-6
+              className={`${CONTRACT_DOCUMENT_PADDING_CLASS}
                 [&_input[data-share-side]]:cursor-pointer
                 [&_input[data-share-side=OWNER]]:!bg-sky-100 [&_input[data-share-side=OWNER]]:!text-sky-800 [&_input[data-share-side=OWNER]]:!ring-sky-300
                 [&_input[data-share-side=COUNTERPARTY]]:!bg-emerald-100 [&_input[data-share-side=COUNTERPARTY]]:!text-emerald-800 [&_input[data-share-side=COUNTERPARTY]]:!ring-emerald-300
-                [&_input[data-share-side=THIRD_PARTY]]:!bg-violet-100 [&_input[data-share-side=THIRD_PARTY]]:!text-violet-800 [&_input[data-share-side=THIRD_PARTY]]:!ring-violet-300"
+                [&_input[data-share-side=THIRD_PARTY]]:!bg-violet-100 [&_input[data-share-side=THIRD_PARTY]]:!text-violet-800 [&_input[data-share-side=THIRD_PARTY]]:!ring-violet-300`}
             >
-            <EditorContent
-              editor={editor}
-              className="prose prose-sm max-w-none leading-relaxed text-ink-secondary focus:outline-none [&_:focus]:outline-none
-                [&_h2]:mb-4 [&_h2]:mt-0 [&_h2]:text-[26px] [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-ink
-                [&_h3]:mb-2 [&_h3]:mt-7 [&_h3]:flex [&_h3]:items-center [&_h3]:gap-2.5 [&_h3]:text-[11px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-[0.18em] [&_h3]:text-brand
-                [&_h3]:before:h-[2px] [&_h3]:before:w-6 [&_h3]:before:rounded-full [&_h3]:before:bg-brand [&_h3]:before:content-['']"
-            />
+            <EditorContent editor={editor} className={CONTRACT_DOCUMENT_CLASS} />
 
             {/* Bouton IA au survol d'une clause */}
             {hover && !ai && (
@@ -1266,7 +1261,7 @@ function FormatButton({ label, className, onClick, children }: {
  * court accompagne l'icône ; dans tous les cas, l'explication complète
  * s'affiche immédiatement au survol.
  */
-function ToolbarAction({ icon: Icon, label, short, onClick, disabled = false, highlight = false }: {
+export function ToolbarAction({ icon: Icon, label, short, onClick, disabled = false, highlight = false }: {
   icon: React.ElementType;
   label: string;
   short?: string;
