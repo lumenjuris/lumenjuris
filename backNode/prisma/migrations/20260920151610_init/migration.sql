@@ -3,11 +3,12 @@ CREATE TABLE `User` (
     `idUser` INTEGER NOT NULL AUTO_INCREMENT,
     `role` ENUM('USER', 'ADMIN', 'JURISTE', 'LECTEUR') NOT NULL DEFAULT 'USER',
     `email` VARCHAR(191) NOT NULL,
-    `nom` VARCHAR(191) NULL,
-    `prenom` VARCHAR(191) NULL,
+    `nom` TEXT NULL,
+    `prenom` TEXT NULL,
     `password` VARCHAR(191) NULL,
     `isVerified` BOOLEAN NOT NULL DEFAULT false,
     `twoFactorEnabled` BOOLEAN NOT NULL DEFAULT false,
+    `isBanned` BOOLEAN NOT NULL DEFAULT false,
     `cgu` BOOLEAN NOT NULL DEFAULT false,
     `stripeCustomerId` VARCHAR(191) NULL,
 
@@ -70,13 +71,13 @@ CREATE TABLE `Address` (
 -- CreateTable
 CREATE TABLE `Token` (
     `idToken` INTEGER NOT NULL AUTO_INCREMENT,
-    `token` VARCHAR(191) NOT NULL,
+    `tokenHash` VARCHAR(191) NOT NULL,
     `expiresAt` DATETIME(3) NOT NULL,
     `type` VARCHAR(191) NOT NULL,
     `status` ENUM('ACTIVE', 'EXPIRED', 'USED') NOT NULL DEFAULT 'ACTIVE',
     `userId` INTEGER NOT NULL,
 
-    UNIQUE INDEX `Token_token_key`(`token`),
+    UNIQUE INDEX `Token_tokenHash_key`(`tokenHash`),
     PRIMARY KEY (`idToken`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -135,7 +136,7 @@ CREATE TABLE `ContractHistory` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `lastOpenedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `encryptedSnapshot` LONGTEXT NOT NULL,
+    `snapshot` JSON NOT NULL,
     `userId` INTEGER NOT NULL,
 
     UNIQUE INDEX `ContractHistory_externalId_key`(`externalId`),
@@ -146,12 +147,52 @@ CREATE TABLE `ContractHistory` (
 -- CreateTable
 CREATE TABLE `UserCredit` (
     `idUserCredit` INTEGER NOT NULL AUTO_INCREMENT,
-    `creditIncluded` INTEGER NOT NULL,
-    `creditAdded` INTEGER NOT NULL,
+    `quotas` JSON NOT NULL,
     `userId` INTEGER NOT NULL,
 
     UNIQUE INDEX `UserCredit_userId_key`(`userId`),
     PRIMARY KEY (`idUserCredit`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CreditTransaction` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `feature` VARCHAR(191) NOT NULL,
+    `amount` INTEGER NOT NULL,
+    `balanceAfter` INTEGER NOT NULL,
+    `type` ENUM('SUBSCRIPTION', 'PURCHASE', 'CONSUMPTION', 'BONUS', 'REFUND', 'ADMIN', 'EXPIRE') NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `sourceId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `userId` INTEGER NOT NULL,
+
+    INDEX `CreditTransaction_userId_idx`(`userId`),
+    INDEX `CreditTransaction_feature_idx`(`feature`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ProcessedStripeEvent` (
+    `idProcessed` INTEGER NOT NULL AUTO_INCREMENT,
+    `eventId` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
+    `processedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `ProcessedStripeEvent_eventId_key`(`eventId`),
+    PRIMARY KEY (`idProcessed`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `FeatureUsage` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `feature` VARCHAR(191) NOT NULL,
+    `userId` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `FeatureUsage_userId_idx`(`userId`),
+    INDEX `FeatureUsage_feature_idx`(`feature`),
+    INDEX `FeatureUsage_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -172,11 +213,14 @@ CREATE TABLE `Subscription` (
 -- CreateTable
 CREATE TABLE `Plan` (
     `idPlan` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(191) NOT NULL,
+    `name` ENUM('Freemium', 'Betatesteur', 'Starter_mensuel', 'Starter_annuel', 'Pro_mensuel', 'Pro_annuel') NOT NULL,
     `price` INTEGER NOT NULL,
-    `interval` VARCHAR(191) NOT NULL,
-    `creditIncluded` INTEGER NOT NULL,
+    `interval` ENUM('monthly', 'yearly') NOT NULL,
+    `creditsIncluded` JSON NOT NULL,
+    `stripeProductId` VARCHAR(191) NOT NULL,
+    `stripePriceId` VARCHAR(191) NOT NULL,
 
+    UNIQUE INDEX `Plan_name_interval_key`(`name`, `interval`),
     PRIMARY KEY (`idPlan`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -185,6 +229,7 @@ CREATE TABLE `Facture` (
     `idFacture` INTEGER NOT NULL AUTO_INCREMENT,
     `price` INTEGER NOT NULL,
     `stripeInvoiceId` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PAID',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `subscriptionId` INTEGER NOT NULL,
 
@@ -210,7 +255,7 @@ CREATE TABLE `ContractTemplate` (
     `contractType` VARCHAR(191) NULL,
     `sourceFilename` VARCHAR(191) NULL,
     `sourceFilePath` VARCHAR(191) NULL,
-    `encryptedStructure` LONGTEXT NOT NULL,
+    `structure` JSON NOT NULL,
     `version` INTEGER NOT NULL DEFAULT 1,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -257,7 +302,7 @@ CREATE TABLE `GenerationLog` (
     `variables` JSON NOT NULL,
     `promptTokens` INTEGER NOT NULL DEFAULT 0,
     `completionTokens` INTEGER NOT NULL DEFAULT 0,
-    `encryptedOutput` LONGTEXT NOT NULL,
+    `output` JSON NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `templateId` INTEGER NOT NULL,
 
@@ -273,13 +318,14 @@ CREATE TABLE `SignatureEnvelope` (
     `documentName` VARCHAR(191) NOT NULL,
     `documentFilePath` VARCHAR(191) NULL,
     `numPages` INTEGER NOT NULL DEFAULT 1,
-    `signingToken` VARCHAR(191) NOT NULL,
-    `encryptedFields` LONGTEXT NOT NULL,
+    `signingTokenHash` VARCHAR(191) NOT NULL,
+    `signingToken` TEXT NOT NULL,
+    `envelopeFields` JSON NOT NULL,
     `status` ENUM('DRAFT', 'SENT', 'PARTIALLY_SIGNED', 'SIGNED', 'DECLINED', 'EXPIRED') NOT NULL DEFAULT 'DRAFT',
-    `selfName` VARCHAR(191) NOT NULL,
-    `selfEmail` VARCHAR(191) NOT NULL,
-    `counterpartyName` VARCHAR(191) NOT NULL,
-    `counterpartyEmail` VARCHAR(191) NOT NULL,
+    `selfName` TEXT NOT NULL,
+    `selfEmail` TEXT NOT NULL,
+    `counterpartyName` TEXT NOT NULL,
+    `counterpartyEmail` TEXT NOT NULL,
     `sentAt` DATETIME(3) NULL,
     `selfSignedAt` DATETIME(3) NULL,
     `counterpartySignedAt` DATETIME(3) NULL,
@@ -289,7 +335,7 @@ CREATE TABLE `SignatureEnvelope` (
     `userId` INTEGER NOT NULL,
 
     UNIQUE INDEX `SignatureEnvelope_externalId_key`(`externalId`),
-    UNIQUE INDEX `SignatureEnvelope_signingToken_key`(`signingToken`),
+    UNIQUE INDEX `SignatureEnvelope_signingTokenHash_key`(`signingTokenHash`),
     INDEX `SignatureEnvelope_userId_idx`(`userId`),
     INDEX `SignatureEnvelope_status_idx`(`status`),
     PRIMARY KEY (`idEnvelope`)
@@ -339,11 +385,11 @@ CREATE TABLE `UserLlmUsage` (
 CREATE TABLE `Contract` (
     `idContract` INTEGER NOT NULL AUTO_INCREMENT,
     `externalId` VARCHAR(191) NOT NULL,
-    `title` VARCHAR(191) NOT NULL,
+    `title` TEXT NOT NULL,
     `contractType` VARCHAR(191) NULL,
-    `counterpartyName` VARCHAR(191) NULL,
-    `responsibleName` VARCHAR(191) NULL,
-    `status` ENUM('DRAFT', 'IN_NEGOTIATION', 'ACTIVE', 'TACIT_RENEWAL', 'EXPIRED', 'TERMINATED') NOT NULL DEFAULT 'DRAFT',
+    `counterpartyName` TEXT NULL,
+    `responsibleName` TEXT NULL,
+    `status` ENUM('DRAFT', 'IN_NEGOTIATION', 'ACTIVE', 'TACIT_RENEWAL', 'EXPIRED', 'TERMINATED', 'CLOSED') NOT NULL DEFAULT 'DRAFT',
     `signatureDate` DATETIME(3) NULL,
     `effectiveDate` DATETIME(3) NULL,
     `endDate` DATETIME(3) NULL,
@@ -400,7 +446,7 @@ CREATE TABLE `ContractMetadataField` (
 CREATE TABLE `Amendment` (
     `idAmendment` INTEGER NOT NULL AUTO_INCREMENT,
     `externalId` VARCHAR(191) NOT NULL,
-    `title` VARCHAR(191) NOT NULL,
+    `title` TEXT NOT NULL,
     `documentFilePath` VARCHAR(191) NULL,
     `signatureDate` DATETIME(3) NULL,
     `effectiveDate` DATETIME(3) NULL,
@@ -532,6 +578,8 @@ CREATE TABLE `NegotiationSession` (
     `contractExternalId` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `status` ENUM('DRAFT', 'IN_NEGOTIATION', 'VALIDATED', 'BLOCKED', 'CLOSED') NOT NULL DEFAULT 'DRAFT',
+    `mode` ENUM('NEGOTIATION', 'COMPLETION') NOT NULL DEFAULT 'NEGOTIATION',
+    `autoToSignature` BOOLEAN NOT NULL DEFAULT false,
     `ownerUserId` INTEGER NOT NULL,
     `finalVersionId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -541,6 +589,27 @@ CREATE TABLE `NegotiationSession` (
     INDEX `NegotiationSession_contractExternalId_idx`(`contractExternalId`),
     INDEX `NegotiationSession_ownerUserId_idx`(`ownerUserId`),
     PRIMARY KEY (`idNegotiation`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `NegotiationField` (
+    `idField` INTEGER NOT NULL AUTO_INCREMENT,
+    `externalId` VARCHAR(191) NOT NULL,
+    `variableId` VARCHAR(191) NOT NULL,
+    `label` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL DEFAULT 'text',
+    `side` ENUM('OWNER', 'COUNTERPARTY', 'THIRD_PARTY') NOT NULL DEFAULT 'COUNTERPARTY',
+    `required` BOOLEAN NOT NULL DEFAULT true,
+    `position` INTEGER NOT NULL DEFAULT 0,
+    `value` TEXT NULL,
+    `filledById` INTEGER NULL,
+    `filledAt` DATETIME(3) NULL,
+    `negotiationId` INTEGER NOT NULL,
+
+    UNIQUE INDEX `NegotiationField_externalId_key`(`externalId`),
+    INDEX `NegotiationField_negotiationId_idx`(`negotiationId`),
+    UNIQUE INDEX `NegotiationField_negotiationId_variableId_key`(`negotiationId`, `variableId`),
+    PRIMARY KEY (`idField`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -611,10 +680,10 @@ CREATE TABLE `NegotiationParticipant` (
     `idParticipant` INTEGER NOT NULL AUTO_INCREMENT,
     `externalId` VARCHAR(191) NOT NULL,
     `side` ENUM('INTERNAL', 'EXTERNAL') NOT NULL DEFAULT 'INTERNAL',
-    `role` ENUM('READER', 'COMMENTER', 'PROPOSER', 'VALIDATOR') NOT NULL DEFAULT 'COMMENTER',
+    `role` ENUM('READER', 'COMMENTER', 'PROPOSER', 'VALIDATOR', 'FILLER') NOT NULL DEFAULT 'COMMENTER',
     `userId` INTEGER NULL,
-    `name` VARCHAR(191) NULL,
-    `email` VARCHAR(191) NULL,
+    `name` TEXT NULL,
+    `email` TEXT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `negotiationId` INTEGER NOT NULL,
 
@@ -627,24 +696,102 @@ CREATE TABLE `NegotiationParticipant` (
 CREATE TABLE `GuestAccess` (
     `idGuest` INTEGER NOT NULL AUTO_INCREMENT,
     `externalId` VARCHAR(191) NOT NULL,
-    `token` VARCHAR(191) NOT NULL,
+    `tokenHash` VARCHAR(191) NOT NULL,
+    `token` TEXT NOT NULL,
     `participantId` INTEGER NULL,
+    `name` TEXT NULL,
+    `email` TEXT NULL,
+    `fillSide` ENUM('OWNER', 'COUNTERPARTY', 'THIRD_PARTY') NULL,
+    `lastSentAt` DATETIME(3) NULL,
     `expiresAt` DATETIME(3) NOT NULL,
     `revokedAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `negotiationId` INTEGER NOT NULL,
 
     UNIQUE INDEX `GuestAccess_externalId_key`(`externalId`),
-    UNIQUE INDEX `GuestAccess_token_key`(`token`),
+    UNIQUE INDEX `GuestAccess_tokenHash_key`(`tokenHash`),
     INDEX `GuestAccess_negotiationId_idx`(`negotiationId`),
-    INDEX `GuestAccess_token_idx`(`token`),
+    INDEX `GuestAccess_tokenHash_idx`(`tokenHash`),
     PRIMARY KEY (`idGuest`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `LegalWatchSource` (
+    `idSource` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `lastRunAt` DATETIME(3) NULL,
+
+    UNIQUE INDEX `LegalWatchSource_name_key`(`name`),
+    PRIMARY KEY (`idSource`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `LegalWatchItem` (
+    `idItem` INTEGER NOT NULL AUTO_INCREMENT,
+    `externalId` VARCHAR(191) NOT NULL,
+    `providerId` VARCHAR(191) NOT NULL,
+    `contentHash` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(191) NOT NULL,
+    `jurisdiction` VARCHAR(191) NULL,
+    `decisionDate` DATETIME(3) NULL,
+    `sourceUrl` VARCHAR(191) NOT NULL,
+    `rawText` LONGTEXT NOT NULL,
+    `summary` TEXT NULL,
+    `legalDomain` VARCHAR(191) NULL,
+    `concepts` JSON NULL,
+    `impactLevel` ENUM('HAUT', 'MOYEN', 'FAIBLE') NULL,
+    `isEvolution` BOOLEAN NULL,
+    `confidence` DOUBLE NULL,
+    `enrichedAt` DATETIME(3) NULL,
+    `enrichError` TEXT NULL,
+    `status` ENUM('INGESTED', 'ENRICHED', 'PUBLISHED', 'DISCARDED', 'ERROR') NOT NULL DEFAULT 'INGESTED',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `sourceId` INTEGER NOT NULL,
+
+    UNIQUE INDEX `LegalWatchItem_externalId_key`(`externalId`),
+    UNIQUE INDEX `LegalWatchItem_contentHash_key`(`contentHash`),
+    INDEX `LegalWatchItem_status_idx`(`status`),
+    INDEX `LegalWatchItem_decisionDate_idx`(`decisionDate`),
+    INDEX `LegalWatchItem_legalDomain_idx`(`legalDomain`),
+    UNIQUE INDEX `LegalWatchItem_sourceId_providerId_key`(`sourceId`, `providerId`),
+    PRIMARY KEY (`idItem`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `LegalConceptMapping` (
+    `idConcept` INTEGER NOT NULL AUTO_INCREMENT,
+    `concept` VARCHAR(191) NOT NULL,
+    `label` VARCHAR(191) NOT NULL,
+    `legalDomain` VARCHAR(191) NOT NULL,
+    `keywords` JSON NOT NULL,
+    `contractTypes` JSON NOT NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+
+    UNIQUE INDEX `LegalConceptMapping_concept_key`(`concept`),
+    PRIMARY KEY (`idConcept`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `LegalWatchAlert` (
+    `idAlert` INTEGER NOT NULL AUTO_INCREMENT,
+    `externalId` VARCHAR(191) NOT NULL,
+    `userId` INTEGER NOT NULL,
+    `contractIds` JSON NOT NULL,
+    `status` ENUM('UNREAD', 'READ', 'DISMISSED') NOT NULL DEFAULT 'UNREAD',
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `itemId` INTEGER NOT NULL,
+
+    UNIQUE INDEX `LegalWatchAlert_externalId_key`(`externalId`),
+    INDEX `LegalWatchAlert_userId_status_idx`(`userId`, `status`),
+    UNIQUE INDEX `LegalWatchAlert_itemId_userId_key`(`itemId`, `userId`),
+    PRIMARY KEY (`idAlert`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `NegotiationAudit` (
     `idAudit` INTEGER NOT NULL AUTO_INCREMENT,
-    `action` ENUM('SESSION_CREATED', 'STATUS_CHANGED', 'VERSION_CREATED', 'PROPOSAL_CREATED', 'PROPOSAL_STATUS_CHANGED', 'COMMENT_ADDED', 'PARTICIPANT_ADDED', 'PARTICIPANT_REMOVED', 'GUEST_INVITED', 'GUEST_REVOKED', 'VALIDATED', 'ABORTED') NOT NULL,
+    `action` ENUM('SESSION_CREATED', 'STATUS_CHANGED', 'VERSION_CREATED', 'PROPOSAL_CREATED', 'PROPOSAL_STATUS_CHANGED', 'COMMENT_ADDED', 'PARTICIPANT_ADDED', 'PARTICIPANT_REMOVED', 'GUEST_INVITED', 'GUEST_REVOKED', 'GUEST_REMINDED', 'FIELD_FILLED', 'COMPLETION_FINISHED', 'VALIDATED', 'ABORTED') NOT NULL,
     `actorUserId` INTEGER NULL,
     `actorLabel` VARCHAR(191) NULL,
     `versionId` INTEGER NULL,
@@ -656,26 +803,56 @@ CREATE TABLE `NegotiationAudit` (
     PRIMARY KEY (`idAudit`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- AddForeignKey
-ALTER TABLE `AuthProviderAccount` ADD CONSTRAINT `AuthProviderAccount_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+-- CreateTable
+CREATE TABLE `ContractSummary` (
+    `idSummary` INTEGER NOT NULL AUTO_INCREMENT,
+    `externalId` VARCHAR(191) NOT NULL,
+    `identification` JSON NOT NULL,
+    `resume_executif` TEXT NOT NULL,
+    `parties` JSON NOT NULL,
+    `dates` JSON NOT NULL,
+    `objet` TEXT NOT NULL,
+    `obligations` JSON NOT NULL,
+    `conditions_financieres` JSON NOT NULL,
+    `responsabilite` JSON NOT NULL,
+    `clauses_particulieres` JSON NOT NULL,
+    `delais_importants` JSON NOT NULL,
+    `annexes` JSON NOT NULL,
+    `resiliation` JSON NOT NULL,
+    `points_attention` JSON NOT NULL,
+    `niveau_risque` JSON NULL,
+    `duree` TEXT NULL,
+    `fileName` TEXT NULL,
+    `rawText` LONGTEXT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `userId` INTEGER NOT NULL,
+    `contractId` INTEGER NULL,
+
+    UNIQUE INDEX `ContractSummary_externalId_key`(`externalId`),
+    INDEX `ContractSummary_userId_idx`(`userId`),
+    PRIMARY KEY (`idSummary`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `UserPreference` ADD CONSTRAINT `UserPreference_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `AuthProviderAccount` ADD CONSTRAINT `AuthProviderAccount_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Enterprise` ADD CONSTRAINT `Enterprise_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `UserPreference` ADD CONSTRAINT `UserPreference_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Enterprise` ADD CONSTRAINT `Enterprise_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Address` ADD CONSTRAINT `Address_enterpriseId_fkey` FOREIGN KEY (`enterpriseId`) REFERENCES `Enterprise`(`idEnterprise`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Token` ADD CONSTRAINT `Token_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Event` ADD CONSTRAINT `Event_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Event` ADD CONSTRAINT `Event_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `DocumentCustom` ADD CONSTRAINT `DocumentCustom_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `DocumentCustom` ADD CONSTRAINT `DocumentCustom_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `DocumentCustom` ADD CONSTRAINT `DocumentCustom_eventId_fkey` FOREIGN KEY (`eventId`) REFERENCES `Event`(`idEvent`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -687,10 +864,16 @@ ALTER TABLE `ChatHistory` ADD CONSTRAINT `ChatHistory_userId_fkey` FOREIGN KEY (
 ALTER TABLE `ContractHistory` ADD CONSTRAINT `ContractHistory_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `UserCredit` ADD CONSTRAINT `UserCredit_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `UserCredit` ADD CONSTRAINT `UserCredit_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Subscription` ADD CONSTRAINT `Subscription_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CreditTransaction` ADD CONSTRAINT `CreditTransaction_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `FeatureUsage` ADD CONSTRAINT `FeatureUsage_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Subscription` ADD CONSTRAINT `Subscription_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Subscription` ADD CONSTRAINT `Subscription_planId_fkey` FOREIGN KEY (`planId`) REFERENCES `Plan`(`idPlan`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -771,6 +954,12 @@ ALTER TABLE `ContractComment` ADD CONSTRAINT `ContractComment_contractId_fkey` F
 ALTER TABLE `ContractComment` ADD CONSTRAINT `ContractComment_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `NegotiationSession` ADD CONSTRAINT `NegotiationSession_contractExternalId_fkey` FOREIGN KEY (`contractExternalId`) REFERENCES `Contract`(`externalId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `NegotiationField` ADD CONSTRAINT `NegotiationField_negotiationId_fkey` FOREIGN KEY (`negotiationId`) REFERENCES `NegotiationSession`(`idNegotiation`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `NegotiationVersion` ADD CONSTRAINT `NegotiationVersion_negotiationId_fkey` FOREIGN KEY (`negotiationId`) REFERENCES `NegotiationSession`(`idNegotiation`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -786,4 +975,16 @@ ALTER TABLE `NegotiationParticipant` ADD CONSTRAINT `NegotiationParticipant_nego
 ALTER TABLE `GuestAccess` ADD CONSTRAINT `GuestAccess_negotiationId_fkey` FOREIGN KEY (`negotiationId`) REFERENCES `NegotiationSession`(`idNegotiation`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `LegalWatchItem` ADD CONSTRAINT `LegalWatchItem_sourceId_fkey` FOREIGN KEY (`sourceId`) REFERENCES `LegalWatchSource`(`idSource`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `LegalWatchAlert` ADD CONSTRAINT `LegalWatchAlert_itemId_fkey` FOREIGN KEY (`itemId`) REFERENCES `LegalWatchItem`(`idItem`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `NegotiationAudit` ADD CONSTRAINT `NegotiationAudit_negotiationId_fkey` FOREIGN KEY (`negotiationId`) REFERENCES `NegotiationSession`(`idNegotiation`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ContractSummary` ADD CONSTRAINT `ContractSummary_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`idUser`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ContractSummary` ADD CONSTRAINT `ContractSummary_contractId_fkey` FOREIGN KEY (`contractId`) REFERENCES `Contract`(`idContract`) ON DELETE SET NULL ON UPDATE CASCADE;
