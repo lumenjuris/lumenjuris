@@ -318,7 +318,9 @@ INFORMATIONS À REPÉRER :
 À NE PAS REPÉRER :
 - le texte juridique générique et les références légales (ex : "article 1103 du Code civil") ;
 - les numéros d'articles, les titres, les numéros de page ;
-- les appellations génériques des parties ("le Prestataire", "la Société", "les Parties").
+- les appellations génériques des parties ("le Prestataire", "la Société", "les Parties") ;
+- les dates de textes officiels : lois, ordonnances, décrets, arrêtés, conventions et accords collectifs ("la loi du 30 août 1947", "l'ordonnance du 7 janvier 1959", "la convention collective du 3 octobre 1975") ;
+- les mots isolés du texte courant (articles, pronoms, adjectifs comme "Le", "exclusif") : une valeur est une information complète, jamais un mot de la phrase.
 
 RÈGLES POUR LES REPÈRES [[Pn]] (modèle vierge) :
 - Donne une ligne pour CHAQUE repère [[Pn]] qui correspond à une information à compléter. Déduis le nom du texte qui entoure le repère : "dont le siège social est situé [[P2]]" → ADRESSE_SIEGE_APPORTEUR.
@@ -583,8 +585,18 @@ function readVariableDefinition(rawName: unknown, rawLabel: unknown, rawType: un
 function cleanValues(rawValues: unknown[]): string[] {
   return rawValues
     .map((value) => String(value ?? "").replace(/\s+/g, " ").trim())
-    .filter((value) => value.length >= 2 && /[\p{L}\p{N}]/u.test(value) && !/<<|>>|\||\[\[|\]\]/.test(value));
+    .filter((value) => value.length >= 2 && /[\p{L}\p{N}]/u.test(value) && !/<<|>>|\||\[\[|\]\]/.test(value))
+    .filter((value) => !MOTS_COURANTS.has(value.toLowerCase()));
 }
+
+/** Mots du texte courant que l'IA prend parfois pour une valeur ("Le", "exclusif"). */
+const MOTS_COURANTS = new Set([
+  "le", "la", "les", "l'", "un", "une", "des", "du", "de", "il", "elle", "ils", "elles", "et", "ou",
+  "exclusif", "exclusive", "non exclusif", "non exclusive", "monsieur", "madame",
+]);
+
+/** Date d'un texte officiel juste avant la valeur ("loi du", "ordonnance du"…) : pas une variable. */
+const REFERENCE_OFFICIELLE = /(lois?|ordonnances?|d[ée]crets?|arr[êe]t[ée]s?|conventions?\s+collectives?|accords?(\s+collectifs?|\s+nationa(l|ux))?|circulaires?|directives?|r[èe]glements?)[^.;:]{0,40}?(du|des|en\s+date\s+du)\s*$/iu;
 
 /**
  * Lit la réponse de l'IA (une information par ligne, champs séparés par "|") et
@@ -777,6 +789,8 @@ function insertVariableMarkers(content: string, variables: ExtractedVariable[]):
   const searchRegex = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{N}])`, "gu");
 
   return content.replace(searchRegex, (matchedText, ...groups) => {
+    const offset = groups[groups.length - 2] as number;
+    if (typeof offset === "number" && REFERENCE_OFFICIELLE.test(content.slice(Math.max(0, offset - 80), offset))) return matchedText;
     const matchedIndex = groups.findIndex((group, index) => index < valuesToFind.length && group !== undefined);
     const variableName = valuesToFind[matchedIndex]?.name;
     return variableName ? `<<${variableName}|${matchedText}>>` : matchedText;

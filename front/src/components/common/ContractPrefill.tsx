@@ -377,9 +377,9 @@ function CartePartie({
   const fermee = r ? estFermee(r) : false;
 
   return (
-    <div className="flex items-start gap-2 px-3 py-2.5">
-      <span className="w-12 shrink-0 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{titre}</span>
-      <div className="min-w-0 flex-1">
+    <div className="space-y-1.5 px-3 py-2.5">
+      <p className="break-words text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{titre}</p>
+      <div className="min-w-0">
         {enRecherche ? (
           <CompanySearchField label="" hint="" placeholder="Nom ou SIRET" onSelect={onChoisir} />
         ) : (
