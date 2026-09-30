@@ -131,7 +131,7 @@ microsoftRouter.get(
 
       if (!microsoftId || !email) {
         console.error("Claims Microsoft incomplets (oid ou email manquant)");
-        return res.redirect(`${FRONT}?error=microsoft_auth_error`);
+        return res.redirect(`${FRONT}?error=microsoft_error`);
       }
 
       // Recherche dans la BDD d'un utilisateur inscrit avec cet e-mail.
@@ -185,7 +185,7 @@ microsoftRouter.get(
         err
       );
       logger.error("Erreur lors de l'enregistrement du compte microsft")
-      return res.redirect(`${FRONT}/dashboard?error=microsoft_auth_error`);
+      return res.redirect(`${FRONT}/dashboard?error=microsoft_error`);
     }
   },
 );
