@@ -136,12 +136,13 @@ export class Mailer {
     mailOptions: SendMailOptions,
     successMessage?: string,
   ): Promise<MailResult> {
-    const debut = Date.now();
-
+    
     try {
+      const debut = Date.now();
+      console.log("Envoie d'email en cours, début le :", debut)
       const sending = await transporter.sendMail(mailOptions);
-
       if (!sending.messageId) {
+        console.log("Echec lors de l'envoie de l'email, pas d'id dans le sendMail")
         throw new Error(
           `Échec lors de l'envoi de l'email "${mailOptions.subject}" : messageId indisponible.`,
         );
@@ -161,6 +162,8 @@ export class Mailer {
         dureeMs: Date.now() - debut,
       });
 
+      const timeProcess = Date.now() - debut
+      console.log(`Email envoyé avec succès à ${this.email}, durée du process : `, timeProcess)
       return { success: true, message: successMessage };
     } catch (err) {
       return this.errorCatching(err);

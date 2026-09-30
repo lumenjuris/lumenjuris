@@ -33,6 +33,8 @@ interface SignupFormProps {
   presentation: PresentationPanneau;
 }
 
+
+
 /**
  * Panneau de création de compte.
  *
@@ -52,6 +54,7 @@ export const SignupForm = ({
   onSwitchToLogin,
   presentation,
 }: SignupFormProps) => {
+  
   // Adresse à laquelle le code d'activation vient de partir : tant qu'elle est
   // renseignée, l'écran de saisie du code remplace le formulaire.
   const [emailAVerifier, setEmailAVerifier] = useState<string | null>(null);
@@ -367,16 +370,14 @@ export const SignupForm = ({
                   {criteresMotDePasse.map((critere) => (
                     <li
                       key={critere.libelle}
-                      className={`flex items-center gap-1.5 text-[11.5px] transition-colors ${
-                        critere.rempli ? "text-success-dark" : "text-ink-subtle"
-                      }`}
+                      className={`flex items-center gap-1.5 text-[11.5px] transition-colors ${critere.rempli ? "text-success-dark" : "text-ink-subtle"
+                        }`}
                     >
                       <span
-                        className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors ${
-                          critere.rempli
-                            ? "bg-success text-white"
-                            : "border border-line-emphasis"
-                        }`}
+                        className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors ${critere.rempli
+                          ? "bg-success text-white"
+                          : "border border-line-emphasis"
+                          }`}
                       >
                         {critere.rempli && <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />}
                       </span>

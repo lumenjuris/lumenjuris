@@ -56,6 +56,8 @@ export function App() {
   const loadPreferences = usePreferencesStore((state) => state.loadPreferences);
   const resetPreferences = usePreferencesStore((state) => state.reset);
 
+
+  
   useEffect(() => {
     if (authStatus === "idle") {
       void fetchUser();
