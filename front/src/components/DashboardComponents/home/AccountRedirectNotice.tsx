@@ -36,6 +36,15 @@ const MESSAGES: { correspond: (p: URLSearchParams) => boolean; notice: Notice }[
     },
   },
   {
+    correspond: (p) => p.get("error") === "google-erreur",
+    notice: {
+      variant: "error",
+      title: "Connexion Google impossible",
+      detail:
+        "Un problème est survenu pendant la connexion avec Google. Veuillez réessayer dans quelques instants, ou créer un compte avec une adresse e-mail et un mot de passe.",
+    },
+  },
+  {
     correspond: (p) => p.get("verified") === "true",
     notice: {
       variant: "success",
