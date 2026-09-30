@@ -96,9 +96,7 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
     const FRONT = process.env.HOST_FRONT;
 
-    // On ne fait confiance à l'e-mail que si Google l'a vérifié : sinon
-    // n'importe qui pourrait créer un compte Google portant l'e-mail d'un tiers
-    // et, par la liaison ci-dessous, ouvrir le compte de ce tiers.
+
     const emailVerifie = email_verified === true || email_verified === "true";
     if (!email || !emailVerifie) {
       return res.redirect(`${FRONT}/dashboard?error=google-email-non-verifie`);
@@ -111,8 +109,6 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
     if (findUser) {
       if (findUser.isBanned) {
-        // /inscription n'existe plus : la connexion se fait depuis l'accueil,
-        // qui lit ce parametre et affiche le message de blocage.
         return res.redirect(`${FRONT}/dashboard?error=banned`);
       }
       return (
@@ -154,10 +150,15 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
     //Créer session JWT cookie http only
     createCookieAuth(newUser.data?.idUser!, "USER", res);
-    res.redirect(`${process.env.HOST_FRONT}`);
+
+    res.redirect(`${process.env.HOST_FRONT}/dashboard`);
   } catch (err) {
     console.log(err);
     logger.error("Erreur lors de l'enregistrement d'un nouvel user via google", err)
+    // Sans réponse, le navigateur resterait suspendu sur le callback.
+    if (!res.headersSent) {
+      res.redirect(`${process.env.HOST_FRONT}/dashboard?error=google-erreur`);
+    }
   }
 },
 );
