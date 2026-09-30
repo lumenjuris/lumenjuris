@@ -8,7 +8,7 @@ import { User } from "../services/classUser.js";
 import { Google } from "../services/classGoogle.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
-import { Mailer } from "../infrastructure/mailer/classMailer.js";
+import { logger } from "../logger/logger.js";
 
 
 
@@ -49,26 +49,27 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
 
 
 //Route callback de l'auth google
-routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Response) => {
-    
-    const { code, state } = req.query;
+routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response) => {
 
-    // L'état doit être un jeton que NOUS avons signé et qui n'a pas expiré.
-    // La signature suffit à écarter un state forgé ; l'expiration borne sa
-    // durée de vie. (Le `code` Google, lui, n'est de toute façon utilisable
-    // qu'une fois.)
-    try {
-      const payload = jwt.verify(
-        typeof state === "string" ? state : "",
-        process.env.JWT_SECRET!,
-      ) as { purpose?: string };
-      if (payload.purpose !== "google-oauth") {
-        return res.status(400).send("Invalid State");
-      }
-    } catch {
+  const { code, state } = req.query;
+
+  // L'état doit être un jeton que NOUS avons signé et qui n'a pas expiré.
+  // La signature suffit à écarter un state forgé ; l'expiration borne sa
+  // durée de vie. (Le `code` Google, lui, n'est de toute façon utilisable
+  // qu'une fois.)
+  try {
+    const payload = jwt.verify(
+      typeof state === "string" ? state : "",
+      process.env.JWT_SECRET!,
+    ) as { purpose?: string };
+    if (payload.purpose !== "google-oauth") {
       return res.status(400).send("Invalid State");
     }
+  } catch {
+    return res.status(400).send("Invalid State");
+  }
 
+  try {
     //Echanger le code contre un token
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
@@ -95,9 +96,7 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
 
     const FRONT = process.env.HOST_FRONT;
 
-    // On ne fait confiance à l'e-mail que si Google l'a vérifié : sinon
-    // n'importe qui pourrait créer un compte Google portant l'e-mail d'un tiers
-    // et, par la liaison ci-dessous, ouvrir le compte de ce tiers.
+
     const emailVerifie = email_verified === true || email_verified === "true";
     if (!email || !emailVerifie) {
       return res.redirect(`${FRONT}/dashboard?error=google-email-non-verifie`);
@@ -110,17 +109,16 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
 
     if (findUser) {
       if (findUser.isBanned) {
-        // /inscription n'existe plus : la connexion se fait depuis l'accueil,
-        // qui lit ce parametre et affiche le message de blocage.
         return res.redirect(`${FRONT}/dashboard?error=banned`);
       }
       return (
-        createCookieAuth(findUser.idUser, findUser.role , res),
+        createCookieAuth(findUser.idUser, findUser.role, res),
         res.redirect(`${process.env.HOST_FRONT}/dashboard`)
       );
     }
 
-    //Enregistrer dans la bdd
+
+
     //New user dans la bdd
     const newUser = await new User().create({
       email,
@@ -135,7 +133,7 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
       );
     }
 
-  
+
 
     //New AuthProviderAccount
     const newGoogle = await new Google().create({
@@ -150,14 +148,19 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
       .catch(console.error);
 
 
-    //Envoyer l'email de bienvenue
-    await new Mailer(newUser.data.email).sendWelcomeFreemium()
-
-
     //Créer session JWT cookie http only
     createCookieAuth(newUser.data?.idUser!, "USER", res);
-    res.redirect(`${process.env.HOST_FRONT}`);
-  },
+
+    res.redirect(`${process.env.HOST_FRONT}/dashboard`);
+  } catch (err) {
+    console.log(err);
+    logger.error("Erreur lors de l'enregistrement d'un nouvel user via google", err)
+    // Sans réponse, le navigateur resterait suspendu sur le callback.
+    if (!res.headersSent) {
+      res.redirect(`${process.env.HOST_FRONT}/dashboard?error=google-erreur`);
+    }
+  }
+},
 );
 
 export default routerAuthGoogle;

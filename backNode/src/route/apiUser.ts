@@ -4,6 +4,7 @@ import { User } from "../services/classUser.js";
 import { Token } from "../services/classToken.js";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
 import {
+  clearCookieAuth,
   createCookieAuth,
   createPendingTwoFactorCookie,
 } from "../securite/cookieAuth.js";
@@ -1130,9 +1131,12 @@ routerUser.post("/confirm-delete", async (req: Request, res: Response) => {
       }),
     ]);
 
+    clearCookieAuth(res)
+
     return res
       .status(200)
       .json({ success: true, message: "Votre compte a bien été supprimé" });
+
   } catch (error) {
     console.error("Erreur de la confirmation de suppression du compte", error);
     return res

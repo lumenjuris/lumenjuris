@@ -9,6 +9,7 @@ import { Microsoft } from "../services/classMicrosoft.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
+import { logger } from "../logger/logger.js";
 
 /** Le paramètre `state` OAuth n'est valable que quelques minutes. */
 const DUREE_STATE_OAUTH = "5m";
@@ -130,7 +131,7 @@ microsoftRouter.get(
 
       if (!microsoftId || !email) {
         console.error("Claims Microsoft incomplets (oid ou email manquant)");
-        return res.redirect(`${FRONT}?error=microsoft_auth_error`);
+        return res.redirect(`${FRONT}?error=microsoft_error`);
       }
 
       // Recherche dans la BDD d'un utilisateur inscrit avec cet e-mail.
@@ -173,18 +174,18 @@ microsoftRouter.get(
         .activateFreemium(newUser.data?.idUser!)
         .catch(console.error);
 
-      // Envoyer l'email de bienvenue.
-      await new Mailer(newUser.data.email).sendWelcomeFreemium();
+
 
       // Créer session JWT cookie http only.
       createCookieAuth(newUser.data?.idUser!, "USER", res);
-      return res.redirect(`${FRONT}`);
+      return res.redirect(`${FRONT}/dashboard`);
     } catch (err) {
       console.error(
         "Erreur lors du callback de microsoft auth, error : \n",
-        err,
+        err
       );
-      return res.redirect(`${FRONT}?error=microsoft_auth_error`);
+      logger.error("Erreur lors de l'enregistrement du compte microsft", err)
+      return res.redirect(`${FRONT}/dashboard?error=microsoft_error`);
     }
   },
 );
