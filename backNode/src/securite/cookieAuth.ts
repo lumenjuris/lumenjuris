@@ -80,3 +80,14 @@ export function createPendingTwoFactorCookie(
     optionsCookie(DUREE_ATTENTE_2FA_MS),
   );
 }
+
+
+export function clearCookieAuth(res: Response) {
+  return res.clearCookie("authLumenJuris", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    path: "/",
+  });
+}

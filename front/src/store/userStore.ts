@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { UserData } from "../types/userData";
 import { fetchProxy } from "../utils/fetchProxy";
+import { oublierDestination } from "../utils/destinationApresConnexion";
 
 /**
  * Cycle de vie de l'authentification :
@@ -123,6 +124,7 @@ export const useUserStore = create<UserState>((set) => ({
         return true;
       }
       set({ userInfoError: logoutResponse.message });
+      oublierDestination()
       return false;
     } catch (error) {
       set({
