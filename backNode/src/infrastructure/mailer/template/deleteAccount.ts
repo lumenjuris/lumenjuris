@@ -8,7 +8,7 @@ export const templateDeleteAccount = (resetLink: string, username?: string) => {
         </p>
         <h1 style="margin:0 0 20px; font-family:'Newsreader',Georgia,'Times New Roman',serif;
                     font-size:28px; font-weight:400; color:#0A2540; line-height:1.25;">
-          Bonjour ${username ? `<span style="color:#2C3A5E;">${username}</span>` : ""}
+          Bonjour ${username !== "null" ? `<span style="color:#2C3A5E;">${username}</span>` : ""}
         </h1>
         <p style="margin:0 0 24px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                    font-size:15px; line-height:1.7; color:#374151;">
