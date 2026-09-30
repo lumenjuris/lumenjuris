@@ -184,7 +184,7 @@ microsoftRouter.get(
         "Erreur lors du callback de microsoft auth, error : \n",
         err
       );
-      logger.error("Erreur lors de l'enregistrement du compte microsft")
+      logger.error("Erreur lors de l'enregistrement du compte microsft", err)
       return res.redirect(`${FRONT}/dashboard?error=microsoft_error`);
     }
   },
