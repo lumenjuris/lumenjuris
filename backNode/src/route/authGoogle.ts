@@ -8,7 +8,7 @@ import { User } from "../services/classUser.js";
 import { Google } from "../services/classGoogle.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
-import { Mailer } from "../infrastructure/mailer/classMailer.js";
+import { logger } from "../logger/logger.js";
 
 
 
@@ -49,26 +49,27 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
 
 
 //Route callback de l'auth google
-routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Response) => {
-    
-    const { code, state } = req.query;
+routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response) => {
 
-    // L'état doit être un jeton que NOUS avons signé et qui n'a pas expiré.
-    // La signature suffit à écarter un state forgé ; l'expiration borne sa
-    // durée de vie. (Le `code` Google, lui, n'est de toute façon utilisable
-    // qu'une fois.)
-    try {
-      const payload = jwt.verify(
-        typeof state === "string" ? state : "",
-        process.env.JWT_SECRET!,
-      ) as { purpose?: string };
-      if (payload.purpose !== "google-oauth") {
-        return res.status(400).send("Invalid State");
-      }
-    } catch {
+  const { code, state } = req.query;
+
+  // L'état doit être un jeton que NOUS avons signé et qui n'a pas expiré.
+  // La signature suffit à écarter un state forgé ; l'expiration borne sa
+  // durée de vie. (Le `code` Google, lui, n'est de toute façon utilisable
+  // qu'une fois.)
+  try {
+    const payload = jwt.verify(
+      typeof state === "string" ? state : "",
+      process.env.JWT_SECRET!,
+    ) as { purpose?: string };
+    if (payload.purpose !== "google-oauth") {
       return res.status(400).send("Invalid State");
     }
+  } catch {
+    return res.status(400).send("Invalid State");
+  }
 
+  try {
     //Echanger le code contre un token
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
@@ -115,7 +116,7 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
         return res.redirect(`${FRONT}/dashboard?error=banned`);
       }
       return (
-        createCookieAuth(findUser.idUser, findUser.role , res),
+        createCookieAuth(findUser.idUser, findUser.role, res),
         res.redirect(`${process.env.HOST_FRONT}/dashboard`)
       );
     }
@@ -136,7 +137,7 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
       );
     }
 
-  
+
 
     //New AuthProviderAccount
     const newGoogle = await new Google().create({
@@ -154,7 +155,11 @@ routerAuthGoogle.get( "/auth/google/callback", async (req: Request, res: Respons
     //Créer session JWT cookie http only
     createCookieAuth(newUser.data?.idUser!, "USER", res);
     res.redirect(`${process.env.HOST_FRONT}`);
-  },
+  } catch (err) {
+    console.log(err);
+    logger.error("Erreur lors de l'enregistrement d'un nouvel user via google", err)
+  }
+},
 );
 
 export default routerAuthGoogle;
