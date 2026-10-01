@@ -762,6 +762,13 @@ function ImportSection({
   // En quittant la section, la page reprend son affichage normal.
   useEffect(() => () => onReviewDisplayed?.(false), []);
 
+  // Réveille dès l'ouverture le service qui lira le fichier : en ligne, il s'endort
+  // sans visite et met plusieurs secondes à redémarrer ; ce temps s'écoule pendant
+  // que l'internaute choisit son fichier plutôt qu'après.
+  useEffect(() => {
+    fetchProxy("/api/template/import/warmup", { method: "POST" }).catch(() => {});
+  }, []);
+
   /** Clic sur un champ dans le contrat : on le conserve / retire et on le désigne dans la liste. */
   function handleDocumentVariableClick(name: string) {
     toggleEssentialVar(name);
