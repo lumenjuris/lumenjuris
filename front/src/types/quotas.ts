@@ -35,7 +35,9 @@ export function readQuotaValue(
   if ("unlimited" in q) {
     return q.unlimited ? { kind: "unlimited" } : { kind: "finite", value: q.value };
   }
-  return q.enabled ? { kind: "finite", value: q.limit } : { kind: "disabled" };
+  if (!q.enabled) return { kind: "disabled" };
+  // Activée sans plafond (comptes administrateurs) : illimitée.
+  return typeof q.limit === "number" ? { kind: "finite", value: q.limit } : { kind: "unlimited" };
 }
 
 /** Libellés FR des features à valeur (consommables). */
