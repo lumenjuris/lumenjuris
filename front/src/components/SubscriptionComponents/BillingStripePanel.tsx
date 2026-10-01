@@ -1,12 +1,20 @@
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
+// Variante « pure » : l'import seul n'insère pas le script de Stripe dans la page.
+import { loadStripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "../ui/Button";
 import { BillingForm } from "./BillingForm";
 import { BillingInterval } from "../../types/subscriptionData";
 import type { CreditsPayload } from "../../types/creditsData";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_CLIENT ?? "");
+// Le script de Stripe (≈ 250 Ko) n'est chargé qu'à l'ouverture du formulaire de
+// paiement : appelé au chargement du module, il ralentissait l'ouverture de tout le site.
+let stripePromise: Promise<Stripe | null> | null = null;
+function getStripe(): Promise<Stripe | null> {
+  stripePromise ??= loadStripe(import.meta.env.VITE_STRIPE_CLIENT ?? "");
+  return stripePromise;
+}
 
 type BillingStripePanelProps = {
   planName: string;
@@ -77,7 +85,7 @@ export function BillingStripePanel({
   }
 
   return (
-    <Elements stripe={stripePromise} options={options} key={price}>
+    <Elements stripe={getStripe()} options={options} key={price}>
       <BillingForm
         planName={planName}
         price={price}

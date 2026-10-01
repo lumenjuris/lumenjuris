@@ -1,47 +1,76 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { Routes, Route } from "react-router-dom";
-import ContractAnalysis from "./page/ContractAnalysis";
 
 import { MainLayout } from "./components/MainLayout";
-import { Generateur } from "./components/DashboardComponents/Generateur";
-import { Signature } from "./components/DashboardComponents/Signature";
-import { ChatJuridique } from "./components/DashboardComponents/ChatJuridique";
-import { Calculateur } from "./components/DashboardComponents/Calculateur";
-//import { Veille } from "./components/DashboardComponents/Veille";
-import { Conformite } from "./components/DashboardComponents/Conformite";
-import { Contratheque } from "./page/Contratheque";
-import { ClausesLibrary } from "./components/DashboardComponents/clauses/ClausesLibrary";
-import { PlaybookRules } from "./components/DashboardComponents/playbook/PlaybookRules";
-import { PlaybookAnalysis } from "./page/PlaybookAnalysis";
 import { isFeatureEnabled } from "./config/features";
-import { UserManagement } from "./components/DashboardComponents/admin/UserManagement";
-import { NegotiationWorkspace } from "./components/DashboardComponents/negotiation/NegotiationWorkspace";
-import { NegotiationsList } from "./components/DashboardComponents/negotiation/NegotiationsList";
-import { NegotiationGuest } from "./page/NegotiationGuest";
+//import { Veille } from "./components/DashboardComponents/Veille";
 //import { MesFiligranes } from "./components/DashboardComponents/MesFiligranes";
-import { ComprendreContrat } from "./components/DashboardComponents/ComprendreContrat";
 
 import { Dashboard } from "./page/Dashboard";
-import { VerifyAccount } from "./page/VerifyAccount";
-import { ResetPassword } from "./page/ResetPassword";
-import { Sandbox } from "./page/Sandbox";
-import { ParamCompte } from "./page/ParamCompte";
-import { Monitoring } from "./page/Monitoring";
-import { Subscription } from "./page/Subscription";
-import { SubscriptionSuccess } from "./components/SubscriptionComponents/SubscriptionSuccess";
-import { SubscriptionFailed } from "./components/SubscriptionComponents/SubscriptionFailed";
-import { ConfirmDeleteAccountPage } from "./page/DeleteAccount";
 
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { useRetourConnexionExterne } from "./components/auth/useRetourConnexionExterne";
 import { useUserStore } from "./store/userStore";
 import { usePreferencesStore } from "./store/preferencesStore";
-import { SignerPage } from "./page/SignerPage";
 
 import { usePageLoaded } from "./hooks/usePageLoaded";
 import { Loader } from "./components/common/Loader";
 import { PublicLayout } from "./components/DashboardComponents/PublicLayout";
+
+// Chaque écran (sauf l'accueil) est téléchargé seulement quand on l'ouvre : tous
+// réunis dans un seul fichier, ils pesaient près de 5 Mo à charger avant le moindre
+// affichage. L'attente éventuelle s'affiche dans le cadre de la page (MainLayout)
+// ou en plein écran (Suspense ci-dessous) pour les pages sans menu.
+const CLE_RECHARGEMENT = "lj-rechargement-ecran";
+function lazyPage(load: () => Promise<{ default: ComponentType<any> }>) {
+  return lazy(() =>
+    load().then(
+      (module) => {
+        try { sessionStorage.removeItem(CLE_RECHARGEMENT); } catch { /* stockage indisponible */ }
+        return module;
+      },
+      (error) => {
+        // Après une mise en ligne, les fichiers de l'ancienne version n'existent plus :
+        // un onglet resté ouvert ne trouve pas l'écran demandé. On recharge la page
+        // une seule fois pour récupérer la nouvelle version.
+        let dejaRecharge = true;
+        try {
+          dejaRecharge = sessionStorage.getItem(CLE_RECHARGEMENT) === "1";
+          if (!dejaRecharge) sessionStorage.setItem(CLE_RECHARGEMENT, "1");
+        } catch { /* stockage indisponible : pas de rechargement automatique */ }
+        if (dejaRecharge) throw error;
+        window.location.reload();
+        return new Promise<never>(() => {});
+      },
+    ),
+  );
+}
+const ContractAnalysis = lazyPage(() => import("./page/ContractAnalysis"));
+const Generateur = lazyPage(() => import("./components/DashboardComponents/Generateur").then((m) => ({ default: m.Generateur })));
+const Signature = lazyPage(() => import("./components/DashboardComponents/Signature").then((m) => ({ default: m.Signature })));
+const ChatJuridique = lazyPage(() => import("./components/DashboardComponents/ChatJuridique").then((m) => ({ default: m.ChatJuridique })));
+const Calculateur = lazyPage(() => import("./components/DashboardComponents/Calculateur").then((m) => ({ default: m.Calculateur })));
+const Conformite = lazyPage(() => import("./components/DashboardComponents/Conformite").then((m) => ({ default: m.Conformite })));
+const Contratheque = lazyPage(() => import("./page/Contratheque").then((m) => ({ default: m.Contratheque })));
+const ClausesLibrary = lazyPage(() => import("./components/DashboardComponents/clauses/ClausesLibrary").then((m) => ({ default: m.ClausesLibrary })));
+const PlaybookRules = lazyPage(() => import("./components/DashboardComponents/playbook/PlaybookRules").then((m) => ({ default: m.PlaybookRules })));
+const PlaybookAnalysis = lazyPage(() => import("./page/PlaybookAnalysis").then((m) => ({ default: m.PlaybookAnalysis })));
+const UserManagement = lazyPage(() => import("./components/DashboardComponents/admin/UserManagement").then((m) => ({ default: m.UserManagement })));
+const NegotiationWorkspace = lazyPage(() => import("./components/DashboardComponents/negotiation/NegotiationWorkspace").then((m) => ({ default: m.NegotiationWorkspace })));
+const NegotiationsList = lazyPage(() => import("./components/DashboardComponents/negotiation/NegotiationsList").then((m) => ({ default: m.NegotiationsList })));
+const NegotiationGuest = lazyPage(() => import("./page/NegotiationGuest").then((m) => ({ default: m.NegotiationGuest })));
+const ComprendreContrat = lazyPage(() => import("./components/DashboardComponents/ComprendreContrat").then((m) => ({ default: m.ComprendreContrat })));
+const VerifyAccount = lazyPage(() => import("./page/VerifyAccount").then((m) => ({ default: m.VerifyAccount })));
+const ResetPassword = lazyPage(() => import("./page/ResetPassword").then((m) => ({ default: m.ResetPassword })));
+const Sandbox = lazyPage(() => import("./page/Sandbox").then((m) => ({ default: m.Sandbox })));
+const ParamCompte = lazyPage(() => import("./page/ParamCompte").then((m) => ({ default: m.ParamCompte })));
+const Monitoring = lazyPage(() => import("./page/Monitoring").then((m) => ({ default: m.Monitoring })));
+const Subscription = lazyPage(() => import("./page/Subscription").then((m) => ({ default: m.Subscription })));
+const SubscriptionSuccess = lazyPage(() => import("./components/SubscriptionComponents/SubscriptionSuccess").then((m) => ({ default: m.SubscriptionSuccess })));
+const SubscriptionFailed = lazyPage(() => import("./components/SubscriptionComponents/SubscriptionFailed").then((m) => ({ default: m.SubscriptionFailed })));
+const ConfirmDeleteAccountPage = lazyPage(() => import("./page/DeleteAccount").then((m) => ({ default: m.ConfirmDeleteAccountPage })));
+const SignerPage = lazyPage(() => import("./page/SignerPage").then((m) => ({ default: m.SignerPage })));
 
 
 
@@ -56,9 +85,6 @@ export function App() {
   const loadPreferences = usePreferencesStore((state) => state.loadPreferences);
   const resetPreferences = usePreferencesStore((state) => state.reset);
 
-  console.log(authStatus)
-  console.log(fetchUser)
-  
   useEffect(() => {
     if (authStatus === "idle") {
       void fetchUser();
@@ -95,6 +121,7 @@ export function App() {
     <>
       <ScrollToTop />
 
+      <Suspense fallback={<Loader />}>
       <Routes>
         {/* ------------------------------------------------------------------
             Pages ouvertes à tous, avec le menu latéral et l'en-tête.
@@ -173,6 +200,7 @@ export function App() {
         {/* Page publique de négociation pour un invité externe — sans auth */}
         <Route path="/negociation-invite/:token" element={<NegotiationGuest />} />
       </Routes>
+      </Suspense>
 
 
     </>
