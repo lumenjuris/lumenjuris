@@ -719,6 +719,9 @@ function mergeExtractions(extractions: AiExtractionResult[]): AiExtractionResult
  * Découpe les paragraphes en sections à partir des numéros de titres donnés par l'IA.
  * Ce qui précède le premier titre devient la section "En-tête".
  */
+/** Au-delà, un paragraphe marqué « titre » par l'IA contient aussi du texte courant. */
+const MAX_HEADING_LENGTH = 120;
+
 function buildSections(paragraphs: string[], headingLines: number[]): Array<{ title: string; paragraphs: string[] }> {
   // Numéros IA (commencent à 1) → index du tableau, sans doublon.
   const headingIndexes = new Set(
@@ -731,8 +734,21 @@ function buildSections(paragraphs: string[], headingLines: number[]): Array<{ ti
   let currentSection = { title: "En-tête", paragraphs: [] as string[] };
   let currentSectionIsHeader = true;
 
-  paragraphs.forEach((paragraph, index) => {
-    const isHeading = headingIndexes.has(index);
+  paragraphs.forEach((rawParagraph, index) => {
+    let paragraph = rawParagraph;
+    let isHeading = headingIndexes.has(index);
+    let bodyAfterHeading: string | null = null;
+    // « Article 1 : Les époux choisissent… » : titre et texte sur la même ligne.
+    // Seul le début devient titre ; sinon tout le texte s'afficherait en style de titre.
+    if (isHeading && paragraph.length > MAX_HEADING_LENGTH) {
+      const split = paragraph.match(/^(.{1,80}?)\s*[:–—-]\s+([\s\S]+)$/);
+      if (split) {
+        paragraph = split[1];
+        bodyAfterHeading = split[2];
+      } else {
+        isHeading = false;
+      }
+    }
     const currentTitleHasNoContent = !currentSectionIsHeader && currentSection.paragraphs.length === 0;
 
     if (isHeading && currentTitleHasNoContent) {
@@ -746,6 +762,7 @@ function buildSections(paragraphs: string[], headingLines: number[]): Array<{ ti
     } else {
       currentSection.paragraphs.push(paragraph);
     }
+    if (bodyAfterHeading) currentSection.paragraphs.push(bodyAfterHeading);
   });
   if (currentSection.paragraphs.length > 0) sections.push(currentSection);
 

@@ -19,7 +19,7 @@ const TIMEOUT_MS = 180_000;
 export interface Gpt5Request {
   prompt: string;
   model: "gpt-5.2" | "gpt-5.4-nano";
-  reasoning: "none" | "low" | "medium" | "high";
+  reasoning: "none" | "low" | "medium" | "high" | "xhigh";
   verbosity: "low" | "medium" | "high";
 }
 
