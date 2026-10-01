@@ -3,6 +3,7 @@ import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js";
 import { BACKEND_URL, BACKNODE_URL } from "../config.js";
 import { relayToNode } from "../relay.js";
 import { logOpenAiTokens, trackFeature } from "../tracking.js";
+import { callGpt5, type Gpt5Response } from "../utils/openaiResponses.js";
 
 // Chemin relatif /api/template" 
 export const templateRouter: Router = Router();
@@ -18,6 +19,7 @@ export const templateRouter: Router = Router();
 const id = (req: Request) => encodeURIComponent(req.params.externalId as string);
 
 // Import d'un contrat en modèle, en plusieurs étapes (voir « Import d'un contrat → modèle »).
+templateRouter.post("/import/warmup", auth, handleImportWarmup);
 templateRouter.post("/import/prepare", auth, handleImportPrepare);
 templateRouter.post("/import/analyse", auth, handleImportAnalyse);
 templateRouter.post("/import/assemble", auth, handleImportAssemble);
@@ -717,6 +719,9 @@ function mergeExtractions(extractions: AiExtractionResult[]): AiExtractionResult
  * Découpe les paragraphes en sections à partir des numéros de titres donnés par l'IA.
  * Ce qui précède le premier titre devient la section "En-tête".
  */
+/** Au-delà, un paragraphe marqué « titre » par l'IA contient aussi du texte courant. */
+const MAX_HEADING_LENGTH = 120;
+
 function buildSections(paragraphs: string[], headingLines: number[]): Array<{ title: string; paragraphs: string[] }> {
   // Numéros IA (commencent à 1) → index du tableau, sans doublon.
   const headingIndexes = new Set(
@@ -729,8 +734,21 @@ function buildSections(paragraphs: string[], headingLines: number[]): Array<{ ti
   let currentSection = { title: "En-tête", paragraphs: [] as string[] };
   let currentSectionIsHeader = true;
 
-  paragraphs.forEach((paragraph, index) => {
-    const isHeading = headingIndexes.has(index);
+  paragraphs.forEach((rawParagraph, index) => {
+    let paragraph = rawParagraph;
+    let isHeading = headingIndexes.has(index);
+    let bodyAfterHeading: string | null = null;
+    // « Article 1 : Les époux choisissent… » : titre et texte sur la même ligne.
+    // Seul le début devient titre ; sinon tout le texte s'afficherait en style de titre.
+    if (isHeading && paragraph.length > MAX_HEADING_LENGTH) {
+      const split = paragraph.match(/^(.{1,80}?)\s*[:–—-]\s+([\s\S]+)$/);
+      if (split) {
+        paragraph = split[1];
+        bodyAfterHeading = split[2];
+      } else {
+        isHeading = false;
+      }
+    }
     const currentTitleHasNoContent = !currentSectionIsHeader && currentSection.paragraphs.length === 0;
 
     if (isHeading && currentTitleHasNoContent) {
@@ -744,6 +762,7 @@ function buildSections(paragraphs: string[], headingLines: number[]): Array<{ ti
     } else {
       currentSection.paragraphs.push(paragraph);
     }
+    if (bodyAfterHeading) currentSection.paragraphs.push(bodyAfterHeading);
   });
   if (currentSection.paragraphs.length > 0) sections.push(currentSection);
 
@@ -937,16 +956,13 @@ function readExtractions(raw: unknown): AiExtractionResult[] {
 // ─── Étapes de l'import ────────────────────────────────────────────────────────
 
 /** Extrait le texte du fichier via le moteur Python. */
-async function extractDocumentText(fileBase64: string, mimeType: string | undefined, filename: string): Promise<string> {
-  const formData = new FormData();
-  formData.append(
-    "file",
-    new Blob([Buffer.from(fileBase64, "base64")], { type: mimeType || "application/octet-stream" }),
-    filename,
-  );
-  const extractRes = await fetch(`${BACKEND_URL}/extract-document-text`, {
+async function extractDocumentText(fileBase64: string, filename: string): Promise<string> {
+  // Le fichier part en JSON (base64) et non en multipart : chez o2switch, un envoi
+  // multipart contenant un fichier est détourné avant d'atteindre le moteur Python (404).
+  const extractRes = await fetch(`${BACKEND_URL}/extract-document-text-json`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename, fileBase64 }),
   });
   if (!extractRes.ok) throw new ImportError(502, "Extraction du document échouée.");
 
@@ -965,19 +981,19 @@ async function analysePart(
   const { scope, reminder } = buildPartInstructions(part, paragraphCount);
   const prompt = `${EXTRACT_VARIABLES_PROMPT_BASE}${scope}\n\nTEXTE DU CONTRAT :\n${numberedText}${reminder}`;
 
-  const aiRes = await fetch(`${BACKEND_URL}/openai-chat-5`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  let aiData: Gpt5Response;
+  try {
+    aiData = await callGpt5({
       prompt,
       // « low » plutôt que « medium » : même qualité sur nos essais, réponse bien plus rapide.
       reasoning: "low",
       verbosity: "low",
       model: "gpt-5.2",
-    }),
-  });
-  if (!aiRes.ok) throw new ImportError(502, "Analyse IA échouée.");
-  const aiData = (await aiRes.json()) as { content?: string; openai_tokens?: unknown };
+    });
+  } catch (error) {
+    console.error("[template/import] analyse IA échouée :", (error as Error)?.message);
+    throw new ImportError(502, "Analyse IA échouée.");
+  }
 
   if (aiData.openai_tokens && userId) {
     await logOpenAiTokens({ openai_tokens: aiData.openai_tokens } as any, userId);
@@ -996,11 +1012,20 @@ function sendImportError(res: Response, step: string, error: unknown): void {
     res.status(500).json({ success: false, message: "Erreur interne lors de l'import." });
 }
 
+/**
+ * Appelé dès l'ouverture de l'écran d'import : réveille le moteur Python, qui lit
+ * le fichier. En ligne, il s'endort après quelques minutes sans visite et met
+ * jusqu'à 15 s à redémarrer ; ce temps s'écoule pendant que l'internaute choisit son fichier.
+ */
+function handleImportWarmup(_req: Request, res: Response): void {
+  fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => {});
+  res.status(204).end();
+}
+
 /** Étape 1 : lit le fichier, repère les emplacements vides et découpe le document en parties. */
 async function handleImportPrepare(req: Request, res: Response): Promise<void> {
-  const { fileBase64, mimeType, filename } = req.body as {
+  const { fileBase64, filename } = req.body as {
     fileBase64?: string;
-    mimeType?: string;
     filename?: string;
   };
   if (!fileBase64 || !filename) {
@@ -1010,7 +1035,7 @@ async function handleImportPrepare(req: Request, res: Response): Promise<void> {
 
   try {
     const startedAt = Date.now();
-    const document = prepareDocument(await extractDocumentText(fileBase64, mimeType, filename));
+    const document = prepareDocument(await extractDocumentText(fileBase64, filename));
     if (document.paragraphs.length === 0) throw new ImportError(422, "Aucun texte extrait du document.");
 
     const { paragraphCount, isTruncated } = buildNumberedText(document);

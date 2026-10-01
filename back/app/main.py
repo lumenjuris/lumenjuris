@@ -4,6 +4,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, Set, Tuple
 import os
+import io
+import base64
+import binascii
 import requests
 import asyncio
 from starlette.concurrency import run_in_threadpool
@@ -231,6 +234,25 @@ async def extract_pdf_text(file: UploadFile = File(...), scan: bool = Form(False
         "pages": 1,
         "is_protected": False,
     }
+
+
+class DocumentBase64Request(BaseModel):
+    filename: str
+    fileBase64: str
+    scan: bool = False
+
+
+@app.post("/extract-document-text-json")
+async def extract_document_text_json(req: DocumentBase64Request):
+    """Même traitement que /extract-document-text, mais le fichier arrive encodé en base64
+    dans un corps JSON. Chez o2switch, un envoi multipart contenant un fichier est détourné
+    avant d'atteindre l'application (réponse 404) : le JSON, lui, passe."""
+    try:
+        content = base64.b64decode(req.fileBase64, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="Fichier base64 invalide")
+    upload = UploadFile(file=io.BytesIO(content), filename=req.filename)
+    return await extract_pdf_text(file=upload, scan=req.scan)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

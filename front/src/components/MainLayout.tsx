@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,7 +19,8 @@ import {
   HandCoins,
   ClipboardCheck,
   ListChecks,
-  ScanSearch
+  ScanSearch,
+  Loader2
 } from "lucide-react";
 import { isFeatureEnabled } from "../config/features";
 
@@ -393,7 +394,16 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
         <main className="lj-main flex-1 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-3">
           <ErrorBoundary key={location.pathname}>
-            {children ?? <Outlet />}
+            {/* Écrans chargés à la demande (voir router.tsx) : le menu reste affiché pendant le téléchargement. */}
+            <Suspense
+              fallback={
+                <div role="status" aria-label="Chargement…" className="flex min-h-[240px] items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-brand" />
+                </div>
+              }
+            >
+              {children ?? <Outlet />}
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>

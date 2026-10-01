@@ -67,6 +67,27 @@ function writeRemaining(
   return next as Prisma.InputJsonValue;
 }
 
+// ─── Administrateurs : tout en illimité ──────────────────────────────────────
+// Un administrateur peut utiliser toutes les fonctionnalités sans limite, quel
+// que soit le plan affiché sur son compte (il peut en changer pour une démo).
+
+async function isAdmin(userId: number): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { idUser: userId }, select: { role: true } });
+  return user?.role === "ADMIN";
+}
+
+/** Quotas tels que vus par un administrateur : chaque entrée du plan, illimitée ou activée. */
+function unlimitedQuotas(quotas: Prisma.JsonValue): Record<string, unknown> {
+  const all = (quotas ?? {}) as Record<string, any>;
+  return Object.fromEntries(
+    Object.entries(all).map(([feature, q]) => {
+      if (q && typeof q === "object" && "unlimited" in q) return [feature, { unlimited: true }];
+      if (q && typeof q === "object" && "enabled" in q) return [feature, { ...q, enabled: true }];
+      return [feature, q];
+    }),
+  );
+}
+
 export class Credit {
   /**
    * Ajoute un bonus à un quota consommable (ex: offrir 10 analyses).
@@ -142,6 +163,9 @@ export class Credit {
       if (!isConsumable(feature)) {
         return { success: false, message: `Feature "${feature}" non consommable.` };
       }
+      if (await isAdmin(userId)) {
+        return { success: true, message: "Quota illimité.", data: { unlimited: true } };
+      }
 
       const activeSubscription = await prisma.subscription.findUnique({
         where: { userId },
@@ -207,6 +231,9 @@ export class Credit {
       if (!isConsumable(feature)) {
         return { success: false, message: `Feature "${feature}" non consommable.` };
       }
+      if (await isAdmin(userId)) {
+        return { success: true, data: { allowed: true, unlimited: true } };
+      }
 
       const activeSubscription = await prisma.subscription.findUnique({
         where: { userId },
@@ -246,6 +273,9 @@ export class Credit {
    */
   async checkContrathequeCapacity(userId: number): Promise<ReturnData> {
     try {
+      if (await isAdmin(userId)) {
+        return { success: true, data: { allowed: true, unlimited: true } };
+      }
       const activeSubscription = await prisma.subscription.findUnique({
         where: { userId },
         select: { status: true },
@@ -300,7 +330,9 @@ export class Credit {
       return {
         success: true,
         message: "Quotas restants.",
-        data: userCredit ? { quotas: userCredit.quotas } : { quotas: null },
+        data: userCredit
+          ? { quotas: user.role === "ADMIN" ? unlimitedQuotas(userCredit.quotas) : userCredit.quotas }
+          : { quotas: null },
       };
     } catch (error) {
       console.error("GET QUOTA ERROR:", error);

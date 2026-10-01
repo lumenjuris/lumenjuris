@@ -3,6 +3,9 @@
   RewriteEngine On
   RewriteBase /
   RewriteRule ^index\.html$ - [L]
+  # Un fichier absent de /assets (ancienne version après une mise en ligne) doit
+  # répondre 404 et non la page d'accueil : l'application recharge alors la page.
+  RewriteRule ^assets/ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
@@ -16,4 +19,9 @@
     Header set Pragma "no-cache"
     Header set Expires "0"
   </Files>
+  # Fichiers construits dont le nom contient une empreinte (ex. index-0ls_skHg.js) :
+  # leur contenu ne change jamais sous ce nom, le navigateur peut les garder un an.
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|woff2?|svg|png|jpe?g|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>

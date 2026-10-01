@@ -314,12 +314,12 @@ export function UserManagement() {
                       <div className="flex items-center gap-2">
                         <select
                           value={u.plan}
-                          disabled={isSavingPlan || isSelf || u.isBanned}
+                          disabled={isSavingPlan || u.isBanned}
                           onChange={(e) => void changePlan(u, e.target.value as PlanName)}
                           className="bg-white border border-line px-3 py-1.5 rounded-lg text-sm text-ink-secondary outline-none focus:border-brand/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           title={
                             isSelf
-                              ? "Vous ne pouvez pas modifier votre propre plan"
+                              ? "Votre plan, pour une démonstration : en administrateur, tout reste illimité"
                               : u.isBanned
                               ? "Débannissez l'utilisateur pour modifier son rôle"
                               : undefined

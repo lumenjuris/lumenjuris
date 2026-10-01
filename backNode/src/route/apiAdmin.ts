@@ -77,9 +77,8 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
             return res.status(400).json({ success: false, message: "Plan invalide" });
         }
 
-        if (targetId === Number(req.idUser)) {
-            return res.status(400).json({ success: false, message: "Vous ne pouvez pas modifier votre propre plan" });
-        }
+        // Un administrateur peut changer son propre plan (démonstrations) : ses crédits
+        // restent illimités quel que soit le plan (voir services/classCredit.ts).
 
         // L'intervalle est porté par le nom du plan (ex: Starter_annuel). Les plans
         // gratuits (Freemium, Betatesteur) n'existent qu'en mensuel. Sans ce couple

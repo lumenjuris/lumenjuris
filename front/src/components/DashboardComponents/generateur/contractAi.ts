@@ -105,7 +105,10 @@ export async function generateContractQuestions(title: string): Promise<WizardQu
     `Exemples de forme (le contenu doit être adapté au contrat demandé, pas recopié) : ` +
     `{"question":"Comment serez-vous payé ?","type":"choice","hint":"","options":["Chaque mois, sur facture","En une fois, à la fin","Acompte puis solde"]} ` +
     `{"question":"Peut-on arrêter le contrat avant la fin ?","type":"choice","hint":"","options":["Oui, avec un préavis","Seulement en cas de faute","Non, jusqu'au terme"]}.`;
-  const out = await callOpenAi52(prompt, "high", "low", "gpt-5.4-nano");
+  // gpt-5.2 sans réflexion préalable : questions mieux ciblées que gpt-5.4-nano en « high »
+  // (essais du 1er oct. 2026 : motif, échéance, essai pour un CDD ; type de bail, révision,
+  // travaux pour un bail commercial) en 5 à 7 s au lieu de 26 s. « low » variait de 6 à 26 s.
+  const out = await callOpenAi52(prompt, "none", "low", "gpt-5.2");
   let arr: unknown;
   try { arr = JSON.parse(extractJson(out)); } catch { arr = null; }
   if (!Array.isArray(arr)) throw new Error("Questions illisibles");
