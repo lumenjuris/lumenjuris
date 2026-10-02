@@ -295,72 +295,39 @@ export function PlansPanel() {
         </div>
       )}
 
-      {/* ── Grille des 3 offres principales ── */}
-      <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
+      {/* ── Tableau des offres : prix, bouton de paiement et contenu, colonne par colonne ── */}
+      <PlansComparison
+        renderHeader={(plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           const actuelle = estActuelle(plan);
           return (
-            <div
-              key={plan.name}
-              className={cn(
-                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300 bg-white",
-                plan.highlight
-                  ? "z-10 border-brand/30 bg-blue-primary shadow-[0_20px_45px_-15px_rgba(44,58,94,0.45)] ring-1 ring-brand/20 lg:-translate-y-3 lg:scale-[1.03]"
-                  : "border-line shadow-sm hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)]",
-                actuelle && "ring-2 ring-emerald-500",
-              )}
-            >
-              {/* Liseré supérieur lumineux sur l'offre mise en avant */}
-              {plan.highlight && (
-                <span className="absolute inset-x-8 top-0 h-1 rounded-full bg-gradient-to-r from-brand/0 via-brand to-brand/0" />
-              )}
-
+            <div className="flex h-full flex-col items-center gap-1 text-center">
               {actuelle ? (
-                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-md">
-                  <Check className="h-3 w-3" />
-                  Votre formule actuelle
+                <span className="mb-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                  <Check className="h-3 w-3" /> Votre formule
                 </span>
-              ) : plan.badge && (
-                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-md">
-                  <Sparkles className="h-3 w-3" />
-                  {plan.badge}
+              ) : plan.badge ? (
+                <span className="mb-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                  <Sparkles className="h-3 w-3" /> {plan.badge}
                 </span>
+              ) : (
+                <span className="mb-1 h-[22px]" />
               )}
-
-              <div>
-                <h3 className={cn("text-lg font-bold ", plan.highlight ? "text-white" : "text-blue-primary")}>{plan.name}</h3>
-                <p className={cn("mt-1 text-sm", plan.highlight ? "text-gray-primary" : "text-ink-muted")}>{plan.tagline}</p>
-              </div>
-
-              <div className="mt-6 flex items-baseline gap-1">
-                <span
-                  className={cn(
-                    "text-4xl font-extrabold tracking-tight",
-                    plan.highlight ? "text-white" : "text-blue-primary",
-                  )}
-                >
-                  {price} €
-                </span>
-                <span className="text-sm text-ink-subtle">
-                  HT / utilisateur / mois
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-ink-subtle">
-                {plan.free
-                  ? "Gratuit, sans engagement"
-                  : yearly
-                    ? "Facturé annuellement"
-                    : "Facturé mensuellement"}
-              </p>
-
+              <span className="text-lg font-bold text-blue-primary">{plan.name}</span>
+              <span className="text-xs font-normal text-ink-muted">{plan.tagline}</span>
+              <span className="mt-2 text-3xl font-extrabold tracking-tight text-blue-primary">{price} €</span>
+              <span className="text-[11px] font-normal text-ink-subtle">
+                HT / utilisateur / mois
+                <br />
+                {plan.free ? "Gratuit, sans engagement" : yearly ? "Facturé annuellement" : "Facturé mensuellement"}
+              </span>
               <Button
                 variant={plan.highlight ? "default" : "outline"}
                 disabled={checkoutLoadingPlan === plan.name || actuelle}
                 className={cn(
-                  "mt-6 w-full",
+                  "mt-3 w-full",
                   plan.highlight
-                    ? "bg-white text-blue-primary shadow-sm hover:bg-gray-300"
+                    ? "bg-blue-primary text-white hover:bg-blue-primary/90"
                     : "border-blue-primary text-blue-primary hover:bg-brand-light",
                 )}
                 onClick={() => {
@@ -375,14 +342,10 @@ export function PlansPanel() {
               >
                 {actuelle ? "Formule actuelle" : checkoutLoadingPlan === plan.name ? "Redirection…" : plan.cta}
               </Button>
-
             </div>
           );
-        })}
-      </div>
-
-      {/* ── Détail des formules : une seule référence, juste sous les prix ── */}
-      <PlansComparison />
+        }}
+      />
 
       <div className="mt-4">
         <span className="text-3xl font-bold tracking-tight text-blue-primary ">
@@ -540,20 +503,29 @@ function ComparisonCell({ value }: { value: Cell }) {
   return <span className="font-medium text-ink">{value}</span>;
 }
 
-/** Tableau détaillé : une ligne par fonctionnalité, une colonne par formule. */
-function PlansComparison() {
-  const columns = ["Free", "Starter", "Pro"];
+/**
+ * Tableau des offres : en tête de chaque colonne le prix et le bouton de paiement
+ * de la formule, puis une ligne par fonctionnalité. Les colonnes suivent l'ordre
+ * de PLANS (Free, Starter, Pro) comme les valeurs de COMPARISON.
+ */
+function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React.ReactNode }) {
+  const plans = PLANS.filter((plan) => !plan.contactOnly);
   return (
-    <section className="mt-2">
-      <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Ce que comprend chaque formule</h3>
-      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-white">
-        <table className="w-full min-w-[560px] text-sm">
+    <section className="mt-8">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-sm">
+        <table className="w-full min-w-[720px] table-fixed text-sm">
+          <colgroup>
+            <col />
+            {plans.map((plan) => <col key={plan.name} className="w-[23%]" />)}
+          </colgroup>
           <thead>
-            <tr className="border-b border-line bg-surface-subtle">
-              <th className="px-4 py-3 text-left font-semibold text-ink">Fonctionnalité</th>
-              {columns.map((column) => (
-                <th key={column} className={cn("w-32 px-4 py-3 text-center font-semibold", column === "Pro" ? "text-blue-primary" : "text-ink")}>
-                  {column}
+            <tr className="border-b border-line align-top">
+              <th className="px-4 py-5 text-left align-bottom">
+                <span className="text-xl font-bold text-blue-primary">Ce que comprend chaque formule</span>
+              </th>
+              {plans.map((plan) => (
+                <th key={plan.name} className={cn("px-4 py-5 font-normal", plan.highlight && "bg-blue-card-sub/40")}>
+                  {renderHeader(plan)}
                 </th>
               ))}
             </tr>
@@ -572,7 +544,7 @@ function PlansComparison() {
                     {row.hint && <span className="block text-xs text-ink-muted">{row.hint}</span>}
                   </td>
                   {row.values.map((value, i) => (
-                    <td key={i} className={cn("px-4 py-2.5 text-center", i === 2 && "bg-blue-card-sub/30")}>
+                    <td key={i} className={cn("px-4 py-2.5 text-center", i === 2 && "bg-blue-card-sub/40")}>
                       <ComparisonCell value={value} />
                     </td>
                   ))}
