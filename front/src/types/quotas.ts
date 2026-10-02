@@ -2,12 +2,12 @@
  * Structure des quotas d'un plan / d'un utilisateur (miroir de `CreditPlan`
  * défini côté backend dans seedPlans.ts). Deux natures d'entrées :
  *  - quotas À VALEUR : analyzer, contrathequeLimit ({unlimited,value}) et
- *    signatureEnhanced ({enabled,limit}) — consommables ;
+ *    signatureEnhanced ({enabled,value}) — consommables ;
  *  - features BOOLÉENNES : le reste ({enabled}) — simples droits d'accès.
  */
 
 export type Quota = { unlimited: true } | { unlimited: false; value: number };
-export type MeteredFeature = { enabled: false } | { enabled: true; limit: number };
+export type MeteredFeature = { enabled: false } | { enabled: true; value: number };
 export type BooleanFeature = { enabled: boolean };
 
 export type PlanQuotas = {
@@ -36,8 +36,10 @@ export function readQuotaValue(
     return q.unlimited ? { kind: "unlimited" } : { kind: "finite", value: q.value };
   }
   if (!q.enabled) return { kind: "disabled" };
+  // Les anciens crédits en base utilisent encore "limit" au lieu de "value".
+  const remaining = q.value ?? (q as { limit?: number }).limit;
   // Activée sans plafond (comptes administrateurs) : illimitée.
-  return typeof q.limit === "number" ? { kind: "finite", value: q.limit } : { kind: "unlimited" };
+  return typeof remaining === "number" ? { kind: "finite", value: remaining } : { kind: "unlimited" };
 }
 
 /** Libellés FR des features à valeur (consommables). */

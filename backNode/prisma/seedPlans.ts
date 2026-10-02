@@ -3,7 +3,7 @@ import { prisma } from "./singletonPrisma.js";
 import { Prisma, PlanInterval, PlanName } from "@prisma/client";
 
 /**
- * Création de tout les plans d'abonnement dans la base de données
+ * Création de tous les plans d'abonnement dans la base de données
  * 
  * Comprend actuellement : 
  * -Freemium
@@ -14,11 +14,9 @@ import { Prisma, PlanInterval, PlanName } from "@prisma/client";
  * -Pro yearly
  */
 
-
 type Quota = { unlimited: true } | { unlimited: false, value: number } // Outil limité sur Quotas
 type Feature = { enabled: true } | { enabled: false } // Outil limité sur boolean
-type QuotaFeature = { enabled: false } | { enabled: true, limit: number } // Outil limité sur boolean et si true quotas
-
+type QuotaFeature = { enabled: false } | { enabled: true, value: number } // Outil limité sur boolean et si true quotas
 
 type CreditPlan = {
     //Outil sur Quotas
@@ -38,19 +36,12 @@ type CreditPlan = {
     signatureEnhanced: QuotaFeature;
 };
 
-
 interface PlanSeed {
     name: PlanName;
     price: number;
     interval: PlanInterval;
     creditsIncluded: CreditPlan;
 };
-
-
-
-
-
-type StripeEnv = "production" | "teste";
 
 type StripeId = {
     production: string;
@@ -64,12 +55,10 @@ type StripePlan = {
 
 type StripeProductId = Record<PaidPlanName, StripePlan>;
 
-
 type PaidPlanName = Exclude<
     typeof PlanName[keyof typeof PlanName],
     "Freemium" | "Betatesteur"
 >;
-
 
 const stripeProductId: StripeProductId = {
     [PlanName.Starter_mensuel]: {
@@ -113,15 +102,10 @@ const stripeProductId: StripeProductId = {
         }
     },
 
-
 }
 
-
-
-
-const PLANS_SEED: PlanSeed[] = [
+const PLANS_SEED = [
     // - FREEMIUM
-    //FAIT
     {
         name: PlanName.Freemium,
         price: 0,
@@ -167,7 +151,7 @@ const PLANS_SEED: PlanSeed[] = [
         },
     },
 
-    //BETA Gratuit, offre pour les beta testeur accès illimité
+    //Plan pour beta testeur qui sera valide deux mois. Equivalent d'un plan starter
     {
         name: PlanName.Betatesteur,
         price: 0,
@@ -210,16 +194,11 @@ const PLANS_SEED: PlanSeed[] = [
 
             //FeatureQuota
             signatureEnhanced: { enabled: false },
-        },
+        }
     },
 
-
-
-
-
+    //STARTER mois:49€ | année:468€(39€/mois)
     {
-        //MENSUEL 
-        // FAIT
         name: PlanName.Starter_mensuel,
         price: 49_00,
         interval: PlanInterval.monthly,
@@ -263,9 +242,6 @@ const PLANS_SEED: PlanSeed[] = [
             signatureEnhanced: { enabled: false },
         }
     },
-
-
-
 
     {
         name: PlanName.Starter_annuel,
@@ -312,10 +288,6 @@ const PLANS_SEED: PlanSeed[] = [
         }
     },
 
-
-
-
-
     //PRO mois:119€ | année:1188€(99€/mois)
     {
         name: PlanName.Pro_mensuel,
@@ -356,7 +328,7 @@ const PLANS_SEED: PlanSeed[] = [
             generationContractWithFiligrane: { enabled: false },
 
             //FeatureQuota
-            signatureEnhanced: { enabled: true, limit: 10 },
+            signatureEnhanced: { enabled: true, value: 10 },
         },
     },
     {
@@ -398,23 +370,19 @@ const PLANS_SEED: PlanSeed[] = [
             generationContractWithFiligrane: { enabled: false },
 
             //FeatureQuota
-            signatureEnhanced: { enabled: true, limit: 10 },
+            signatureEnhanced: { enabled: true, value: 10 },
         },
     },
 
-
 ] satisfies PlanSeed[];
-
-
-
 
 export async function seedPlans(): Promise<void> {
     try {
 
         const stripeEnv = process.env.STRIPE_ENV;
         if (stripeEnv !== "production" && stripeEnv !== "teste") {
-            logger.error("Echec lors de l'introdction seedPlan", {
-                error : `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
+            logger.error("Echec lors de l'introduction seedPlan", {
+                error: `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
             })
             throw new Error(
                 `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
@@ -423,17 +391,14 @@ export async function seedPlans(): Promise<void> {
 
         for (const plan of PLANS_SEED) {
 
-            const stripePlan = stripeProductId[plan.name as keyof StripeProductId];
+            const stripePlan = stripeProductId[plan.name as PaidPlanName];
 
             const data = {
                 ...plan,
-                creditsIncluded:
-                    plan.creditsIncluded as Prisma.InputJsonValue,
-
-                stripeProductId: stripePlan.productId[stripeEnv],
-                stripePriceId: stripePlan.priceId[stripeEnv],
+                creditsIncluded: plan.creditsIncluded as Prisma.InputJsonValue,
+                stripeProductId: stripePlan ? stripePlan.productId[stripeEnv] : "",
+                stripePriceId: stripePlan ? stripePlan.priceId[stripeEnv] : "",
             };
-
 
             await prisma.plan.upsert({
                 where: {
@@ -446,8 +411,9 @@ export async function seedPlans(): Promise<void> {
                 update: data
             });
         }
-        console.log("Les seeds de Plan sont injecté avec succès.");
+        logger.info("Les seeds de Plan sont injectés avec succès.");
     } catch (err) {
-        console.error("Une erreur est survenue lors de l'initialisation des seeds \"Plan\", error :  ", err)
+        logger.error("Une erreur est survenue lors de l'initialisation des seeds \"Plan\"", { error: err });
+        throw err;
     }
 }

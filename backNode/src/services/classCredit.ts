@@ -11,7 +11,7 @@ type ReturnData<T = any> = {
 // UserCredit.quotas est une copie de Plan.creditsIncluded (structure CreditPlan
 // de seedPlans.ts). Deux natures d'entrées :
 //  - quotas À VALEUR (consommables)  : analyzer ({unlimited,value}) et
-//                                      signatureEnhanced ({enabled,limit}) — décrémentés à l'usage ;
+//                                      signatureEnhanced ({enabled,value}) — décrémentés à l'usage ;
 //  - PLAFOND (non consommable) : contrathequeLimit ({unlimited,value}) — vérifié par
 //                                comptage (checkContrathequeCapacity), jamais décrémenté ;
 //  - features BOOLÉENNES (droits d'accès) : le reste ({enabled}).
@@ -45,9 +45,11 @@ function readRemaining(quotas: Prisma.JsonValue, feature: ConsumableFeature): Fe
     return { kind: "disabled" };
   }
 
-  // signatureEnhanced : { enabled: boolean, limit?: number }
-  if (q.enabled === true && typeof q.limit === "number") {
-    return { kind: "finite", remaining: q.limit };
+  // signatureEnhanced : { enabled: boolean, value?: number }
+  // (les anciens crédits en base utilisent encore "limit" au lieu de "value")
+  const remaining = q.value ?? q.limit;
+  if (q.enabled === true && typeof remaining === "number") {
+    return { kind: "finite", remaining };
   }
   return { kind: "disabled" };
 }
@@ -62,7 +64,7 @@ function writeRemaining(
   if (feature === "analyzer") {
     next[feature] = { unlimited: false, value: remaining };
   } else {
-    next[feature] = { enabled: true, limit: remaining };
+    next[feature] = { enabled: true, value: remaining };
   }
   return next as Prisma.InputJsonValue;
 }
