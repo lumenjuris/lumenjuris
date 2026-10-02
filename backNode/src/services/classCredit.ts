@@ -1,5 +1,5 @@
 import { prisma } from "../../prisma/singletonPrisma.js";
-import { Prisma, SubscriptionStatus, CreditTransactionType } from "@prisma/client";
+import { Prisma, SubscriptionStatus, CreditTransactionType, PlanInterval } from "@prisma/client";
 
 type ReturnData<T = any> = {
   success: boolean;
@@ -153,6 +153,29 @@ async function getActiveQuotas(
   if (!userCredit) return { reason: "no_quota" };
 
   return { quotas: userCredit.quotas };
+}
+
+/**
+ * Quotas à valeur finie d'un plan ({ unlimited: false, value } ou { enabled: true, value }),
+ * pour journaliser leur attribution. Même règle que extractFiniteQuotas (stripe.service.ts).
+ */
+function finiteQuotasOf(creditsIncluded: Prisma.JsonValue): { feature: string; amount: number }[] {
+  const allQuotas = (creditsIncluded ?? {}) as Record<string, any>;
+  const result: { feature: string; amount: number }[] = [];
+  for (const [feature, quota] of Object.entries(allQuotas)) {
+    if (!quota || typeof quota.value !== "number") continue;
+    if (quota.unlimited === false || quota.enabled === true) {
+      result.push({ feature, amount: quota.value });
+    }
+  }
+  return result;
+}
+
+/** Date d'il y a un mois exactement. */
+function oneMonthAgo(): Date {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1);
+  return date;
 }
 
 const REASON_MESSAGES = {
@@ -381,6 +404,88 @@ export class Credit {
     } catch (error) {
       console.error("CHECK CONTRATHEQUE CAPACITY ERROR:", error);
       return { success: false, message: "Erreur lors de la vérification du plafond contrathèque." };
+    }
+  }
+
+  /**
+   * Remise à niveau MENSUELLE des quotas, pour les abonnements que Stripe ne
+   * réinitialise pas chaque mois :
+   *  - plans gratuits (Freemium, Betatesteur) : aucun paiement, donc aucun reset ;
+   *  - plans annuels : un seul paiement par an, alors que les quotas sont mensuels.
+   * Les plans mensuels payants sont exclus : le webhook invoice.payment_succeeded
+   * les réinitialise déjà à chaque paiement.
+   *
+   * Un abonnement est remis à niveau si sa dernière attribution (dernière
+   * CreditTransaction de type SUBSCRIPTION, sinon la date de début de
+   * l'abonnement) date d'au moins un mois. Les quotas redeviennent une copie
+   * du plan (les bonus non consommés sont perdus, comme au renouvellement Stripe).
+   *
+   * Appelée chaque jour par cron.ts : sans risque si elle tourne plusieurs fois.
+   */
+  async refillMonthlyQuotas(): Promise<ReturnData<{ refilledCount: number; errorCount: number }>> {
+    try {
+      const subscriptions = await prisma.subscription.findMany({
+        where: {
+          status: SubscriptionStatus.ACTIVE,
+          plan: { OR: [{ price: 0 }, { interval: PlanInterval.yearly }] },
+        },
+        select: { userId: true, startAt: true, plan: { select: { name: true, creditsIncluded: true } } },
+      });
+
+      const limitDate = oneMonthAgo();
+      let refilledCount = 0;
+      let errorCount = 0;
+
+      for (const subscription of subscriptions) {
+        try {
+          const lastAttribution = await prisma.creditTransaction.findFirst({
+            where: { userId: subscription.userId, type: CreditTransactionType.SUBSCRIPTION },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+          });
+          const lastRefillDate = lastAttribution?.createdAt ?? subscription.startAt;
+          if (lastRefillDate > limitDate) continue; // pas encore un mois
+
+          const { userId, plan } = subscription;
+          const finiteQuotas = finiteQuotasOf(plan.creditsIncluded);
+
+          await prisma.$transaction([
+            prisma.userCredit.upsert({
+              where: { userId },
+              create: { userId, quotas: plan.creditsIncluded as Prisma.InputJsonValue },
+              update: { quotas: plan.creditsIncluded as Prisma.InputJsonValue },
+            }),
+            // Ces lignes servent aussi de repère pour la prochaine remise à niveau.
+            ...finiteQuotas.map(({ feature, amount }) =>
+              prisma.creditTransaction.create({
+                data: {
+                  userId,
+                  feature,
+                  amount,
+                  balanceAfter: amount, // après remise à niveau, le restant = le montant plein
+                  type: CreditTransactionType.SUBSCRIPTION,
+                  description: `Remise à niveau mensuelle ${feature} (plan ${plan.name})`,
+                  sourceId: "monthly-refill",
+                },
+              }),
+            ),
+          ]);
+          refilledCount++;
+        } catch (error) {
+          // Un utilisateur en erreur ne bloque pas les autres.
+          errorCount++;
+          console.error(`REFILL QUOTAS ERROR userId=${subscription.userId}:`, error);
+        }
+      }
+
+      return {
+        success: errorCount === 0,
+        message: `${refilledCount} abonnement(s) remis à niveau, ${errorCount} erreur(s).`,
+        data: { refilledCount, errorCount },
+      };
+    } catch (error) {
+      console.error("REFILL MONTHLY QUOTAS ERROR:", error);
+      return { success: false, message: "Erreur lors de la remise à niveau mensuelle des quotas." };
     }
   }
 

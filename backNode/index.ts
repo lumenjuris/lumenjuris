@@ -186,6 +186,16 @@ app.listen(port, async () => {
       24 * 60 * 60 * 1000,
     );
 
+    // Remise à niveau mensuelle des quotas (plans gratuits et annuels).
+    // DÉSACTIVÉ : en production, Passenger (cPanel) arrête le serveur sans trafic,
+    // ce setInterval ne serait donc pas fiable. La tâche est lancée par le cron
+    // cPanel via cron.ts. À réactiver seulement sur un serveur toujours allumé.
+    // void new Credit().refillMonthlyQuotas();
+    // setInterval(
+    //   () => void new Credit().refillMonthlyQuotas(),
+    //   24 * 60 * 60 * 1000,
+    // );
+
     console.log(`Serveur backend nodejs running on port ${port}`);
   } catch (err) {
     console.error(
