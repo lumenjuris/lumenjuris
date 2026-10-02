@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ClauseRisk } from '../types';
-import { callOpenAI, callOpenAi52, type OpenAIModelId } from '../utils/aiClient';
+import { callAssistant, type OpenAIModelId } from '../utils/aiClient';
 
 
 
@@ -33,12 +33,6 @@ const pendingClauseAIRequests = new Map<string, Promise<ClauseAI>>();
 
 
 
-const usesResponsesApi = (
-  model: OpenAIModelId,
-): model is Extract<OpenAIModelId, 'gpt-5.2' | 'gpt-5.4-nano'> => model === 'gpt-5.2' || model === 'gpt-5.4-nano';
-
-
-
 const parseClauseAI = (txt: string): ClauseAI => JSON.parse(
   (txt || '{}')
     .trim()
@@ -60,40 +54,9 @@ export const useAIStore = create<AIState>()(
         }
 
         const request = (async (): Promise<ClauseAI> => {
-          const prompt = `Tu es un avocat français spécialisé en droit des contrats.
-Analyse la clause suivante:
-"""${clause.content}"""
-
-RÈGLE DE STYLE : n'utilise JAMAIS d'énumérations en chiffres romains ((i), (ii), (iii), i., ii.…) ; rédige en phrases complètes, ou numérote 1. 2. 3. si nécessaire.
-
-Réponds STRICTEMENT en JSON:
-{
-  "summary":"résumé 2 lignes",
-  "riskLevel":"High|Medium|Low",
-  "riskScore":"0-100",
-  "litigation":"type de litige potentiel",
-  "issues":["problème1","problème2"],
-  "advice":"conseil global (1-2 phrases)",
-  "alternatives":[
-    {
-      "clause":"réécriture intégrale (Proposition 1)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    },
-    {
-      "clause":"réécriture intégrale (Proposition 2)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    }
-  ]
-}`;
-
           try {
-            const txt = usesResponsesApi(model)
-              ? await callOpenAi52(prompt, 'medium', 'medium', model)
-              : await callOpenAI([
-                { role: 'user', content: prompt }
-              ], { model, temperature: 0.2, response_format: { type: 'json_object' } });
+            // Prompt construit par le proxy (services/assistant/assistantPrompts.ts).
+            const txt = await callAssistant('clause-analysis', { clauseText: clause.content, model });
             return parseClauseAI(txt);
           } catch (e) {
             console.error('OpenAI error:', e);

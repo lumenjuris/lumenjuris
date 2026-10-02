@@ -2,22 +2,17 @@ import { Router } from "express"
 import { withTracking, logOpenAiTokens } from "../tracking.js"
 import { proxyAuthMiddleware } from "../middleware/authMiddleware.js";
 import { relayJsonToPython } from "../relay.js";
-import { callGpt5 } from "../utils/openaiResponses.js";
 import { hasQuota } from "../quota.js";
+import { CHAT_JURIDIQUE_CONTEXT, buildClauseChatContext } from "../services/assistant/assistantPrompts.js";
 
-
+// Monté sur "/api/openai" — chats uniquement.
+// Aucune route n'accepte de prompt ou de contexte libre venant du client : le
+// contexte du modèle est toujours construit ici (services/assistant/assistantPrompts.ts).
+// Les autres aides IA sont dans routes/assistant.ts (/api/assistant).
 export const openaiRouter : Router = Router()
 
-
-openaiRouter.post("/chat", proxyAuthMiddleware, (req, res) => {
-  relayJsonToPython(req, res, "/chat", withTracking("chat", logOpenAiTokens));
-});
-
-
-
-// Page « Chat juridique » : même moteur que /chat, mais réservée aux plans qui
-// incluent chatJuridique (simple droit d'accès, rien n'est décompté).
-// /chat reste libre : il sert aussi aux questions sur une clause dans l'analyzer.
+// Page « Chat juridique » : réservée aux plans qui incluent chatJuridique
+// (simple droit d'accès, rien n'est décompté).
 openaiRouter.post("/chat-juridique", proxyAuthMiddleware, async (req, res) => {
   const userId = res.locals.userId as number | undefined;
   if (userId && !(await hasQuota("chatJuridique", userId))) {
@@ -25,31 +20,23 @@ openaiRouter.post("/chat-juridique", proxyAuthMiddleware, async (req, res) => {
     res.status(402).json({ success: false, code: "QUOTA_EXCEEDED", message, detail: message });
     return;
   }
+  // Le contexte est fixé ici : celui éventuellement envoyé par le client est ignoré.
+  req.body = { ...req.body, context: CHAT_JURIDIQUE_CONTEXT };
   relayJsonToPython(req, res, "/chat", withTracking("chat", logOpenAiTokens));
 });
 
-openaiRouter.post("/openai-chat", proxyAuthMiddleware, (req, res) => {
-  relayJsonToPython(req, res, "/openai-chat", withTracking("openai_chat", logOpenAiTokens))
-});
-
-// Questions et rédaction du générateur : appel direct d'OpenAI quand le relais a sa clé
-// (voir utils/openaiResponses.ts), sans attendre le moteur Python (2 demandes à la fois en ligne).
-const MODELS = new Set(["gpt-5.2", "gpt-5.4-nano"]);
-const REASONINGS = new Set(["none", "low", "medium", "high", "xhigh"]);
-const VERBOSITIES = new Set(["low", "medium", "high"]);
-
-openaiRouter.post("/openai-chat-5", proxyAuthMiddleware, async (req, res) => {
-  const { prompt, model, reasoning, verbosity } = req.body ?? {};
-  if (typeof prompt !== "string" || !MODELS.has(model) || !REASONINGS.has(reasoning) || !VERBOSITIES.has(verbosity)) {
-    res.status(400).json({ detail: "Requête OpenAI invalide" });
+// Chat sur une clause (analyzer) : le front envoie le texte de la clause,
+// le contexte du modèle est construit ici.
+openaiRouter.post("/chat-clause", proxyAuthMiddleware, (req, res) => {
+  const clauseText = typeof req.body?.clauseText === "string" ? req.body.clauseText : "";
+  if (!clauseText.trim()) {
+    res.status(400).json({ detail: "Le champ 'clauseText' est requis." });
     return;
   }
-  try {
-    const data = await callGpt5({ prompt, model, reasoning, verbosity });
-    await withTracking("openai_chat", logOpenAiTokens)(data, res.locals.userId as number | undefined);
-    res.json(data);
-  } catch (e) {
-    console.error("[openai-chat-5]", (e as Error)?.message);
-    res.status(502).json({ detail: "Service IA momentanément indisponible" });
-  }
+  req.body = {
+    message: req.body?.message,
+    model: req.body?.model,
+    context: buildClauseChatContext(clauseText),
+  };
+  relayJsonToPython(req, res, "/chat", withTracking("chat", logOpenAiTokens));
 });

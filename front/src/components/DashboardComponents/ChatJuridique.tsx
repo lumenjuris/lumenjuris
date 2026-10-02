@@ -135,8 +135,6 @@ export function ChatJuridique() {
           body: JSON.stringify({
             message: text,
             model: "gpt-5.4-nano",
-            context:
-              "Tu es un assistant juridique spécialisé en droit du travail français. Réponds avec précision en citant les articles du Code du travail pertinents.",
             history: previousMessages
               .filter((m) => m.role === "user" || m.role === "bot")
               .map((m) => ({

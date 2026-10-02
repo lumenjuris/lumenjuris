@@ -3,6 +3,7 @@
  * Toutes les requêtes envoient le cookie d'auth (`credentials: "include"`).
  */
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { callAssistant } from "../../../utils/aiClient";
 import type {
   ContractStats, ContractListItem, ContractDetail, ListFilters,
   TagDTO, FolderDTO, ExtractedField, ValidationStatus, DeadlineEvent,
@@ -126,17 +127,10 @@ export const contractApi = {
       body: JSON.stringify({ note, contentText }),
     }).then(json<unknown>),
 
-  /** Suggestion de reformulation d'une clause par l'IA (réutilise /openai-chat-5). */
+  /** Suggestion de reformulation d'une clause par l'IA (prompt construit par le proxy). */
   reformulateClause: async (clauseText: string, instruction: string): Promise<string> => {
-    const prompt = `Tu es juriste expert en droit français des contrats. Reformule la clause ci-dessous ${instruction ? `en tenant compte de cette consigne : « ${instruction} ». ` : "pour la rendre plus claire, équilibrée et juridiquement robuste. "}Réponds UNIQUEMENT avec le texte reformulé de la clause, sans préambule ni explication.\n\nClause à reformuler :\n"""\n${clauseText}\n"""`;
-    const res = await fetchProxy("/api/openai/openai-chat-5", {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, reasoning: "none", verbosity: "medium", model: "gpt-5.4-nano" }),
-    });
-    const data = (await res.json()) as { content?: string; detail?: string };
-    if (!res.ok) throw new Error(data.detail || `Échec de la reformulation (${res.status})`);
-    return (data.content ?? "").trim();
+    const out = await callAssistant("reformulate-clause", { clauseText, instruction });
+    return out.trim();
   },
 
   remove: (id: string) =>
