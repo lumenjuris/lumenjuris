@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { contractApi } from "./api";
 import { FieldReviewList } from "./FieldReviewList";
 import type { FieldChanges } from "./FieldReviewList";
@@ -11,6 +11,13 @@ interface Props {
   contract: ContractDetail;
   /** Recharge la fiche en arrière-plan après un enregistrement. */
   onSaved: () => void;
+  /** Prévient la fiche du début et de la fin de l'analyse IA (bouton du bandeau). */
+  onAnalysingChange?: (analysing: boolean) => void;
+}
+
+/** Commande exposée à la fiche : le bouton « Analyser » est dans le bandeau. */
+export interface ContractFieldsPanelHandle {
+  analyse: () => Promise<void>;
 }
 
 /**
@@ -18,7 +25,7 @@ interface Props {
  * pendant l'import (à compléter / à vérifier / validé), mais chaque champ est
  * enregistré dès qu'on le quitte, et non à chaque frappe.
  */
-export function ContractFieldsPanel({ contract, onSaved }: Props) {
+export const ContractFieldsPanel = forwardRef<ContractFieldsPanelHandle, Props>(function ContractFieldsPanel({ contract, onSaved, onAnalysingChange }, ref) {
   const [fields, setFields] = useState<ReviewField[]>(() => buildFields(contract));
   const [savingKeys, setSavingKeys] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -100,6 +107,7 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
     const text = contract.ocrText?.trim();
     if (!text) return;
     setAnalysing(true);
+    onAnalysingChange?.(true);
     setError("");
     setNotice("");
     try {
@@ -127,24 +135,15 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
       setError("L'analyse du contrat a échoué. Réessayez dans un instant.");
     } finally {
       setAnalysing(false);
+      onAnalysingChange?.(false);
     }
   }
 
-  const hasText = Boolean(contract.ocrText?.trim());
+  useImperativeHandle(ref, () => ({ analyse: analyseAndFill }));
 
   return (
     <div className="bg-white rounded-card border border-line shadow-card p-3 space-y-3">
 
-      <button
-        type="button"
-        onClick={() => void analyseAndFill()}
-        disabled={analysing || !hasText}
-        title={hasText ? undefined : "Ce contrat n'a pas de texte à analyser."}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {analysing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-        {analysing ? "Analyse du contrat en cours…" : "Analyser le contrat et remplir les champs"}
-      </button>
       {analysing && (
         <p className="text-xs text-ink-muted">L'IA lit le contrat : dates, durée, préavis, montant… Cela prend environ 20 secondes.</p>
       )}
@@ -166,7 +165,7 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
       />
     </div>
   );
-}
+});
 
 // ─── Construction des champs à partir du contrat ─────────────────────────────
 

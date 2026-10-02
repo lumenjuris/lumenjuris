@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, Loader2, AlertCircle, Trash2, Download, Handshake,
+  ChevronLeft, Loader2, AlertCircle, Trash2, Download, Handshake, Sparkles,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { ContractFieldsPanel } from "./ContractFieldsPanel";
+import { ContractFieldsPanel, type ContractFieldsPanelHandle } from "./ContractFieldsPanel";
 import { InlineContractEditor } from "./InlineContractEditor";
 import { contractApi } from "./api";
 import { negotiationApi } from "../negotiation/api";
@@ -30,6 +30,9 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
   const [openingNego, setOpeningNego] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  // Le bouton « Analyser » du bandeau déclenche l'analyse du panneau des informations.
+  const fieldsPanelRef = useRef<ContractFieldsPanelHandle>(null);
+  const [analysing, setAnalysing] = useState(false);
 
   // Point d'entrée du tunnel : ouvre (ou rejoint) la négociation isolée de ce contrat.
   async function handleNegotiate() {
@@ -137,6 +140,18 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             )}
 
             <button
+              onClick={() => void fieldsPanelRef.current?.analyse()}
+              disabled={analysing || !data.ocrText?.trim()}
+              title={data.ocrText?.trim()
+                ? "L'IA lit le contrat et remplit ses informations (dates, durée, préavis…)"
+                : "Ce contrat n'a pas de texte à analyser."}
+              className={BANNER_ACTION_CLASS}
+            >
+              {analysing ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              {analysing ? "Analyse…" : "Analyser"}
+            </button>
+
+            <button
               onClick={() => void handleNegotiate()}
               disabled={openingNego}
               className={BANNER_ACTION_CLASS}
@@ -178,7 +193,7 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
 
         {/* Colonne droite : ce qu'il reste à traiter d'abord, le reste ensuite */}
         <div className="space-y-4">
-          <ContractFieldsPanel key={data.id} contract={data} onSaved={refreshInBackground} />
+          <ContractFieldsPanel ref={fieldsPanelRef} key={data.id} contract={data} onSaved={refreshInBackground} onAnalysingChange={setAnalysing} />
           <TrackingCard contract={data} onUpdated={refreshInBackground} />
           <Amendments
             contractId={contractId}
