@@ -73,18 +73,18 @@ playbookRouter.post("/check", auth, async (req, res) => {
       return;
     }
 
-    if (!(await hasQuota("analyzer", userId))) {
+    if (!(await hasQuota("analyzerPlaybook", userId))) {
       res.status(402).json({
         success: false,
         code: "QUOTA_EXCEEDED",
-        message: "Quota d'analyses épuisé. Passez à un plan supérieur pour continuer.",
+        message: "Quota d'analyses playbook épuisé. Passez à un plan supérieur pour continuer.",
       });
       return;
     }
 
     const brut = await callPythonOpenAi(buildPlaybookPrompt(content, pertinentes), userId);
     const findings = parsePlaybookResponse(brut, pertinentes, content);
-    await consumeQuota("analyzer", userId, 1);
+    await consumeQuota("analyzerPlaybook", userId, 1);
     void trackFeature("playbook_check", userId);
     res.json({ ...base, findings, summary: summarize(findings) });
   } catch (error: unknown) {

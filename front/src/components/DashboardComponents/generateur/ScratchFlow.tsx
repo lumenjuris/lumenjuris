@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { BlockDef, ContractModel, VariableDef } from "../../../contractEngine/types";
 import {
-  generateContractQuestions, generateContractDraft, generateContractDraftFromBrief,
+  generateContractQuestions, generateContractDraft, generateContractDraftFromBrief, QuotaExceededError,
   type WizardQuestion, type ContractDraft,
 } from "./contractAi";
 
@@ -167,9 +167,9 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
         : await generateContractDraftFromBrief(title, initialBrief?.trim() || title, [], [], includeRgpd);
       if (opId.current !== id) return;
       onReady({ model: buildModel(title, draft), fileBase: slug(title) });
-    } catch {
+    } catch (err) {
       if (opId.current !== id) return;
-      setError("Échec de la rédaction. Réessayez.");
+      setError(err instanceof QuotaExceededError ? err.message : "Échec de la rédaction. Réessayez.");
       setStep(from);
       writeUrl(from === "asking" ? { step: "asking", q: idx + 1 } : { step: null, q: null });
     }

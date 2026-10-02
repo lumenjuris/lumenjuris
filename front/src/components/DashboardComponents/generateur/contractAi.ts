@@ -5,6 +5,29 @@
  * Réutilise le client IA existant (proxy → /openai-chat-5).
  */
 import { callOpenAi52 } from "../../../utils/aiClient";
+import { fetchProxy } from "../../../utils/fetchProxy";
+
+/** Levée quand le quota de contrats générés de l'utilisateur est épuisé. */
+export class QuotaExceededError extends Error {}
+
+/**
+ * Rédaction d'un contrat par l'IA via la route dédiée du générateur, qui
+ * vérifie et décompte le quota "generatorFromScratch".
+ */
+async function callDraftGeneration(prompt: string): Promise<string> {
+  const res = await fetchProxy("/api/template/generate-draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+  if (res.status === 402) {
+    const data = await res.json().catch(() => ({}));
+    throw new QuotaExceededError(data?.message ?? "Quota de contrats générés épuisé.");
+  }
+  if (!res.ok) throw new Error(`Echec de la rédaction du contrat, status:${res.status}`);
+  const data = await res.json();
+  return data.content as string;
+}
 
 export interface WizardQuestion {
   id: string;
@@ -257,7 +280,7 @@ export async function generateContractDraft(
     `choix non renseigné, retiens l'option la plus usuelle et la plus équilibrée.\n\n` +
     blocParties(parties) +
     EXIGENCE_LICEITE + (includeRgpd ? EXIGENCE_RGPD : "") + FORMAT_JSON_CONTRAT;
-  const out = await callOpenAi52(prompt, "medium", "medium", "gpt-5.2");
+  const out = await callDraftGeneration(prompt);
   return parseDraft(out, title);
 }
 
@@ -305,6 +328,6 @@ export async function generateContractDraftFromBrief(
   // attendait nettement plus longtemps que le parcours par questions, pour un
   // resultat comparable — ce dernier redige deja en "medium". Le gain de temps
   // est immediat ; a reevaluer si la qualite des contrats produits baisse.
-  const out = await callOpenAi52(prompt, "medium", "medium", "gpt-5.2");
+  const out = await callDraftGeneration(prompt);
   return parseDraft(out, title);
 }

@@ -3,6 +3,7 @@ import { withTracking, logOpenAiTokens } from "../tracking.js"
 import { proxyAuthMiddleware } from "../middleware/authMiddleware.js";
 import { relayJsonToPython } from "../relay.js";
 import { callGpt5 } from "../utils/openaiResponses.js";
+import { hasQuota } from "../quota.js";
 
 
 export const openaiRouter : Router = Router()
@@ -13,6 +14,19 @@ openaiRouter.post("/chat", proxyAuthMiddleware, (req, res) => {
 });
 
 
+
+// Page « Chat juridique » : même moteur que /chat, mais réservée aux plans qui
+// incluent chatJuridique (simple droit d'accès, rien n'est décompté).
+// /chat reste libre : il sert aussi aux questions sur une clause dans l'analyzer.
+openaiRouter.post("/chat-juridique", proxyAuthMiddleware, async (req, res) => {
+  const userId = res.locals.userId as number | undefined;
+  if (userId && !(await hasQuota("chatJuridique", userId))) {
+    const message = "Le chat juridique n'est pas inclus dans votre formule. Passez à un plan supérieur pour y accéder.";
+    res.status(402).json({ success: false, code: "QUOTA_EXCEEDED", message, detail: message });
+    return;
+  }
+  relayJsonToPython(req, res, "/chat", withTracking("chat", logOpenAiTokens));
+});
 
 openaiRouter.post("/openai-chat", proxyAuthMiddleware, (req, res) => {
   relayJsonToPython(req, res, "/openai-chat", withTracking("openai_chat", logOpenAiTokens))

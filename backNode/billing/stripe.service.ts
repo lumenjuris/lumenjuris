@@ -174,25 +174,21 @@ export class StripeLumenJuris {
      *  - features booléennes (droits d'accès) -> jamais retournées.
      */
     private extractFiniteQuotas(creditsIncluded: Prisma.JsonValue): { feature: string; amount: number }[] {
-        // Structure attendue (miroir de CreditPlan dans seedPlans.ts)
-        type NumericQuota = { unlimited: true } | { unlimited: false; value: number };
-        type MeteredQuota = { enabled: false } | { enabled: true; limit: number };
-        const q = creditsIncluded as unknown as {
-            analyzer?: NumericQuota;
-            signatureEnhanced?: MeteredQuota;
-            contrathequeLimit?: NumericQuota;
-        };
-
+        // Structure attendue (miroir de CreditPlan dans seedPlans.ts) :
+        //  - { unlimited: false, value }  -> quota fini, journalisé ;
+        //  - { enabled: true, value }     -> feature réservée avec quota, journalisée ;
+        //  - { unlimited: true } / { enabled } sans value -> ignorés.
+        const allQuotas = (creditsIncluded ?? {}) as Record<string, any>;
         const result: { feature: string; amount: number }[] = [];
 
-        if (q.analyzer && q.analyzer.unlimited === false) {
-            result.push({ feature: "analyzer", amount: q.analyzer.value });
-        }
-        if (q.contrathequeLimit && q.contrathequeLimit.unlimited === false) {
-            result.push({ feature: "contrathequeLimit", amount: q.contrathequeLimit.value });
-        }
-        if (q.signatureEnhanced && q.signatureEnhanced.enabled === true) {
-            result.push({ feature: "signatureEnhanced", amount: q.signatureEnhanced.limit });
+        for (const [feature, quota] of Object.entries(allQuotas)) {
+            if (!quota || typeof quota.value !== "number") continue;
+
+            const isFiniteQuota = quota.unlimited === false;
+            const isEnabledWithQuota = quota.enabled === true;
+            if (isFiniteQuota || isEnabledWithQuota) {
+                result.push({ feature, amount: quota.value });
+            }
         }
 
         return result;

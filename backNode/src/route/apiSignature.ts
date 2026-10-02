@@ -9,6 +9,7 @@ import { SignatureEnvelopeService } from "../services/classSignatureEnvelope.js"
 import type { EnvelopeFieldsPayload, EnvelopeStatusValue } from "../services/classSignatureEnvelope.js"
 import { prisma } from "../../prisma/singletonPrisma.js"
 import { encryptBuffer, decryptBuffer } from "../services/encryption.js"
+import { Credit } from "../services/classCredit.js"
 
 const router: Router = express.Router()
 const svc = new SignatureEnvelopeService()
@@ -69,6 +70,18 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: "Nom et e-mail du cocontractant requis." })
         }
 
+        // Quota : 1 crédit "signature" par email d'invitation envoyé.
+        // On vérifie AVANT de créer l'enveloppe, on décompte après l'envoi.
+        const credit = new Credit()
+        const quota = await credit.hasFeatureQuota(userId, "signature")
+        if (quota.success && quota.data?.allowed === false) {
+            return res.status(402).json({
+                success: false,
+                code: "QUOTA_EXCEEDED",
+                message: "Quota de signatures épuisé. Passez à un plan supérieur pour continuer.",
+            })
+        }
+
         // Sauvegarde le PDF chiffré sur le filesystem (pas en DB pour ne pas alourdir)
         await fs.mkdir(ENVELOPES_DIR, { recursive: true })
         const storedName = crypto.randomBytes(8).toString("hex") + ".pdf.enc"
@@ -119,6 +132,9 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
                 cc: dto.selfEmail,
                 senderName: dto.selfName,
                 senderEmail: dto.selfEmail,
+            })
+            .then((mailResult) => {
+                if (mailResult.success) return credit.consumeQuota(userId, "signature")
             })
             .catch((err: unknown) => console.error("[signature] échec envoi invitation:", err))
 

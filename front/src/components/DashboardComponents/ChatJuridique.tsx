@@ -129,7 +129,7 @@ export function ChatJuridique() {
         conversations.find((c) => c.id === convId)?.messages ?? [];
 
       try {
-        const res = await fetchProxy("/api/openai/chat", {
+        const res = await fetchProxy("/api/openai/chat-juridique", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

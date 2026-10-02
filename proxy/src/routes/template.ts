@@ -2,8 +2,9 @@ import { Router, type Request, type Response } from "express";
 import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js";
 import { BACKEND_URL, BACKNODE_URL } from "../config.js";
 import { relayToNode } from "../relay.js";
-import { logOpenAiTokens, trackFeature } from "../tracking.js";
+import { logOpenAiTokens, trackFeature, withTracking } from "../tracking.js";
 import { callGpt5, type Gpt5Response } from "../utils/openaiResponses.js";
+import { hasQuota, consumeQuota } from "../quota.js";
 
 // Chemin relatif /api/template" 
 export const templateRouter: Router = Router();
@@ -42,6 +43,10 @@ templateRouter.put("/:externalId/playbook", auth, (req, res) =>
   relayToNode(req, res, `/template/${id(req)}/playbook`),
 );
 templateRouter.post("/:externalId/generate", auth, handleTemplateGenerate);
+
+// Rédaction d'un contrat « de zéro » (générateur) : passe par ici plutôt que par
+// /api/openai/openai-chat-5 pour pouvoir vérifier et décompter le quota.
+templateRouter.post("/generate-draft", auth, handleGenerateDraft);
 
 
 // Création directe d'un modèle (structure déjà prête, sans structuration IA) —
@@ -1022,6 +1027,43 @@ function handleImportWarmup(_req: Request, res: Response): void {
   res.status(204).end();
 }
 
+/**
+ * Rédaction d'un contrat « de zéro » : 1 rédaction = 1 crédit "generatorFromScratch".
+ * Le prompt est construit côté front (generateur/contractAi.ts) ; le modèle et
+ * ses réglages sont fixés ici.
+ */
+async function handleGenerateDraft(req: Request, res: Response): Promise<void> {
+  const { prompt } = req.body as { prompt?: string };
+  if (!prompt || typeof prompt !== "string") {
+    res.status(400).json({ success: false, message: "Le champ 'prompt' est requis." });
+    return;
+  }
+
+  // Quota : on vérifie AVANT de lancer l'IA.
+  const userId = res.locals.userId as number | undefined;
+  if (userId && !(await hasQuota("generatorFromScratch", userId))) {
+    res.status(402).json({
+      success: false,
+      code: "QUOTA_EXCEEDED",
+      message: "Quota de contrats générés épuisé. Passez à un plan supérieur pour continuer.",
+    });
+    return;
+  }
+
+  try {
+    const data = await callGpt5({ prompt, model: "gpt-5.2", reasoning: "medium", verbosity: "medium" });
+    await withTracking("generate_contract_scratch", logOpenAiTokens)(data, userId);
+
+    // Décrément après succès uniquement.
+    if (userId) await consumeQuota("generatorFromScratch", userId, 1);
+
+    res.json(data);
+  } catch (e) {
+    console.error("[template/generate-draft]", (e as Error)?.message);
+    res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
+  }
+}
+
 /** Étape 1 : lit le fichier, repère les emplacements vides et découpe le document en parties. */
 async function handleImportPrepare(req: Request, res: Response): Promise<void> {
   const { fileBase64, filename } = req.body as {
@@ -1030,6 +1072,18 @@ async function handleImportPrepare(req: Request, res: Response): Promise<void> {
   };
   if (!fileBase64 || !filename) {
     res.status(400).json({ success: false, message: "fileBase64 et filename sont requis." });
+    return;
+  }
+
+  // Quota : 1 import = 1 crédit "generatorImport". On vérifie dès la première
+  // étape (avant tout appel IA) ; le crédit n'est décompté qu'à l'enregistrement.
+  const userId = res.locals.userId as number | undefined;
+  if (userId && !(await hasQuota("generatorImport", userId))) {
+    res.status(402).json({
+      success: false,
+      code: "QUOTA_EXCEEDED",
+      message: "Quota d'imports de modèles épuisé. Passez à un plan supérieur pour continuer.",
+    });
     return;
   }
 
@@ -1140,7 +1194,9 @@ async function handleImportFinalize(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    void trackFeature("import_template", res.locals.userId as number | undefined);
+    const userId = res.locals.userId as number | undefined;
+    if (userId) await consumeQuota("generatorImport", userId, 1);
+    void trackFeature("import_template", userId);
     res.status(201).json({ success: true, data: { meta: saved.data, structure } });
   } catch (e) {
     sendImportError(res, "finalize", e);
