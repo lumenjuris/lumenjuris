@@ -526,7 +526,24 @@ function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React
         </colgroup>
         <thead>
           <tr className="align-top">
-            <th />
+            <th className="px-2 pb-6 pt-6 text-left align-bottom font-normal">
+              <p className="text-2xl font-bold leading-tight tracking-tight text-blue-primary">
+                Le juridique de votre entreprise, sous contrôle
+              </p>
+              <p className="mt-2 text-sm text-ink-muted">
+                Commencez gratuitement, puis passez à la formule qui suit votre activité.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-ink-secondary">
+                {["Données hébergées en France (RGPD)", "Changement de formule à tout moment", "Paiement sécurisé par Stripe"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
+                      <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </th>
             {plans.map((plan) => (
               <th
                 key={plan.name}
