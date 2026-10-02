@@ -199,7 +199,8 @@ export const useDocumentTextStore = create<DocumentTextState>((set, get) => ({
       patches: [],
       currentText: originalText,
       lastAppliedRecommendationKey: undefined,
-      htmlContent: null,
+      // Le document (HTML d'origine) est conservé : l'effacer faisait afficher le
+      // contrat sans sa mise en forme après chaque lancement d'analyse.
     });
   },
 

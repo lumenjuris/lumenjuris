@@ -2,10 +2,20 @@
 // proprement en Word ou en PDF. Le texte extrait d'un PDF arrive coupé ligne par
 // ligne : sans ce travail, l'export collait tout en un bloc ou gardait les coupures.
 
-export type ContractBlock =
-  | { kind: "heading"; text: string }
-  | { kind: "paragraph"; text: string }
-  | { kind: "item"; text: string };
+/** Morceau de texte avec son style (gras, italique), repris du document d'origine. */
+export type Run = { text: string; bold?: boolean; italic?: boolean };
+
+export type ContractBlock = {
+  kind: "heading" | "paragraph" | "item";
+  text: string;
+  /** Styles d'origine ; absents pour un texte brut (un seul morceau, sans style). */
+  runs?: Run[];
+};
+
+/** Morceaux d'un bloc : ses styles d'origine, ou tout son texte sans style. */
+export function blockRuns(block: ContractBlock): Run[] {
+  return block.runs ?? [{ text: block.text }];
+}
 
 const HEADING_WORDS = /^(article|art\.|chapitre|titre|section|sous-section|annexe|pr[ée]ambule|expos[ée]|entre les soussign[ée]s|fait [àa] )/i;
 const ROMAN_HEADING = /^[IVXLC]+\s*[.\-–—)]\s+\S/;
@@ -51,16 +61,44 @@ export function htmlToBlocks(html: string): ContractBlock[] {
     const text = (el.textContent ?? "").trim();
     if (!text) continue;
     const oneLine = text.replace(/\s+/g, " ");
-    const fullyBold = el.querySelector("strong,b")?.textContent?.trim() === text;
-    if (/^H\d$/.test(el.tagName) || (fullyBold && oneLine.length <= MAX_HEADING_LENGTH)) {
-      blocks.push({ kind: "heading", text: oneLine });
-    } else if (el.tagName === "LI") {
-      blocks.push({ kind: "item", text: oneLine });
-    } else {
+    // Plusieurs lignes ou « Article 1 : texte » (contrat issu d'un PDF) : on redécoupe le texte.
+    if (el.tagName !== "LI" && (text.includes("\n") || splitHeadingAndBody(oneLine))) {
       blocks.push(...textToBlocks(text));
+      continue;
     }
+    const runs = elementRuns(el);
+    const fullyBold = runs.every((run) => run.bold || !run.text.trim());
+    const kind =
+      /^H\d$/.test(el.tagName) || (oneLine.length <= MAX_HEADING_LENGTH && (fullyBold || isUpperCaseLine(oneLine)))
+        ? "heading"
+        : el.tagName === "LI" ? "item" : "paragraph";
+    blocks.push({ kind, text: oneLine, runs });
   }
   return blocks.length ? blocks : textToBlocks(body.textContent ?? "");
+}
+
+/** Morceaux stylés d'un élément HTML, espaces regroupés comme à l'affichage. */
+function elementRuns(el: HTMLElement): Run[] {
+  const runs: Run[] = [];
+  const walk = (node: Node, bold: boolean, italic: boolean) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent ?? "").replace(/\s+/g, " ");
+      const last = runs[runs.length - 1];
+      if (last && last.bold === bold && last.italic === italic) last.text += text;
+      else if (text) runs.push({ text, bold, italic });
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    const tag = node.tagName;
+    node.childNodes.forEach((child) =>
+      walk(child, bold || tag === "STRONG" || tag === "B", italic || tag === "EM" || tag === "I"));
+  };
+  walk(el, false, false);
+  // Espaces en double à la jonction de deux morceaux, et en début / fin de bloc.
+  runs.forEach((run, i) => { if (i > 0 && runs[i - 1].text.endsWith(" ")) run.text = run.text.replace(/^ /, ""); });
+  if (runs[0]) runs[0].text = runs[0].text.trimStart();
+  if (runs.length) runs[runs.length - 1].text = runs[runs.length - 1].text.trimEnd();
+  return runs.filter((run) => run.text);
 }
 
 export function textToBlocks(text: string): ContractBlock[] {

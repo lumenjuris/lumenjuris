@@ -2,7 +2,7 @@
 // titre centré, titres d'articles en gras, paragraphes justifiés, puces, n° de page.
 // Utilisé par l'analyse des risques, la négociation et l'analyse playbook.
 import { buildPdfFromBlocks } from "../components/DashboardComponents/negotiation/buildPdfFromText";
-import { textToBlocks, type ContractBlock } from "./contractBlocks";
+import { blockRuns, textToBlocks, type ContractBlock } from "./contractBlocks";
 
 export type ExportFormat = "docx" | "pdf";
 
@@ -38,12 +38,21 @@ export async function buildDocxBlob(title: string, blocks: ContractBlock[]): Pro
   const docTitle = title.trim() || (first?.kind === "heading" ? first.text : "");
   const body = !title.trim() && first?.kind === "heading" ? rest : blocks;
 
+  // Gras et italique d'origine conservés, morceau par morceau.
+  const textRuns = (block: ContractBlock, heading: boolean) =>
+    blockRuns(block).map((run) => new TextRun({
+      text: run.text,
+      bold: heading || run.bold,
+      italics: run.italic,
+      ...(heading ? { size: 22, color: NAVY } : {}),
+    }));
+
   const paragraphs = body.map((block) => {
     if (block.kind === "heading") {
-      return new Paragraph({ children: [new TextRun({ text: block.text, bold: true, size: 22, color: NAVY })], keepNext: true, spacing: { before: 240, after: 80 } });
+      return new Paragraph({ children: textRuns(block, true), keepNext: true, spacing: { before: 240, after: 80 } });
     }
     return new Paragraph({
-      children: [new TextRun(block.text)],
+      children: textRuns(block, false),
       alignment: AlignmentType.JUSTIFIED,
       spacing: { after: block.kind === "item" ? 60 : 140 },
       ...(block.kind === "item" ? { bullet: { level: 0 } } : {}),
