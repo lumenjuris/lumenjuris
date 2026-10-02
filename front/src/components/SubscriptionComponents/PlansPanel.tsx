@@ -37,45 +37,41 @@ const PLANS: Plan[] = [
     free: true,
     cta: "Commencer gratuitement",
     features: [
-      "Ce qui est inclus :",
-      "Génération de contrats illimitée (export avec filigrane)",
-      "Signature électronique simple illimitée",
-      "3 analyses de contrat par IA / mois",
-      "Négociation collaborative incluse",
-      "Actualité juridique incluse",
-      "Contrathèque : 5 contrats suivis",
+      "Pour découvrir l'outil :",
+      "Contrathèque : 15 contrats suivis",
+      "5 contrats générés / mois",
+      "3 analyses des risques / mois",
+      "Négociation et bibliothèque de clauses illimitées",
     ],
   },
   {
     name: "Starter",
     tagline: "PME sans direction juridique",
     monthly: 49,
-    yearly: 39,
+    yearly: 42,
     cta: "Choisir Starter",
     features: [
       "Tout le Free, plus :",
-      "Export des contrats sans filigrane",
-      "30 analyses de contrat par IA / mois",
-      "Contrats et modèles illimités",
-      "Suivi des échéances illimité + alertes (préavis, loi Chatel)",
-      "Tableau de bord des renouvellements",
+      "Contrathèque : 300 contrats suivis",
+      "30 contrats générés / mois",
+      "30 analyses des risques / mois",
+      "Bibliothèque de modèles",
     ],
   },
   {
     name: "Pro",
     tagline: "PME structurée & ETI",
     monthly: 119,
-    yearly: 99,
+    yearly: 101,
     highlight: true,
     badge: "Le plus populaire",
     cta: "Choisir Pro",
     features: [
       "Tout le Starter, plus :",
-      "Analyses de contrat par IA illimitées",
-      "Jurisprudence reliée aux clauses analysées",
-      "Workflows d'approbation interne",
-      "10 signatures avancées eIDAS / mois (via DocuSign)",
-      "Intégrations standards",
+      "Contrathèque : 1 200 contrats suivis",
+      "Génération de contrats illimitée",
+      "100 analyses des risques / mois",
+      "120 analyses playbook / mois",
     ],
   },
   {
@@ -102,7 +98,7 @@ const PLANS: Plan[] = [
  *
  * Workflow :
  * 1. **Grille des plans** — affiche les offres (Free, Starter, Pro, Enterprise)
- *    avec un toggle mensuel / annuel (-20 %). "Pro" est mis en avant
+ *    avec un toggle mensuel / annuel (-15 %). "Pro" est mis en avant
  *    (`highlight`), "Enterprise" déclenche un `mailto:`, "Free" envoie vers
  *    l'inscription. Une FAQ statique est affichée en bas de page.
  *
@@ -286,7 +282,7 @@ export function PlansPanel() {
                     : "bg-emerald-500/10 text-emerald-600",
                 )}
               >
-                -20%
+                -15%
               </span>
             </button>
           </div>
@@ -491,6 +487,9 @@ export function PlansPanel() {
       })}
 
 
+      {/* ── Comparatif détaillé ── */}
+      <PlansComparison />
+
       {/* ── FAQ ── */}
       <div className="flex flex-col mb-2 mt-6">
         <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Questions fréquentes</h3>
@@ -500,7 +499,7 @@ export function PlansPanel() {
         {[
           {
             q: "Puis-je changer d'offre à tout moment ?",
-            a: "Oui. Le changement est effectif immédiatement et la facturation est ajustée au prorata.",
+            a: "Oui. Le changement prend effet immédiatement. Chaque période payée vous engage jusqu'à son terme : le mois en cours pour un abonnement mensuel, l'année en cours pour un abonnement annuel. Vous pouvez arrêter ou changer d'offre pour la période suivante, sans frais.",
           },
           {
             q: "Mes données sont-elles hébergées en France ?",
@@ -508,19 +507,11 @@ export function PlansPanel() {
           },
           {
             q: "Proposez-vous une période d'essai ?",
-            a: "14 jours d'essai gratuits sur l'offre Pro, sans carte bancaire requise.",
+            a: "L'offre Free vous permet d'essayer l'outil gratuitement, sans limite de durée. Une offre payante souscrite engage pour la période en cours, qui n'est pas remboursée en cas d'arrêt, sauf erreur de facturation justifiée.",
           },
           {
             q: "Comment fonctionne la facturation annuelle ?",
-            a: "Vous économisez 20 % en réglant l'année en une fois. Une facture est émise automatiquement.",
-          },
-          {
-            q: "La génération de contrats est-elle vraiment gratuite ?",
-            a: "Oui, illimitée sur toutes les formules. En Free, l'export porte un filigrane Lumen Juris ; dès Starter, vos documents s'exportent sans filigrane.",
-          },
-          {
-            q: "Pourquoi l'analyse par IA est-elle limitée en Free ?",
-            a: "C'est la fonctionnalité la plus coûteuse à opérer (modèles d'IA, jurisprudence). Le Free inclut 3 analyses par mois ; Starter passe à 30, Pro les rend illimitées.",
+            a: "Vous économisez 15 % en réglant l'année en une fois. Une facture est émise automatiquement.",
           },
         ].map((item) => (
           <div
@@ -533,5 +524,100 @@ export function PlansPanel() {
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── Comparatif des formules ─────────────────────────────────────────────────
+
+type Cell = string | boolean;
+
+const COMPARISON: { group: string; rows: { label: string; hint?: string; values: [Cell, Cell, Cell] }[] }[] = [
+  {
+    group: "Contrathèque",
+    rows: [
+      { label: "Contrats suivis", hint: "Import, contrats et échéances", values: ["15", "300", "1 200"] },
+    ],
+  },
+  {
+    group: "Génération de contrats",
+    rows: [
+      { label: "Création de zéro", values: ["5 / mois", "30 / mois", "Illimitée"] },
+      { label: "Import de modèle", values: ["10 / mois", "60 / mois", "150 / mois"] },
+      { label: "Bibliothèque de modèles", values: [false, true, true] },
+    ],
+  },
+  {
+    group: "Collaboration",
+    rows: [
+      { label: "Négociation", values: ["Illimitée", "Illimitée", "Illimitée"] },
+      { label: "Bibliothèque de clauses", values: [true, true, true] },
+    ],
+  },
+  {
+    group: "Analyse",
+    rows: [
+      { label: "Analyse des risques", values: ["3 / mois", "30 / mois", "100 / mois"] },
+      { label: "Comprendre ses contrats", values: ["15 / mois", "50 / mois", "50 / mois"] },
+      { label: "Analyse playbook", values: ["5 / mois", "60 / mois", "120 / mois"] },
+    ],
+  },
+];
+
+function ComparisonCell({ value }: { value: Cell }) {
+  if (value === true) {
+    return (
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary" aria-label="Inclus">
+        <Check className="h-3 w-3" strokeWidth={3} />
+      </span>
+    );
+  }
+  if (value === false) return <span className="text-ink-subtle" aria-label="Non inclus">—</span>;
+  return <span className="font-medium text-ink">{value}</span>;
+}
+
+/** Tableau détaillé : une ligne par fonctionnalité, une colonne par formule. */
+function PlansComparison() {
+  const columns = ["Free", "Starter", "Pro"];
+  return (
+    <section className="mt-6">
+      <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Comparer les formules</h3>
+      <p className="mt-1 text-sm text-ink-muted">Ce que comprend chaque formule, en détail</p>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-white">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead>
+            <tr className="border-b border-line bg-surface-subtle">
+              <th className="px-4 py-3 text-left font-semibold text-ink">Fonctionnalité</th>
+              {columns.map((column) => (
+                <th key={column} className={cn("w-32 px-4 py-3 text-center font-semibold", column === "Pro" ? "text-blue-primary" : "text-ink")}>
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {COMPARISON.map(({ group, rows }) => (
+            <tbody key={group}>
+              <tr>
+                <td colSpan={4} className="bg-white px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
+                  {group}
+                </td>
+              </tr>
+              {rows.map((row) => (
+                <tr key={row.label} className="border-t border-line/60">
+                  <td className="px-4 py-2.5 text-ink-secondary">
+                    {row.label}
+                    {row.hint && <span className="block text-xs text-ink-muted">{row.hint}</span>}
+                  </td>
+                  {row.values.map((value, i) => (
+                    <td key={i} className={cn("px-4 py-2.5 text-center", i === 2 && "bg-blue-card-sub/30")}>
+                      <ComparisonCell value={value} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </section>
   );
 }
