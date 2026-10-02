@@ -29,7 +29,8 @@ async function runCron(): Promise<void> {
   if (!refillResult.success) {
     throw new Error("La remise à niveau des quotas a rencontré des erreurs.");
   }
-}
+};
+
 
 runCron()
   .then(() => {
