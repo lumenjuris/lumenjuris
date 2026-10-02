@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { contractApi } from "./api";
 import { FieldReviewList } from "./FieldReviewList";
 import type { FieldChanges } from "./FieldReviewList";
-import { IMPORT_FIELDS, applyDeductions, isEmptyValue, normalizeFieldValue } from "./importReview";
+import { IMPORT_FIELDS, applyDeductions, buildReviewFields, isEmptyValue, normalizeFieldValue } from "./importReview";
 import type { ReviewField } from "./importReview";
 import type { ContractDetail, ValidationStatus } from "./types";
 
@@ -22,6 +22,8 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
   const [fields, setFields] = useState<ReviewField[]>(() => buildFields(contract));
   const [savingKeys, setSavingKeys] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [analysing, setAnalysing] = useState(false);
+  const [notice, setNotice] = useState("");
 
   // Ce que le serveur connaît déjà : évite de réécrire un champ inchangé.
   const savedValues = useRef<Record<string, string | null>>(initialSavedValues(contract));
@@ -87,8 +89,68 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
     }
   }
 
+  /**
+   * Fait lire le contrat par l'IA (même analyse qu'à l'import) et remplit les
+   * champs encore vides ou non validés. Les valeurs sont enregistrées comme
+   * suggestions de l'IA : l'échéance est suivie tout de suite, et chaque champ
+   * reste « à vérifier » jusqu'à sa validation. Un champ validé par
+   * l'utilisateur n'est jamais remplacé.
+   */
+  async function analyseAndFill() {
+    const text = contract.ocrText?.trim();
+    if (!text) return;
+    setAnalysing(true);
+    setError("");
+    setNotice("");
+    try {
+      const suggestions = buildReviewFields(await contractApi.extractMetadata(text)).filter((suggestion) => {
+        const current = fieldsRef.current.find((field) => field.key === suggestion.key);
+        return !isEmptyValue(suggestion.value) && !current?.confirmedByUser && !current?.markedAbsent;
+      });
+      await Promise.all(suggestions.map((suggestion) =>
+        contractApi.validateField(contract.id, suggestion.key, suggestion.value, "AI_SUGGESTED")));
+      for (const suggestion of suggestions) {
+        savedValues.current[suggestion.key] = suggestion.value;
+        savedStatuses.current[suggestion.key] = "AI_SUGGESTED";
+      }
+      // Confiance remise à zéro : comme après un rechargement, tout reste à vérifier.
+      const filled = suggestions.map((suggestion) => ({ ...suggestion, aiValue: suggestion.value, confidence: 0 }));
+      setFields((previous) => applyDeductions([
+        ...previous.map((field) => filled.find((suggestion) => suggestion.key === field.key) ?? field),
+        ...filled.filter((suggestion) => !previous.some((field) => field.key === suggestion.key)),
+      ]));
+      setNotice(filled.length
+        ? `${filled.length} champ${filled.length > 1 ? "s" : ""} rempli${filled.length > 1 ? "s" : ""} par l'IA : vérifiez-les puis validez-les.`
+        : "L'IA n'a trouvé aucune nouvelle information dans le contrat.");
+      onSaved();
+    } catch {
+      setError("L'analyse du contrat a échoué. Réessayez dans un instant.");
+    } finally {
+      setAnalysing(false);
+    }
+  }
+
+  const hasText = Boolean(contract.ocrText?.trim());
+
   return (
     <div className="bg-white rounded-card border border-line shadow-card p-3 space-y-3">
+
+      <button
+        type="button"
+        onClick={() => void analyseAndFill()}
+        disabled={analysing || !hasText}
+        title={hasText ? undefined : "Ce contrat n'a pas de texte à analyser."}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {analysing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+        {analysing ? "Analyse du contrat en cours…" : "Analyser le contrat et remplir les champs"}
+      </button>
+      {analysing && (
+        <p className="text-xs text-ink-muted">L'IA lit le contrat : dates, durée, préavis, montant… Cela prend environ 20 secondes.</p>
+      )}
+      {notice && (
+        <p role="status" className="text-xs text-ink-secondary bg-brand-light border border-brand/20 px-3 py-2 rounded-lg">{notice}</p>
+      )}
 
       {error && (
         <div role="alert" className="flex items-start gap-2 text-xs text-danger-dark bg-danger-light border border-danger/20 px-3 py-2 rounded-lg">
