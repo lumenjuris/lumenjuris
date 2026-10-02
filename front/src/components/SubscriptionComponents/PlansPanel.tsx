@@ -470,14 +470,14 @@ const COMPARISON: { group: string; rows: { label: string; hint?: string; values:
     rows: [
       { label: "Création de zéro", values: ["5 / mois", "30 / mois", "Illimitée"] },
       { label: "Import de modèle", values: ["10 / mois", "60 / mois", "150 / mois"] },
-      { label: "Bibliothèque de modèles", values: [false, true, true] },
+      { label: "Bibliothèque de modèles", values: [false, "Illimitée", "Illimitée"] },
     ],
   },
   {
     group: "Collaboration",
     rows: [
       { label: "Négociation", values: ["Illimitée", "Illimitée", "Illimitée"] },
-      { label: "Bibliothèque de clauses", values: [true, true, true] },
+      { label: "Bibliothèque de clauses", values: ["Illimitée", "Illimitée", "Illimitée"] },
       { label: "Chat juridique", values: [false, "Illimité", "Illimité"] },
     ],
   },
@@ -491,16 +491,23 @@ const COMPARISON: { group: string; rows: { label: string; hint?: string; values:
   },
 ];
 
-function ComparisonCell({ value }: { value: Cell }) {
-  if (value === true) {
-    return (
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary" aria-label="Inclus">
-        <Check className="h-3 w-3" strokeWidth={3} />
-      </span>
-    );
+function ComparisonCell({ value, highlight }: { value: Cell; highlight: boolean }) {
+  if (value === false || value === true) {
+    return <span className="text-ink-subtle" aria-label="Non inclus">—</span>;
   }
-  if (value === false) return <span className="text-ink-subtle" aria-label="Non inclus">—</span>;
-  return <span className="font-medium text-ink">{value}</span>;
+  const unlimited = /^illimit/i.test(value);
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-[88px] justify-center rounded-full px-3 py-1 text-[13px] font-semibold",
+        unlimited
+          ? highlight ? "bg-blue-primary text-white" : "bg-brand-light text-blue-primary"
+          : highlight ? "text-blue-primary" : "text-ink",
+      )}
+    >
+      {value}
+    </span>
+  );
 }
 
 /**
@@ -511,49 +518,64 @@ function ComparisonCell({ value }: { value: Cell }) {
 function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React.ReactNode }) {
   const plans = PLANS.filter((plan) => !plan.contactOnly);
   return (
-    <section className="mt-8">
-      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-sm">
-        <table className="w-full min-w-[720px] table-fixed text-sm">
-          <colgroup>
-            <col />
-            {plans.map((plan) => <col key={plan.name} className="w-[23%]" />)}
-          </colgroup>
-          <thead>
-            <tr className="border-b border-line align-top">
-              <th className="px-4 py-5 text-left align-bottom">
-                <span className="text-xl font-bold text-blue-primary">Ce que comprend chaque formule</span>
+    <section className="mt-8 overflow-x-auto">
+      <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-0 text-sm">
+        <colgroup>
+          <col />
+          {plans.map((plan) => <col key={plan.name} className="w-[23%]" />)}
+        </colgroup>
+        <thead>
+          <tr className="align-top">
+            <th />
+            {plans.map((plan) => (
+              <th
+                key={plan.name}
+                className={cn(
+                  "px-4 pb-6 pt-6 font-normal",
+                  plan.highlight
+                    ? "rounded-t-3xl bg-gradient-to-b from-brand-light to-blue-card-sub/40 ring-1 ring-brand/20"
+                    : "",
+                )}
+              >
+                {renderHeader(plan)}
               </th>
+            ))}
+          </tr>
+        </thead>
+        {COMPARISON.map(({ group, rows }, groupIndex) => (
+          <tbody key={group}>
+            <tr>
+              <td className="px-2 pb-2 pt-7 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-title-card-sub">{group}</td>
               {plans.map((plan) => (
-                <th key={plan.name} className={cn("px-4 py-5 font-normal", plan.highlight && "bg-blue-card-sub/40")}>
-                  {renderHeader(plan)}
-                </th>
+                <td key={plan.name} className={cn(plan.highlight && "bg-blue-card-sub/40")} />
               ))}
             </tr>
-          </thead>
-          {COMPARISON.map(({ group, rows }) => (
-            <tbody key={group}>
-              <tr>
-                <td colSpan={4} className="bg-white px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub">
-                  {group}
-                </td>
-              </tr>
-              {rows.map((row) => (
-                <tr key={row.label} className="border-t border-line/60">
-                  <td className="px-4 py-2.5 text-ink-secondary">
-                    {row.label}
+            {rows.map((row, rowIndex) => {
+              const last = groupIndex === COMPARISON.length - 1 && rowIndex === rows.length - 1;
+              return (
+                <tr key={row.label} className="group/row">
+                  <td className="rounded-l-xl px-2 py-3 text-ink-secondary transition-colors group-hover/row:bg-surface-subtle">
+                    <span className="font-medium text-ink">{row.label}</span>
                     {row.hint && <span className="block text-xs text-ink-muted">{row.hint}</span>}
                   </td>
                   {row.values.map((value, i) => (
-                    <td key={i} className={cn("px-4 py-2.5 text-center", i === 2 && "bg-blue-card-sub/40")}>
-                      <ComparisonCell value={value} />
+                    <td
+                      key={i}
+                      className={cn(
+                        "px-4 py-3 text-center transition-colors",
+                        plans[i]?.highlight ? "bg-blue-card-sub/40" : "group-hover/row:bg-surface-subtle",
+                        plans[i]?.highlight && last && "rounded-b-3xl pb-6",
+                      )}
+                    >
+                      <ComparisonCell value={value} highlight={Boolean(plans[i]?.highlight)} />
                     </td>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          ))}
-        </table>
-      </div>
+              );
+            })}
+          </tbody>
+        ))}
+      </table>
     </section>
   );
 }
