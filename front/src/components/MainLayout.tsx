@@ -100,14 +100,14 @@ const navSections: NavSection[] = [
               path: "/conformite",
               matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
               children: [
-                { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
+                { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
                 { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook" },
                 { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
               ],
             },
           ]
         : [
-            { icon: ShieldCheck, label: "Analyse des risques", path: "/conformite" },
+            { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
             { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
           ]),
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
