@@ -242,7 +242,6 @@ export function PlansPanel() {
       {/* ── En-tête + toggle mensuel/annuel ── */}
       <PageBanner
         title="Accéder à nos outils"
-        subtitle="Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout moment."
         badges={
           libelleFormule && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-300/30">
@@ -519,39 +518,22 @@ function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React
   const plans = PLANS.filter((plan) => !plan.contactOnly);
   return (
     <section className="mt-8 overflow-x-auto">
-      <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-0 text-sm">
+      <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-x-3 border-spacing-y-0 text-sm">
         <colgroup>
           <col />
-          {plans.map((plan) => <col key={plan.name} className="w-[23%]" />)}
+          {plans.map((plan) => <col key={plan.name} className="w-[27%]" />)}
         </colgroup>
         <thead>
           <tr className="align-top">
-            <th className="px-2 pb-6 pt-6 text-left align-bottom font-normal">
-              <p className="text-2xl font-bold leading-tight tracking-tight text-blue-primary">
-                Le juridique de votre entreprise, sous contrôle
-              </p>
-              <p className="mt-2 text-sm text-ink-muted">
-                Commencez gratuitement, puis passez à la formule qui suit votre activité.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-ink-secondary">
-                {["Données hébergées en France (RGPD)", "Changement de formule à tout moment", "Paiement sécurisé par Stripe"].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-card-sub text-blue-primary">
-                      <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </th>
+            <th />
             {plans.map((plan) => (
               <th
                 key={plan.name}
                 className={cn(
-                  "px-4 pb-6 pt-6 font-normal",
+                  "rounded-t-3xl border-x border-t px-4 pb-6 pt-6 font-normal",
                   plan.highlight
-                    ? "rounded-t-3xl bg-gradient-to-b from-brand-light to-blue-card-sub/40 ring-1 ring-brand/20"
-                    : "",
+                    ? "border-brand/40 bg-gradient-to-b from-brand-light to-blue-card-sub/40"
+                    : "border-line bg-white",
                 )}
               >
                 {renderHeader(plan)}
@@ -564,7 +546,7 @@ function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React
             <tr>
               <td className="px-2 pb-2 pt-7 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-title-card-sub">{group}</td>
               {plans.map((plan) => (
-                <td key={plan.name} className={cn(plan.highlight && "bg-blue-card-sub/40")} />
+                <td key={plan.name} className={cn("border-x", plan.highlight ? "border-brand/40 bg-blue-card-sub/40" : "border-line bg-white")} />
               ))}
             </tr>
             {rows.map((row, rowIndex) => {
@@ -579,9 +561,9 @@ function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React
                     <td
                       key={i}
                       className={cn(
-                        "px-4 py-3 text-center transition-colors",
-                        plans[i]?.highlight ? "bg-blue-card-sub/40" : "group-hover/row:bg-surface-subtle",
-                        plans[i]?.highlight && last && "rounded-b-3xl pb-6",
+                        "border-x px-4 py-3 text-center transition-colors",
+                        plans[i]?.highlight ? "border-brand/40 bg-blue-card-sub/40" : "border-line bg-white group-hover/row:bg-surface-subtle",
+                        last && "rounded-b-3xl border-b pb-6",
                       )}
                     >
                       <ComparisonCell value={value} highlight={Boolean(plans[i]?.highlight)} />
