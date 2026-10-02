@@ -1,51 +1,64 @@
-// Construit un PDF sobre à partir du texte d'un contrat (négociation, complétion,
-// export de l'analyse) : titres, paragraphes et listes reconstruits par
-// textToBlocks, numéros de page en pied.
+// PDF d'un contrat (négociation, complétion, export de l'analyse), même mise en page
+// que l'export Word : titre centré, titres d'articles en gras, paragraphes justifiés,
+// puces, numéros de page.
 import { jsPDF } from "jspdf";
-import { textToBlocks } from "../../../utils/contractBlocks";
+import { textToBlocks, type ContractBlock } from "../../../utils/contractBlocks";
+
+const NAVY: [number, number, number] = [27, 48, 73];
+const INK: [number, number, number] = [25, 25, 25];
 
 export function buildPdfFromText(title: string, text: string): jsPDF {
+  return buildPdfFromBlocks(title, textToBlocks(text));
+}
+
+export function buildPdfFromBlocks(title: string, blocks: ContractBlock[]): jsPDF {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
-  const margin = 64;
-  const maxW = pdf.internal.pageSize.getWidth() - margin * 2;
+  const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 64;
+  const maxW = pageW - margin * 2;
   let y = margin;
 
-  const ensureRoom = (height: number) => {
-    if (y + height > pageH - margin) { pdf.addPage(); y = margin; }
-  };
-
-  const write = (txt: string, opts: { size: number; bold?: boolean; indent?: number; gapAfter: number }) => {
-    const lineH = opts.size * 1.45;
-    const x = margin + (opts.indent ?? 0);
-    const width = maxW - (opts.indent ?? 0);
-    pdf.setFont("helvetica", opts.bold ? "bold" : "normal");
-    pdf.setFontSize(opts.size);
+  const write = (
+    txt: string,
+    o: { size: number; bold?: boolean; color?: [number, number, number]; indent?: number; center?: boolean; justify?: boolean; bullet?: boolean; before?: number; after: number; keepWithNext?: number },
+  ) => {
+    const lineH = o.size * 1.5;
+    const x = margin + (o.indent ?? 0);
+    const width = maxW - (o.indent ?? 0);
+    pdf.setFont("helvetica", o.bold ? "bold" : "normal");
+    pdf.setFontSize(o.size);
+    pdf.setTextColor(...(o.color ?? INK));
     const lines = pdf.splitTextToSize(txt, width) as string[];
-    for (const line of lines) {
-      ensureRoom(lineH);
-      pdf.text(line, x, y);
+    y += o.before ?? 0;
+    // Un titre ne reste jamais seul en bas de page (on réserve la place de la suite) ;
+    // un paragraphe peut se couper, mais pas en laissant une ligne seule.
+    const needed = o.keepWithNext !== undefined ? lineH * lines.length + o.keepWithNext : lineH * Math.min(2, lines.length);
+    if (y + needed > pageH - margin) { pdf.addPage(); y = margin; }
+    lines.forEach((line, i) => {
+      if (y + lineH > pageH - margin) { pdf.addPage(); y = margin; }
+      if (o.bullet && i === 0) pdf.text("•", margin + 6, y); // sur la même page que sa première ligne
+      if (o.center) pdf.text(line, pageW / 2, y, { align: "center" });
+      // jsPDF ne justifie pas la dernière ligne d'un texte : on lui en donne une vide.
+      else if (o.justify && i < lines.length - 1) pdf.text([line, ""], x, y, { align: "justify", maxWidth: width });
+      else pdf.text(line, x, y);
       y += lineH;
-    }
-    y += opts.gapAfter;
+    });
+    y += o.after;
   };
 
-  pdf.setTextColor(20, 20, 20);
-  if (title.trim()) write(title.trim(), { size: 16, bold: true, gapAfter: 14 });
+  const [first, ...rest] = blocks;
+  const docTitle = title.trim() || (first?.kind === "heading" ? first.text : "");
+  const body = !title.trim() && first?.kind === "heading" ? rest : blocks;
+  if (docTitle) write(docTitle, { size: 15, bold: true, color: NAVY, center: true, after: 18 });
 
-  for (const block of textToBlocks(text)) {
+  for (const block of body) {
     if (block.kind === "heading") {
-      ensureRoom(50); // un titre ne reste jamais seul en bas de page
-      y += 8;
-      write(block.text, { size: 11.5, bold: true, gapAfter: 4 });
+      write(block.text, { size: 11, bold: true, color: NAVY, before: 10, after: 4, keepWithNext: 32 });
     } else if (block.kind === "item") {
-      ensureRoom(16);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10.5);
-      pdf.text("•", margin + 6, y);
-      write(block.text, { size: 10.5, indent: 18, gapAfter: 3 });
+      write(block.text, { size: 10.5, indent: 18, justify: true, bullet: true, after: 4 });
     } else {
-      write(block.text, { size: 10.5, gapAfter: 7 });
+      write(block.text, { size: 10.5, justify: true, after: 8 });
     }
   }
 
@@ -54,8 +67,8 @@ export function buildPdfFromText(title: string, text: string): jsPDF {
     pdf.setPage(page);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8.5);
-    pdf.setTextColor(120, 120, 120);
-    pdf.text(`${page} / ${pages}`, pdf.internal.pageSize.getWidth() / 2, pageH - 28, { align: "center" });
+    pdf.setTextColor(130, 130, 130);
+    pdf.text(`${page} / ${pages}`, pageW / 2, pageH - 30, { align: "center" });
   }
   return pdf;
 }

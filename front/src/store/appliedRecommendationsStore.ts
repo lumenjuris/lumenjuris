@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { ClauseRecommendation, ClauseRisk } from "../types";
-import { downloadTextAsDocx, downloadTextAsPdf, toExportBaseName } from "../utils/exportContract";
+import { downloadBlocksAsDocx, downloadBlocksAsPdf, toExportBaseName } from "../utils/exportContract";
+import { htmlToBlocks, textToBlocks, type ContractBlock } from "../utils/contractBlocks";
 
 export interface AppliedRecommendation {
   clauseId: string;
@@ -32,8 +33,8 @@ interface AppliedRecommendationsState {
   ) => boolean;
   clearAllAppliedRecommendations: () => void;
   hasAnyAppliedRecommendations: () => boolean;
-  generateWordDocument: (originalContent?: string, fileName?: string, htmlContent?: string) => void;
-  generatePDFDocument: (originalContent?: string, fileName?: string, htmlContent?: string) => void;
+  generateWordDocument: (originalContent?: string, fileName?: string, htmlContent?: string, displayedHtml?: string | null) => void;
+  generatePDFDocument: (originalContent?: string, fileName?: string, htmlContent?: string, displayedHtml?: string | null) => void;
 }
 
 // Applique chaque recommandation au contenu via regex tolérante aux espaces multiples/retours ligne.
@@ -56,28 +57,23 @@ function applyRecommendationsToContent(
   }, original);
 }
 
-// Texte d'un contenu HTML : un bloc (paragraphe, titre, élément de liste) par paragraphe.
-function htmlToPlainText(html: string): string {
-  const parsed = new DOMParser().parseFromString(html, "text/html");
-  parsed.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
-  const blocks = Array.from(parsed.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,tr"))
-    .filter((el) => !el.parentElement?.closest("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,tr"))
-    .map((el) => (el.textContent || "").trim())
-    .filter(Boolean);
-  return blocks.length ? blocks.join("\n\n") : (parsed.body.textContent || "").trim();
-}
-
-/** Texte à exporter : le contenu affiché (HTML), ou l'original avec les recommandations appliquées. */
-function exportTextOf(
+/**
+ * Contenu à exporter, du plus fidèle au moins fidèle : le contrat tel qu'affiché
+ * (mise en forme d'origine + recommandations appliquées), sinon le texte d'origine
+ * avec les recommandations, sinon le HTML extrait, sinon le texte brut.
+ */
+function exportBlocksOf(
   appliedRecommendations: AppliedRecommendation[],
   originalContent?: string,
   htmlContent?: string,
-): string | null {
+  displayedHtml?: string | null,
+): ContractBlock[] | null {
+  if (displayedHtml) return htmlToBlocks(displayedHtml);
   if (appliedRecommendations.length > 0 && originalContent) {
-    return applyRecommendationsToContent(originalContent, appliedRecommendations);
+    return textToBlocks(applyRecommendationsToContent(originalContent, appliedRecommendations));
   }
-  if (htmlContent) return htmlToPlainText(htmlContent);
-  return originalContent || null;
+  if (htmlContent) return htmlToBlocks(htmlContent);
+  return originalContent ? textToBlocks(originalContent) : null;
 }
 
 export const useAppliedRecommendationsStore =
@@ -152,15 +148,14 @@ export const useAppliedRecommendationsStore =
       return get().appliedRecommendations.length > 0;
     },
 
-    // Word et PDF : même texte (recommandations appliquées, clauses ajoutées) et
-    // même mise en forme (titres, paragraphes, listes reconstruits par textToBlocks).
-    generateWordDocument: async (originalContent, fileName, htmlContent) => {
-      const exportText = exportTextOf(get().appliedRecommendations, originalContent, htmlContent);
-      if (exportText) await downloadTextAsDocx("", exportText, toExportBaseName(fileName));
+    // Word et PDF : même contenu et même mise en page (utils/exportContract.ts).
+    generateWordDocument: async (originalContent, fileName, htmlContent, displayedHtml) => {
+      const blocks = exportBlocksOf(get().appliedRecommendations, originalContent, htmlContent, displayedHtml);
+      if (blocks) await downloadBlocksAsDocx("", blocks, toExportBaseName(fileName));
     },
 
-    generatePDFDocument: async (originalContent, fileName, htmlContent) => {
-      const exportText = exportTextOf(get().appliedRecommendations, originalContent, htmlContent);
-      if (exportText) downloadTextAsPdf("", exportText, toExportBaseName(fileName));
+    generatePDFDocument: async (originalContent, fileName, htmlContent, displayedHtml) => {
+      const blocks = exportBlocksOf(get().appliedRecommendations, originalContent, htmlContent, displayedHtml);
+      if (blocks) downloadBlocksAsPdf("", blocks, toExportBaseName(fileName));
     },
   }));

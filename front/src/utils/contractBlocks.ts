@@ -35,6 +35,34 @@ function splitHeadingAndBody(line: string): [string, string] | null {
   return isSentence ? [match[1].trim(), body] : null;
 }
 
+const BLOCK_SELECTOR = "h1,h2,h3,h4,h5,h6,p,li,blockquote,td,th";
+
+/**
+ * Blocs d'un contrat en HTML (document affiché dans l'analyse) : on garde la
+ * structure d'origine (titres, paragraphes, listes) et on ne devine que dans les
+ * paragraphes (« Article 1 : … », lignes séparées par des retours à la ligne).
+ */
+export function htmlToBlocks(html: string): ContractBlock[] {
+  const body = new DOMParser().parseFromString(html, "text/html").body;
+  body.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+  const blocks: ContractBlock[] = [];
+  for (const el of Array.from(body.querySelectorAll<HTMLElement>(BLOCK_SELECTOR))) {
+    if (el.parentElement?.closest(BLOCK_SELECTOR)) continue; // déjà pris par son bloc parent
+    const text = (el.textContent ?? "").trim();
+    if (!text) continue;
+    const oneLine = text.replace(/\s+/g, " ");
+    const fullyBold = el.querySelector("strong,b")?.textContent?.trim() === text;
+    if (/^H\d$/.test(el.tagName) || (fullyBold && oneLine.length <= MAX_HEADING_LENGTH)) {
+      blocks.push({ kind: "heading", text: oneLine });
+    } else if (el.tagName === "LI") {
+      blocks.push({ kind: "item", text: oneLine });
+    } else {
+      blocks.push(...textToBlocks(text));
+    }
+  }
+  return blocks.length ? blocks : textToBlocks(body.textContent ?? "");
+}
+
 export function textToBlocks(text: string): ContractBlock[] {
   const lines = text.replace(/\r/g, "").split("\n").map((line) => line.replace(/\s+/g, " ").trim());
 
