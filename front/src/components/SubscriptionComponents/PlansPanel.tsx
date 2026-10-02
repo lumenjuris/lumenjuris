@@ -376,46 +376,13 @@ export function PlansPanel() {
                 {actuelle ? "Formule actuelle" : checkoutLoadingPlan === plan.name ? "Redirection…" : plan.cta}
               </Button>
 
-              <div className="border border-t-blue-title-card-sub mt-6"></div>
-
-              <ul className="mt-6 space-y-3 text-sm">
-                {plan.features.map((f, i) => {
-                  const isHeading = f.endsWith("plus :") || f.endsWith("inclus :");
-                  if (isHeading) {
-                    return (
-                      <li
-                        key={f}
-                        className="pt-1 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub"
-                      >
-                        {f}
-                      </li>
-                    );
-                  }
-                  return (
-                    <li
-                      key={`${plan.name}-${i}`}
-                      className="flex items-start gap-2.5"
-                    >
-                      <span
-                        className={cn(
-                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
-                          plan.highlight
-                            ? "bg-blue-card-sub text-blue-primary"
-                            : "bg-blue-card-sub text-blue-600",
-                        )}
-                      >
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </span>
-                      <span className={cn("text-sm", plan.highlight ? "text-white" : "text-blue-primary")}>{f}</span>
-                    </li>
-                  );
-                })}
-              </ul>
             </div>
           );
         })}
       </div>
 
+      {/* ── Détail des formules : une seule référence, juste sous les prix ── */}
+      <PlansComparison />
 
       <div className="mt-4">
         <span className="text-3xl font-bold tracking-tight text-blue-primary ">
@@ -487,9 +454,6 @@ export function PlansPanel() {
       })}
 
 
-      {/* ── Comparatif détaillé ── */}
-      <PlansComparison />
-
       {/* ── FAQ ── */}
       <div className="flex flex-col mb-2 mt-6">
         <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Questions fréquentes</h3>
@@ -551,6 +515,7 @@ const COMPARISON: { group: string; rows: { label: string; hint?: string; values:
     rows: [
       { label: "Négociation", values: ["Illimitée", "Illimitée", "Illimitée"] },
       { label: "Bibliothèque de clauses", values: [true, true, true] },
+      { label: "Chat juridique", values: [false, "Illimité", "Illimité"] },
     ],
   },
   {
@@ -579,9 +544,8 @@ function ComparisonCell({ value }: { value: Cell }) {
 function PlansComparison() {
   const columns = ["Free", "Starter", "Pro"];
   return (
-    <section className="mt-6">
-      <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Comparer les formules</h3>
-      <p className="mt-1 text-sm text-ink-muted">Ce que comprend chaque formule, en détail</p>
+    <section className="mt-2">
+      <h3 className="text-3xl font-bold tracking-tight text-blue-primary">Ce que comprend chaque formule</h3>
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
