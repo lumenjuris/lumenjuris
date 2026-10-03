@@ -23,6 +23,7 @@ import { PublicLayout } from "./components/DashboardComponents/PublicLayout";
 // affichage. L'attente éventuelle s'affiche dans le cadre de la page (MainLayout)
 // ou en plein écran (Suspense ci-dessous) pour les pages sans menu.
 const CLE_RECHARGEMENT = "lj-rechargement-ecran";
+
 function lazyPage(load: () => Promise<{ default: ComponentType<any> }>) {
   return lazy(() =>
     load().then(
@@ -46,6 +47,8 @@ function lazyPage(load: () => Promise<{ default: ComponentType<any> }>) {
     ),
   );
 }
+
+
 const ContractAnalysis = lazyPage(() => import("./page/ContractAnalysis"));
 const Generateur = lazyPage(() => import("./components/DashboardComponents/Generateur").then((m) => ({ default: m.Generateur })));
 const Signature = lazyPage(() => import("./components/DashboardComponents/Signature").then((m) => ({ default: m.Signature })));
@@ -114,6 +117,8 @@ export function App() {
 
   if (showLoaderPage) return <Loader />
 
+
+  
 
   // L'accueil n'est plus une redirection selon l'authentification : `/` rend
   // directement le tableau de bord, qui s'adapte lui-même au visiteur.

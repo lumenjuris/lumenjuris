@@ -25,8 +25,8 @@ import { analyzerRouter } from "./src/routes/analyzer.js";
 import { chatHistoryRouter } from "./src/routes/chatHistory.js";
 import { veilleRouter } from "./src/routes/veille.js";
 import { openaiRouter } from "./src/routes/callopenai.js";
+import { assistantRouter } from "./src/routes/assistant.js";
 import { legalTextRouter } from "./src/routes/legalText.js";
-import { aiRouter } from "./src/routes/ai.js";
 import { adminRouter } from "./src/routes/admin.js";
 import { summarizeContractRouter } from "./src/routes/summarizeContract.js";
 import { globalErrorHandler } from "./src/middleware/globalErrorHandler.js";
@@ -82,8 +82,8 @@ app.use("/api/analyzer", analyzerRouter);
 app.use("/api/chat-history", chatHistoryRouter);;
 app.use("/api/veille", veilleRouter);
 app.use("/api/openai", openaiRouter);
+app.use("/api/assistant", assistantRouter);
 app.use("/api/legal-text", legalTextRouter);
-app.use("/api/ai", aiRouter);
 app.use("/api/admin", adminRouter)
 app.use("/api/summarize-contract", summarizeContractRouter)
 app.use("/api/delete-summarize-contract", summarizeContractRouter);

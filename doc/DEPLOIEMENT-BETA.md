@@ -152,7 +152,7 @@ Enfin, les adresses appelées par le complément doivent exister côté serveur.
 Les tester une par une avant de soumettre (404 = adresse disparue) :
 
     for r in /api/addin/login /api/analyzer/analyze-contract /api/analyzer/detect-contract \
-             /api/analyzer/recommend-clause /api/legal-text/jurisprudence /api/openai/openai-chat-5; do
+             /api/analyzer/recommend-clause /api/legal-text/jurisprudence \n             /api/assistant/addin-clause-detail /api/assistant/addin-question; do
       echo -n "$r "
       curl -s -o /dev/null -w "%{http_code}\n" -X POST "https://proxy.lumenjuris.com$r" \
         -H "Content-Type: application/json" -d '{}'

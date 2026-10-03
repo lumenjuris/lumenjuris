@@ -9,7 +9,9 @@ import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendatio
  *  - POST /api/analyzer/analyze-contract  → ClauseRisk[] (analyse IA du proxy)
  *  - POST /api/analyzer/recommend-clause  → recommandations alternatives
  *  - POST /api/legal-text/jurisprudence   → recherche hybride (backend Python)
- *  - POST /api/openai/openai-chat-5       → détail clause (issues/advice) et questions
+ *  - POST /api/assistant/addin-clause-detail → détail clause (issues/advice)
+ *  - POST /api/assistant/addin-question      → question libre sur une clause
+ *    (les prompts sont construits par le proxy, jamais ici)
  *
  * Auth : l'iframe Word ne reçoit pas le cookie httpOnly `authLumenJuris`,
  * le proxy accepte donc aussi `Authorization: Bearer <jwt>` (voir
@@ -199,20 +201,12 @@ export async function fetchJurisprudence(clause: ClauseRisk): Promise<Jurisprude
   }));
 }
 
-/* ------------------- Détail clause & question (relay /api/openai-chat-5) ------------------- */
+/* ------------------- Détail clause & question (proxy /api/assistant) ------------------- */
 
-const CLAUSE_AI_MODEL = "gpt-5.4-nano";
-
-async function chat5(prompt: string, reasoning: "none" | "low" = "none"): Promise<string> {
-  // reasoning "none" = réglage de la plateforme pour gpt-5.4-nano
-  // (ex. ClauseReformulator) : même qualité de sortie, latence réduite.
-  const data = await post<{ content?: string }>("/api/openai/openai-chat-5", {
-    prompt,
-    reasoning,
-    verbosity: "low",
-    model: CLAUSE_AI_MODEL,
-  });
-  return data.content ?? "";
+/** Appelle une aide IA du proxy : le proxy construit le prompt à partir des données. */
+async function callAssistant(route: string, data: unknown): Promise<string> {
+  const response = await post<{ content?: string }>(`/api/assistant/${route}`, data);
+  return response.content ?? "";
 }
 
 const parseClauseAI = (txt: string): ClauseAI =>
@@ -223,64 +217,17 @@ const parseClauseAI = (txt: string): ClauseAI =>
       .replace(/```(?:json)?|```/gi, "")
   );
 
-/** Détail IA d'une clause — même prompt que aiStore.fetch de la plateforme. */
+/** Détail IA d'une clause (prompt construit par le proxy). */
 export async function fetchClauseDetail(clause: ClauseRisk): Promise<ClauseAI> {
-  const prompt = `Tu es un avocat français spécialisé en droit des contrats. Tu t'adresses à des professionnels du droit.
-Analyse la clause suivante:
-"""${clause.content}"""
-
-LANGUE — IMPÉRATIF : rédige TOUS les textes de ta réponse dans la langue de la
-clause ci-dessus. Si la clause est en anglais, réponds en anglais. Le droit
-applicable reste le droit français : seule la langue de rédaction s'adapte.
-
-STYLE DES "issues" (problèmes) — IMPÉRATIF :
-- 2 problèmes MAXIMUM (1 seul si un seul risque réel), classés du plus grave au moins grave.
-- Une phrase courte chacun (20 mots max), qui va droit au risque concret.
-- Langage clair et direct, sans jargon superflu ni énumération de généralités ; précis sur le plan juridique mais immédiatement compréhensible.
-- Pas de chiffres romains ((i), (ii)…), pas de sous-listes.
-
-Réponds STRICTEMENT en JSON:
-{
-  "summary":"résumé 1 ligne",
-  "riskLevel":"High|Medium|Low",
-  "riskScore":"0-100",
-  "litigation":"type de litige potentiel",
-  "issues":["problème principal (1 phrase courte)","problème secondaire éventuel (1 phrase courte)"],
-  "advice":"conseil actionnable (1 phrase)",
-  "alternatives":[
-    {
-      "clause":"réécriture intégrale (Proposition 1)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    },
-    {
-      "clause":"réécriture intégrale (Proposition 2)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    }
-  ]
-}`;
-  return parseClauseAI(await chat5(prompt));
+  return parseClauseAI(await callAssistant("addin-clause-detail", { clauseText: clause.content }));
 }
 
 /** Question libre sur une clause (équivalent ChatUI de la modale). */
 export async function askQuestion(clause: ClauseRisk, question: string): Promise<string> {
-  const prompt = `Tu es un avocat français spécialisé en droit des contrats. Voici une clause d'un contrat :
-"""${clause.content}"""
-
-Contexte : cette clause a été identifiée comme à risque (${clause.type}) pour la raison suivante : ${clause.justification}
-
-Question du juriste : ${question}
-
-Réponds de façon concise, structurée et opérationnelle, en droit français, sans inventer de jurisprudence ni d'article de loi.
-
-LANGUE — IMPÉRATIF : rédige ta réponse dans la langue de la clause ci-dessus.
-Si la clause est en anglais, réponds en anglais. Le droit applicable reste le
-droit français : seule la langue de rédaction s'adapte.
-
-FORMAT — le volet Word est étroit, la réponse doit se lire d'un coup d'œil :
-- 180 mots maximum.
-- Pas de titres de niveau 1 ou 2, pas de séparateurs horizontaux.
-- Va droit au fait, sans préambule ni relance finale proposant d'autres questions.`;
-  return chat5(prompt, "low");
+  return callAssistant("addin-question", {
+    clauseText: clause.content,
+    clauseType: clause.type,
+    justification: clause.justification,
+    question,
+  });
 }

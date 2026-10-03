@@ -37,7 +37,7 @@ import {
 import { estChampRedige, suggestionsPourChamp, type Pastille } from "../../../common/suggestionsChamp";
 import type { CompanyResult, CompanySearchResponse } from "../../../../types/companySearch";
 import { buildSearchUrl, detectLookupMode, formatCompanyOption, normalizeDigits } from "../../../../utils/companyLookup";
-import { callOpenAi52 } from "../../../../utils/aiClient";
+import { callAssistant } from "../../../../utils/aiClient";
 
 interface AdresseBan { label: string; name: string; postcode: string; city: string }
 interface ChampDoc { id: string; label: string; value: string; origin: string }
@@ -227,18 +227,17 @@ function VariableView({ node, updateAttributes, editor, getPos }: NodeViewProps)
       const titre = editor.state.doc.firstChild?.textContent ?? "";
       const pos = typeof getPos === "function" ? getPos() : undefined;
       const phrase = typeof pos === "number" ? editor.state.doc.resolve(pos).parent.textContent : "";
-      const remplis = champsDuDocument(editor)
+      const knownFields = champsDuDocument(editor)
         .filter((c) => c.value.trim() && c.id !== name)
         .slice(0, 30)
-        .map((c) => `- ${c.label} : ${c.value}`)
-        .join("\n");
-      const prompt =
-        `Contrat : « ${titre} ». Rédige le contenu du champ « ${label} », qui s'insère dans la phrase : « ${phrase} ». ` +
-        `Informations déjà connues :\n${remplis || "(aucune)"}\n` +
-        `Consignes : français juridique clair, concret, adapté à ce contrat ; 1 à 3 phrases, 60 mots maximum ; ` +
-        `n'invente aucun nom, montant ni date absent des informations connues ; ` +
-        `réponds UNIQUEMENT avec le texte du champ, sans guillemets ni introduction.`;
-      const texte = (await callOpenAi52(prompt, "low", "low", "gpt-5.4-nano")).trim().replace(/^["«\s]+|["»\s]+$/g, "");
+        .map((c) => ({ label: c.label, value: c.value }));
+      const reponse = await callAssistant("field-draft", {
+        contractTitle: titre,
+        fieldLabel: label,
+        sentence: phrase,
+        knownFields,
+      });
+      const texte = reponse.trim().replace(/^["«\s]+|["»\s]+$/g, "");
       if (!texte) throw new Error("vide");
       updateAttributes({ value: texte, origin: "suggestion" });
       setRedaction("idle");

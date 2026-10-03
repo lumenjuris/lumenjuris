@@ -2,8 +2,16 @@ import { Router, type Request, type Response } from "express";
 import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js";
 import { BACKEND_URL, BACKNODE_URL } from "../config.js";
 import { relayToNode } from "../relay.js";
-import { logOpenAiTokens, trackFeature } from "../tracking.js";
+import { logOpenAiTokens, trackFeature, withTracking } from "../tracking.js";
 import { callGpt5, type Gpt5Response } from "../utils/openaiResponses.js";
+import { hasQuota, consumeQuota } from "../quota.js";
+import {
+  buildQuestionsPrompt,
+  buildDraftPrompt,
+  buildBriefPrompt,
+  type PartyIdentity,
+  type BriefAttachment,
+} from "../services/generateur/scratchPrompts.js";
 
 // Chemin relatif /api/template" 
 export const templateRouter: Router = Router();
@@ -42,6 +50,11 @@ templateRouter.put("/:externalId/playbook", auth, (req, res) =>
   relayToNode(req, res, `/template/${id(req)}/playbook`),
 );
 templateRouter.post("/:externalId/generate", auth, handleTemplateGenerate);
+
+// Génération d'un contrat « de zéro » (générateur). Les prompts sont construits
+// ici (services/generateur/scratchPrompts.ts) : le front n'envoie que des données.
+templateRouter.post("/generate-questions", auth, handleGenerateQuestions);
+templateRouter.post("/generate-draft", auth, handleGenerateDraft);
 
 
 // Création directe d'un modèle (structure déjà prête, sans structuration IA) —
@@ -1022,6 +1035,125 @@ function handleImportWarmup(_req: Request, res: Response): void {
   res.status(204).end();
 }
 
+// ─── Génération d'un contrat « de zéro » ───────────────────────────────────────
+
+/** Garde les entrées { question, answer } valides envoyées par le front. */
+function readAnswers(raw: unknown): { question: string; answer: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => typeof item?.question === "string")
+    .map((item) => ({
+      question: item.question,
+      answer: typeof item.answer === "string" ? item.answer : "",
+    }));
+}
+
+/** Garde les parties valides (au minimum un rôle) envoyées par le front. */
+function readParties(raw: unknown): PartyIdentity[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((party) => typeof party?.role === "string") as PartyIdentity[];
+}
+
+/** Garde les pièces jointes valides { name, text } envoyées par le front. */
+function readAttachments(raw: unknown): BriefAttachment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (attachment) => typeof attachment?.name === "string" && typeof attachment?.text === "string",
+  );
+}
+
+/**
+ * Étape 1 : questions de cadrage du contrat. Gratuit (pas de quota) : seule la
+ * rédaction du contrat consomme un crédit.
+ */
+async function handleGenerateQuestions(req: Request, res: Response): Promise<void> {
+  const { title } = req.body as { title?: string };
+  if (!title || typeof title !== "string" || !title.trim()) {
+    res.status(400).json({ success: false, message: "Le champ 'title' est requis." });
+    return;
+  }
+
+  try {
+    // gpt-5.2 sans réflexion préalable : questions mieux ciblées que gpt-5.4-nano en « high »
+    // (essais du 1er oct. 2026 : motif, échéance, essai pour un CDD ; type de bail, révision,
+    // travaux pour un bail commercial) en 5 à 7 s au lieu de 26 s. « low » variait de 6 à 26 s.
+    const data = await callGpt5({
+      prompt: buildQuestionsPrompt(title),
+      model: "gpt-5.2",
+      reasoning: "none",
+      verbosity: "low",
+    });
+    await withTracking("generate_contract_questions", logOpenAiTokens)(data, res.locals.userId as number | undefined);
+    res.json(data);
+  } catch (e) {
+    console.error("[template/generate-questions]", (e as Error)?.message);
+    res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
+  }
+}
+
+/**
+ * Étape 2 : rédaction du contrat. 1 rédaction = 1 crédit "generatorFromScratch".
+ * Deux modes :
+ *  - "questions" : depuis les réponses au questionnaire (`answers`) ;
+ *  - "brief"     : depuis un besoin exprimé librement (`brief`, `attachments`).
+ */
+async function handleGenerateDraft(req: Request, res: Response): Promise<void> {
+  const { mode, title, brief, includeRgpd } = req.body as {
+    mode?: string;
+    title?: string;
+    brief?: string;
+    includeRgpd?: boolean;
+  };
+  if (!title || typeof title !== "string" || !title.trim()) {
+    res.status(400).json({ success: false, message: "Le champ 'title' est requis." });
+    return;
+  }
+  if (mode !== "questions" && mode !== "brief") {
+    res.status(400).json({ success: false, message: "Le champ 'mode' doit valoir 'questions' ou 'brief'." });
+    return;
+  }
+
+  // Quota : on vérifie AVANT de lancer l'IA.
+  const userId = res.locals.userId as number | undefined;
+  if (userId && !(await hasQuota("generatorFromScratch", userId))) {
+    res.status(402).json({
+      success: false,
+      code: "QUOTA_EXCEEDED",
+      message: "Quota de contrats générés épuisé. Passez à un plan supérieur pour continuer.",
+    });
+    return;
+  }
+
+  const parties = readParties(req.body?.parties);
+  const withRgpd = includeRgpd !== false; // RGPD inclus par défaut
+  const prompt =
+    mode === "questions"
+      ? buildDraftPrompt(title, readAnswers(req.body?.answers), parties, withRgpd)
+      : buildBriefPrompt(
+          title,
+          typeof brief === "string" && brief.trim() ? brief : title,
+          readAttachments(req.body?.attachments),
+          parties,
+          withRgpd,
+        );
+
+  try {
+    // Profondeur "medium" et non "high" : la rédaction depuis une consigne libre
+    // attendait nettement plus longtemps que le parcours par questions, pour un
+    // résultat comparable. À réévaluer si la qualité des contrats produits baisse.
+    const data = await callGpt5({ prompt, model: "gpt-5.2", reasoning: "medium", verbosity: "medium" });
+    await withTracking("generate_contract_scratch", logOpenAiTokens)(data, userId);
+
+    // Décrément après succès uniquement.
+    if (userId) await consumeQuota("generatorFromScratch", userId, 1);
+
+    res.json(data);
+  } catch (e) {
+    console.error("[template/generate-draft]", (e as Error)?.message);
+    res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
+  }
+}
+
 /** Étape 1 : lit le fichier, repère les emplacements vides et découpe le document en parties. */
 async function handleImportPrepare(req: Request, res: Response): Promise<void> {
   const { fileBase64, filename } = req.body as {
@@ -1030,6 +1162,18 @@ async function handleImportPrepare(req: Request, res: Response): Promise<void> {
   };
   if (!fileBase64 || !filename) {
     res.status(400).json({ success: false, message: "fileBase64 et filename sont requis." });
+    return;
+  }
+
+  // Quota : 1 import = 1 crédit "generatorImport". On vérifie dès la première
+  // étape (avant tout appel IA) ; le crédit n'est décompté qu'à l'enregistrement.
+  const userId = res.locals.userId as number | undefined;
+  if (userId && !(await hasQuota("generatorImport", userId))) {
+    res.status(402).json({
+      success: false,
+      code: "QUOTA_EXCEEDED",
+      message: "Quota d'imports de modèles épuisé. Passez à un plan supérieur pour continuer.",
+    });
     return;
   }
 
@@ -1140,7 +1284,9 @@ async function handleImportFinalize(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    void trackFeature("import_template", res.locals.userId as number | undefined);
+    const userId = res.locals.userId as number | undefined;
+    if (userId) await consumeQuota("generatorImport", userId, 1);
+    void trackFeature("import_template", userId);
     res.status(201).json({ success: true, data: { meta: saved.data, structure } });
   } catch (e) {
     sendImportError(res, "finalize", e);
