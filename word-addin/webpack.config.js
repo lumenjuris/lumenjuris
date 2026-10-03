@@ -19,7 +19,9 @@ module.exports = async (env, options) => {
   const config = {
     devtool: "source-map",
     entry: {
-      polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
+      // whatwg-fetch : les anciennes versions de Word (Office 2016/2019 sous Windows)
+      // affichent le volet dans un navigateur intégré sans `fetch`.
+      polyfill: ["core-js/stable", "regenerator-runtime/runtime", "whatwg-fetch"],
       react: ["react", "react-dom"],
       taskpane: {
         import: ["./src/taskpane/index.tsx", "./src/taskpane/taskpane.html"],
