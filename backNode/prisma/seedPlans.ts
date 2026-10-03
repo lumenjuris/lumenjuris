@@ -1,4 +1,4 @@
-import { logger } from "./logger/logger.js";
+import { logger } from "../src/logger/logger.js";
 import { prisma } from "./singletonPrisma.js";
 import { Prisma, PlanInterval, PlanName } from "@prisma/client";
 
