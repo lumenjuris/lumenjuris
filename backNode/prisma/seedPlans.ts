@@ -121,7 +121,7 @@ const PLANS_SEED = [
             },
             contrathequeLimit: {
                 unlimited: false,
-                value: 5
+                value: 15
             },
             generatorFromScratch: {
                 unlimited: false,
@@ -245,7 +245,7 @@ const PLANS_SEED = [
 
     {
         name: PlanName.Starter_annuel,
-        price: 468_00,
+        price: 504_00, // 42 €/mois, -15 % (prix Stripe à mettre à jour)
         interval: PlanInterval.yearly,
         creditsIncluded: {
             analyzer: {
@@ -288,7 +288,7 @@ const PLANS_SEED = [
         }
     },
 
-    //PRO mois:119€ | année:1188€(99€/mois)
+    //PRO mois:119€ | année:1212€(101€/mois, -15 %)
     {
         name: PlanName.Pro_mensuel,
         price: 119_00,
@@ -333,7 +333,7 @@ const PLANS_SEED = [
     },
     {
         name: PlanName.Pro_annuel,
-        price: 1_188_00,
+        price: 1_212_00, // 101 €/mois, -15 % (prix Stripe à mettre à jour)
         interval: PlanInterval.yearly,
         creditsIncluded: {
             analyzer: {

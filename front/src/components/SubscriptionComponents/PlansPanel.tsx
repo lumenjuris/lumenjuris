@@ -37,45 +37,41 @@ const PLANS: Plan[] = [
     free: true,
     cta: "Commencer gratuitement",
     features: [
-      "Ce qui est inclus :",
-      "Génération de contrats illimitée (export avec filigrane)",
-      "Signature électronique simple illimitée",
-      "3 analyses de contrat par IA / mois",
-      "Négociation collaborative incluse",
-      "Actualité juridique incluse",
-      "Contrathèque : 5 contrats suivis",
+      "Pour découvrir l'outil :",
+      "Contrathèque : 15 contrats suivis",
+      "5 contrats générés / mois",
+      "3 analyses des risques / mois",
+      "Négociation et bibliothèque de clauses illimitées",
     ],
   },
   {
     name: "Starter",
     tagline: "PME sans direction juridique",
     monthly: 49,
-    yearly: 39,
+    yearly: 42,
     cta: "Choisir Starter",
     features: [
       "Tout le Free, plus :",
-      "Export des contrats sans filigrane",
-      "30 analyses de contrat par IA / mois",
-      "Contrats et modèles illimités",
-      "Suivi des échéances illimité + alertes (préavis, loi Chatel)",
-      "Tableau de bord des renouvellements",
+      "Contrathèque : 300 contrats suivis",
+      "30 contrats générés / mois",
+      "30 analyses des risques / mois",
+      "Bibliothèque de modèles",
     ],
   },
   {
     name: "Pro",
     tagline: "PME structurée & ETI",
     monthly: 119,
-    yearly: 99,
+    yearly: 101,
     highlight: true,
     badge: "Le plus populaire",
     cta: "Choisir Pro",
     features: [
       "Tout le Starter, plus :",
-      "Analyses de contrat par IA illimitées",
-      "Jurisprudence reliée aux clauses analysées",
-      "Workflows d'approbation interne",
-      "10 signatures avancées eIDAS / mois (via DocuSign)",
-      "Intégrations standards",
+      "Contrathèque : 1 200 contrats suivis",
+      "Génération de contrats illimitée",
+      "100 analyses des risques / mois",
+      "120 analyses playbook / mois",
     ],
   },
   {
@@ -102,7 +98,7 @@ const PLANS: Plan[] = [
  *
  * Workflow :
  * 1. **Grille des plans** — affiche les offres (Free, Starter, Pro, Enterprise)
- *    avec un toggle mensuel / annuel (-20 %). "Pro" est mis en avant
+ *    avec un toggle mensuel / annuel (-15 %). "Pro" est mis en avant
  *    (`highlight`), "Enterprise" déclenche un `mailto:`, "Free" envoie vers
  *    l'inscription. Une FAQ statique est affichée en bas de page.
  *
@@ -246,7 +242,6 @@ export function PlansPanel() {
       {/* ── En-tête + toggle mensuel/annuel ── */}
       <PageBanner
         title="Accéder à nos outils"
-        subtitle="Choisissez l'offre adaptée à votre équipe. Changez ou annulez à tout moment."
         badges={
           libelleFormule && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-300/30">
@@ -286,7 +281,7 @@ export function PlansPanel() {
                     : "bg-emerald-500/10 text-emerald-600",
                 )}
               >
-                -20%
+                -15%
               </span>
             </button>
           </div>
@@ -299,72 +294,39 @@ export function PlansPanel() {
         </div>
       )}
 
-      {/* ── Grille des 3 offres principales ── */}
-      <div className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {PLANS.filter((plan) => !plan.contactOnly).map((plan) => {
+      {/* ── Tableau des offres : prix, bouton de paiement et contenu, colonne par colonne ── */}
+      <PlansComparison
+        renderHeader={(plan) => {
           const price = yearly ? plan.yearly : plan.monthly;
           const actuelle = estActuelle(plan);
           return (
-            <div
-              key={plan.name}
-              className={cn(
-                "group relative flex h-full flex-col rounded-2xl border p-6 transition-all duration-300 bg-white",
-                plan.highlight
-                  ? "z-10 border-brand/30 bg-blue-primary shadow-[0_20px_45px_-15px_rgba(44,58,94,0.45)] ring-1 ring-brand/20 lg:-translate-y-3 lg:scale-[1.03]"
-                  : "border-line shadow-sm hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_18px_40px_-18px_rgba(44,58,94,0.35)]",
-                actuelle && "ring-2 ring-emerald-500",
-              )}
-            >
-              {/* Liseré supérieur lumineux sur l'offre mise en avant */}
-              {plan.highlight && (
-                <span className="absolute inset-x-8 top-0 h-1 rounded-full bg-gradient-to-r from-brand/0 via-brand to-brand/0" />
-              )}
-
+            <div className="flex h-full flex-col items-center gap-1 text-center">
               {actuelle ? (
-                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-md">
-                  <Check className="h-3 w-3" />
-                  Votre formule actuelle
+                <span className="mb-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                  <Check className="h-3 w-3" /> Votre formule
                 </span>
-              ) : plan.badge && (
-                <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-md">
-                  <Sparkles className="h-3 w-3" />
-                  {plan.badge}
+              ) : plan.badge ? (
+                <span className="mb-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                  <Sparkles className="h-3 w-3" /> {plan.badge}
                 </span>
+              ) : (
+                <span className="mb-1 h-[22px]" />
               )}
-
-              <div>
-                <h3 className={cn("text-lg font-bold ", plan.highlight ? "text-white" : "text-blue-primary")}>{plan.name}</h3>
-                <p className={cn("mt-1 text-sm", plan.highlight ? "text-gray-primary" : "text-ink-muted")}>{plan.tagline}</p>
-              </div>
-
-              <div className="mt-6 flex items-baseline gap-1">
-                <span
-                  className={cn(
-                    "text-4xl font-extrabold tracking-tight",
-                    plan.highlight ? "text-white" : "text-blue-primary",
-                  )}
-                >
-                  {price} €
-                </span>
-                <span className="text-sm text-ink-subtle">
-                  HT / utilisateur / mois
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-ink-subtle">
-                {plan.free
-                  ? "Gratuit, sans engagement"
-                  : yearly
-                    ? "Facturé annuellement"
-                    : "Facturé mensuellement"}
-              </p>
-
+              <span className="text-lg font-bold text-blue-primary">{plan.name}</span>
+              <span className="text-xs font-normal text-ink-muted">{plan.tagline}</span>
+              <span className="mt-2 text-3xl font-extrabold tracking-tight text-blue-primary">{price} €</span>
+              <span className="text-[11px] font-normal text-ink-subtle">
+                HT / utilisateur / mois
+                <br />
+                {plan.free ? "Gratuit, sans engagement" : yearly ? "Facturé annuellement" : "Facturé mensuellement"}
+              </span>
               <Button
                 variant={plan.highlight ? "default" : "outline"}
                 disabled={checkoutLoadingPlan === plan.name || actuelle}
                 className={cn(
-                  "mt-6 w-full",
+                  "mt-3 w-full",
                   plan.highlight
-                    ? "bg-white text-blue-primary shadow-sm hover:bg-gray-300"
+                    ? "bg-blue-primary text-white hover:bg-blue-primary/90"
                     : "border-blue-primary text-blue-primary hover:bg-brand-light",
                 )}
                 onClick={() => {
@@ -379,47 +341,10 @@ export function PlansPanel() {
               >
                 {actuelle ? "Formule actuelle" : checkoutLoadingPlan === plan.name ? "Redirection…" : plan.cta}
               </Button>
-
-              <div className="border border-t-blue-title-card-sub mt-6"></div>
-
-              <ul className="mt-6 space-y-3 text-sm">
-                {plan.features.map((f, i) => {
-                  const isHeading = f.endsWith("plus :") || f.endsWith("inclus :");
-                  if (isHeading) {
-                    return (
-                      <li
-                        key={f}
-                        className="pt-1 text-xs font-semibold uppercase tracking-wide text-blue-title-card-sub"
-                      >
-                        {f}
-                      </li>
-                    );
-                  }
-                  return (
-                    <li
-                      key={`${plan.name}-${i}`}
-                      className="flex items-start gap-2.5"
-                    >
-                      <span
-                        className={cn(
-                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
-                          plan.highlight
-                            ? "bg-blue-card-sub text-blue-primary"
-                            : "bg-blue-card-sub text-blue-600",
-                        )}
-                      >
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      </span>
-                      <span className={cn("text-sm", plan.highlight ? "text-white" : "text-blue-primary")}>{f}</span>
-                    </li>
-                  );
-                })}
-              </ul>
             </div>
           );
-        })}
-      </div>
-
+        }}
+      />
 
       <div className="mt-4">
         <span className="text-3xl font-bold tracking-tight text-blue-primary ">
@@ -500,7 +425,7 @@ export function PlansPanel() {
         {[
           {
             q: "Puis-je changer d'offre à tout moment ?",
-            a: "Oui. Le changement est effectif immédiatement et la facturation est ajustée au prorata.",
+            a: "Oui. Le changement prend effet immédiatement. Chaque période payée vous engage jusqu'à son terme : le mois en cours pour un abonnement mensuel, l'année en cours pour un abonnement annuel. Vous pouvez arrêter ou changer d'offre pour la période suivante, sans frais.",
           },
           {
             q: "Mes données sont-elles hébergées en France ?",
@@ -508,19 +433,11 @@ export function PlansPanel() {
           },
           {
             q: "Proposez-vous une période d'essai ?",
-            a: "14 jours d'essai gratuits sur l'offre Pro, sans carte bancaire requise.",
+            a: "L'offre Free vous permet d'essayer l'outil gratuitement, sans limite de durée. Une offre payante souscrite engage pour la période en cours, qui n'est pas remboursée en cas d'arrêt, sauf erreur de facturation justifiée.",
           },
           {
             q: "Comment fonctionne la facturation annuelle ?",
-            a: "Vous économisez 20 % en réglant l'année en une fois. Une facture est émise automatiquement.",
-          },
-          {
-            q: "La génération de contrats est-elle vraiment gratuite ?",
-            a: "Oui, illimitée sur toutes les formules. En Free, l'export porte un filigrane Lumen Juris ; dès Starter, vos documents s'exportent sans filigrane.",
-          },
-          {
-            q: "Pourquoi l'analyse par IA est-elle limitée en Free ?",
-            a: "C'est la fonctionnalité la plus coûteuse à opérer (modèles d'IA, jurisprudence). Le Free inclut 3 analyses par mois ; Starter passe à 30, Pro les rend illimitées.",
+            a: "Vous économisez 15 % en réglant l'année en une fois. Une facture est émise automatiquement.",
           },
         ].map((item) => (
           <div
@@ -533,5 +450,131 @@ export function PlansPanel() {
         ))}
       </div>
     </div>
+  );
+}
+
+// ─── Comparatif des formules ─────────────────────────────────────────────────
+
+type Cell = string | boolean;
+
+const COMPARISON: { group: string; rows: { label: string; hint?: string; values: [Cell, Cell, Cell] }[] }[] = [
+  {
+    group: "Contrathèque",
+    rows: [
+      { label: "Contrats suivis", hint: "Import, contrats et échéances", values: ["15", "300", "1 200"] },
+    ],
+  },
+  {
+    group: "Génération de contrats",
+    rows: [
+      { label: "Création de zéro", values: ["5 / mois", "30 / mois", "Illimitée"] },
+      { label: "Import de modèle", values: ["10 / mois", "60 / mois", "150 / mois"] },
+      { label: "Bibliothèque de modèles", values: [false, "Illimitée", "Illimitée"] },
+    ],
+  },
+  {
+    group: "Collaboration",
+    rows: [
+      { label: "Négociation", values: ["Illimitée", "Illimitée", "Illimitée"] },
+      { label: "Bibliothèque de clauses", values: ["Illimitée", "Illimitée", "Illimitée"] },
+      { label: "Chat juridique", values: [false, "Illimité", "Illimité"] },
+    ],
+  },
+  {
+    group: "Analyse",
+    rows: [
+      { label: "Analyse des risques", values: ["3 / mois", "30 / mois", "100 / mois"] },
+      { label: "Comprendre ses contrats", values: ["15 / mois", "50 / mois", "50 / mois"] },
+      { label: "Analyse playbook", values: ["5 / mois", "60 / mois", "120 / mois"] },
+    ],
+  },
+];
+
+function ComparisonCell({ value, highlight }: { value: Cell; highlight: boolean }) {
+  if (value === false || value === true) {
+    return <span className="text-ink-subtle" aria-label="Non inclus">—</span>;
+  }
+  const unlimited = /^illimit/i.test(value);
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-[88px] justify-center rounded-full px-3 py-1 text-[13px] font-semibold",
+        unlimited
+          ? highlight ? "bg-blue-primary text-white" : "bg-brand-light text-blue-primary"
+          : highlight ? "text-blue-primary" : "text-ink",
+      )}
+    >
+      {value}
+    </span>
+  );
+}
+
+/**
+ * Tableau des offres : en tête de chaque colonne le prix et le bouton de paiement
+ * de la formule, puis une ligne par fonctionnalité. Les colonnes suivent l'ordre
+ * de PLANS (Free, Starter, Pro) comme les valeurs de COMPARISON.
+ */
+function PlansComparison({ renderHeader }: { renderHeader: (plan: Plan) => React.ReactNode }) {
+  const plans = PLANS.filter((plan) => !plan.contactOnly);
+  return (
+    <section className="mt-8 overflow-x-auto">
+      <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-x-3 border-spacing-y-0 text-sm">
+        <colgroup>
+          <col />
+          {plans.map((plan) => <col key={plan.name} className="w-[27%]" />)}
+        </colgroup>
+        <thead>
+          <tr className="align-top">
+            <th />
+            {plans.map((plan) => (
+              <th
+                key={plan.name}
+                className={cn(
+                  "rounded-t-3xl border-x border-t px-4 pb-6 pt-6 font-normal",
+                  plan.highlight
+                    ? "border-brand/40 bg-gradient-to-b from-brand-light to-blue-card-sub/40"
+                    : "border-line bg-white",
+                )}
+              >
+                {renderHeader(plan)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {COMPARISON.map(({ group, rows }, groupIndex) => (
+          <tbody key={group}>
+            <tr>
+              <td className="px-2 pb-2 pt-7 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-title-card-sub">{group}</td>
+              {plans.map((plan) => (
+                <td key={plan.name} className={cn("border-x", plan.highlight ? "border-brand/40 bg-blue-card-sub/40" : "border-line bg-white")} />
+              ))}
+            </tr>
+            {rows.map((row, rowIndex) => {
+              const last = groupIndex === COMPARISON.length - 1 && rowIndex === rows.length - 1;
+              return (
+                <tr key={row.label} className="group/row">
+                  <td className="rounded-l-xl px-2 py-3 text-ink-secondary transition-colors group-hover/row:bg-surface-subtle">
+                    <span className="font-medium text-ink">{row.label}</span>
+                    {row.hint && <span className="block text-xs text-ink-muted">{row.hint}</span>}
+                  </td>
+                  {row.values.map((value, i) => (
+                    <td
+                      key={i}
+                      className={cn(
+                        "border-x px-4 py-3 text-center transition-colors",
+                        plans[i]?.highlight ? "border-brand/40 bg-blue-card-sub/40" : "border-line bg-white group-hover/row:bg-surface-subtle",
+                        last && "rounded-b-3xl border-b pb-6",
+                      )}
+                    >
+                      <ComparisonCell value={value} highlight={Boolean(plans[i]?.highlight)} />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        ))}
+      </table>
+    </section>
   );
 }

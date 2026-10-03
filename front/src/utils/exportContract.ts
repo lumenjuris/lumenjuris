@@ -1,6 +1,8 @@
-// Téléchargement d'un contrat (texte brut) en Word ou en PDF.
-// Utilisé par l'analyse des risques et par la négociation.
-import { buildPdfFromText } from "../components/DashboardComponents/negotiation/buildPdfFromText";
+// Téléchargement d'un contrat en Word ou en PDF, avec la même mise en page :
+// titre centré, titres d'articles en gras, paragraphes justifiés, puces, n° de page.
+// Utilisé par l'analyse des risques, la négociation et l'analyse playbook.
+import { buildPdfFromBlocks } from "../components/DashboardComponents/negotiation/buildPdfFromText";
+import { blockRuns, textToBlocks, type ContractBlock } from "./contractBlocks";
 
 export type ExportFormat = "docx" | "pdf";
 
@@ -10,28 +12,70 @@ export function toExportBaseName(name: string | undefined): string {
   return base || "document";
 }
 
-/** Télécharge le texte en PDF sobre (même rendu que l'envoi en signature). */
 export function downloadTextAsPdf(title: string, text: string, baseName: string): void {
-  buildPdfFromText(title, text).save(`${baseName}.pdf`);
+  downloadBlocksAsPdf(title, textToBlocks(text), baseName);
 }
 
-/** Télécharge le texte en Word : un titre, puis un paragraphe par bloc séparé d'une ligne vide. */
-export async function downloadTextAsDocx(title: string, text: string, baseName: string): Promise<void> {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
-  const { saveAs } = await import("file-saver");
+export function downloadTextAsDocx(title: string, text: string, baseName: string): Promise<void> {
+  return downloadBlocksAsDocx(title, textToBlocks(text), baseName);
+}
 
-  const paragraphs = text
-    .split(/\n{2,}/)
-    .map((block) => block.replace(/\n/g, " ").replace(/\s{2,}/g, " ").trim())
-    .filter(Boolean)
-    .map((block) => new Paragraph({ children: [new TextRun({ text: block })], spacing: { after: 160 } }));
+export function downloadBlocksAsPdf(title: string, blocks: ContractBlock[], baseName: string): void {
+  buildPdfFromBlocks(title, blocks).save(`${baseName}.pdf`);
+}
+
+export async function downloadBlocksAsDocx(title: string, blocks: ContractBlock[], baseName: string): Promise<void> {
+  const { saveAs } = await import("file-saver");
+  saveAs(await buildDocxBlob(title, blocks), `${baseName}.docx`);
+}
+
+/** Sans titre fourni, le premier titre du contrat sert de titre du document (comme le PDF). */
+export async function buildDocxBlob(title: string, blocks: ContractBlock[]): Promise<Blob> {
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, Footer, PageNumber } = await import("docx");
+
+  const NAVY = "1B3049";
+  const [first, ...rest] = blocks;
+  const docTitle = title.trim() || (first?.kind === "heading" ? first.text : "");
+  const body = !title.trim() && first?.kind === "heading" ? rest : blocks;
+
+  // Gras et italique d'origine conservés, morceau par morceau.
+  const textRuns = (block: ContractBlock, heading: boolean) =>
+    blockRuns(block).map((run) => new TextRun({
+      text: run.text,
+      bold: heading || run.bold,
+      italics: run.italic,
+      ...(heading ? { size: 22, color: NAVY } : {}),
+    }));
+
+  const paragraphs = body.map((block) => {
+    if (block.kind === "heading") {
+      return new Paragraph({ children: textRuns(block, true), keepNext: true, spacing: { before: 240, after: 80 } });
+    }
+    return new Paragraph({
+      children: textRuns(block, false),
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: block.kind === "item" ? 60 : 140 },
+      ...(block.kind === "item" ? { bullet: { level: 0 } } : {}),
+    });
+  });
+  if (docTitle) {
+    paragraphs.unshift(new Paragraph({ children: [new TextRun({ text: docTitle, bold: true, size: 30, color: NAVY })], alignment: AlignmentType.CENTER, spacing: { after: 360 } }));
+  }
 
   const wordDoc = new Document({
-    styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
+    styles: { default: { document: { run: { font: "Arial", size: 21, color: "191919" }, paragraph: { spacing: { line: 300 } } } } },
     sections: [{
-      properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } } },
-      children: [new Paragraph({ text: title, heading: HeadingLevel.HEADING_1, spacing: { after: 240 } }), ...paragraphs],
+      properties: { page: { margin: { top: 1280, bottom: 1280, left: 1280, right: 1280 } } },
+      footers: {
+        default: new Footer({
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ children: [PageNumber.CURRENT, " / ", PageNumber.TOTAL_PAGES], size: 17, color: "828282" })],
+          })],
+        }),
+      },
+      children: paragraphs,
     }],
   });
-  saveAs(await Packer.toBlob(wordDoc), `${baseName}.docx`);
+  return Packer.toBlob(wordDoc);
 }
