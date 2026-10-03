@@ -22,7 +22,9 @@ const stripeService = new StripeLumenJuris();
  On peut içi traiter tout les mises à jour des users suite à un achat/ou un echec de façon safe 
 */
 routerBilling.post("/stripe/webhook", async (req: Request, res: Response) => {
-  //Adress du webhook https://lumenjurisbackendnodejs.lumenjuris.com/billing/stripe/webhook
+  //Adresse du webhook de l'env teste https://lumenjurisbackendnodejs.lumenjuris.com/billing/stripe/webhook
+  //Adresse du webhook pour la producction : https://app.node.lumenjuris.com/billing/stripe/webhook
+  
   try {
     const signature = req.headers["stripe-signature"];
 

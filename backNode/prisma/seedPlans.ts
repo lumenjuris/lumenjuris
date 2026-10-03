@@ -63,42 +63,42 @@ type PaidPlanName = Exclude<
 const stripeProductId: StripeProductId = {
     [PlanName.Starter_mensuel]: {
         productId: {
-            production: "xxx",
+            production: "prod_VN9lR5ADrcjfYA",
             teste: "prod_Uzwv74n813QFUj"
         },
         priceId: {
-            production: "xxx",
+            production: "price_1UMPS2Ho9nqLjCW8bhIVsTya",
             teste: "price_1Tzx1pHjiTZrRhmvwc77AaOP",
         }
     },
     [PlanName.Starter_annuel]: {
         productId: {
-            production: "xxx",
-            teste: "prod_UzwvInSRbmCi3q"
+            production: "prod_VN9ehMqr9m5rIm",
+            teste: "prod_VN9ehMqr9m5rIm"
         },
         priceId: {
-            production: "xxx",
-            teste: "price_1Tzx1QHjiTZrRhmvhBjNoTWP",
+            production: "price_1UMPRwHo9nqLjCW8WJJmIF43",
+            teste: "price_1UMPLYHjiTZrRhmvHCWk52iZ",
         }
     },
     [PlanName.Pro_mensuel]: {
         productId: {
-            production: "xxx",
+            production: "prod_VN9l2tmvIosqDr",
             teste: "prod_Uzwy9wCTYQtRfr"
         },
         priceId: {
-            production: "xxx",
+            production: "price_1UMPS0Ho9nqLjCW8pmhz7CWd",
             teste: "price_1Tzx4LHjiTZrRhmvGvNeGbJj",
         }
     },
     [PlanName.Pro_annuel]: {
         productId: {
-            production: "xxx",
-            teste: "prod_UzwyQfcdBdU0w2"
+            production: "prod_VN9dymi5MnV4Ot",
+            teste: "prod_VN9dymi5MnV4Ot"
         },
         priceId: {
-            production: "xxx",
-            teste: "price_1Tzx4uHjiTZrRhmv24NjwbKr",
+            production: "price_1UMPRyHo9nqLjCW8fOKWc7JZ",
+            teste: "price_1UMPKHHjiTZrRhmvaVhJ75ZW",
         }
     },
 
