@@ -64,6 +64,7 @@ enum PlanName {
   Starter_annuel
   Pro_mensuel
   Pro_annuel
+  Teste_admin
 }
 
 enum PlanInterval {
