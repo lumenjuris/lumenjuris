@@ -14,6 +14,7 @@ import { templatePaymentFailed } from "./template/paymentFailed.js";
 
 import { generateInvoicePDF, type InvoiceData } from "../pdf/invoicePDF.js";
 import { logger } from "../../logger/logger.js";
+import { templateWelcomeBetatesteur } from "./template/welcomeBetatesteur.js";
 
 
 export type MailAttachment = {
@@ -479,6 +480,21 @@ export class Mailer {
         ...(opts.senderEmail ? { replyTo: opts.senderEmail } : {}),
       }),
       `Une invitation à signer a été envoyée à ${this.email}.`,
+    );
+  }
+
+
+  // Envoyé quand un admin passe un utilisateur au plan Betatesteur (monitoring)
+  async sendNewBetaTesteur(username?: string, expiresAt?: Date): Promise<MailResult> {
+    const html = this.createHtmlFullContent(
+      templateWelcomeBetatesteur(username, expiresAt),
+    );
+
+    return this.send(
+      this.createOption(
+        html,
+        "Lumen Juris - Votre accès bêta-testeur est activé",
+      ),
     );
   }
 

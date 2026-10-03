@@ -1,6 +1,6 @@
 import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "./types";
 
-/* global localStorage, fetch, window, Response */
+/* global localStorage, fetch, window, Response, setTimeout */
 
 /**
  * Client des endpoints LumenJuris — les MÊMES routes que la page « Analyse
@@ -9,7 +9,9 @@ import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendatio
  *  - POST /api/analyzer/analyze-contract  → ClauseRisk[] (analyse IA du proxy)
  *  - POST /api/analyzer/recommend-clause  → recommandations alternatives
  *  - POST /api/legal-text/jurisprudence   → recherche hybride (backend Python)
- *  - POST /api/openai/openai-chat-5       → détail clause (issues/advice) et questions
+ *  - POST /api/assistant/addin-clause-detail → détail clause (issues/advice)
+ *  - POST /api/assistant/addin-question      → question libre sur une clause
+ *    (les prompts sont construits par le proxy, jamais ici)
  *
  * Auth : l'iframe Word ne reçoit pas le cookie httpOnly `authLumenJuris`,
  * le proxy accepte donc aussi `Authorization: Bearer <jwt>` (voir
@@ -17,13 +19,24 @@ import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendatio
  */
 
 // En local (développement), on parle au proxy lancé sur la machine (port 3000).
-// En ligne (complément publié sur beta.lumenjuris.com), on parle au proxy
-// public — le MÊME que celui qu'utilise déjà l'application beta.lumenjuris.com.
+// En ligne, on parle au proxy du site actuel app.lumenjuris.com : les comptes
+// des utilisateurs (et le compte de test fourni à Microsoft) sont dans sa base.
 export const PROXY_BASE =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:3000"
-    : "https://proxy.lumenjuris.com";
+    : "https://app.proxy.lumenjuris.com";
+
+/**
+ * Réveille le serveur dès l'ouverture du volet : l'hébergeur l'endort après
+ * quelques minutes sans visite et le réveil prend jusqu'à 15 secondes. Ainsi,
+ * la connexion qui suit ne paie pas cette attente.
+ */
+export function wakeServer(): void {
+  fetch(`${PROXY_BASE}/health`).catch(() => {
+    /* best-effort */
+  });
+}
 
 const TOKEN_KEY = "lumen-addin-token";
 
@@ -38,18 +51,21 @@ async function post<T>(endpoint: string, body: unknown): Promise<T> {
   // le Bearer est envoyé dès qu'une session existe (login obligatoire côté UI).
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  const send = () => fetch(`${PROXY_BASE}${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
   let response: Response;
   try {
-    response = await fetch(`${PROXY_BASE}${endpoint}`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
+    response = await send();
   } catch {
-    // TypeError « Failed to fetch » : réseau coupé, serveur injoignable ou CORS.
-    throw new Error(
-      "Serveur Lumen Juris injoignable. Vérifiez votre connexion internet puis réessayez."
-    );
+    // Échec réseau (serveur en train de se réveiller, coupure brève) : un
+    // second essai après une courte pause avant d'afficher l'erreur.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    try {
+      response = await send();
+    } catch {
+      throw new Error(
+        "Serveur Lumen Juris injoignable. Vérifiez votre connexion internet puis réessayez."
+      );
+    }
   }
   if (response.status === 401) {
     clearToken();
@@ -199,20 +215,12 @@ export async function fetchJurisprudence(clause: ClauseRisk): Promise<Jurisprude
   }));
 }
 
-/* ------------------- Détail clause & question (relay /api/openai-chat-5) ------------------- */
+/* ------------------- Détail clause & question (proxy /api/assistant) ------------------- */
 
-const CLAUSE_AI_MODEL = "gpt-5.4-nano";
-
-async function chat5(prompt: string, reasoning: "none" | "low" = "none"): Promise<string> {
-  // reasoning "none" = réglage de la plateforme pour gpt-5.4-nano
-  // (ex. ClauseReformulator) : même qualité de sortie, latence réduite.
-  const data = await post<{ content?: string }>("/api/openai/openai-chat-5", {
-    prompt,
-    reasoning,
-    verbosity: "low",
-    model: CLAUSE_AI_MODEL,
-  });
-  return data.content ?? "";
+/** Appelle une aide IA du proxy : le proxy construit le prompt à partir des données. */
+async function callAssistant(route: string, data: unknown): Promise<string> {
+  const response = await post<{ content?: string }>(`/api/assistant/${route}`, data);
+  return response.content ?? "";
 }
 
 const parseClauseAI = (txt: string): ClauseAI =>
@@ -223,64 +231,17 @@ const parseClauseAI = (txt: string): ClauseAI =>
       .replace(/```(?:json)?|```/gi, "")
   );
 
-/** Détail IA d'une clause — même prompt que aiStore.fetch de la plateforme. */
+/** Détail IA d'une clause (prompt construit par le proxy). */
 export async function fetchClauseDetail(clause: ClauseRisk): Promise<ClauseAI> {
-  const prompt = `Tu es un avocat français spécialisé en droit des contrats. Tu t'adresses à des professionnels du droit.
-Analyse la clause suivante:
-"""${clause.content}"""
-
-LANGUE — IMPÉRATIF : rédige TOUS les textes de ta réponse dans la langue de la
-clause ci-dessus. Si la clause est en anglais, réponds en anglais. Le droit
-applicable reste le droit français : seule la langue de rédaction s'adapte.
-
-STYLE DES "issues" (problèmes) — IMPÉRATIF :
-- 2 problèmes MAXIMUM (1 seul si un seul risque réel), classés du plus grave au moins grave.
-- Une phrase courte chacun (20 mots max), qui va droit au risque concret.
-- Langage clair et direct, sans jargon superflu ni énumération de généralités ; précis sur le plan juridique mais immédiatement compréhensible.
-- Pas de chiffres romains ((i), (ii)…), pas de sous-listes.
-
-Réponds STRICTEMENT en JSON:
-{
-  "summary":"résumé 1 ligne",
-  "riskLevel":"High|Medium|Low",
-  "riskScore":"0-100",
-  "litigation":"type de litige potentiel",
-  "issues":["problème principal (1 phrase courte)","problème secondaire éventuel (1 phrase courte)"],
-  "advice":"conseil actionnable (1 phrase)",
-  "alternatives":[
-    {
-      "clause":"réécriture intégrale (Proposition 1)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    },
-    {
-      "clause":"réécriture intégrale (Proposition 2)",
-      "benefits":"bénéfices de cette version",
-      "riskReduction":"%"
-    }
-  ]
-}`;
-  return parseClauseAI(await chat5(prompt));
+  return parseClauseAI(await callAssistant("addin-clause-detail", { clauseText: clause.content }));
 }
 
 /** Question libre sur une clause (équivalent ChatUI de la modale). */
 export async function askQuestion(clause: ClauseRisk, question: string): Promise<string> {
-  const prompt = `Tu es un avocat français spécialisé en droit des contrats. Voici une clause d'un contrat :
-"""${clause.content}"""
-
-Contexte : cette clause a été identifiée comme à risque (${clause.type}) pour la raison suivante : ${clause.justification}
-
-Question du juriste : ${question}
-
-Réponds de façon concise, structurée et opérationnelle, en droit français, sans inventer de jurisprudence ni d'article de loi.
-
-LANGUE — IMPÉRATIF : rédige ta réponse dans la langue de la clause ci-dessus.
-Si la clause est en anglais, réponds en anglais. Le droit applicable reste le
-droit français : seule la langue de rédaction s'adapte.
-
-FORMAT — le volet Word est étroit, la réponse doit se lire d'un coup d'œil :
-- 180 mots maximum.
-- Pas de titres de niveau 1 ou 2, pas de séparateurs horizontaux.
-- Va droit au fait, sans préambule ni relance finale proposant d'autres questions.`;
-  return chat5(prompt, "low");
+  return callAssistant("addin-question", {
+    clauseText: clause.content,
+    clauseType: clause.type,
+    justification: clause.justification,
+    question,
+  });
 }

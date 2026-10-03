@@ -27,18 +27,20 @@ const SEARCH_OPTIONS = { ignoreSpace: true, ignorePunct: true, matchCase: false 
 /**
  * Couleur de surlignage selon le score. Word WEB accepte les hex pastel ;
  * Word Windows/Mac desktop ne supporte que la palette de surlignage — un hex
- * hors palette y lèverait une erreur et la clause serait comptée manquante.
+ * hors palette y est ramené à la couleur la plus proche (rouge vif, illisible).
+ * La plateforme est lue au moment du surlignage : au chargement du module,
+ * Office n'est pas encore prêt et le test concluait à tort à Word web.
  */
-const IS_WEB = (() => {
+const isWeb = (): boolean => {
   try {
     return Office.context.platform === Office.PlatformType.OfficeOnline;
   } catch {
     return true;
   }
-})();
+};
 
 const highlightFor = (riskScore: number): string => {
-  if (IS_WEB) return riskScore >= 4 ? "#FCA5A5" : riskScore >= 3 ? "#FDBA74" : "#FDE68A";
+  if (isWeb()) return riskScore >= 4 ? "#FCA5A5" : riskScore >= 3 ? "#FDBA74" : "#FDE68A";
   return riskScore >= 4 ? "pink" : riskScore >= 3 ? "yellow" : "turquoise";
 };
 
@@ -337,8 +339,10 @@ function segmentClause(raw: string): string[] {
     text = text.replace(new RegExp(`\\b${a}\\.`, "g"), a + MARK);
   }
 
-  // Coupe devant les marqueurs d'énumération (précédés d'une espace).
-  text = text.replace(/\s+(?=(?:\d{1,2}[°)]|[a-z]\)|[-–•])\s)/g, "\n");
+  // Coupe devant les marqueurs d'énumération, seulement après une fin de
+  // phrase ou un deux-points : le tiret d'un titre (« Article 4 – Objet »)
+  // ne doit pas couper la ligne.
+  text = text.replace(/([.;:])\s+(?=(?:\d{1,2}[°)]|[a-z]\)|[-–•])\s)/g, "$1\n");
   // Coupe en fin de phrase : « . » suivi d'une majuscule.
   text = text.replace(/\.\s+(?=[A-ZÀ-Ÿ])/g, ".\n");
 
@@ -352,16 +356,37 @@ function segmentClause(raw: string): string[] {
 }
 
 
+/** Police du texte remplacé, reprise par la clause insérée. */
+interface TextStyle {
+  name: string;
+  size: number;
+}
+
 /**
  * Convertit le texte de la clause recommandée en HTML : insertHtml restitue de
- * vrais paragraphes Word (insertText collerait tout sur une seule ligne).
+ * vrais paragraphes Word (insertText collerait tout sur une seule ligne). Sans
+ * style explicite, Word applique sa police HTML par défaut (Times New Roman) et
+ * de grands espacements : on reprend la police du texte d'origine.
  */
-function toHtmlParagraphs(text: string): string {
+function toHtmlParagraphs(text: string, style: TextStyle | null): string {
   const escape = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const css = [
+    style?.name ? `font-family:'${escape(style.name)}'` : "",
+    style?.size ? `font-size:${style.size}pt` : "",
+    "margin:0 0 6pt 0",
+  ]
+    .filter(Boolean)
+    .join(";");
   const lines = segmentClause(text);
   if (lines.length === 0) return "<p></p>";
-  return lines.map((line) => `<p>${escape(line)}</p>`).join("");
+  return lines
+    .map((line) => {
+      // Ligne de titre (« Article 4 – Responsabilité ») : en gras, comme l'original.
+      const isTitle = /^(article|art\.)\s*\d+/i.test(line) && line.length <= 90;
+      return `<p style="${css}">${isTitle ? `<b>${escape(line)}</b>` : escape(line)}</p>`;
+    })
+    .join("");
 }
 
 /**
@@ -393,10 +418,15 @@ export async function applyRecommendationTracked(clauseId: string, newText: stri
       if (controls.items.length > 0) {
         const control = controls.items[0];
         const range = control.getRange(Word.RangeLocation.whole);
+        // Police du corps de la clause (dernier paragraphe : le titre peut différer).
+        const bodyFont = control.paragraphs.getLast().font;
+        bodyFont.load("name,size");
+        await context.sync();
+        const style = { name: bodyFont.name || "", size: bodyFont.size || 0 };
         range.font.highlightColor = null as unknown as string;
         // insertHtml (et non insertText) : préserve les sauts de ligne de la
         // clause recommandée sous forme de vrais paragraphes Word.
-        control.insertHtml(toHtmlParagraphs(newText), Word.InsertLocation.replace);
+        control.insertHtml(toHtmlParagraphs(newText, style), Word.InsertLocation.replace);
         control.select();
         applied = true;
         await context.sync();

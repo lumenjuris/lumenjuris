@@ -1,24 +1,27 @@
 /**
  * Structure des quotas d'un plan / d'un utilisateur (miroir de `CreditPlan`
- * défini côté backend dans seedPlans.ts). Deux natures d'entrées :
- *  - quotas À VALEUR : analyzer, contrathequeLimit ({unlimited,value}) et
- *    signatureEnhanced ({enabled,limit}) — consommables ;
- *  - features BOOLÉENNES : le reste ({enabled}) — simples droits d'accès.
+ * défini côté backend dans prisma/seedPlans.ts). Trois natures d'entrées :
+ *  - quotas À VALEUR ({unlimited,value}) : décomptés à l'usage, sauf
+ *    contrathequeLimit qui est un plafond de contrats suivis ;
+ *  - feature réservée + quota ({enabled,value}) : signatureEnhanced ;
+ *  - features BOOLÉENNES ({enabled}) : simples droits d'accès.
  */
 
 export type Quota = { unlimited: true } | { unlimited: false; value: number };
-export type MeteredFeature = { enabled: false } | { enabled: true; limit: number };
+export type MeteredFeature = { enabled: false } | { enabled: true; value: number };
 export type BooleanFeature = { enabled: boolean };
 
 export type PlanQuotas = {
   analyzer: Quota;
-  signatureEnhanced: MeteredFeature;
-  generationContractWithFiligrane: BooleanFeature;
+  analyzerPlaybook: Quota;
   contrathequeLimit: Quota;
-  suivisEcheance: BooleanFeature;
-  dashboardRenouvellements: BooleanFeature;
-  veilleReviewContract: BooleanFeature;
-  internalWorkflowValidator: BooleanFeature;
+  generatorFromScratch: Quota;
+  generatorImport: Quota;
+  signature: Quota;
+  comprendreContrat: Quota;
+  chatJuridique: BooleanFeature;
+  generationContractWithFiligrane: BooleanFeature;
+  signatureEnhanced: MeteredFeature;
 };
 
 /** Valeur normalisée d'un quota à valeur, pour l'affichage. */
@@ -36,22 +39,38 @@ export function readQuotaValue(
     return q.unlimited ? { kind: "unlimited" } : { kind: "finite", value: q.value };
   }
   if (!q.enabled) return { kind: "disabled" };
+  // Les anciens crédits en base utilisent encore "limit" au lieu de "value".
+  const remaining = q.value ?? (q as { limit?: number }).limit;
   // Activée sans plafond (comptes administrateurs) : illimitée.
-  return typeof q.limit === "number" ? { kind: "finite", value: q.limit } : { kind: "unlimited" };
+  return typeof remaining === "number" ? { kind: "finite", value: remaining } : { kind: "unlimited" };
 }
 
-/** Libellés FR des features à valeur (consommables). */
+/** Libellés FR des features à valeur (consommables ou plafond). */
 export const NUMERIC_FEATURES: { key: keyof PlanQuotas; label: string }[] = [
   { key: "analyzer", label: "Analyses de contrat" },
-  { key: "signatureEnhanced", label: "Signatures électronique"},
+  { key: "analyzerPlaybook", label: "Analyses avec playbook" },
+  { key: "comprendreContrat", label: "Résumés de contrat" },
+  { key: "generatorFromScratch", label: "Contrats générés" },
+  { key: "generatorImport", label: "Modèles importés" },
+  { key: "signature", label: "Signatures électroniques" },
+  { key: "signatureEnhanced", label: "Signatures avancées" },
   { key: "contrathequeLimit", label: "Contrathèque" },
 ];
 
-/** Libellés FR des features booléennes (droits d'accès). */
-export const BOOLEAN_FEATURES: { key: keyof PlanQuotas; label: string }[] = [
-  { key: "generationContractWithFiligrane", label: "Génération avec filigrane" },
-  { key: "suivisEcheance", label: "Suivi des échéances" },
-  { key: "dashboardRenouvellements", label: "Dashboard renouvellements" },
-  { key: "veilleReviewContract", label: "Veille juridique" },
-  { key: "internalWorkflowValidator", label: "Workflow de validation interne" },
+/**
+ * Libellés FR des features booléennes (droits d'accès).
+ * `isRestriction` : la feature est une contrainte (activée = moins bien), on
+ * affiche donc l'avantage inverse comme « inclus » quand elle est désactivée.
+ */
+export const BOOLEAN_FEATURES: {
+  key: keyof PlanQuotas;
+  label: string;
+  isRestriction?: boolean;
+}[] = [
+  { key: "chatJuridique", label: "Chat juridique" },
+  {
+    key: "generationContractWithFiligrane",
+    label: "Contrats générés sans filigrane",
+    isRestriction: true,
+  },
 ];

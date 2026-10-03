@@ -1,5 +1,5 @@
 import { prisma } from "../../prisma/singletonPrisma.js";
-import { Prisma, SubscriptionStatus, CreditTransactionType } from "@prisma/client";
+import { Prisma, SubscriptionStatus, CreditTransactionType, PlanInterval } from "@prisma/client";
 
 type ReturnData<T = any> = {
   success: boolean;
@@ -9,16 +9,46 @@ type ReturnData<T = any> = {
 
 // ─── Modèle des quotas ───────────────────────────────────────────────────────
 // UserCredit.quotas est une copie de Plan.creditsIncluded (structure CreditPlan
-// de seedPlans.ts). Deux natures d'entrées :
-//  - quotas À VALEUR (consommables)  : analyzer ({unlimited,value}) et
-//                                      signatureEnhanced ({enabled,limit}) — décrémentés à l'usage ;
-//  - PLAFOND (non consommable) : contrathequeLimit ({unlimited,value}) — vérifié par
-//                                comptage (checkContrathequeCapacity), jamais décrémenté ;
-//  - features BOOLÉENNES (droits d'accès) : le reste ({enabled}).
+// de prisma/seedPlans.ts). Quatre natures d'entrées :
+//
+//  1. QUOTAS CONSOMMABLES { unlimited, value } — décrémentés à chaque usage :
+//     analyzer, analyzerPlaybook, generatorFromScratch, generatorImport,
+//     signature, comprendreContrat.
+//
+//  2. FEATURE + QUOTA { enabled, value } — accès réservé à certains plans,
+//     puis décrémenté à chaque usage : signatureEnhanced.
+//
+//  3. PLAFOND { unlimited, value } — jamais décrémenté, comparé au nombre de
+//     contrats non archivés : contrathequeLimit (voir checkContrathequeCapacity).
+//
+//  4. FEATURES BOOLÉENNES { enabled } — simple droit d'accès :
+//     chatJuridique, generationContractWithFiligrane.
+//     ATTENTION : generationContractWithFiligrane est une CONTRAINTE (true =
+//     le contrat généré porte un filigrane), pas un avantage.
 
-/** Features consommables (à valeur, décrémentées). Le reste = plafonds / droits d'accès. */
-const CONSUMABLE_FEATURES = ["analyzer", "signatureEnhanced"] as const;
-type ConsumableFeature = (typeof CONSUMABLE_FEATURES)[number];
+/** Quotas consommables de type { unlimited, value }. */
+const QUOTA_FEATURES = [
+  "analyzer",
+  "analyzerPlaybook",
+  "generatorFromScratch",
+  "generatorImport",
+  "signature",
+  "comprendreContrat",
+] as const;
+
+/** Quotas consommables de type { enabled, value } (feature réservée + quota). */
+const QUOTA_WITH_ACCESS_FEATURES = ["signatureEnhanced"] as const;
+
+/** Droits d'accès de type { enabled }. */
+const BOOLEAN_FEATURES = ["chatJuridique", "generationContractWithFiligrane"] as const;
+
+/** Features booléennes qui sont des contraintes : un administrateur ne les subit jamais. */
+const RESTRICTION_FEATURES = ["generationContractWithFiligrane"];
+
+type QuotaFeature = (typeof QUOTA_FEATURES)[number];
+type QuotaWithAccessFeature = (typeof QUOTA_WITH_ACCESS_FEATURES)[number];
+type ConsumableFeature = QuotaFeature | QuotaWithAccessFeature;
+type BooleanFeature = (typeof BOOLEAN_FEATURES)[number];
 
 /** État d'un quota consommable pour un utilisateur. */
 type FeatureState =
@@ -26,28 +56,41 @@ type FeatureState =
   | { kind: "disabled" } // feature absente / désactivée dans le plan
   | { kind: "finite"; remaining: number }; // quota à valeur, `remaining` restant
 
+function isQuotaFeature(feature: string): feature is QuotaFeature {
+  return (QUOTA_FEATURES as readonly string[]).includes(feature);
+}
+
 function isConsumable(feature: string): feature is ConsumableFeature {
-  return (CONSUMABLE_FEATURES as readonly string[]).includes(feature);
+  return (
+    isQuotaFeature(feature) ||
+    (QUOTA_WITH_ACCESS_FEATURES as readonly string[]).includes(feature)
+  );
+}
+
+function isBooleanFeature(feature: string): feature is BooleanFeature {
+  return (BOOLEAN_FEATURES as readonly string[]).includes(feature);
 }
 
 /** Lit l'état d'un quota consommable dans le JSON quotas. */
 function readRemaining(quotas: Prisma.JsonValue, feature: ConsumableFeature): FeatureState {
-  const all = quotas as Record<string, any> | null;
-  const q = all?.[feature];
-  if (!q) return { kind: "disabled" };
+  const allQuotas = quotas as Record<string, any> | null;
+  const quota = allQuotas?.[feature];
+  if (!quota) return { kind: "disabled" };
 
-  // analyzer : { unlimited: boolean, value?: number }
-  if (feature === "analyzer") {
-    if (q.unlimited === true) return { kind: "unlimited" };
-    if (q.unlimited === false && typeof q.value === "number") {
-      return { kind: "finite", remaining: q.value };
+  // { unlimited: boolean, value?: number }
+  if (isQuotaFeature(feature)) {
+    if (quota.unlimited === true) return { kind: "unlimited" };
+    if (quota.unlimited === false && typeof quota.value === "number") {
+      return { kind: "finite", remaining: quota.value };
     }
     return { kind: "disabled" };
   }
 
-  // signatureEnhanced : { enabled: boolean, limit?: number }
-  if (q.enabled === true && typeof q.limit === "number") {
-    return { kind: "finite", remaining: q.limit };
+  // { enabled: boolean, value?: number }
+  // (les anciens crédits en base utilisent encore "limit" au lieu de "value")
+  const remaining = quota.value ?? quota.limit;
+  if (quota.enabled === true && typeof remaining === "number") {
+    return { kind: "finite", remaining };
   }
   return { kind: "disabled" };
 }
@@ -58,13 +101,13 @@ function writeRemaining(
   feature: ConsumableFeature,
   remaining: number,
 ): Prisma.InputJsonValue {
-  const next = structuredClone(quotas) as Record<string, any>;
-  if (feature === "analyzer") {
-    next[feature] = { unlimited: false, value: remaining };
+  const nextQuotas = structuredClone(quotas) as Record<string, any>;
+  if (isQuotaFeature(feature)) {
+    nextQuotas[feature] = { unlimited: false, value: remaining };
   } else {
-    next[feature] = { enabled: true, limit: remaining };
+    nextQuotas[feature] = { enabled: true, value: remaining };
   }
-  return next as Prisma.InputJsonValue;
+  return nextQuotas as Prisma.InputJsonValue;
 }
 
 // ─── Administrateurs : tout en illimité ──────────────────────────────────────
@@ -76,45 +119,85 @@ async function isAdmin(userId: number): Promise<boolean> {
   return user?.role === "ADMIN";
 }
 
-/** Quotas tels que vus par un administrateur : chaque entrée du plan, illimitée ou activée. */
+/** Quotas tels que vus par un administrateur : tout illimité, aucune contrainte. */
 function unlimitedQuotas(quotas: Prisma.JsonValue): Record<string, unknown> {
-  const all = (quotas ?? {}) as Record<string, any>;
+  const allQuotas = (quotas ?? {}) as Record<string, any>;
   return Object.fromEntries(
-    Object.entries(all).map(([feature, q]) => {
-      if (q && typeof q === "object" && "unlimited" in q) return [feature, { unlimited: true }];
-      if (q && typeof q === "object" && "enabled" in q) return [feature, { ...q, enabled: true }];
-      return [feature, q];
+    Object.entries(allQuotas).map(([feature, quota]) => {
+      if (RESTRICTION_FEATURES.includes(feature)) return [feature, { enabled: false }];
+      if (quota && typeof quota === "object" && "unlimited" in quota) {
+        return [feature, { unlimited: true }];
+      }
+      // { enabled, value } : activé sans valeur = illimité (lu ainsi par le front)
+      if (quota && typeof quota === "object" && "enabled" in quota) {
+        return [feature, { enabled: true }];
+      }
+      return [feature, quota];
     }),
   );
 }
+
+/** Récupère les quotas d'un utilisateur ayant un abonnement actif. */
+async function getActiveQuotas(
+  userId: number,
+): Promise<{ quotas: Prisma.JsonValue } | { reason: "no_active_subscription" | "no_quota" }> {
+  const subscription = await prisma.subscription.findUnique({
+    where: { userId },
+    select: { status: true },
+  });
+  if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+    return { reason: "no_active_subscription" };
+  }
+
+  const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
+  if (!userCredit) return { reason: "no_quota" };
+
+  return { quotas: userCredit.quotas };
+}
+
+/**
+ * Quotas à valeur finie d'un plan ({ unlimited: false, value } ou { enabled: true, value }),
+ * pour journaliser leur attribution. Même règle que extractFiniteQuotas (stripe.service.ts).
+ */
+function finiteQuotasOf(creditsIncluded: Prisma.JsonValue): { feature: string; amount: number }[] {
+  const allQuotas = (creditsIncluded ?? {}) as Record<string, any>;
+  const result: { feature: string; amount: number }[] = [];
+  for (const [feature, quota] of Object.entries(allQuotas)) {
+    if (!quota || typeof quota.value !== "number") continue;
+    if (quota.unlimited === false || quota.enabled === true) {
+      result.push({ feature, amount: quota.value });
+    }
+  }
+  return result;
+}
+
+/** Date d'il y a un mois exactement. */
+function oneMonthAgo(): Date {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1);
+  return date;
+}
+
+const REASON_MESSAGES = {
+  no_active_subscription: "Aucun abonnement actif !",
+  no_quota: "Aucun quota pour cet utilisateur.",
+};
 
 export class Credit {
   /**
    * Ajoute un bonus à un quota consommable (ex: offrir 10 analyses).
    * Ne fonctionne que sur une feature à valeur déjà active dans le plan.
    */
-  async addQuota(
-    userId: number,
-    feature: string,
-    amount: number,
-  ): Promise<ReturnData> {
+  async addQuota(userId: number, feature: string, amount: number): Promise<ReturnData> {
     try {
       if (!isConsumable(feature)) {
         return { success: false, message: `Feature "${feature}" non consommable.` };
       }
 
-      const activeSubscription = await prisma.subscription.findUnique({
-        where: { userId },
-        select: { status: true },
-      });
-      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
-        return { success: false, message: "Aucun abonnement actif !" };
-      }
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) return { success: false, message: REASON_MESSAGES[result.reason] };
 
-      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
-      if (!userCredit) return { success: false, message: "Aucun quota pour cet utilisateur." };
-
-      const state = readRemaining(userCredit.quotas, feature);
+      const state = readRemaining(result.quotas, feature);
       if (state.kind === "unlimited") {
         return { success: true, message: "Quota illimité, aucun bonus nécessaire." };
       }
@@ -123,7 +206,7 @@ export class Credit {
       }
 
       const newRemaining = state.remaining + amount;
-      const newQuotas = writeRemaining(userCredit.quotas, feature, newRemaining);
+      const newQuotas = writeRemaining(result.quotas, feature, newRemaining);
 
       await prisma.$transaction([
         prisma.userCredit.update({ where: { userId }, data: { quotas: newQuotas } }),
@@ -154,11 +237,7 @@ export class Credit {
    * Consomme `amount` unités d'un quota (ex: 1 analyse). Respecte l'illimité
    * (aucun décompte) et refuse si la feature est absente ou le quota épuisé.
    */
-  async consumeQuota(
-    userId: number,
-    feature: string,
-    amount = 1,
-  ): Promise<ReturnData> {
+  async consumeQuota(userId: number, feature: string, amount = 1): Promise<ReturnData> {
     try {
       if (!isConsumable(feature)) {
         return { success: false, message: `Feature "${feature}" non consommable.` };
@@ -167,18 +246,10 @@ export class Credit {
         return { success: true, message: "Quota illimité.", data: { unlimited: true } };
       }
 
-      const activeSubscription = await prisma.subscription.findUnique({
-        where: { userId },
-        select: { status: true },
-      });
-      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
-        return { success: false, message: "Aucun abonnement actif !" };
-      }
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) return { success: false, message: REASON_MESSAGES[result.reason] };
 
-      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
-      if (!userCredit) return { success: false, message: "Aucun quota pour cet utilisateur." };
-
-      const state = readRemaining(userCredit.quotas, feature);
+      const state = readRemaining(result.quotas, feature);
       if (state.kind === "unlimited") {
         return { success: true, message: "Quota illimité.", data: { unlimited: true } };
       }
@@ -194,7 +265,7 @@ export class Credit {
       }
 
       const newRemaining = state.remaining - amount;
-      const newQuotas = writeRemaining(userCredit.quotas, feature, newRemaining);
+      const newQuotas = writeRemaining(result.quotas, feature, newRemaining);
 
       await prisma.$transaction([
         prisma.userCredit.update({ where: { userId }, data: { quotas: newQuotas } }),
@@ -222,33 +293,28 @@ export class Credit {
   }
 
   /**
-   * Vérifie SANS décrémenter si l'utilisateur peut encore utiliser un quota
-   * consommable (à appeler avant de lancer une feature coûteuse). Renvoie
-   * `data.allowed` : true si illimité ou solde > 0, false sinon (+ `reason`).
+   * Vérifie SANS décrémenter si l'utilisateur peut utiliser une feature.
+   * - feature consommable : `allowed` = illimité ou solde > 0 (+ `remaining`) ;
+   * - feature booléenne : `allowed` = droit d'accès du plan (voir hasFeatureAccess).
+   * Renvoie `data.allowed` (+ `reason` si refusé).
    */
   async hasFeatureQuota(userId: number, feature: string): Promise<ReturnData> {
+    if (isBooleanFeature(feature)) return this.hasFeatureAccess(userId, feature);
+
     try {
       if (!isConsumable(feature)) {
-        return { success: false, message: `Feature "${feature}" non consommable.` };
+        return { success: false, message: `Feature "${feature}" inconnue.` };
       }
       if (await isAdmin(userId)) {
         return { success: true, data: { allowed: true, unlimited: true } };
       }
 
-      const activeSubscription = await prisma.subscription.findUnique({
-        where: { userId },
-        select: { status: true },
-      });
-      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
-        return { success: true, data: { allowed: false, reason: "no_active_subscription" } };
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) {
+        return { success: true, data: { allowed: false, reason: result.reason } };
       }
 
-      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
-      if (!userCredit) {
-        return { success: true, data: { allowed: false, reason: "no_quota" } };
-      }
-
-      const state = readRemaining(userCredit.quotas, feature);
+      const state = readRemaining(result.quotas, feature);
       if (state.kind === "unlimited") {
         return { success: true, data: { allowed: true, unlimited: true } };
       }
@@ -266,6 +332,39 @@ export class Credit {
   }
 
   /**
+   * Lit un droit d'accès booléen du plan (chatJuridique, generationContractWithFiligrane).
+   * `data.allowed` = valeur de `enabled` dans le plan.
+   * Pour generationContractWithFiligrane, `allowed: true` signifie donc
+   * « le contrat doit porter un filigrane » (un administrateur n'en a jamais).
+   */
+  async hasFeatureAccess(userId: number, feature: string): Promise<ReturnData> {
+    try {
+      if (!isBooleanFeature(feature)) {
+        return { success: false, message: `Feature "${feature}" n'est pas un droit d'accès.` };
+      }
+      if (await isAdmin(userId)) {
+        const isRestriction = RESTRICTION_FEATURES.includes(feature);
+        return { success: true, data: { allowed: !isRestriction } };
+      }
+
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) {
+        // Sans abonnement actif, on applique le cas le plus prudent :
+        // pas d'accès aux avantages, et le filigrane reste imposé.
+        const isRestriction = RESTRICTION_FEATURES.includes(feature);
+        return { success: true, data: { allowed: isRestriction, reason: result.reason } };
+      }
+
+      const allQuotas = result.quotas as Record<string, any> | null;
+      const isEnabled = allQuotas?.[feature]?.enabled === true;
+      return { success: true, data: { allowed: isEnabled } };
+    } catch (error) {
+      console.error("HAS FEATURE ACCESS ERROR:", error);
+      return { success: false, message: "Erreur lors de la vérification de l'accès." };
+    }
+  }
+
+  /**
    * Vérifie si l'utilisateur peut encore AJOUTER un contrat à sa contrathèque.
    * `contrathequeLimit` est un PLAFOND (pas un consommable) : on compare le nombre
    * de contrats non archivés au plafond du plan. Illimité -> toujours autorisé.
@@ -276,35 +375,27 @@ export class Credit {
       if (await isAdmin(userId)) {
         return { success: true, data: { allowed: true, unlimited: true } };
       }
-      const activeSubscription = await prisma.subscription.findUnique({
-        where: { userId },
-        select: { status: true },
-      });
-      if (!activeSubscription || activeSubscription.status !== SubscriptionStatus.ACTIVE) {
-        return { success: true, data: { allowed: false, reason: "no_active_subscription" } };
+
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) {
+        return { success: true, data: { allowed: false, reason: result.reason } };
       }
 
-      const userCredit = await prisma.userCredit.findUnique({ where: { userId } });
-      if (!userCredit) {
-        return { success: true, data: { allowed: false, reason: "no_quota" } };
-      }
+      const allQuotas = result.quotas as Record<string, any> | null;
+      const contrathequeLimit = allQuotas?.contrathequeLimit;
 
-      const quotas = userCredit.quotas as Record<string, any> | null;
-      const limit = quotas?.contrathequeLimit;
-
-      // Plafond illimité (plans payants) -> toujours autorisé.
-      if (limit?.unlimited === true) {
+      if (contrathequeLimit?.unlimited === true) {
         return { success: true, data: { allowed: true, unlimited: true } };
       }
 
       // Plafond fini -> comparer au nombre de contrats non archivés.
-      if (limit?.unlimited === false && typeof limit.value === "number") {
+      if (contrathequeLimit?.unlimited === false && typeof contrathequeLimit.value === "number") {
         const count = await prisma.contract.count({
           where: { userId, isArchived: false },
         });
         return {
           success: true,
-          data: { allowed: count < limit.value, count, limit: limit.value },
+          data: { allowed: count < contrathequeLimit.value, count, limit: contrathequeLimit.value },
         };
       }
 
@@ -313,6 +404,88 @@ export class Credit {
     } catch (error) {
       console.error("CHECK CONTRATHEQUE CAPACITY ERROR:", error);
       return { success: false, message: "Erreur lors de la vérification du plafond contrathèque." };
+    }
+  }
+
+  /**
+   * Remise à niveau MENSUELLE des quotas, pour les abonnements que Stripe ne
+   * réinitialise pas chaque mois :
+   *  - plans gratuits (Freemium, Betatesteur) : aucun paiement, donc aucun reset ;
+   *  - plans annuels : un seul paiement par an, alors que les quotas sont mensuels.
+   * Les plans mensuels payants sont exclus : le webhook invoice.payment_succeeded
+   * les réinitialise déjà à chaque paiement.
+   *
+   * Un abonnement est remis à niveau si sa dernière attribution (dernière
+   * CreditTransaction de type SUBSCRIPTION, sinon la date de début de
+   * l'abonnement) date d'au moins un mois. Les quotas redeviennent une copie
+   * du plan (les bonus non consommés sont perdus, comme au renouvellement Stripe).
+   *
+   * Appelée chaque jour par cron.ts : sans risque si elle tourne plusieurs fois.
+   */
+  async refillMonthlyQuotas(): Promise<ReturnData<{ refilledCount: number; errorCount: number }>> {
+    try {
+      const subscriptions = await prisma.subscription.findMany({
+        where: {
+          status: SubscriptionStatus.ACTIVE,
+          plan: { OR: [{ price: 0 }, { interval: PlanInterval.yearly }] },
+        },
+        select: { userId: true, startAt: true, plan: { select: { name: true, creditsIncluded: true } } },
+      });
+
+      const limitDate = oneMonthAgo();
+      let refilledCount = 0;
+      let errorCount = 0;
+
+      for (const subscription of subscriptions) {
+        try {
+          const lastAttribution = await prisma.creditTransaction.findFirst({
+            where: { userId: subscription.userId, type: CreditTransactionType.SUBSCRIPTION },
+            orderBy: { createdAt: "desc" },
+            select: { createdAt: true },
+          });
+          const lastRefillDate = lastAttribution?.createdAt ?? subscription.startAt;
+          if (lastRefillDate > limitDate) continue; // pas encore un mois
+
+          const { userId, plan } = subscription;
+          const finiteQuotas = finiteQuotasOf(plan.creditsIncluded);
+
+          await prisma.$transaction([
+            prisma.userCredit.upsert({
+              where: { userId },
+              create: { userId, quotas: plan.creditsIncluded as Prisma.InputJsonValue },
+              update: { quotas: plan.creditsIncluded as Prisma.InputJsonValue },
+            }),
+            // Ces lignes servent aussi de repère pour la prochaine remise à niveau.
+            ...finiteQuotas.map(({ feature, amount }) =>
+              prisma.creditTransaction.create({
+                data: {
+                  userId,
+                  feature,
+                  amount,
+                  balanceAfter: amount, // après remise à niveau, le restant = le montant plein
+                  type: CreditTransactionType.SUBSCRIPTION,
+                  description: `Remise à niveau mensuelle ${feature} (plan ${plan.name})`,
+                  sourceId: "monthly-refill",
+                },
+              }),
+            ),
+          ]);
+          refilledCount++;
+        } catch (error) {
+          // Un utilisateur en erreur ne bloque pas les autres.
+          errorCount++;
+          console.error(`REFILL QUOTAS ERROR userId=${subscription.userId}:`, error);
+        }
+      }
+
+      return {
+        success: errorCount === 0,
+        message: `${refilledCount} abonnement(s) remis à niveau, ${errorCount} erreur(s).`,
+        data: { refilledCount, errorCount },
+      };
+    } catch (error) {
+      console.error("REFILL MONTHLY QUOTAS ERROR:", error);
+      return { success: false, message: "Erreur lors de la remise à niveau mensuelle des quotas." };
     }
   }
 
