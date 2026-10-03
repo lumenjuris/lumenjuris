@@ -15,7 +15,7 @@ import { AnalysisContext } from "../../types/contextualAnalysis";
 import { findBestClauseSpan } from "../../utils/textPatchLocator";
 import { formatContentToHtml } from "../../utils/documentViewerTools/formatContentToHtml";
 import { injectClausesIntoHtml } from "../../utils/documentViewerTools/injectClausesIntoHtml";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Mark, mergeAttributes } from "@tiptap/core";
 
@@ -214,6 +214,10 @@ export const DocumentViewer = forwardRef<
     const editorRef = useRef(editor);
     useEffect(() => {
       editorRef.current = editor;
+      displayedEditor = editor;
+      return () => {
+        if (displayedEditor === editor) displayedEditor = null;
+      };
     }, [editor]);
 
     const tiptapWrapperRef = useRef<HTMLDivElement>(null);
@@ -429,6 +433,17 @@ export const DocumentViewer = forwardRef<
 );
 
 DocumentViewer.displayName = "DocumentViewer";
+
+// Éditeur du contrat affiché : l'export (Word/PDF) part de ce document, qui contient
+// la mise en forme d'origine et les recommandations appliquées.
+let displayedEditor: Editor | null = null;
+
+/** HTML du contrat tel qu'affiché (sans le balisage des clauses), ou null hors de l'analyse. */
+export function getDisplayedContractHtml(): string | null {
+  return displayedEditor && !displayedEditor.isDestroyed
+    ? stripClauseMarkupFromHtml(displayedEditor.getHTML())
+    : null;
+}
 
 function stripClauseMarkupFromHtml(html: string): string {
   if (typeof DOMParser === "undefined") return html;

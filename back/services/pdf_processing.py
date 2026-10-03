@@ -329,89 +329,103 @@ def _extract_text_pdfminer(content: bytes) -> str:
 
 def _extract_html_from_pdf_dict(content: bytes) -> Optional[str]:
     """
-    Extrait le texte du PDF avec mise en forme HTML (gras, italique, titres h1/h2)
-    en exploitant get_text("dict") de PyMuPDF.
-    Retourne None si PyMuPDF n'est pas disponible ou si l'extraction échoue.
+    Extrait le texte du PDF en HTML (paragraphes, titres h1/h2, gras, italique)
+    à partir de get_text("dict") de PyMuPDF. Retourne None si PyMuPDF manque ou échoue.
+
+    Le découpage se fait ligne par ligne, comme une lecture : un bloc PyMuPDF
+    contient souvent toute une page, et une seule ligne en gros caractères ne
+    doit pas transformer tout le bloc en titre.
     """
     if not PYMUPDF_AVAILABLE or not fitz:
         return None
     try:
         doc = fitz.open(stream=content, filetype="pdf")
 
-        # Collecter toutes les tailles de police pour déterminer la taille "normale"
-        all_sizes: List[float] = []
+        # Lignes du document : html, texte, taille, tout en gras, position.
+        lines: List[dict] = []
         for page in doc:
-            page_dict = page.get_text("dict")
-            for block in page_dict.get("blocks", []):
-                if block.get("type") != 0:
-                    continue
-                for line in block.get("lines", []):
-                    for span in line.get("spans", []):
-                        size = span.get("size", 0)
-                        if span.get("text", "").strip() and size > 0:
-                            all_sizes.append(size)
-
-        if not all_sizes:
-            doc.close()
-            return None
-
-        all_sizes.sort()
-        median_size = all_sizes[len(all_sizes) // 2]
-
-        html_parts: List[str] = []
-
-        for page in doc:
-            page_dict = page.get_text("dict")
-            for block in page_dict.get("blocks", []):
+            for block in page.get_text("dict").get("blocks", []):
                 if block.get("type") != 0:
                     continue  # ignorer les blocs image
-
-                block_lines_html: List[str] = []
-                block_sizes: List[float] = []
-
-                for line in block.get("lines", []):
-                    line_html = ""
+                for index, line in enumerate(block.get("lines", [])):
+                    html, text, sizes, all_bold = "", "", [], True
                     for span in line.get("spans", []):
-                        raw_text = span.get("text", "")
-                        if not raw_text.strip():
-                            line_html += html_module.escape(raw_text)
-                            continue
-
-                        flags = span.get("flags", 0)
-                        size = span.get("size", median_size)
-                        if size > 0:
-                            block_sizes.append(size)
-
-                        is_bold = bool(flags & 16)
-                        is_italic = bool(flags & 2)
-
-                        safe_text = html_module.escape(raw_text)
-
-                        if is_bold and is_italic:
-                            safe_text = f"<strong><em>{safe_text}</em></strong>"
-                        elif is_bold:
-                            safe_text = f"<strong>{safe_text}</strong>"
-                        elif is_italic:
-                            safe_text = f"<em>{safe_text}</em>"
-
-                        line_html += safe_text
-
-                    block_lines_html.append(line_html)
-
-                block_text = " ".join(block_lines_html).strip()
-                if not block_text:
-                    continue
-
-                block_max_size = max(block_sizes) if block_sizes else median_size
-
-                if block_max_size >= median_size * 1.5:
-                    html_parts.append(f"<h1>{block_text}</h1>")
-                elif block_max_size >= median_size * 1.2:
-                    html_parts.append(f"<h2>{block_text}</h2>")
-                else:
-                    html_parts.append(f"<p>{block_text}</p>")
-
+                        raw = span.get("text", "")
+                        safe = html_module.escape(raw)
+                        if raw.strip():
+                            flags = span.get("flags", 0)
+                            bold, italic = bool(flags & 16), bool(flags & 2)
+                            all_bold = all_bold and bold
+                            sizes.append(span.get("size", 0))
+                            if italic:
+                                safe = f"<em>{safe}</em>"
+                            if bold:
+                                safe = f"<strong>{safe}</strong>"
+                        html += safe
+                        text += raw
+                    if not text.strip():
+                        continue
+                    x0, y0, x1, y1 = line.get("bbox", (0, 0, 0, 0))
+                    lines.append({
+                        "html": html.strip(), "text": text.strip(), "size": max(sizes or [0]),
+                        "bold": all_bold, "x1": x1, "y0": y0, "y1": y1,
+                        "new_block": index == 0, "page": page.number,
+                    })
         doc.close()
+        if not lines:
+            return None
+
+        sizes = sorted(line["size"] for line in lines)
+        median_size = sizes[len(sizes) // 2] or 1
+        right_edge = sorted(line["x1"] for line in lines)[int(len(lines) * 0.9)]
+        list_or_article = re.compile(r"^([-•·▪●*]|\(?[a-z0-9]{1,3}[).]\s|article\s|chapitre\s|titre\s|annexe\s)", re.I)
+
+        def level(line: dict) -> str:
+            if line["size"] >= median_size * 1.5:
+                return "h1"
+            if line["size"] >= median_size * 1.2:
+                return "h2"
+            # Ligne courte entièrement en gras : titre de clause, gardé seul.
+            return "bold" if line["bold"] and len(line["text"]) <= 100 else "p"
+
+        html_parts: List[str] = []
+        current: List[str] = []
+        current_tag = "p"
+        previous: Optional[dict] = None
+
+        def flush():
+            if current:
+                tag = "p" if current_tag == "bold" else current_tag
+                html_parts.append(f"<{tag}>{' '.join(current)}</{tag}>")
+                current.clear()
+
+        for line in lines:
+            tag = level(line)
+            if previous is None:
+                starts_new = True
+            elif line["page"] != previous["page"]:
+                # Changement de page : on continue le paragraphe seulement s'il était
+                # coupé en pleine phrase (la ligne suivante commence en minuscule).
+                ends_sentence = re.search(r"[.:;!?»]$", previous["text"])
+                starts_new = not (tag == current_tag == "p" and not ends_sentence and line["text"][:1].islower())
+            else:
+                starts_new = (
+                    tag != current_tag
+                    or tag == "bold"
+                    or line["new_block"]
+                    # Espace vertical plus grand qu'un interligne : nouveau paragraphe.
+                    or line["y0"] - previous["y1"] > (previous["y1"] - previous["y0"]) * 0.6
+                    # Ligne précédente nettement plus courte qui finit une phrase.
+                    or (re.search(r"[.:;!?»]$", previous["text"]) and previous["x1"] < right_edge - 40)
+                    or list_or_article.match(line["text"]) is not None
+                )
+            if starts_new:
+                flush()
+                current_tag = tag
+            current.append(line["html"])
+            previous = line
+        flush()
+
         result = "\n".join(html_parts)
         return result if result.strip() else None
 

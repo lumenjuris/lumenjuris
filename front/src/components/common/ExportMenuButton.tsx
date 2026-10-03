@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Download, FileText, FileType } from "lucide-react";
 import { BANNER_ACTION_CLASS } from "./PageBanner";
 import type { ExportFormat } from "../../utils/exportContract";
@@ -16,17 +17,33 @@ export function ExportMenuButton({
   disabled?: boolean;
   title?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  // Position du menu (en coordonnées de la fenêtre) : il est rendu à la racine de la
+  // page, car le bandeau qui contient le bouton coupe ce qui dépasse de son cadre.
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const open = menuPosition !== null;
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const setOpen = (isOpen: boolean) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setMenuPosition(isOpen && rect ? { top: rect.bottom + 8, right: window.innerWidth - rect.right } : null);
+  };
 
-  // Un clic en dehors du menu le referme.
+  // Un clic en dehors du menu, un défilement ou un redimensionnement le referme.
   useEffect(() => {
     if (!open) return;
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) setMenuPosition(null);
     };
+    const close = () => setMenuPosition(null);
     document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
   }, [open]);
 
   const choose = (format: ExportFormat) => {
@@ -38,7 +55,7 @@ export function ExportMenuButton({
     <div ref={containerRef} className="relative w-full lg:w-auto">
       <button
         type="button"
-        onClick={() => setOpen((isOpen) => !isOpen)}
+        onClick={() => setOpen(!open)}
         disabled={disabled}
         className={BANNER_ACTION_CLASS}
         title={title}
@@ -50,8 +67,13 @@ export function ExportMenuButton({
         <ChevronDown className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && (
-        <div role="menu" className="absolute right-0 z-30 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-card">
+      {menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ top: menuPosition.top, right: menuPosition.right }}
+          className="fixed z-[60] w-64 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-card"
+        >
           <button type="button" role="menuitem" onClick={() => choose("docx")} className="flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-surface-subtle">
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-primary" />
             <span>
@@ -66,7 +88,8 @@ export function ExportMenuButton({
               <span className="block text-xs text-ink-muted">Pour partager ou archiver une version finale</span>
             </span>
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

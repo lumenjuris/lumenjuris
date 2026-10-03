@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { contractApi } from "./api";
 import { FieldReviewList } from "./FieldReviewList";
 import type { FieldChanges } from "./FieldReviewList";
-import { IMPORT_FIELDS, applyDeductions, isEmptyValue, normalizeFieldValue } from "./importReview";
+import { IMPORT_FIELDS, applyDeductions, buildReviewFields, isEmptyValue, normalizeFieldValue } from "./importReview";
 import type { ReviewField } from "./importReview";
 import type { ContractDetail, ValidationStatus } from "./types";
 
@@ -11,6 +11,13 @@ interface Props {
   contract: ContractDetail;
   /** Recharge la fiche en arrière-plan après un enregistrement. */
   onSaved: () => void;
+  /** Prévient la fiche du début et de la fin de l'analyse IA (bouton du bandeau). */
+  onAnalysingChange?: (analysing: boolean) => void;
+}
+
+/** Commande exposée à la fiche : le bouton « Analyser » est dans le bandeau. */
+export interface ContractFieldsPanelHandle {
+  analyse: () => Promise<void>;
 }
 
 /**
@@ -18,10 +25,12 @@ interface Props {
  * pendant l'import (à compléter / à vérifier / validé), mais chaque champ est
  * enregistré dès qu'on le quitte, et non à chaque frappe.
  */
-export function ContractFieldsPanel({ contract, onSaved }: Props) {
+export const ContractFieldsPanel = forwardRef<ContractFieldsPanelHandle, Props>(function ContractFieldsPanel({ contract, onSaved, onAnalysingChange }, ref) {
   const [fields, setFields] = useState<ReviewField[]>(() => buildFields(contract));
   const [savingKeys, setSavingKeys] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [analysing, setAnalysing] = useState(false);
+  const [notice, setNotice] = useState("");
 
   // Ce que le serveur connaît déjà : évite de réécrire un champ inchangé.
   const savedValues = useRef<Record<string, string | null>>(initialSavedValues(contract));
@@ -87,8 +96,60 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
     }
   }
 
+  /**
+   * Fait lire le contrat par l'IA (même analyse qu'à l'import) et remplit les
+   * champs encore vides ou non validés. Les valeurs sont enregistrées comme
+   * suggestions de l'IA : l'échéance est suivie tout de suite, et chaque champ
+   * reste « à vérifier » jusqu'à sa validation. Un champ validé par
+   * l'utilisateur n'est jamais remplacé.
+   */
+  async function analyseAndFill() {
+    const text = contract.ocrText?.trim();
+    if (!text) return;
+    setAnalysing(true);
+    onAnalysingChange?.(true);
+    setError("");
+    setNotice("");
+    try {
+      const suggestions = buildReviewFields(await contractApi.extractMetadata(text)).filter((suggestion) => {
+        const current = fieldsRef.current.find((field) => field.key === suggestion.key);
+        return !isEmptyValue(suggestion.value) && !current?.confirmedByUser && !current?.markedAbsent;
+      });
+      await Promise.all(suggestions.map((suggestion) =>
+        contractApi.validateField(contract.id, suggestion.key, suggestion.value, "AI_SUGGESTED")));
+      for (const suggestion of suggestions) {
+        savedValues.current[suggestion.key] = suggestion.value;
+        savedStatuses.current[suggestion.key] = "AI_SUGGESTED";
+      }
+      // Confiance remise à zéro : comme après un rechargement, tout reste à vérifier.
+      const filled = suggestions.map((suggestion) => ({ ...suggestion, aiValue: suggestion.value, confidence: 0 }));
+      setFields((previous) => applyDeductions([
+        ...previous.map((field) => filled.find((suggestion) => suggestion.key === field.key) ?? field),
+        ...filled.filter((suggestion) => !previous.some((field) => field.key === suggestion.key)),
+      ]));
+      setNotice(filled.length
+        ? `${filled.length} champ${filled.length > 1 ? "s" : ""} rempli${filled.length > 1 ? "s" : ""} par l'IA : vérifiez-les puis validez-les.`
+        : "L'IA n'a trouvé aucune nouvelle information dans le contrat.");
+      onSaved();
+    } catch {
+      setError("L'analyse du contrat a échoué. Réessayez dans un instant.");
+    } finally {
+      setAnalysing(false);
+      onAnalysingChange?.(false);
+    }
+  }
+
+  useImperativeHandle(ref, () => ({ analyse: analyseAndFill }));
+
   return (
     <div className="bg-white rounded-card border border-line shadow-card p-3 space-y-3">
+
+      {analysing && (
+        <p className="text-xs text-ink-muted">L'IA lit le contrat : dates, durée, préavis, montant… Cela prend environ 20 secondes.</p>
+      )}
+      {notice && (
+        <p role="status" className="text-xs text-ink-secondary bg-brand-light border border-brand/20 px-3 py-2 rounded-lg">{notice}</p>
+      )}
 
       {error && (
         <div role="alert" className="flex items-start gap-2 text-xs text-danger-dark bg-danger-light border border-danger/20 px-3 py-2 rounded-lg">
@@ -104,7 +165,7 @@ export function ContractFieldsPanel({ contract, onSaved }: Props) {
       />
     </div>
   );
-}
+});
 
 // ─── Construction des champs à partir du contrat ─────────────────────────────
 

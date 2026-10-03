@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Share2, RefreshCw, Lightbulb } from "lucide-react";
 import { ExportMenuButton } from "../common/ExportMenuButton";
+import { getDisplayedContractHtml } from "./DocumentViewer";
 import { useAppliedRecommendationsStore } from "../../store/appliedRecommendationsStore";
 import { AddToContrathequeButton } from "./AddToContrathequeButton";
 import { ContractAnalysis } from "../../types";
@@ -126,7 +127,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         title="Exporter le contrat corrigé"
         onExport={(format) => {
           const exportDocument = format === "pdf" ? generatePDFDocument : generateWordDocument;
-          exportDocument(originalContent, fileName, htmlContent ?? undefined);
+          exportDocument(originalContent, fileName, htmlContent ?? undefined, getDisplayedContractHtml());
         }}
       />
 

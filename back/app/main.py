@@ -318,6 +318,9 @@ def _lire_texte_contrat(filename: str, content: bytes, scan: bool) -> Tuple[str,
     return corriger_espaces(texte_brut), "server"
 
 
+METADATA_MODEL = "gpt-5.2"
+
+
 def _construire_prompt_metadonnees(texte: str) -> str:
     keys_desc = "\n".join(f"- {k}" for k in CONTRACT_METADATA_KEYS)
     return (
@@ -327,13 +330,15 @@ def _construire_prompt_metadonnees(texte: str) -> str:
         "mets value=null et confidence=0.\n\n"
         "Champs à extraire :\n" + keys_desc + "\n\n"
         "Règles :\n"
-        "- Dates au format AAAA-MM-JJ.\n"
+        "- Dates au format AAAA-MM-JJ. Convertis les dates, durées et montants écrits en toutes lettres.\n"
+        "- end_date : si elle n'est pas écrite mais que la date d'effet et la durée le sont, calcule-la.\n"
         "- renewal_type : 'tacit' (tacite reconduction), 'express' (reconduction expresse) ou 'none'.\n"
         "- is_b2c : true UNIQUEMENT si une partie est un particulier/consommateur (déclenche la loi Chatel).\n"
-        "- duration_months et notice_period_days : entiers.\n"
+        "- duration_months et notice_period_days : entiers (préavis en jours : 1 mois = 30 jours).\n"
         "- amount : nombre sans symbole ; currency séparément.\n"
         "- sensitive_clauses : liste courte (exclusivité, non-concurrence, pénalités, résiliation unilatérale, "
-        "limitation de responsabilité, cession, confidentialité…).\n\n"
+        "limitation de responsabilité, cession, confidentialité…).\n"
+        "- N'invente rien : un passage à compléter (pointillés, crochets, blanc) donne value=null.\n\n"
         "Réponds UNIQUEMENT en JSON strict de la forme :\n"
         '{ "fields": { "<clé>": { "value": <valeur ou null>, "confidence": <0..1> }, ... } }\n\n'
         f"Contrat :\n{texte}"
@@ -374,19 +379,20 @@ async def _analyser_metadonnees_ia(texte: str) -> Tuple[List[Dict[str, Any]], An
 
     prompt = _construire_prompt_metadonnees(texte)
 
+    # gpt-5.2 en réflexion « low » : gpt-4o-mini laissait des champs vides et se
+    # trompait (durée « UN MOIS » lue 36 mois, échéance jamais calculée).
     def _call():
-        return _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=1200,
-            response_format={"type": "json_object"},
+        return _openai_client.responses.create(
+            model=METADATA_MODEL,
+            input=prompt,
+            reasoning={"effort": "low"},
+            text={"format": {"type": "json_object"}},
         )
 
     debut = datetime.now()
     try:
         resp = await run_in_threadpool(_call)
-        raw = resp.choices[0].message.content or "{}"
+        raw = resp.output_text or "{}"
         import json as _json
         parsed = _json.loads(raw)
     except Exception as e:
@@ -430,7 +436,7 @@ async def extract_contract_metadata_from_text(req: ContractMetadataFromTextReque
     return {
         "success": True,
         "fields": fields,
-        "openai_tokens": extract_token_usage(resp, "gpt-4o"),
+        "openai_tokens": extract_token_usage(resp, METADATA_MODEL),
     }
 
 
@@ -451,7 +457,7 @@ async def extract_contract_metadata(file: UploadFile = File(...), scan: bool = F
         "ocr_text": texte,
         "filename": file.filename,
         "extraction_method": extraction_method,
-        "openai_tokens": extract_token_usage(resp, "gpt-4o"),
+        "openai_tokens": extract_token_usage(resp, METADATA_MODEL),
     }
 
 

@@ -61,7 +61,7 @@ const PLANS_SEED = [
             generationContractWithFiligrane: { enabled: true },
             contrathequeLimit: {
                 unlimited: false,
-                value: 5
+                value: 15
             },
             suivisEcheance: { enabled: false },
             dashboardRenouvellements: { enabled: false },
@@ -106,7 +106,8 @@ const PLANS_SEED = [
             generationContractWithFiligrane: { enabled: false },
 
             contrathequeLimit: {
-                unlimited: true,
+                unlimited: false,
+                value: 300
             },
             suivisEcheance: { enabled: true },
             dashboardRenouvellements: { enabled: true },
@@ -119,7 +120,7 @@ const PLANS_SEED = [
     },
     {
         name: PlanName.Starter_annuel,
-        price: 468_00,
+        price: 504_00, // 42 €/mois, -15 % (prix Stripe à mettre à jour)
         interval: PlanInterval.yearly,
         creditsIncluded: {
             analyzer: {
@@ -129,7 +130,10 @@ const PLANS_SEED = [
             signatureEnhanced: { enabled: false },
             generationContractWithFiligrane: { enabled: false },
 
-            contrathequeLimit: { unlimited: true },
+            contrathequeLimit: {
+                unlimited: false,
+                value: 300
+            },
             suivisEcheance: { enabled: true },
             dashboardRenouvellements: { enabled: true },
 
@@ -140,17 +144,23 @@ const PLANS_SEED = [
         stripePriceId: "price_1Tzx1QHjiTZrRhmvhBjNoTWP",
     },
 
-    //PRO mois:119€ | année:1188€(99€/mois)
+    //PRO mois:119€ | année:1212€(101€/mois, -15 %)
     {
         name: PlanName.Pro_mensuel,
         price: 119_00,
         interval: PlanInterval.monthly,
         creditsIncluded: {
-            analyzer: { unlimited: true },
+            analyzer: {
+                unlimited: false,
+                value: 100
+            },
             signatureEnhanced: { enabled: true, limit: 10 },
             generationContractWithFiligrane: { enabled: false },
 
-            contrathequeLimit: { unlimited: true },
+            contrathequeLimit: {
+                unlimited: false,
+                value: 1200
+            },
             suivisEcheance: { enabled: true },
             dashboardRenouvellements: { enabled: true },
 
@@ -162,14 +172,20 @@ const PLANS_SEED = [
     },
     {
         name: PlanName.Pro_annuel,
-        price: 1_188_00,
+        price: 1_212_00, // 101 €/mois, -15 % (prix Stripe à mettre à jour)
         interval: PlanInterval.yearly,
         creditsIncluded: {
-            analyzer: { unlimited: true },
+            analyzer: {
+                unlimited: false,
+                value: 100
+            },
             signatureEnhanced: { enabled: true, limit: 10 },
             generationContractWithFiligrane: { enabled: false },
 
-            contrathequeLimit: { unlimited: true },
+            contrathequeLimit: {
+                unlimited: false,
+                value: 1200
+            },
             suivisEcheance: { enabled: true },
             dashboardRenouvellements: { enabled: true },
 

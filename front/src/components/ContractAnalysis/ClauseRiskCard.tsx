@@ -38,13 +38,16 @@ export function ClauseRiskCard({
     return "Modéré";
   };
 
+  // Titre de la clause : bloc (et non flex) pour qu'un long mot comme
+  // « validité/contrepartie/renonciation » passe à la ligne au lieu de déborder.
+  const TITLE_CLASS = "block min-w-0 break-words [overflow-wrap:anywhere] text-sm leading-snug font-medium bg-white px-2.5 py-1.5 rounded-md border";
   const getRiskType = (riskScore: number) => {
-    if (riskScore === 5) return "flex font-medium text-red-card-primary bg-white p-2 rounded-lg border border-red-800"
-    if (riskScore >= 3) 
-      return "flex font-medium text-yellow-card-text bg-white p-2 rounded-lg border border-yellow-card-text"
+    if (riskScore === 5) return `${TITLE_CLASS} text-red-card-primary border-red-800`
+    if (riskScore >= 3)
+      return `${TITLE_CLASS} text-yellow-card-text border-yellow-card-text`
     if (riskScore === -1)
-      return "flex font-medium text-blue-500 bg-white p-2 rounded-lg border border-blue-300" //modified
-    return "flex font-medium text-green-card-primary bg-white p-2 rounded-lg border border-green-800" // Modéré
+      return `${TITLE_CLASS} text-blue-500 border-blue-300` //modified
+    return `${TITLE_CLASS} text-green-card-primary border-green-800` // Modéré
   }
 
   const thisClauseIsModified = recommandationApplied?.some(
@@ -57,13 +60,13 @@ export function ClauseRiskCard({
       <div
         onClick={onClick}
         className={`
-        p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md
+        min-w-0 p-2.5 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md
         ${thisClauseIsModified ? "ring-1 ring-blue-500 bg-blue-50 " : getRiskColor(clause.riskScore)}
       `}
       >
-        <div className="flex justify-between items-start mb-2">
+        <div className="flex justify-between items-center gap-2 mb-1.5">
           <span
-            className={`px-4 py-2 rounded-full text-xs font-medium ${thisClauseIsModified ? getRiskBadge(-1) : getRiskBadge(clause.riskScore)}`}
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${thisClauseIsModified ? getRiskBadge(-1) : getRiskBadge(clause.riskScore)}`}
           >
             {!thisClauseIsModified
               ? `Risque ${getRiskLabel(clause.riskScore)} ${clause.riskScore}/5`
@@ -72,15 +75,15 @@ export function ClauseRiskCard({
 
           <span
             ref={iconRef}
-            className="cursor-pointer text-gray-700 hover:text-gray-900"
+            className="shrink-0 cursor-pointer text-gray-700 hover:text-gray-900"
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
             onClick={(e) => e.stopPropagation()}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
+              width="15"
+              height="15"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

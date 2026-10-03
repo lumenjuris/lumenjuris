@@ -627,6 +627,7 @@ export default function ContractAnalysis() {
     try {
       setActiveHistoryId(null);
       resetAllPatches();
+      useDocumentTextStore.getState().setHtmlContent(null); // texte collé : pas de document d'origine
       clearEnhancedClauseCaches();
       const preparedContract = await handleTextSubmit(text, fileName);
       if (documentPreparationRef.current !== preparationKey) return;
