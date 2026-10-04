@@ -95,15 +95,39 @@ routerBilling.post("/create-checkout", authMiddleware, async (req, res) => {
     }
 
 
-    if (req.body.planName == PlanName.Freemium || req.body.planName == PlanName.Betatesteur) {
+    const userId = Number(req.idUser);
+
+    // Plans publics réellement achetables via Checkout. Tout le reste est refusé
+    // (Freemium = inscription directe, Betatesteur = attribué à la main).
+    const PLANS_PUBLICS: PlanName[] = [
+      PlanName.Starter_mensuel,
+      PlanName.Starter_annuel,
+      PlanName.Pro_mensuel,
+      PlanName.Pro_annuel,
+    ];
+
+    if (req.body.planName === PlanName.Teste_admin) {
+      // Plan de test Stripe (0,01 €/sem, tout illimité) : réservé aux ADMIN,
+      // pour valider la chaîne de paiement. Interdit aux comptes standards.
+      const user = await prisma.user.findUnique({
+        where: { idUser: userId },
+        select: { role: true },
+      });
+      if (user?.role !== "ADMIN") {
+        return res.status(403).json({
+          success: false,
+          error: "Forbidden",
+          message: "Ce plan est réservé aux administrateurs.",
+        });
+      }
+    } else if (!PLANS_PUBLICS.includes(req.body.planName)) {
       return res.status(400).json({
         success: false,
         error: "Bad Request",
-        message: `Le plan d'abonnement ${req.body.planName} ne fait pas partis des listes d'achat de Lumen Juris`
-      })
+        message: `Le plan d'abonnement ${req.body.planName} n'est pas disponible à l'achat.`,
+      });
     }
 
-    const userId = Number(req.idUser);
     const checkout = await stripeService.createCheckout(userId, req.body.planName);
 
     // Statut HTTP relayé depuis le service : 409 si abonnement déjà actif,
