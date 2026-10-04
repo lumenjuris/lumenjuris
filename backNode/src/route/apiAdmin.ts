@@ -546,7 +546,7 @@ router.get("/overview", authMiddleware, requireAdmin, async (_req: Request, res:
             prisma.subscription.count({
                 where: {
                     status: "ACTIVE",
-                    plan: { name: { notIn: [PlanName.Freemium, PlanName.Betatesteur] } },
+                    plan: { name: { notIn: [PlanName.Freemium, PlanName.Betatesteur, PlanName.Teste_admin] } },
                 },
             }),
 

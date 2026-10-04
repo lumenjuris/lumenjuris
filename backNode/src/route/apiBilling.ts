@@ -6,7 +6,7 @@ import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { Credit } from "../services/classCredit.js";
 import Stripe from "stripe"
-
+import { logger } from "../logger/logger.js";
 import { isPlanName } from "../utils/typeGuard.js";
 import { PlanName } from "@prisma/client";
 
@@ -24,20 +24,26 @@ const stripeService = new StripeLumenJuris();
 routerBilling.post("/stripe/webhook", async (req: Request, res: Response) => {
   //Adresse du webhook de l'env teste https://lumenjurisbackendnodejs.lumenjuris.com/billing/stripe/webhook
   //Adresse du webhook pour la producction : https://app.node.lumenjuris.com/billing/stripe/webhook
-  
+
   try {
     const signature = req.headers["stripe-signature"];
+    const stripeEnvTeste = process.env.STRIPE_ENV
 
-    const stripeClient = new Stripe(process.env.STRIPE_SK!, {
+    const stripeClient = new Stripe(
+      stripeEnvTeste == "teste"
+        ? process.env.STRIPE_SK_TESTE!
+        : process.env.STRIPE_SK_LIVE!, {
       maxNetworkRetries: 2,
       telemetry: process.env.NODE_ENV == "dev" ? true : false
     });
 
-    const webhookSecret = process.env.NODE_ENV == "dev"
-      ? process.env.STRIPE_WEBHOOK_SECRET_TEST
-      : process.env.STRIPE_WEBHOOK_SECRET_PRODUCTION;
+    const webhookSecret = stripeEnvTeste == "teste"
+      ? process.env.STRIPE_WEBHOOK_SECRET_TESTE
+      : process.env.STRIPE_WEBHOOK_SECRET_LIVE;
 
     if (!webhookSecret) {
+      logger.error("Variable d'environnement STRIPE_WEBHOOK_SECRET est absente, veuillez remplir le .env !",
+        { stripe_wh: webhookSecret })
       throw new Error("Variable d'environnement STRIPE_WEBHOOK_SECRET est absente, veuillez remplir le .env !");
     };
 
@@ -63,9 +69,12 @@ routerBilling.post("/stripe/webhook", async (req: Request, res: Response) => {
 
   } catch (err) {
     console.error(err)
+    logger.error("Une erreur est survenue lors d'une requête au webhook stripe", err)
     return res.status(400).send("Error server")
   }
 })
+
+
 
 
 routerBilling.post("/create-checkout", authMiddleware, async (req, res) => {
@@ -86,14 +95,14 @@ routerBilling.post("/create-checkout", authMiddleware, async (req, res) => {
     }
 
 
-    if(req.body.planName == PlanName.Freemium || req.body.planName == PlanName.Betatesteur){
+    if (req.body.planName == PlanName.Freemium || req.body.planName == PlanName.Betatesteur) {
       return res.status(400).json({
-        success:false,
+        success: false,
         error: "Bad Request",
-        message : `Le plan d'abonnement ${req.body.planName} ne fait pas partis des listes d'achat de Lumen Juris`
+        message: `Le plan d'abonnement ${req.body.planName} ne fait pas partis des listes d'achat de Lumen Juris`
       })
     }
-    
+
     const userId = Number(req.idUser);
     const checkout = await stripeService.createCheckout(userId, req.body.planName);
 
@@ -112,9 +121,10 @@ routerBilling.post("/create-checkout", authMiddleware, async (req, res) => {
     })
   } catch (err) {
     console.error("Une erreur est survenue lors de la la mthode post /create-checkout. Error : ", err)
+    logger.error("Une erreur est survenue lors de la la mthode post /create-checkout. Error : ", err)
     return res.status(500).json({
-      success:false,
-      message : "Une erreur serveur est survenue lors de la creation de la souscription."
+      success: false,
+      message: "Une erreur serveur est survenue lors de la creation de la souscription."
     })
   }
 })
@@ -143,6 +153,7 @@ routerBilling.post("/portal", authMiddleware, async (req: Request, res: Response
     })
   } catch (err) {
     console.error("Erreur POST /billing/portal:", err)
+    logger.error("Erreur lors de la création de l'url pour le portal stripe gestion des souscriptions", err)
     return res.status(500).json({
       success: false,
       message: "Erreur serveur lors de l'ouverture du portail de facturation."
@@ -305,17 +316,13 @@ routerBilling.get(
 
 
 // Liste des factures payées de l'utilisateur (JSON).
-routerBilling.get(
-  "/invoices",
-  authMiddleware,
-  async (req: Request, res: Response) => {
-    const idUser = Number(req.idUser);
+routerBilling.get("/invoices", authMiddleware, async (req: Request, res: Response) => {
+  
+  const idUser = Number(req.idUser);
+  const result = await new Subscription().listInvoices(idUser);
 
-    const result = await new Subscription().listInvoices(idUser);
-
-    return res.status(result.success ? 200 : 500).json(result);
-  },
-);
+  return res.status(result.success ? 200 : 500).json(result);
+});
 
 
 

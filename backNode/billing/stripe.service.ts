@@ -15,16 +15,22 @@ import {
  * checkout.session.completed ait lié l'abonnement). Ce n'est pas un bug : on
  * renvoie un 500 pour que Stripe rejoue l'event, sans polluer les logs d'erreur.
  */
-class WebhookRetryError extends Error {}
+class WebhookRetryError extends Error { }
 
 
 export class StripeLumenJuris {
 
 
-    private stripeClient = new Stripe(process.env.STRIPE_SK!, {
-        maxNetworkRetries: 2,
-        telemetry: process.env.NODE_ENV == "dev" ? true : false
-    })
+    private stripeClient = new Stripe(process.env.STRIPE_ENV === "teste"
+        ? process.env.STRIPE_SK_TESTE!
+        : process.env.STRIPE_SK_LIVE!,
+        {
+            maxNetworkRetries: 2,
+            telemetry: process.env.NODE_ENV == "dev" ? true : false
+        })
+
+
+
 
     async createCustomer(email: string, name: string) {
         try {
