@@ -484,7 +484,7 @@ const COMPARISON: { group: string; rows: { label: string; hint?: string; values:
     group: "Analyse",
     rows: [
       { label: "Analyse des risques", values: ["3 / mois", "30 / mois", "100 / mois"] },
-      { label: "Comprendre ses contrats", values: ["15 / mois", "50 / mois", "50 / mois"] },
+      { label: "Comprendre ses contrats", values: ["15 / mois", "50 / mois", "500 / mois"] },
       { label: "Analyse playbook", values: ["5 / mois", "60 / mois", "120 / mois"] },
     ],
   },

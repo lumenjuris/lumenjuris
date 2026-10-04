@@ -19,6 +19,7 @@ import { BannerAction, PageBanner } from "../components/common/PageBanner";
 import { AlertBanner } from "../components/common/AlertBanner";
 import { COMPLETION_ANIMATION_MS, LoadingZoneAnalyzer } from "../components/common/LoadingZoneAnalyzer";
 import { ConfirmationModal } from "../components/ui/ConfirmationModal";
+import { useQuotaLimit } from "../components/common/useQuotaLimit";
 
 // Formats acceptés pour l'import (identiques à l'analyse des risques)
 const ACCEPTED_MIME_TYPES = [
@@ -71,6 +72,7 @@ export function PlaybookAnalysis() {
   const location = useLocation();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { handleQuotaError, quotaModal } = useQuotaLimit();
 
   const [playbooks, setPlaybooks] = useState<PlaybookInfo[]>([]);
   const [playbookChoisi, setPlaybookChoisi] = useState<string>("");
@@ -136,6 +138,8 @@ export function PlaybookAnalysis() {
           .catch(() => { /* l'historique est un confort : l'analyse reste affichée */ });
       }
     } catch (e) {
+      // Quota d'analyses playbook épuisé : modale de plafond plutôt qu'une bannière.
+      if (handleQuotaError(e)) return;
       setErreurAnalyse(e instanceof Error ? e.message : "L'analyse playbook n'a pas pu être réalisée.");
     } finally {
       setEnCours(false);
@@ -352,6 +356,7 @@ export function PlaybookAnalysis() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
+      {quotaModal}
       <PageBanner
         compact={!!resultat}
         title="Analyse playbook"

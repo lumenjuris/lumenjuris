@@ -53,7 +53,6 @@ export const NUMERIC_FEATURES: { key: keyof PlanQuotas; label: string }[] = [
   { key: "generatorFromScratch", label: "Contrats générés" },
   { key: "generatorImport", label: "Modèles importés" },
   { key: "signature", label: "Signatures électroniques" },
-  { key: "signatureEnhanced", label: "Signatures avancées" },
   { key: "contrathequeLimit", label: "Contrathèque" },
 ];
 

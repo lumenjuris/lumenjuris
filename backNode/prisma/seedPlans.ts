@@ -1,6 +1,7 @@
-import { logger } from "./logger/logger.js";
 import { prisma } from "./singletonPrisma.js";
 import { Prisma, PlanInterval, PlanName } from "@prisma/client";
+import { logger } from "../src/logger/logger.js"
+
 
 /**
  * Création de tous les plans d'abonnement dans la base de données

@@ -2,6 +2,7 @@
  * Couche d'accès API du Playbook (passe par le proxy).
  */
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { throwIfQuotaExceeded } from "../../../utils/featureQuota";
 import type {
   AnalysisSnapshot,
   PlaybookAnalysisDetail,
@@ -54,6 +55,7 @@ export const playbookApi = {
   /** Compare un contrat aux règles actives du playbook choisi (par défaut : le playbook principal). */
   check: async (content: string, playbookId?: string): Promise<PlaybookCheckResult> => {
     const res = await fetchProxy(`${BASE}/check`, envoyer("POST", { content, playbookId }));
+    await throwIfQuotaExceeded(res, "analyzerPlaybook");
     const data = (await res.json().catch(() => ({}))) as PlaybookCheckResult & { success?: boolean; message?: string };
     if (!res.ok || data.success === false) throw new Error(data.message || "L'analyse playbook n'a pas pu être réalisée.");
     return data;

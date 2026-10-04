@@ -8,6 +8,8 @@ import {
   Loader2, AlertCircle, Search, X, Save,
 } from "lucide-react";
 import { fetchProxy } from "../../utils/fetchProxy";
+import { throwIfQuotaExceeded } from "../../utils/featureQuota";
+import { useQuotaLimit } from "../common/useQuotaLimit";
 import { useTemplateNotificationStore } from "../../store/templateNotificationStore";
 import { useLayoutStore } from "../../store/layoutStore";
 import { SmartCddEditor, ToolbarAction } from "./cdd/smart/SmartCddEditor";
@@ -643,6 +645,7 @@ async function postImportStep<T>(step: "prepare" | "analyse" | "assemble" | "fin
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  await throwIfQuotaExceeded(res, "generatorImport");
   const payload = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string; data?: T };
   if (!res.ok || !payload.success || !payload.data) throw new Error(payload.message || "Import échoué");
   return payload.data;
@@ -695,6 +698,7 @@ function ImportSection({
   /** Retour à l'écran précédent (Générateur de contrat). */
   onBack?: () => void;
 } = {}) {
+  const { handleQuotaError, quotaModal } = useQuotaLimit();
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<ImportStep>("form");
   const [error, setError] = useState("");
@@ -893,11 +897,13 @@ function ImportSection({
       setAnalysis(null);
     } catch (e: unknown) {
       if (!isCurrentRun()) return;
-      setError(e instanceof Error ? e.message : "Erreur lors de l'import");
       setAnalysis(null);
       setStructure(null);
       setFile(null); // on peut redéposer un document directement
       setStep("form");
+      // Quota d'imports épuisé : on ouvre la modale de plafond plutôt qu'une erreur générique.
+      if (handleQuotaError(e)) return;
+      setError(e instanceof Error ? e.message : "Erreur lors de l'import");
     }
   }
 
@@ -1061,6 +1067,8 @@ function ImportSection({
 
   return (
     // Écran de dépôt : le bandeau bleu de la page (avec son propre retour) est affiché.
+    <>
+    {quotaModal}
     <div className="space-y-4 w-full max-w-4xl mx-auto">
       {/* Carte unique : dépôt + détails (homogène avec les autres écrans) */}
       <div className="rounded-card border border-line bg-white shadow-card p-6 space-y-5">
@@ -1116,6 +1124,7 @@ function ImportSection({
         <Lock className="h-3 w-3" /> Traitement confidentiel — données chiffrées
       </p>
     </div>
+    </>
   );
 }
 

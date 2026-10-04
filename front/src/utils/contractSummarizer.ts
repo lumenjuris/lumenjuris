@@ -1,4 +1,5 @@
 import { fetchProxy } from "./fetchProxy";
+import { throwIfQuotaExceeded } from "./featureQuota";
 
 export interface ContractSummary {
   idSummary: number;
@@ -49,6 +50,7 @@ export async function summarizeContract(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, fileName, selectedLlm }),
   });
+  await throwIfQuotaExceeded(res, "comprendreContrat");
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   const data = await res.json() as { success: boolean; data: ContractSummary };
   return data.data;

@@ -8,6 +8,7 @@ import { relativeTime } from "../../utils/format/relativeTime";
 import { AlertBanner } from "../common/AlertBanner";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { BannerAction, PageBanner } from "../common/PageBanner";
+import { useQuotaLimit } from "../common/useQuotaLimit";
 
 const formatParty = (partie: any) => {
   if (!partie) return "Partie non identifiée";
@@ -47,6 +48,7 @@ const ACCEPTED_MIME_TYPES = [
 
 export function ComprendreContrat() {
   const { handleFileUpload } = useContractAnalysis();
+  const { handleQuotaError, quotaModal } = useQuotaLimit();
   const [summary, setSummary] = useState<ContractSummary | null>(null);
 
   type llm = "gpt-4o-mini" | "gpt-4o" | "gpt-5.2" | "gpt-5.2-nano";
@@ -114,6 +116,8 @@ export function ComprendreContrat() {
       setSummary(resSummary);
       void handleListContract();
     } catch (error) {
+      // Quota de résumés épuisé : modale de plafond plutôt qu'une erreur générique.
+      if (handleQuotaError(error)) return;
       setIsSummaryError(true);
       console.error("Erreur lors de l'analyse du fichier : ", error);
     } finally {
@@ -197,6 +201,7 @@ export function ComprendreContrat() {
   return (
 
     <div className="mx-auto w-full max-w-7xl space-y-6">
+        {quotaModal}
         <PageBanner
           title="Analyse et compréhension de contrat"
           subtitle="Obtenez une synthèse claire de vos documents : points d'attention, niveau de risque et obligations clés."

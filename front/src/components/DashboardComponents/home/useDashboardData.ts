@@ -363,12 +363,12 @@ function buildAlerts(raw: RawData): RiskAlert[] {
 
 /** Features consommables affichées en jauge dans la carte « Votre abonnement ». */
 const QUOTA_FEATURES: {
-  key: "contrathequeLimit" | "analyzer" | "signatureEnhanced";
+  key: "contrathequeLimit" | "analyzer" | "signature";
   label: string;
 }[] = [
   { key: "contrathequeLimit", label: "Contrats suivis" },
   { key: "analyzer", label: "Analyses de contrat" },
-  { key: "signatureEnhanced", label: "Signatures avancées" },
+  { key: "signature", label: "Signatures électroniques" },
 ];
 
 /** À partir de ce pourcentage consommé, la jauge passe en orange. */
