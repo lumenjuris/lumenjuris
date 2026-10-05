@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
-  <Id>055cf7a8-1834-4477-838e-7a1895858952</Id>
-  <Version>1.1.1.0</Version>
-  <ProviderName>Geoffrey Pin</ProviderName>
+  <Id>dff4ac01-0254-41df-ac65-ab59529fc77d</Id>
+  <Version>1.2.0.0</Version>
+  <ProviderName>Lumen Juris</ProviderName>
   <DefaultLocale>fr-FR</DefaultLocale>
   <DisplayName DefaultValue="LumenJuris"/>
   <Description DefaultValue="Analysez vos contrats dans Word : clauses à risque détectées et surlignées, reformulations en suivi des modifications, jurisprudence. Compte LumenJuris requis (offre Free gratuite ; offres Pro et Enterprise pour les équipes)."/>
@@ -13,7 +13,7 @@
     <AppDomain>https://beta.lumenjuris.com</AppDomain>
     <!-- API appelée par le volet (analyse, jurisprudence, IA) : doit être déclarée
          pour que l'hôte Office autorise les échanges avec ce domaine. -->
-    <AppDomain>https://proxy.lumenjuris.com</AppDomain>
+    <AppDomain>https://app.proxy.lumenjuris.com</AppDomain>
     <AppDomain>https://www.lumenjuris.com</AppDomain>
   </AppDomains>
   <Hosts>

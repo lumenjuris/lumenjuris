@@ -1,6 +1,6 @@
 import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "./types";
 
-/* global localStorage, fetch, window, Response */
+/* global localStorage, fetch, window, Response, setTimeout */
 
 /**
  * Client des endpoints LumenJuris — les MÊMES routes que la page « Analyse
@@ -19,13 +19,24 @@ import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendatio
  */
 
 // En local (développement), on parle au proxy lancé sur la machine (port 3000).
-// En ligne (complément publié sur beta.lumenjuris.com), on parle au proxy
-// public — le MÊME que celui qu'utilise déjà l'application beta.lumenjuris.com.
+// En ligne, on parle au proxy du site actuel app.lumenjuris.com : les comptes
+// des utilisateurs (et le compte de test fourni à Microsoft) sont dans sa base.
 export const PROXY_BASE =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:3000"
-    : "https://proxy.lumenjuris.com";
+    : "https://app.proxy.lumenjuris.com";
+
+/**
+ * Réveille le serveur dès l'ouverture du volet : l'hébergeur l'endort après
+ * quelques minutes sans visite et le réveil prend jusqu'à 15 secondes. Ainsi,
+ * la connexion qui suit ne paie pas cette attente.
+ */
+export function wakeServer(): void {
+  fetch(`${PROXY_BASE}/health`).catch(() => {
+    /* best-effort */
+  });
+}
 
 const TOKEN_KEY = "lumen-addin-token";
 
@@ -40,18 +51,21 @@ async function post<T>(endpoint: string, body: unknown): Promise<T> {
   // le Bearer est envoyé dès qu'une session existe (login obligatoire côté UI).
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  const send = () => fetch(`${PROXY_BASE}${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
   let response: Response;
   try {
-    response = await fetch(`${PROXY_BASE}${endpoint}`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
+    response = await send();
   } catch {
-    // TypeError « Failed to fetch » : réseau coupé, serveur injoignable ou CORS.
-    throw new Error(
-      "Serveur Lumen Juris injoignable. Vérifiez votre connexion internet puis réessayez."
-    );
+    // Échec réseau (serveur en train de se réveiller, coupure brève) : un
+    // second essai après une courte pause avant d'afficher l'erreur.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    try {
+      response = await send();
+    } catch {
+      throw new Error(
+        "Serveur Lumen Juris injoignable. Vérifiez votre connexion internet puis réessayez."
+      );
+    }
   }
   if (response.status === 401) {
     clearToken();
