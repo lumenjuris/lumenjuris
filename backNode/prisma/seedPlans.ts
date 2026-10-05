@@ -1,8 +1,9 @@
+import { logger } from "../src/logger/logger.js";
 import { prisma } from "./singletonPrisma.js";
 import { Prisma, PlanInterval, PlanName } from "@prisma/client";
 
 /**
- * Création de tout les plans d'abonnement dans la base de données
+ * Création de tous les plans d'abonnement dans la base de données
  * 
  * Comprend actuellement : 
  * -Freemium
@@ -13,41 +14,98 @@ import { Prisma, PlanInterval, PlanName } from "@prisma/client";
  * -Pro yearly
  */
 
+type Quota = { unlimited: true } | { unlimited: false, value: number } // Outil limité sur Quotas
+type Feature = { enabled: true } | { enabled: false } // Outil limité sur boolean
+type QuotaFeature = { enabled: false } | { enabled: true, value: number } // Outil limité sur boolean et si true quotas
 
-type Quota = { unlimited: true } | { unlimited: false, value: number }
-type MeteredFeature = { enabled: false } | { enabled: true, limit: number }
-type Feature = { enabled: true } | { enabled: false }
-
-
-interface CreditPlan {
-
-    //Necessaire pour freemium
+type CreditPlan = {
+    //Outil sur Quotas
     analyzer: Quota;
-    signatureEnhanced: MeteredFeature;
-    generationContractWithFiligrane: Feature;
+    analyzerPlaybook: Quota;
     contrathequeLimit: Quota;
+    generatorFromScratch: Quota;
+    generatorImport: Quota;
+    signature: Quota;
+    comprendreContrat: Quota;
 
-    //necessaire pour starter
-    suivisEcheance: Feature;
-    dashboardRenouvellements: Feature;
+    //Outil sur Feature
+    chatJuridique: Feature;
+    generationContractWithFiligrane: Feature;
 
-    //necessaire pour pro
-    veilleReviewContract: Feature;
-    internalWorkflowValidator: Feature;
+    //Outil sur feature ET quotas
+    signatureEnhanced: QuotaFeature;
+};
 
-}
-
-type PlanSeed = {
+interface PlanSeed {
     name: PlanName;
     price: number;
     interval: PlanInterval;
     creditsIncluded: CreditPlan;
-    stripeProductId: string;
-    stripePriceId: string;
 };
 
+type StripeId = {
+    production: string;
+    teste: string;
+};
+
+type StripePlan = {
+    productId: StripeId;
+    priceId: StripeId;
+};
+
+type StripeProductId = Record<PaidPlanName, StripePlan>;
+
+type PaidPlanName = Exclude<
+    typeof PlanName[keyof typeof PlanName],
+    "Freemium" | "Betatesteur"
+>;
+
+const stripeProductId: StripeProductId = {
+    [PlanName.Starter_mensuel]: {
+        productId: {
+            production: "xxx",
+            teste: "prod_Uzwv74n813QFUj"
+        },
+        priceId: {
+            production: "xxx",
+            teste: "price_1Tzx1pHjiTZrRhmvwc77AaOP",
+        }
+    },
+    [PlanName.Starter_annuel]: {
+        productId: {
+            production: "xxx",
+            teste: "prod_UzwvInSRbmCi3q"
+        },
+        priceId: {
+            production: "xxx",
+            teste: "price_1Tzx1QHjiTZrRhmvhBjNoTWP",
+        }
+    },
+    [PlanName.Pro_mensuel]: {
+        productId: {
+            production: "xxx",
+            teste: "prod_Uzwy9wCTYQtRfr"
+        },
+        priceId: {
+            production: "xxx",
+            teste: "price_1Tzx4LHjiTZrRhmvGvNeGbJj",
+        }
+    },
+    [PlanName.Pro_annuel]: {
+        productId: {
+            production: "xxx",
+            teste: "prod_UzwyQfcdBdU0w2"
+        },
+        priceId: {
+            production: "xxx",
+            teste: "price_1Tzx4uHjiTZrRhmv24NjwbKr",
+        }
+    },
+
+}
+
 const PLANS_SEED = [
-    //FREEMIUM
+    // - FREEMIUM
     {
         name: PlanName.Freemium,
         price: 0,
@@ -57,42 +115,89 @@ const PLANS_SEED = [
                 unlimited: false,
                 value: 3
             },
-            signatureEnhanced: { enabled: false },
-            generationContractWithFiligrane: { enabled: true },
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 5
+            },
             contrathequeLimit: {
                 unlimited: false,
                 value: 15
             },
-            suivisEcheance: { enabled: false },
-            dashboardRenouvellements: { enabled: false },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 5
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 10
+            },
+            signature: {
+                unlimited: false,
+                value: 5
+            },
+            comprendreContrat: {
+                unlimited: false,
+                value: 5
+            },
 
-            veilleReviewContract: { enabled: false },
-            internalWorkflowValidator: { enabled: false },
+            //Tools Feature
+            chatJuridique: {
+                enabled: false
+            },
+            generationContractWithFiligrane: { enabled: true },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: false },
         },
-        stripeProductId: "",
-        stripePriceId: "",
     },
 
-    //BETA Gratuit, offre pour les beta testeur accès illimité
+    //Plan pour beta testeur qui sera valide deux mois. Equivalent d'un plan starter
     {
         name: PlanName.Betatesteur,
         price: 0,
         interval: PlanInterval.monthly,
         creditsIncluded: {
-            analyzer: { unlimited: true },
-            signatureEnhanced: { enabled: true, limit: 30 },
-            generationContractWithFiligrane: { enabled: false },
-            contrathequeLimit: { unlimited: true },
-            suivisEcheance: { enabled: true },
-            dashboardRenouvellements: { enabled: true },
+            analyzer: {
+                unlimited: false,
+                value: 30
+            },
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 60
+            },
+            contrathequeLimit: {
+                unlimited: false,
+                value: 300
+            },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 30
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 60
+            },
+            signature: {
+                unlimited: false,
+                value: 30
+            },
+            comprendreContrat: {
+                unlimited: false,
+                value: 50
+            },
 
-            veilleReviewContract: { enabled: true },
-            internalWorkflowValidator: { enabled: true },
-        },
-        stripeProductId: "",
-        stripePriceId: "",
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: false },
+        }
     },
-    
+
+    //STARTER mois:49€ | année:468€(39€/mois)
     {
         name: PlanName.Starter_mensuel,
         price: 49_00,
@@ -102,22 +207,42 @@ const PLANS_SEED = [
                 unlimited: false,
                 value: 30
             },
-            signatureEnhanced: { enabled: false },
-            generationContractWithFiligrane: { enabled: false },
-
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 60
+            },
             contrathequeLimit: {
                 unlimited: false,
                 value: 300
             },
-            suivisEcheance: { enabled: true },
-            dashboardRenouvellements: { enabled: true },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 30
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 60
+            },
+            signature: {
+                unlimited: false,
+                value: 30
+            },
+            comprendreContrat: {
+                unlimited: false,
+                value: 50
+            },
 
-            veilleReviewContract: { enabled: false },
-            internalWorkflowValidator: { enabled: false },
-        },
-        stripeProductId: "prod_Uzwv74n813QFUj",
-        stripePriceId: "price_1Tzx1pHjiTZrRhmvwc77AaOP",
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: false },
+        }
     },
+
     {
         name: PlanName.Starter_annuel,
         price: 504_00, // 42 €/mois, -15 % (prix Stripe à mettre à jour)
@@ -127,21 +252,40 @@ const PLANS_SEED = [
                 unlimited: false,
                 value: 30
             },
-            signatureEnhanced: { enabled: false },
-            generationContractWithFiligrane: { enabled: false },
-
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 60
+            },
             contrathequeLimit: {
                 unlimited: false,
                 value: 300
             },
-            suivisEcheance: { enabled: true },
-            dashboardRenouvellements: { enabled: true },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 30
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 60
+            },
+            signature: {
+                unlimited: false,
+                value: 30
+            },
+            comprendreContrat: {
+                unlimited: false,
+                value: 50
+            },
 
-            veilleReviewContract: { enabled: false },
-            internalWorkflowValidator: { enabled: false },
-        },
-        stripeProductId: "prod_UzwvInSRbmCi3q",
-        stripePriceId: "price_1Tzx1QHjiTZrRhmvhBjNoTWP",
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: false },
+        }
     },
 
     //PRO mois:119€ | année:1212€(101€/mois, -15 %)
@@ -154,21 +298,38 @@ const PLANS_SEED = [
                 unlimited: false,
                 value: 100
             },
-            signatureEnhanced: { enabled: true, limit: 10 },
-            generationContractWithFiligrane: { enabled: false },
-
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 120
+            },
             contrathequeLimit: {
                 unlimited: false,
                 value: 1200
             },
-            suivisEcheance: { enabled: true },
-            dashboardRenouvellements: { enabled: true },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 100
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 150
+            },
+            signature: {
+                unlimited: true
+            },
+            comprendreContrat: {
+                unlimited: true
+            },
 
-            veilleReviewContract: { enabled: true },
-            internalWorkflowValidator: { enabled: true },
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: true, value: 10 },
         },
-        stripeProductId: "prod_Uzwy9wCTYQtRfr",
-        stripePriceId: "price_1Tzx4LHjiTZrRhmvGvNeGbJj",
     },
     {
         name: PlanName.Pro_annuel,
@@ -179,31 +340,66 @@ const PLANS_SEED = [
                 unlimited: false,
                 value: 100
             },
-            signatureEnhanced: { enabled: true, limit: 10 },
-            generationContractWithFiligrane: { enabled: false },
-
+            analyzerPlaybook: {
+                unlimited: false,
+                value: 120
+            },
             contrathequeLimit: {
                 unlimited: false,
                 value: 1200
             },
-            suivisEcheance: { enabled: true },
-            dashboardRenouvellements: { enabled: true },
+            generatorFromScratch: {
+                unlimited: false,
+                value: 100
+            },
+            generatorImport: {
+                unlimited: false,
+                value: 150
+            },
+            signature: {
+                unlimited: true
+            },
+            comprendreContrat: {
+                unlimited: true
+            },
 
-            veilleReviewContract: { enabled: true },
-            internalWorkflowValidator: { enabled: true },
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: true, value: 10 },
         },
-        stripeProductId: "prod_UzwyQfcdBdU0w2",
-        stripePriceId: "price_1Tzx4uHjiTZrRhmv24NjwbKr",
     },
+
 ] satisfies PlanSeed[];
 
-
-
-//Integration des plans dans la bdd
 export async function seedPlans(): Promise<void> {
     try {
 
+        const stripeEnv = process.env.STRIPE_ENV;
+        if (stripeEnv !== "production" && stripeEnv !== "teste") {
+            logger.error("Echec lors de l'introduction seedPlan", {
+                error: `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
+            })
+            throw new Error(
+                `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
+            );
+        }
+
         for (const plan of PLANS_SEED) {
+
+            const stripePlan = stripeProductId[plan.name as PaidPlanName];
+
+            const data = {
+                ...plan,
+                creditsIncluded: plan.creditsIncluded as Prisma.InputJsonValue,
+                stripeProductId: stripePlan ? stripePlan.productId[stripeEnv] : "",
+                stripePriceId: stripePlan ? stripePlan.priceId[stripeEnv] : "",
+            };
+
             await prisma.plan.upsert({
                 where: {
                     name_interval: {
@@ -211,18 +407,13 @@ export async function seedPlans(): Promise<void> {
                         interval: plan.interval,
                     }
                 },
-                create: {
-                    ...plan,
-                    creditsIncluded: plan.creditsIncluded as Prisma.InputJsonValue,
-                },
-                update: {
-                    ...plan,
-                    creditsIncluded: plan.creditsIncluded as Prisma.InputJsonValue
-                }
+                create: data,
+                update: data
             });
         }
-        console.log("Les seeds de Plan sont injecté avec succès.");
+        logger.info("Les seeds de Plan sont injectés avec succès.");
     } catch (err) {
-        console.error("Une erreur est survenue lors de l'initialisation des seeds \"Plan\", error :  ", err)
+        logger.error("Une erreur est survenue lors de l'initialisation des seeds \"Plan\"", { error: err });
+        throw err;
     }
 }

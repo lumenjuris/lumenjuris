@@ -1,6 +1,7 @@
 
 import { type Request, Response } from "express"
 import { summarizeContract } from "../contractSummarizer.js";
+import { hasQuota, consumeQuota } from "../../quota.js";
 
 
 export async function handleSummarizeContract(req: Request, res: Response): Promise<void> {
@@ -24,8 +25,21 @@ export async function handleSummarizeContract(req: Request, res: Response): Prom
         return;
     }
 
+    // Quota : 1 résumé = 1 crédit "comprendreContrat", vérifié AVANT l'appel IA.
+    if (!(await hasQuota("comprendreContrat", userId))) {
+        res.status(402).json({
+            success: false,
+            code: "QUOTA_EXCEEDED",
+            message: "Quota de résumés de contrat épuisé. Passez à un plan supérieur pour continuer.",
+        });
+        return;
+    }
+
     try {
         const data = await summarizeContract(content, selectedLlm ?? "gpt-4o-mini");
+
+        // Décrément après succès uniquement.
+        await consumeQuota("comprendreContrat", userId, 1);
 
         const response = await fetch(`${BACKNODE_URL}/contract/contract-summary`, {
             method: "POST",

@@ -129,14 +129,12 @@ export function ChatJuridique() {
         conversations.find((c) => c.id === convId)?.messages ?? [];
 
       try {
-        const res = await fetchProxy("/api/openai/chat", {
+        const res = await fetchProxy("/api/openai/chat-juridique", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text,
             model: "gpt-5.4-nano",
-            context:
-              "Tu es un assistant juridique spécialisé en droit du travail français. Réponds avec précision en citant les articles du Code du travail pertinents.",
             history: previousMessages
               .filter((m) => m.role === "user" || m.role === "bot")
               .map((m) => ({

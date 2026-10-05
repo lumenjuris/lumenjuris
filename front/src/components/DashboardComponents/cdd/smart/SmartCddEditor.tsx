@@ -548,24 +548,20 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   };
 
   /** Construit le PDF du contrat (réutilisé pour l'export et la signature). */
-    const [isFreemium, setIsFreemium] = useState<boolean | null>(null);
+    const [hasFiligrane, setHasFiligrane] = useState<boolean | null>(null);
     useEffect(() => {
       let isCurrent = true;
 
-      fetchProxy("/api/billing/subscription", {credentials : "include"}).then((res) => res.ok ? res.json() : null).then((data) => {
+      // Le filigrane suit le droit generationContractWithFiligrane du plan
+      // (un administrateur n'en a jamais : /billing/credits le renvoie désactivé).
+      fetchProxy("/api/billing/credits", {credentials : "include"}).then((res) => res.ok ? res.json() : null).then((data) => {
         if (!isCurrent) return;
 
-        const planName = data?.data?.subscription?.planName?.toUpperCase();
-        const status = data?.data?.subscription?.status?.toUpperCase();
-
-        const hasActivePaidPlan = data !== null && status === "ACTIVE" && planName !== "FREEMIUM";
-        if (hasActivePaidPlan) {
-          setIsFreemium(false);
-        } else {
-          setIsFreemium(true);
-        }
+        const filigrane = data?.data?.quotas?.generationContractWithFiligrane;
+        // Sans information fiable, on garde le filigrane par prudence.
+        setHasFiligrane(filigrane ? filigrane.enabled === true : true);
       }).catch(() => {
-        if (isCurrent) setIsFreemium(true);
+        if (isCurrent) setHasFiligrane(true);
       });
       return () => {
         isCurrent = false;
@@ -595,7 +591,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       }
       else if (txt.trim()) block(txt, false, 10.5, 8);
     }
-    if (isFreemium) {
+    if (hasFiligrane) {
       addFiligraneToPdf(pdf, pageWidth, margin, pageH);
     }
     return pdf;
@@ -756,7 +752,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
     })
     const wordDoc = new Document({
       styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
-      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: !!isFreemium, },headers: isFreemium ? {first: firstPageHeader} : undefined, footers: isFreemium ? {default: footer} : undefined, children }],
+      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: !!hasFiligrane, },headers: hasFiligrane ? {first: firstPageHeader} : undefined, footers: hasFiligrane ? {default: footer} : undefined, children }],
     });
     const blob = await docx.Packer.toBlob(wordDoc);
     saveAs(blob, `${fileBase}.docx`);
@@ -987,9 +983,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 <ToolbarAction
                   icon={FileText}
                   short="Word"
-                  label={isFreemium ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
+                  label={hasFiligrane ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
                   onClick={() => void exportDocx()}
-                  disabled={!!isFreemium}
+                  disabled={!!hasFiligrane}
                 />
                 <ToolbarAction
                   icon={BookmarkPlus}

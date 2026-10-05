@@ -10,6 +10,7 @@ import { buildDayWindow, localDayKey } from "../utils/dayWindow.js"
 import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
 import { Subscription } from "../services/classSubscription.js"
+import { Mailer } from "../infrastructure/mailer/classMailer.js"
 import { Plan, PlanName, PlanInterval } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
@@ -68,6 +69,9 @@ router.patch("/users/:idUser/role", authMiddleware, requireAdmin, async (req: Re
     }
 })
 
+
+
+//Modification d'un plan user depuis le monitoring
 router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Request, res: Response) => {
     try {
         const targetId = Number(req.params["idUser"]);
@@ -105,8 +109,12 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
         const now = new Date();
         let expiresAt: Date;
 
-        if (planName === "Freemium" || planName === "Betatesteur") {
+        if (planName === "Freemium") {
             expiresAt = new Date("2099-12-31T23:59:59.999Z");
+        } else if(planName === "Betatesteur"){
+            const date = new Date();
+            date.setMonth(date.getMonth() + 2);
+            expiresAt = date;
         } else if (interval === PlanInterval.yearly) {
             expiresAt = new Date(new Date(now).setFullYear(now.getFullYear() + 1));
         } else {
@@ -150,6 +158,16 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
                 },
             }),
         ]);
+
+
+        // Si le plan a été mis comme Betatesteur on envoie un email de bienvenue.
+        // Sans await : un échec d'envoi ne doit pas annuler le changement de plan.
+        if (planName === "Betatesteur") {
+            new Mailer(targetUser.email)
+                .sendNewBetaTesteur(targetUser.prenom ?? undefined, expiresAt)
+                .catch(console.error);
+        }
+
         // L'admin doit savoir que le changement ne vaut que dans notre base : Stripe
         // continuera de prélever et de réattribuer les quotas de l'abonnement payé.
         const warning = hasStripeSubscription
@@ -166,6 +184,9 @@ router.patch("/users/:idUser/plan", authMiddleware, requireAdmin, async (req: Re
         return res.status(500).json({ success: false, message: "Erreur serveur" })
     }
 })
+
+
+
 
 /** GET /admin/revenue — tableau de bord financier (abonnements, factures, KPIs, MRR). */
 router.get("/revenue", authMiddleware, requireAdmin, async (_req: Request, res: Response) => {

@@ -10,7 +10,7 @@ interface Props {
   onSignedIn: () => void;
 }
 
-const SIGNUP_URL = "https://beta.lumenjuris.com/inscription";
+const SIGNUP_URL = "https://app.lumenjuris.com/";
 const CONTACT_URL = "https://www.lumenjuris.com/contactez-nous/";
 
 /**

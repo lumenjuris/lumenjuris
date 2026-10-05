@@ -1,8 +1,13 @@
 import {
   CheckCircle2,
+  BookCheck,
+  FileInput,
+  FilePlus2,
   FileSearch,
+  FileText,
   Library,
   PenLine,
+  Stamp,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -17,7 +22,12 @@ import {
 /** Icône affichée sur la carte de chaque feature à valeur. */
 const FEATURE_ICONS: Partial<Record<keyof PlanQuotas, LucideIcon>> = {
   analyzer: FileSearch,
-  signatureEnhanced: PenLine,
+  analyzerPlaybook: BookCheck,
+  comprendreContrat: FileText,
+  generatorFromScratch: FilePlus2,
+  generatorImport: FileInput,
+  signature: PenLine,
+  signatureEnhanced: Stamp,
   contrathequeLimit: Library,
 };
 
@@ -60,10 +70,12 @@ export function QuotasDisplay({
           Fonctionnalités de votre formule
         </p>
         <ul className="grid grid-cols-1 gap-x-6 gap-y-2 lg:grid-cols-2">
-          {BOOLEAN_FEATURES.map(({ key, label }) => {
+          {BOOLEAN_FEATURES.map(({ key, label, isRestriction }) => {
             const feature = planQuotas?.[key] as
               { enabled: boolean } | undefined;
-            const isIncluded = feature?.enabled === true;
+            const isEnabled = feature?.enabled === true;
+            // Pour une contrainte (filigrane), l'avantage est inclus quand elle est désactivée.
+            const isIncluded = isRestriction ? !isEnabled : isEnabled;
             return (
               <li key={key} className="flex items-center gap-2 text-sm">
                 {isIncluded ? (

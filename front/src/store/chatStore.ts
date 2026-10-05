@@ -60,13 +60,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ messages: [...get().messages, userMessage], isSending: true });
 
     try {
-      const response = await fetchProxy("/api/openai/chat", {
+      // Le contexte du modèle est construit par le proxy à partir du texte de la clause.
+      const response = await fetchProxy("/api/openai/chat-clause", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message,
           model,
-          context: `Réponds en 2-3 phrases maximum. Pas d'introduction ni de conclusion.\n\nTexte de la clause:\n"""${contextClause.text.slice(0, 4000)}"""`,
+          clauseText: contextClause.text,
         }),
       });
 
