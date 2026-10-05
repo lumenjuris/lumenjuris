@@ -37,10 +37,13 @@ export async function authMiddleware(
       });
     }
 
+    const date = new Date()
+    const today = date.toLocaleDateString()
+
     await prisma.user.update({
       where : { idUser : userId},
       data : {
-        lastConnected : Date.now()
+        lastConnected : today
       }
     })
 
