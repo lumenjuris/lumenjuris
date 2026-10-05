@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import { fetchProxy } from "../../utils/fetchProxy";
 import { BannerAction, PageBanner } from "../common/PageBanner";
 import { relativeTime } from "../../utils/format/relativeTime";
+import { useQuotaLimit } from "../common/useQuotaLimit";
 
 type Message = { role: "user" | "bot" | "error"; text: string };
 type Conversation = {
@@ -28,6 +29,7 @@ export function ChatJuridique() {
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false);
+  const { openQuotaLimit, quotaModal } = useQuotaLimit();
 
 
 
@@ -144,6 +146,13 @@ export function ChatJuridique() {
           }),
         });
 
+        // Le chat juridique est un droit d'accès du plan (booléen) : un 402 signifie
+        // que la formule ne l'inclut pas -> modale dédiée plutôt qu'une bulle d'erreur.
+        if (res.status === 402) {
+          openQuotaLimit("chatJuridique");
+          return;
+        }
+
         if (!res.ok) {
           let detail = `Erreur HTTP ${res.status}`;
           try {
@@ -178,6 +187,7 @@ export function ChatJuridique() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4">
+    {quotaModal}
     <PageBanner
       title="Chat juridique"
       subtitle="Posez vos questions de droit : réponses sourcées, conversations conservées."

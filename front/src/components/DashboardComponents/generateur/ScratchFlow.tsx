@@ -6,9 +6,10 @@ import {
 } from "lucide-react";
 import type { BlockDef, ContractModel, VariableDef } from "../../../contractEngine/types";
 import {
-  generateContractQuestions, generateContractDraft, generateContractDraftFromBrief, QuotaExceededError,
+  generateContractQuestions, generateContractDraft, generateContractDraftFromBrief,
   type WizardQuestion, type ContractDraft,
 } from "./contractAi";
+import { useQuotaLimit } from "../../common/useQuotaLimit";
 
 function slug(s: string): string {
   const o = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -63,6 +64,7 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const { handleQuotaError, quotaModal } = useQuotaLimit();
   // Article RGPD dans le contrat : proposé par défaut, décochable.
   const [includeRgpd, setIncludeRgpd] = useState(true);
 
@@ -169,9 +171,11 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
       onReady({ model: buildModel(title, draft), fileBase: slug(title) });
     } catch (err) {
       if (opId.current !== id) return;
-      setError(err instanceof QuotaExceededError ? err.message : "Échec de la rédaction. Réessayez.");
       setStep(from);
       writeUrl(from === "asking" ? { step: "asking", q: idx + 1 } : { step: null, q: null });
+      // Quota de contrats générés épuisé : modale de plafond plutôt qu'erreur inline.
+      if (handleQuotaError(err)) return;
+      setError("Échec de la rédaction. Réessayez.");
     }
   }
 
@@ -202,6 +206,8 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   };
 
   return (
+    <>
+    {quotaModal}
     <div className="w-full max-w-2xl mx-auto space-y-4">
       <button onClick={step === "mode" ? onBack : backTarget} className="mb-4 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-brand">
         <ArrowLeft className="h-4 w-4" /> Retour
@@ -341,6 +347,7 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
         )}
       </div>
     </div>
+    </>
   );
 }
 

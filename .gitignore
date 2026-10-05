@@ -38,6 +38,8 @@ backNode/app.log.json
 backNode/logger.json
 backNode/message-banner.json
 backNode/facture
+# Scripts de migration one-shot contenant des données utilisateurs réelles — NE JAMAIS versionner
+backNode/migration-prospects*
 
 #proxy
 proxy/.env

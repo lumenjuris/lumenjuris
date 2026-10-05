@@ -7,7 +7,6 @@ import {
   FileText,
   Library,
   PenLine,
-  Stamp,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +26,6 @@ const FEATURE_ICONS: Partial<Record<keyof PlanQuotas, LucideIcon>> = {
   generatorFromScratch: FilePlus2,
   generatorImport: FileInput,
   signature: PenLine,
-  signatureEnhanced: Stamp,
   contrathequeLimit: Library,
 };
 

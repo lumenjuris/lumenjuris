@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { SIGNERS_DEFAULT, DEFAULT_FIELD_SIZE, buildInitialFields, isValidEmail } from "./types";
 import { PageBanner } from "../../common/PageBanner";
+import { useQuotaLimit } from "../../common/useQuotaLimit";
 
 interface Props {
   /** Fichier PDF déjà sélectionné (vient du file picker du dashboard). */
@@ -54,6 +55,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
   const [numPages, setNumPages] = useState(0);
   const [signers] = useState<Signer[]>(SIGNERS_DEFAULT);
   const [fields, setFields] = useState<Field[]>([]);
+  const { openQuotaLimit, quotaModal } = useQuotaLimit();
 
   // « Changer de document » ouvre directement le sélecteur de fichier du
   // système, sans repasser par la vue de dépôt.
@@ -310,6 +312,11 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
           selfSigned: true,
         }),
       });
+      // Quota de signatures épuisé : modale de plafond plutôt qu'une erreur inline.
+      if (res.status === 402) {
+        openQuotaLimit("signature");
+        return;
+      }
       const data = await res.json() as { success?: boolean; message?: string };
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Échec de l'envoi");
@@ -327,6 +334,7 @@ export function SignatureWizard({ initialFile, onSent, onExit }: Props = {}) {
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto">
+      {quotaModal}
       <input
         ref={replaceDocumentInputRef}
         type="file"

@@ -361,14 +361,30 @@ function buildAlerts(raw: RawData): RiskAlert[] {
   return alerts.slice(0, 3);
 }
 
-/** Features consommables affichées en jauge dans la carte « Votre abonnement ». */
+/**
+ * Features consommables affichées dans la carte « Vos crédits ».
+ * La première (contrats suivis) est mise en avant en grande jauge ; les autres
+ * passent en lignes secondaires. Couvre tous les quotas à valeur du plan
+ * (hors droits d'accès booléens : chat juridique, filigrane).
+ */
 const QUOTA_FEATURES: {
-  key: "contrathequeLimit" | "analyzer" | "signatureEnhanced";
+  key:
+    | "contrathequeLimit"
+    | "analyzer"
+    | "analyzerPlaybook"
+    | "comprendreContrat"
+    | "generatorFromScratch"
+    | "generatorImport"
+    | "signature";
   label: string;
 }[] = [
   { key: "contrathequeLimit", label: "Contrats suivis" },
   { key: "analyzer", label: "Analyses de contrat" },
-  { key: "signatureEnhanced", label: "Signatures avancées" },
+  { key: "analyzerPlaybook", label: "Analyses playbook" },
+  { key: "comprendreContrat", label: "Résumés de contrat" },
+  { key: "generatorFromScratch", label: "Contrats générés" },
+  { key: "generatorImport", label: "Modèles importés" },
+  { key: "signature", label: "Signatures électroniques" },
 ];
 
 /** À partir de ce pourcentage consommé, la jauge passe en orange. */
@@ -396,21 +412,28 @@ function buildQuotas(raw: RawData): QuotaBar[] {
       return { label, text: "Non inclus", percent: 0, state: "disabled" as const };
     }
 
-    // La contrathèque est un plafond de stockage et non un compteur consommé :
-    // on part du nombre réel de contrats, sinon le chiffre contredirait celui
-    // affiché en haut de la page.
-    const consumed = key === "contrathequeLimit"
-      ? contractTotal
-      : full.value - (remaining.kind === "finite" ? remaining.value : 0);
+    // La contrathèque est un plafond de STOCKAGE : on affiche les contrats
+    // suivis (jauge qui se remplit vers le plafond), pas un restant.
+    if (key === "contrathequeLimit") {
+      const used = Math.max(0, Math.min(contractTotal, full.value));
+      const percent = ratio(used, full.value);
+      let state: QuotaState = "ok";
+      if (used >= full.value) state = "full";
+      else if (percent >= QUOTA_WARNING_PERCENT) state = "warning";
+      return { label, text: `${used} / ${full.value}`, percent, state };
+    }
 
-    const used = Math.max(0, Math.min(consumed, full.value));
-    const percent = ratio(used, full.value);
+    // Les autres quotas sont des crédits CONSOMMABLES : on affiche le restant
+    // (`quotas[key]` est déjà le restant) avec une jauge qui se vide à l'usage.
+    const left = Math.max(0, Math.min(remaining.kind === "finite" ? remaining.value : full.value, full.value));
+    const used = full.value - left;
+    const percent = ratio(left, full.value);
 
     let state: QuotaState = "ok";
-    if (used >= full.value) state = "full";
-    else if (percent >= QUOTA_WARNING_PERCENT) state = "warning";
+    if (left <= 0) state = "full";
+    else if (ratio(used, full.value) >= QUOTA_WARNING_PERCENT) state = "warning";
 
-    return { label, text: `${used} / ${full.value}`, percent, state };
+    return { label, text: `${left} / ${full.value}`, percent, state };
   });
 }
 

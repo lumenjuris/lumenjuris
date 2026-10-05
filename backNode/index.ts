@@ -39,6 +39,8 @@ import { globalErrorHandler } from "./src/middleware/globalErrorHandle.js";
 
 import { seedPlans } from "./prisma/seedPlans.js";
 import { StripeLumenJuris } from "./billing/stripe.service.js";
+
+import { logger } from "./src/logger/logger.js";
 /**
  * Préparation du serveur nodejs/express pour ce backend
  * Ici sera traité toute les opérations avec la base de données
@@ -170,8 +172,15 @@ app.use(globalErrorHandler);
 app.listen(port, async () => {
   try {
     //Initialisation des seed de plan. 
-    void await seedPlans()
+    const stripeEnv = process.env.STRIPE_ENV
+    if(stripeEnv !=="teste" && stripeEnv !== "live"){
+      logger.error("Echec lors du demarrage du serveur, environnement Stripe mal configuré dans les variables d'env", {stripeEnv})
+      throw new Error("L'environnement stripe n'est pas valide dans les variables d'environnement.")
 
+    }
+
+    
+    void await seedPlans()
     //Initialisation des utilisateurs de developpement
     void await seedBootstrapUsers();
 
@@ -185,6 +194,8 @@ app.listen(port, async () => {
       () => void StripeLumenJuris.purgeOldProcessedEvents(),
       24 * 60 * 60 * 1000,
     );
+
+
 
     // Remise à niveau mensuelle des quotas (plans gratuits et annuels).
     // DÉSACTIVÉ : en production, Passenger (cPanel) arrête le serveur sans trafic,
@@ -202,5 +213,7 @@ app.listen(port, async () => {
       "Une erreur est survenue lors de demarage du serveur backNode, error :",
       err,
     );
+    logger.error("Une erreur est survenue lors de demarage du serveur backNode, fermture du serveur automatique!, error :", err)
+    process.exit(1)
   }
 });

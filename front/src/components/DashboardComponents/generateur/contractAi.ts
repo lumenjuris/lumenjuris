@@ -6,9 +6,10 @@
  * jamais ici : le front n'envoie que des données et lit les réponses de l'IA.
  */
 import { fetchProxy } from "../../../utils/fetchProxy";
+import { QuotaExceededError } from "../../../utils/featureQuota";
 
-/** Levée quand le quota de contrats générés de l'utilisateur est épuisé. */
-export class QuotaExceededError extends Error {}
+// Ré-export pour les consommateurs historiques (ScratchFlow) qui l'importaient ici.
+export { QuotaExceededError };
 
 /**
  * Appelle une route du générateur (proxy /api/template/…) et renvoie le texte
@@ -21,8 +22,8 @@ async function callGenerator(route: string, body: object): Promise<string> {
     body: JSON.stringify(body),
   });
   if (res.status === 402) {
-    const data = await res.json().catch(() => ({}));
-    throw new QuotaExceededError(data?.message ?? "Quota de contrats générés épuisé.");
+    await res.json().catch(() => ({}));
+    throw new QuotaExceededError("generatorFromScratch");
   }
   if (!res.ok) throw new Error(`Echec de la génération du contrat, status:${res.status}`);
   const data = await res.json();

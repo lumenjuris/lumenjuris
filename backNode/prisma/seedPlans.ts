@@ -1,6 +1,8 @@
 import { logger } from "../src/logger/logger.js";
 import { prisma } from "./singletonPrisma.js";
 import { Prisma, PlanInterval, PlanName } from "@prisma/client";
+import { logger } from "../src/logger/logger.js"
+
 
 /**
  * Création de tous les plans d'abonnement dans la base de données
@@ -12,6 +14,7 @@ import { Prisma, PlanInterval, PlanName } from "@prisma/client";
  * -Starter yearly
  * -Pro monthly
  * -Pro yearly
+ * -Teste adm
  */
 
 type Quota = { unlimited: true } | { unlimited: false, value: number } // Outil limité sur Quotas
@@ -44,7 +47,7 @@ interface PlanSeed {
 };
 
 type StripeId = {
-    production: string;
+    live: string;
     teste: string;
 };
 
@@ -55,6 +58,7 @@ type StripePlan = {
 
 type StripeProductId = Record<PaidPlanName, StripePlan>;
 
+
 type PaidPlanName = Exclude<
     typeof PlanName[keyof typeof PlanName],
     "Freemium" | "Betatesteur"
@@ -63,44 +67,54 @@ type PaidPlanName = Exclude<
 const stripeProductId: StripeProductId = {
     [PlanName.Starter_mensuel]: {
         productId: {
-            production: "xxx",
+            live: "prod_VN9lR5ADrcjfYA",
             teste: "prod_Uzwv74n813QFUj"
         },
         priceId: {
-            production: "xxx",
+            live: "price_1UMPS2Ho9nqLjCW8bhIVsTya",
             teste: "price_1Tzx1pHjiTZrRhmvwc77AaOP",
         }
     },
     [PlanName.Starter_annuel]: {
         productId: {
-            production: "xxx",
-            teste: "prod_UzwvInSRbmCi3q"
+            live: "prod_VN9ehMqr9m5rIm",
+            teste: "prod_VN9ehMqr9m5rIm"
         },
         priceId: {
-            production: "xxx",
-            teste: "price_1Tzx1QHjiTZrRhmvhBjNoTWP",
+            live: "price_1UMPRwHo9nqLjCW8WJJmIF43",
+            teste: "price_1UMPLYHjiTZrRhmvHCWk52iZ",
         }
     },
     [PlanName.Pro_mensuel]: {
         productId: {
-            production: "xxx",
+            live: "prod_VN9l2tmvIosqDr",
             teste: "prod_Uzwy9wCTYQtRfr"
         },
         priceId: {
-            production: "xxx",
+            live: "price_1UMPS0Ho9nqLjCW8pmhz7CWd",
             teste: "price_1Tzx4LHjiTZrRhmvGvNeGbJj",
         }
     },
     [PlanName.Pro_annuel]: {
         productId: {
-            production: "xxx",
-            teste: "prod_UzwyQfcdBdU0w2"
+            live: "prod_VN9dymi5MnV4Ot",
+            teste: "prod_VN9dymi5MnV4Ot"
         },
         priceId: {
-            production: "xxx",
-            teste: "price_1Tzx4uHjiTZrRhmv24NjwbKr",
+            live: "price_1UMPRyHo9nqLjCW8fOKWc7JZ",
+            teste: "price_1UMPKHHjiTZrRhmvaVhJ75ZW",
         }
     },
+    [PlanName.Teste_admin]: {
+        productId: {
+            live: "prod_VNAybb5pVffu8z",
+            teste: "prod_VNBFCYGsgjE8xH",
+        },
+        priceId: {
+            live: "price_1UMQcBHo9nqLjCW8BUzE7C7l",
+            teste: "price_1UMQt1HjiTZrRhmvlTdUqVNl"
+        }
+    }
 
 }
 
@@ -371,7 +385,47 @@ const PLANS_SEED = [
 
             //FeatureQuota
             signatureEnhanced: { enabled: true, value: 10 },
+        }
+    },
+
+    // TESTE ADMIN  il servira de teste pour valider le fonctionnement de stripe et nous occtroyé du debrydage pour les admins
+    {
+        name: PlanName.Teste_admin,
+        price: 0.01,
+        interval: PlanInterval.yearly,
+        creditsIncluded: {
+            analyzer: {
+                unlimited: true,
+            },
+            analyzerPlaybook: {
+                unlimited: true,
+            },
+            contrathequeLimit: {
+                unlimited: true,
+            },
+            generatorFromScratch: {
+                unlimited: true,
+            },
+            generatorImport: {
+                unlimited: true,
+            },
+            signature: {
+                unlimited: true
+            },
+            comprendreContrat: {
+                unlimited: true
+            },
+
+            //Tools Feature
+            chatJuridique: {
+                enabled: true
+            },
+            generationContractWithFiligrane: { enabled: false },
+
+            //FeatureQuota
+            signatureEnhanced: { enabled: true, value: 10 },
         },
+
     },
 
 ] satisfies PlanSeed[];
@@ -380,12 +434,13 @@ export async function seedPlans(): Promise<void> {
     try {
 
         const stripeEnv = process.env.STRIPE_ENV;
-        if (stripeEnv !== "production" && stripeEnv !== "teste") {
+
+        if (stripeEnv !== "live" && stripeEnv !== "teste") {
             logger.error("Echec lors de l'introduction seedPlan", {
-                error: `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
+                error: `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "live" ou "teste".`
             })
             throw new Error(
-                `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "production" ou "teste".`
+                `Variable d'env STRIPE_ENV invalide : "${stripeEnv}". Doit être : "live" ou "teste".`
             );
         }
 
