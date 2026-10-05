@@ -164,6 +164,8 @@ model User {
   isBanned         Boolean @default(false)
   cgu              Boolean @default(false)
   stripeCustomerId String?
+  createdAt        DateTime @default(now())
+  lastConnected    DateTime @default(now())
 
   //relation 
   tokens            Token[]

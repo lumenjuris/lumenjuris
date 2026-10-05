@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../../prisma/singletonPrisma.js";
+import { truncate } from "node:fs";
 
 
 
@@ -21,7 +22,7 @@ export async function authMiddleware(
   try {
     const user = await prisma.user.findUnique({
       where: { idUser: Number(userId) },
-      select: { isBanned: true },
+      select: { isBanned: true, idUser: true },
     });
 
     if (!user) {
@@ -35,6 +36,13 @@ export async function authMiddleware(
         banned: true,
       });
     }
+
+    await prisma.user.update({
+      where : { idUser : userId},
+      data : {
+        lastConnected : Date.now()
+      }
+    })
 
     req.idUser = String(userId);
     req.role = (req.headers["x-user-role"] as string) || "USER";
