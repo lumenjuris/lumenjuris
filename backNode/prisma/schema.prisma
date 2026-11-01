@@ -218,6 +218,7 @@ model User {
   userUpload         UserUpload?
   contractTemplates  ContractTemplate[]
   signatureEnvelopes SignatureEnvelope[]
+  achatUnique       BillingOneShot[]
 
   // Contrathèque
   contracts        Contract[]
@@ -473,6 +474,60 @@ model Subscription {
   facture Facture[]
 }
 
+// ACHAT ONE SHOT
+
+/// Articles vendus à l'unité (hors abonnement).
+enum ItemVente {
+  CONTRACT_SANS_FILIGRANE
+}
+
+/// Cycle de vie d'un achat unitaire :
+/// PENDING à la création du checkout, PAID quand le webhook confirme le paiement,
+/// EXPIRED si la session Stripe expire sans paiement (checkout abandonné).
+enum BillingOneShotStatus {
+  PENDING
+  PAID
+  EXPIRED
+}
+
+/// Catalogue des articles vendus à l'unité : un article = un prix Stripe.
+model ItemBilling {
+  idItemBilling Int @id @default(autoincrement())
+
+  stripeProductId String
+  stripePriceId   String
+  item            ItemVente @unique
+}
+
+/// Achat en one shot d'un article, rattaché à un contrat précis (contractRef).
+/// Séparé de Subscription : pas de renouvellement, pas de quotas.
+model BillingOneShot {
+  idBilling Int                  @id @default(autoincrement())
+  item      ItemVente
+  status    BillingOneShotStatus @default(PENDING)
+
+  // Identifiant du contrat débloqué par l'achat
+  contractRef String
+
+  // Montant réellement payé en centimes TTC (connu au paiement)
+  amount Int?
+
+  // Clés Stripe : la session sert à retrouver l'achat depuis le webhook
+  stripeCheckoutSessionId String  @unique
+  stripePaymentIntentId   String?
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  //relation
+  userId Int
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Restrict)
+
+  facture Facture?
+
+  @@index([userId, contractRef])
+}
+
 /// Définition d'un plan tarifaire : nom, prix, intervalle de facturation et crédits inclus.
 model Plan {
   idPlan Int @id @default(autoincrement())
@@ -492,7 +547,8 @@ model Plan {
   @@unique([name, interval])
 }
 
-/// Facture générée pour un abonnement, associée à une transaction Stripe.
+/// Facture associée à une transaction Stripe : soit d'un abonnement, soit d'un
+/// achat unitaire (une seule des deux relations est remplie).
 /// `status` : "PAID" (paiement réussi) ou "FAILED" (tentative échouée, montant non encaissé).
 model Facture {
   idFacture       Int      @id @default(autoincrement())
@@ -503,8 +559,12 @@ model Facture {
 
   //relation
 
-  subscriptionId Int
-  subscription   Subscription @relation(fields: [subscriptionId], references: [idSubscription])
+  subscriptionId Int?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [idSubscription])
+
+  // Un achat unitaire n'a qu'une seule facture
+  billingOneShotId Int?            @unique
+  billingOneShot   BillingOneShot? @relation(fields: [billingOneShotId], references: [idBilling])
 }
 
 // --- RESSOURCE LLM ---

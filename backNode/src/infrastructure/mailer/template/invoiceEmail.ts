@@ -24,8 +24,24 @@ function formatDate(date: Date): string {
   });
 }
 
-function intervalLabel(interval:string): string {
+function intervalLabel(interval?: string): string {
   return interval === PlanInterval.yearly ? "annuel" : "mensuel";
+}
+
+// Libellé de la ligne du récapitulatif : achat unitaire ou plan d'abonnement.
+function mainLineLabel(data: InvoiceData): string {
+  if (data.itemLabel) return data.itemLabel;
+  return `Plan ${data.planName} — ${intervalLabel(data.interval)}`;
+}
+
+// Phrase d'introduction : un achat est « confirmé », un abonnement est « actif ».
+function introSentence(data: InvoiceData): string {
+  if (data.itemLabel) {
+    return `Votre achat <strong>Lumen Juris — ${data.itemLabel}</strong> est confirmé.`;
+  }
+  return `Votre abonnement
+          <strong>Lumen Juris — Plan ${data.planName} (${intervalLabel(data.interval)})</strong>
+          est actif.`;
 }
 
 export const templateInvoiceEmail = (
@@ -50,9 +66,7 @@ export const templateInvoiceEmail = (
         <p style="margin:0 0 28px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                    font-size:15px; line-height:1.7; color:#374151;">
           Bonjour <strong>${username ?? data.customerName}</strong>,<br>
-          Merci pour votre confiance. Votre abonnement
-          <strong>Lumen Juris — Plan ${data.planName} (${intervalLabel(data.interval)})</strong>
-          est actif. Retrouvez votre facture en pièce jointe.
+          Merci pour votre confiance. ${introSentence(data)} Retrouvez votre facture en pièce jointe.
         </p>
       </td>
     </tr>
@@ -87,7 +101,7 @@ export const templateInvoiceEmail = (
           <tr>
             <td style="padding:14px 20px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                         font-size:14px; color:#374151; border-bottom:1px solid #f1f3f7; background:#fff;">
-              Plan ${data.planName} — ${intervalLabel(data.interval)}
+              ${mainLineLabel(data)}
             </td>
             <td style="padding:14px 20px; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
                         font-size:14px; font-weight:700; color:#111827; text-align:right;

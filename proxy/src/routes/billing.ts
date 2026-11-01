@@ -16,6 +16,16 @@ billingRouter.post("/create-checkout", auth, (req,res)=>{
 })
 
 
+// Achat unitaire d'un article pour un contrat précis
+billingRouter.post("/create-one-shot-checkout", auth, (req, res) =>
+  relayToNode(req, res, "/billing/create-one-shot-checkout"),
+);
+
+billingRouter.get("/one-shot/:item/:contractRef", auth, (req, res) =>
+  relayToNode(req, res, `/billing/one-shot/${encodeURIComponent(req.params.item as string)}/${encodeURIComponent(req.params.contractRef as string)}`),
+);
+
+
 billingRouter.post("/payment-intent", auth, (req, res) =>
   relayToNode(req, res, "/billing/payment-intent"),
 );

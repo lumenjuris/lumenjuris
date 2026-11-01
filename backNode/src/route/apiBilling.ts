@@ -7,7 +7,7 @@ import { Subscription } from "../services/classSubscription.js";
 import { Credit } from "../services/classCredit.js";
 import Stripe from "stripe"
 import { logger } from "../logger/logger.js";
-import { isPlanName } from "../utils/typeGuard.js";
+import { isPlanName, isItemVente } from "../utils/typeGuard.js";
 import { PlanName } from "@prisma/client";
 
 const routerBilling: Router = express.Router();
@@ -150,6 +150,85 @@ routerBilling.post("/create-checkout", authMiddleware, async (req, res) => {
       success: false,
       message: "Une erreur serveur est survenue lors de la creation de la souscription."
     })
+  }
+})
+
+
+// Achat unitaire d'un article pour un contrat précis (paiement one shot).
+routerBilling.post("/create-one-shot-checkout", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.idUser) {
+      return res.status(401).json({
+        success: false,
+        message: "Utilisateur non authentifié."
+      })
+    }
+
+    const { item, contractRef } = req.body;
+
+    if (!isItemVente(item)) {
+      return res.status(400).json({
+        success: false,
+        error: "Bad Request",
+        message: `L'article ${item} ne fait pas partie des articles proposés.`
+      })
+    }
+
+    if (typeof contractRef !== "string" || !contractRef.trim() || contractRef.length > 191) {
+      return res.status(400).json({
+        success: false,
+        error: "Bad Request",
+        message: "La référence du contrat est requise."
+      })
+    }
+
+    const userId = Number(req.idUser);
+    const checkout = await stripeService.createOneShotCheckout(userId, item, contractRef);
+
+    // Statut HTTP relayé depuis le service : 409 si déjà payé,
+    // 404 si utilisateur ou article introuvable.
+    const httpStatus = checkout.success
+      ? 200
+      : "status" in checkout && typeof checkout.status === "number"
+        ? checkout.status
+        : 500;
+
+    return res.status(httpStatus).json({
+      success: checkout.success,
+      message: "message" in checkout ? checkout.message : undefined,
+      data: checkout ?? null
+    })
+  } catch (err) {
+    console.error("Erreur POST /billing/create-one-shot-checkout:", err)
+    logger.error("Erreur lors de la création d'un checkout d'achat unitaire", err)
+    return res.status(500).json({
+      success: false,
+      message: "Une erreur serveur est survenue lors de la création de l'achat."
+    })
+  }
+})
+
+
+// Indique si un article a été payé pour un contrat précis (ex : contrat sans filigrane).
+routerBilling.get("/one-shot/:item/:contractRef", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.idUser);
+    const item = req.params.item;
+    const contractRef = String(req.params.contractRef);
+
+    if (!isItemVente(item)) {
+      return res.status(400).json({
+        success: false,
+        message: `L'article ${item} ne fait pas partie des articles proposés.`
+      })
+    }
+
+    const paid = await stripeService.hasPaidOneShot(userId, item, contractRef);
+
+    return res.status(200).json({ success: true, paid })
+  } catch (err) {
+    console.error("Erreur GET /billing/one-shot:", err)
+    return res.status(500).json({ success: false, message: "Erreur serveur." })
   }
 })
 

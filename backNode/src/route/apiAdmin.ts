@@ -9,9 +9,10 @@ import { requireAdmin } from "../middleware/requireAdmin.js"
 import { buildDayWindow, localDayKey } from "../utils/dayWindow.js"
 import { TVA_RATE } from "../infrastructure/pdf/invoicePDF.js"
 import { getUsdToEurRate, convertUsdToEur } from "../utils/currency.js"
-import { Subscription } from "../services/classSubscription.js"
+import { Subscription, FACTURE_ORIGIN_INCLUDE, getFactureUser, getFactureLabel } from "../services/classSubscription.js"
 import { Mailer } from "../infrastructure/mailer/classMailer.js"
 import { Plan, PlanName, PlanInterval } from "@prisma/client"
+import { ITEM_VENTE_LABELS } from "../utils/itemVente.js"
 import fs from "fs/promises"
 import path from "path"
 import crypto from "crypto"
@@ -239,6 +240,31 @@ router.get("/revenue", authMiddleware, requireAdmin, async (_req: Request, res: 
                 .reduce((s, f) => s + f.price, 0)
         }
 
+        // Factures des achats unitaires (hors abonnement) : série « Ventes articles » du graphique
+        const oneShotFactureRows = await prisma.facture.findMany({
+            where: { billingOneShotId: { not: null } },
+            orderBy: { createdAt: "desc" },
+            include: {
+                billingOneShot: {
+                    select: {
+                        item: true,
+                        user: { select: { idUser: true, email: true, nom: true, prenom: true } },
+                    },
+                },
+            },
+        })
+        const oneShotFactures = oneShotFactureRows
+            .filter((f) => f.billingOneShot)
+            .map((f) => ({
+                idFacture: f.idFacture,
+                price: f.price,
+                stripeInvoiceId: f.stripeInvoiceId,
+                status: f.status,
+                createdAt: f.createdAt,
+                itemLabel: ITEM_VENTE_LABELS[f.billingOneShot!.item],
+                user: f.billingOneShot!.user,
+            }))
+
         // Dernières factures (30 dernières, échecs inclus — le front affiche le statut)
         const recentFactures = await prisma.facture.findMany({
             take: 30,
@@ -250,6 +276,13 @@ router.get("/revenue", authMiddleware, requireAdmin, async (_req: Request, res: 
                         plan: { select: { name: true } },
                     },
                 },
+                // Facture d'un achat unitaire (subscription est alors null)
+                billingOneShot: {
+                    select: {
+                        item: true,
+                        user: { select: { email: true, nom: true, prenom: true } },
+                    },
+                },
             },
         })
 
@@ -257,6 +290,7 @@ router.get("/revenue", authMiddleware, requireAdmin, async (_req: Request, res: 
             success: true,
             data: {
                 subscriptions,
+                oneShotFactures,
                 totalRevenue: Number(totalRevenue._sum.price ?? 0),
                 activeCount,
                 revenueByPlan,
@@ -483,13 +517,26 @@ router.get("/users/:idUser/details", authMiddleware, requireAdmin, async (req: R
         })
         if (!user) return res.status(404).json({ success: false, message: "Utilisateur introuvable." })
 
-        const totalPaid = user.subscription?.facture.reduce((s, f) => s + f.price, 0) ?? 0
-        const invoiceCount = user.subscription?.facture.length ?? 0
+        // Les achats unitaires ont leurs propres factures, hors abonnement
+        const oneShotPaid = await prisma.facture.aggregate({
+            _sum: { price: true },
+            _count: true,
+            where: { status: "PAID", billingOneShot: { userId: user.idUser } },
+        })
+
+        const totalPaid = (user.subscription?.facture.reduce((s, f) => s + f.price, 0) ?? 0)
+            + (oneShotPaid._sum.price ?? 0)
+        const invoiceCount = (user.subscription?.facture.length ?? 0) + oneShotPaid._count
 
         return res.json({
             success: true,
             data: {
                 ...user,
+                // Achats unitaires seuls : affichés même sans abonnement
+                oneShotPaid: {
+                    totalPaid: oneShotPaid._sum.price ?? 0,
+                    invoiceCount: oneShotPaid._count,
+                },
                 subscription: user.subscription
                     ? { ...user.subscription, totalPaid, invoiceCount, facture: undefined }
                     : null,
@@ -735,7 +782,7 @@ router.get("/fiscalite", authMiddleware, requireAdmin, async (req: Request, res:
 
 /**
  * Récupère les factures payées d'un mois donné (année + mois), les plus récentes
- * d'abord, avec les infos nécessaires à l'export (client, plan).
+ * d'abord, avec les infos nécessaires à l'export (client, plan ou article acheté).
  */
 async function findPaidFacturesOfMonth(year: number, month: number) {
     const startOfMonth = new Date(year, month - 1, 1)
@@ -743,14 +790,7 @@ async function findPaidFacturesOfMonth(year: number, month: number) {
     return prisma.facture.findMany({
         where: { status: "PAID", createdAt: { gte: startOfMonth, lt: startOfNextMonth } },
         orderBy: { createdAt: "desc" },
-        include: {
-            subscription: {
-                include: {
-                    plan: { select: { name: true, interval: true } },
-                    user: { select: { email: true, nom: true, prenom: true } },
-                },
-            },
-        },
+        include: FACTURE_ORIGIN_INCLUDE,
     })
 }
 
@@ -789,7 +829,8 @@ router.get("/fiscalite/factures-csv", authMiddleware, requireAdmin, async (req: 
         const lines = [header.map(csvCell).join(";")]
 
         for (const facture of factures) {
-            const user = facture.subscription.user
+            const user = getFactureUser(facture)
+            if (!user) continue
             const clientName = [user.prenom, user.nom].filter(Boolean).join(" ") || user.email
             const invoiceNumber = `LJ-${facture.createdAt.toISOString().slice(0, 10).replace(/-/g, "")}-${String(facture.idFacture).padStart(4, "0")}`
             const { ht, tva, ttc } = breakdownTtcCents(facture.price)
@@ -799,7 +840,7 @@ router.get("/fiscalite/factures-csv", authMiddleware, requireAdmin, async (req: 
                 facture.createdAt.toLocaleDateString("fr-FR"),
                 clientName,
                 user.email,
-                facture.subscription.plan.name,
+                getFactureLabel(facture),
                 formatEurForCsv(ht),
                 formatEurForCsv(tva),
                 formatEurForCsv(ttc),

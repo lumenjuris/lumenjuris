@@ -2,6 +2,7 @@ import { prisma } from "../../prisma/singletonPrisma.js";
 import { Prisma, SubscriptionStatus, PlanName, PlanInterval } from "@prisma/client";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
 import { generateInvoicePDF } from "../infrastructure/pdf/invoicePDF.js";
+import { ITEM_VENTE_LABELS } from "../utils/itemVente.js";
 
 export type ReturnData<T = any> = {
   success: boolean;
@@ -83,8 +84,68 @@ export function buildCustomerInvoiceInfo(user: UserInvoiceInfo): {
   };
 }
 
+/**
+ * Include Prisma d'une facture : son origine (abonnement OU achat unitaire),
+ * avec le client et, pour un abonnement, le plan.
+ */
+export const FACTURE_ORIGIN_INCLUDE = {
+  subscription: {
+    include: { plan: true, user: { select: USER_INVOICE_SELECT } },
+  },
+  billingOneShot: {
+    include: { user: { select: USER_INVOICE_SELECT } },
+  },
+} satisfies Prisma.FactureInclude;
+
+type FactureWithOrigin = Prisma.FactureGetPayload<{
+  include: typeof FACTURE_ORIGIN_INCLUDE;
+}>;
+
+/** Client facturé, qu'il s'agisse d'un abonnement ou d'un achat unitaire. */
+export function getFactureUser(facture: FactureWithOrigin): UserInvoiceInfo | null {
+  return facture.subscription?.user ?? facture.billingOneShot?.user ?? null;
+}
+
+/** Libellé court de ce qui est facturé (listes, export CSV). */
+export function getFactureLabel(facture: FactureWithOrigin): string {
+  if (facture.billingOneShot) return ITEM_VENTE_LABELS[facture.billingOneShot.item];
+  return facture.subscription?.plan.name ?? "";
+}
+
+/** Ligne principale de la facture PDF : plan d'abonnement ou article acheté. */
+function buildInvoiceLine(facture: FactureWithOrigin) {
+  if (facture.billingOneShot) {
+    return { itemLabel: ITEM_VENTE_LABELS[facture.billingOneShot.item] };
+  }
+  return {
+    planName: facture.subscription?.plan.name,
+    interval: facture.subscription?.plan.interval,
+  };
+}
+
+/** Régénère le PDF d'une facture déjà chargée avec son origine. */
+async function renderInvoicePdf(
+  facture: FactureWithOrigin,
+): Promise<{ buffer: Buffer; invoiceNumber: string } | null> {
+  const user = getFactureUser(facture);
+  if (!user) return null;
+
+  const invoiceNumber = buildInvoiceNumber(facture.idFacture, facture.createdAt);
+
+  const buffer = await generateInvoicePDF({
+    invoiceNumber,
+    date: facture.createdAt,
+    ...buildCustomerInvoiceInfo(user),
+    ...buildInvoiceLine(facture),
+    amountTTCCents: facture.price,
+    stripePaymentIntentId: facture.stripeInvoiceId,
+  });
+
+  return { buffer, invoiceNumber };
+}
+
 export class Subscription {
-  
+
 
   async get(userId: number): Promise<ReturnData> {
     try {
@@ -135,34 +196,31 @@ export class Subscription {
   }
 
   /**
-   * Liste les factures payées de l'utilisateur (via son abonnement), triées de
-   * la plus récente à la plus ancienne. Renvoie une liste vide si l'utilisateur
-   * n'a pas d'abonnement.
+   * Liste les factures payées de l'utilisateur (abonnement et achats unitaires),
+   * triées de la plus récente à la plus ancienne.
    */
   async listInvoices(userId: number): Promise<ReturnData> {
     try {
-      const subscription = await prisma.subscription.findUnique({
-        where: { userId },
-        include: {
-          plan: true,
-          facture: {
-            where: { status: "PAID" },
-            orderBy: { createdAt: "desc" },
-          },
+      const factures = await prisma.facture.findMany({
+        where: {
+          status: "PAID",
+          OR: [
+            { subscription: { userId } },
+            { billingOneShot: { userId } },
+          ],
         },
+        orderBy: { createdAt: "desc" },
+        include: FACTURE_ORIGIN_INCLUDE,
       });
 
-      if (!subscription) {
-        return { success: true, data: [] };
-      }
-
-      const data = subscription.facture.map((f) => ({
+      const data = factures.map((f) => ({
         id: f.idFacture,
         invoiceNumber: buildInvoiceNumber(f.idFacture, f.createdAt),
         date: f.createdAt.toISOString(),
         amountCents: f.price,
         status: f.status,
-        planName: subscription.plan.name,
+        // Nom du plan, ou libellé de l'article pour un achat unitaire
+        planName: getFactureLabel(f),
       }));
 
       return { success: true, data };
@@ -177,43 +235,26 @@ export class Subscription {
 
   /**
    * Régénère le PDF d'une facture appartenant à l'utilisateur. Renvoie `null`
-   * si la facture n'existe pas ou n'appartient pas à l'abonnement de
-   * l'utilisateur (contrôle d'accès).
+   * si la facture n'existe pas ou n'appartient pas à l'utilisateur (ni à son
+   * abonnement, ni à l'un de ses achats unitaires) : contrôle d'accès.
    */
   async getInvoicePdf(
     userId: number,
     idFacture: number,
   ): Promise<{ buffer: Buffer; invoiceNumber: string } | null> {
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId },
-      include: { plan: true },
-    });
-    if (!subscription) return null;
-
     const facture = await prisma.facture.findFirst({
-      where: { idFacture, subscriptionId: subscription.idSubscription },
+      where: {
+        idFacture,
+        OR: [
+          { subscription: { userId } },
+          { billingOneShot: { userId } },
+        ],
+      },
+      include: FACTURE_ORIGIN_INCLUDE,
     });
     if (!facture) return null;
 
-    const user = await prisma.user.findUnique({
-      where: { idUser: userId },
-      select: USER_INVOICE_SELECT,
-    });
-    if (!user) return null;
-
-    const invoiceNumber = buildInvoiceNumber(facture.idFacture, facture.createdAt);
-
-    const buffer = await generateInvoicePDF({
-      invoiceNumber,
-      date: facture.createdAt,
-      ...buildCustomerInvoiceInfo(user),
-      planName: subscription.plan.name,
-      interval: subscription.plan.interval,
-      amountTTCCents: facture.price,
-      stripePaymentIntentId: facture.stripeInvoiceId,
-    });
-
-    return { buffer, invoiceNumber };
+    return renderInvoicePdf(facture);
   }
 
   /**
@@ -226,33 +267,11 @@ export class Subscription {
   ): Promise<{ buffer: Buffer; invoiceNumber: string } | null> {
     const facture = await prisma.facture.findUnique({
       where: { idFacture },
-      include: {
-        subscription: {
-          include: {
-            plan: true,
-            user: { select: USER_INVOICE_SELECT },
-          },
-        },
-      },
+      include: FACTURE_ORIGIN_INCLUDE,
     });
     if (!facture) return null;
 
-    const user = facture.subscription.user;
-    const plan = facture.subscription.plan;
-
-    const invoiceNumber = buildInvoiceNumber(facture.idFacture, facture.createdAt);
-
-    const buffer = await generateInvoicePDF({
-      invoiceNumber,
-      date: facture.createdAt,
-      ...buildCustomerInvoiceInfo(user),
-      planName: plan.name,
-      interval: plan.interval,
-      amountTTCCents: facture.price,
-      stripePaymentIntentId: facture.stripeInvoiceId,
-    });
-
-    return { buffer, invoiceNumber };
+    return renderInvoicePdf(facture);
   }
 
   async activateFreemium(userId: number): Promise<void> {
