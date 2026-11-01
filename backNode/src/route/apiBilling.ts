@@ -7,7 +7,9 @@ import { Subscription } from "../services/classSubscription.js";
 import { Credit } from "../services/classCredit.js";
 import Stripe from "stripe"
 import { logger } from "../logger/logger.js";
-import { isPlanName, isItemVente } from "../utils/typeGuard.js";
+import { isPlanName, isItemVente, isLivrableKind } from "../utils/typeGuard.js";
+import { ContractPack } from "../services/classContractPack.js";
+import { isContractNode } from "../services/contractDocument.js";
 import { PlanName } from "@prisma/client";
 
 const routerBilling: Router = express.Router();
@@ -164,7 +166,7 @@ routerBilling.post("/create-one-shot-checkout", authMiddleware, async (req: Requ
       })
     }
 
-    const { item, contractRef } = req.body;
+    const { item, contractRef, documentContent } = req.body;
 
     if (!isItemVente(item)) {
       return res.status(400).json({
@@ -182,11 +184,26 @@ routerBilling.post("/create-one-shot-checkout", authMiddleware, async (req: Requ
       })
     }
 
+    // Contenu de l'éditeur (facultatif) : sans lui, les livrables seront générés
+    // depuis le texte du contrat en contrathèque.
+    if (documentContent !== undefined && !isContractNode(documentContent)) {
+      return res.status(400).json({
+        success: false,
+        error: "Bad Request",
+        message: "Le contenu du contrat est invalide."
+      })
+    }
+
     const userId = Number(req.idUser);
-    const checkout = await stripeService.createOneShotCheckout(userId, item, contractRef);
+    const checkout = await stripeService.createOneShotCheckout(
+      userId,
+      item,
+      contractRef,
+      documentContent ?? null,
+    );
 
     // Statut HTTP relayé depuis le service : 409 si déjà payé,
-    // 404 si utilisateur ou article introuvable.
+    // 404 si utilisateur, contrat ou article introuvable.
     const httpStatus = checkout.success
       ? 200
       : "status" in checkout && typeof checkout.status === "number"
@@ -228,6 +245,76 @@ routerBilling.get("/one-shot/:item/:contractRef", authMiddleware, async (req: Re
     return res.status(200).json({ success: true, paid })
   } catch (err) {
     console.error("Erreur GET /billing/one-shot:", err)
+    return res.status(500).json({ success: false, message: "Erreur serveur." })
+  }
+})
+
+
+// Achats unitaires payés de l'utilisateur, avec l'état de livraison des documents
+// (sert au badge « acheté » de la contrathèque et aux téléchargements).
+routerBilling.get("/one-shot/purchases", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const purchases = await new ContractPack().listPurchases(Number(req.idUser));
+    return res.status(200).json({ success: true, data: purchases })
+  } catch (err) {
+    console.error("Erreur GET /billing/one-shot/purchases:", err)
+    return res.status(500).json({ success: false, message: "Erreur serveur." })
+  }
+})
+
+
+// Téléchargement d'un livrable d'achat (PDF, DOCX ou FICHE), déchiffré à la volée.
+// Si les documents n'ont pas pu être générés après le paiement, la génération est relancée ici.
+routerBilling.get("/one-shot/:idBilling/files/:kind", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const idBilling = Number(req.params.idBilling);
+    const kind = req.params.kind;
+
+    if (!Number.isInteger(idBilling) || idBilling <= 0) {
+      return res.status(400).json({ success: false, message: "Identifiant d'achat invalide." })
+    }
+    if (!isLivrableKind(kind)) {
+      return res.status(400).json({ success: false, message: `Le document ${kind} n'existe pas.` })
+    }
+
+    const file = await new ContractPack().getFile(Number(req.idUser), idBilling, kind);
+    if (!file) {
+      return res.status(404).json({ success: false, message: "Document indisponible pour cet achat." })
+    }
+
+    res.setHeader("Content-Type", file.contentType);
+    // filename* (RFC 5987) porte le vrai nom avec accents ; filename en est une
+    // version ASCII pour les clients qui ne lisent pas filename*.
+    const asciiFilename = file.filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+    );
+    return res.send(file.buffer);
+  } catch (err) {
+    console.error("Erreur GET /billing/one-shot/:idBilling/files/:kind:", err)
+    return res.status(500).json({ success: false, message: "Erreur serveur." })
+  }
+})
+
+
+// Renvoie par e-mail les documents d'un achat (régénérés si besoin).
+routerBilling.post("/one-shot/:idBilling/resend-email", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const idBilling = Number(req.params.idBilling);
+    if (!Number.isInteger(idBilling) || idBilling <= 0) {
+      return res.status(400).json({ success: false, message: "Identifiant d'achat invalide." })
+    }
+
+    const sent = await new ContractPack().resendEmail(Number(req.idUser), idBilling);
+    return res.status(sent ? 200 : 500).json({
+      success: sent,
+      message: sent
+        ? "Les documents vous ont été renvoyés par e-mail."
+        : "L'envoi a échoué. Réessayez dans quelques instants.",
+    })
+  } catch (err) {
+    console.error("Erreur POST /billing/one-shot/:idBilling/resend-email:", err)
     return res.status(500).json({ success: false, message: "Erreur serveur." })
   }
 })

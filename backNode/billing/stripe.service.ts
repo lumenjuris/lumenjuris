@@ -5,6 +5,7 @@ import { Mailer } from "../src/infrastructure/mailer/classMailer.js"
 import type { InvoiceData } from "../src/infrastructure/pdf/invoicePDF.js"
 import { isItemVente } from "../src/utils/typeGuard.js"
 import { ITEM_VENTE_LABELS } from "../src/utils/itemVente.js"
+import { ContractPack } from "../src/services/classContractPack.js"
 import {
     buildInvoiceNumber,
     buildCustomerInvoiceInfo,
@@ -417,7 +418,14 @@ export class StripeLumenJuris {
     // Achat unitaire (paiement one shot) d'un article pour un contrat précis.
     // Même principe que createCheckout : le front redirige vers Stripe, et c'est
     // le webhook (onOneShotCompleted) qui valide l'achat.
-    async createOneShotCheckout(userId: number, item: ItemVente, contractRef: string) {
+    // `documentContent` : contenu de l'éditeur (JSON TipTap), source des livrables
+    // générés après paiement (voir ContractPack).
+    async createOneShotCheckout(
+        userId: number,
+        item: ItemVente,
+        contractRef: string,
+        documentContent: Prisma.InputJsonValue | null,
+    ) {
         const successUrl = `${process.env.HOST_FRONT}/achat/success?contractRef=${encodeURIComponent(contractRef)}`
         const cancelUrl = `${process.env.HOST_FRONT}/achat/failed?contractRef=${encodeURIComponent(contractRef)}`
 
@@ -436,6 +444,20 @@ export class StripeLumenJuris {
                 success: false,
                 status: 404,
                 message: "Utilisateur introuvable."
+            }
+        }
+
+        // Le contrat acheté doit appartenir à l'utilisateur (sinon on paierait
+        // pour la référence de quelqu'un d'autre, ou pour une référence inventée).
+        const contract = await prisma.contract.findFirst({
+            where: { externalId: contractRef, userId },
+            select: { idContract: true }
+        })
+        if (!contract) {
+            return {
+                success: false,
+                status: 404,
+                message: "Contrat introuvable dans votre contrathèque."
             }
         }
 
@@ -493,6 +515,7 @@ export class StripeLumenJuris {
                 contractRef,
                 status: BillingOneShotStatus.PENDING,
                 stripeCheckoutSessionId: checkout.id,
+                ...(documentContent ? { documentContent } : {}),
             }
         })
 
@@ -657,6 +680,8 @@ export class StripeLumenJuris {
 
     // Validation d'un achat unitaire (checkout en mode payment)
     private async onOneShotCompleted(event: Stripe.Event) {
+        // Achat payé dont il faut générer et envoyer les livrables après le commit
+        let paidPurchaseId: number | undefined;
         // Rempli DANS la transaction, envoyé APRÈS le commit (même principe que onPaymentSucceeded).
         let invoiceEmail:
             | {
@@ -714,6 +739,8 @@ export class StripeLumenJuris {
                 update: paidData,
             });
 
+            paidPurchaseId = purchase.idBilling;
+
             // Créer la Facture de l'achat (une seule par achat : billingOneShotId est @unique)
             const facture = await tx.facture.create({
                 data: {
@@ -757,6 +784,14 @@ export class StripeLumenJuris {
                         error,
                     ),
                 );
+        }
+
+        // Livrables (PDF, Word, fiche) : générés et envoyés hors transaction, sans faire
+        // attendre Stripe. En cas d'échec, le téléchargement relance la génération.
+        if (result.success && paidPurchaseId) {
+            new ContractPack()
+                .deliver(paidPurchaseId)
+                .catch((error) => console.error("Erreur lors de la livraison des documents (webhook):", error));
         }
 
         return result;

@@ -48,13 +48,13 @@ function getVendor() {
   };
 }
 
-// ── Palette ─────────────────────────────────────────────────────────────────
-const BLUE = "#5B9DF5"; // bleu de marque (identique au mailer)
-const BLUE_SOFT = "#9CB8E8"; // bleu secondaire ("Juris")
-const INK = "#1f2937"; // texte principal
-const MUTED = "#6b7280"; // texte secondaire
-const LINE = "#e5e7eb"; // filets / bordures
-const BG_SOFT = "#f9fafb"; // fonds de blocs
+// ── Palette (réutilisée par les livrables d'achat, contractPackPDF.ts) ─────────────────────────────────────────────────────────────────
+export const BLUE = "#5B9DF5"; // bleu de marque (identique au mailer)
+export const BLUE_SOFT = "#9CB8E8"; // bleu secondaire ("Juris")
+export const INK = "#1f2937"; // texte principal
+export const MUTED = "#6b7280"; // texte secondaire
+export const LINE = "#e5e7eb"; // filets / bordures
+export const BG_SOFT = "#f9fafb"; // fonds de blocs
 
 // Taux de TVA appliqué à toutes les factures (exporté : source unique de vérité,
 // réutilisé par le calcul fiscal du monitoring).
@@ -138,7 +138,7 @@ function saveEncryptedCopy(data: InvoiceData, pdf: Buffer) {
 
 // ── Logo Lumen Juris (repris du mailer) ─────────────────────────────────────
 // Deux cercles concentriques bleus + le wordmark "Lumen Juris".
-function drawLogo(doc: PdfDoc, x: number, y: number) {
+export function drawLogo(doc: PdfDoc, x: number, y: number) {
   const size = 12;
   const cx = x + size / 2;
   const cy = y + size / 2;

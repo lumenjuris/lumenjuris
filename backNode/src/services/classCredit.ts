@@ -1,5 +1,5 @@
 import { prisma } from "../../prisma/singletonPrisma.js";
-import { Prisma, SubscriptionStatus, CreditTransactionType, PlanInterval } from "@prisma/client";
+import { Prisma, SubscriptionStatus, CreditTransactionType, PlanInterval, BillingOneShotStatus } from "@prisma/client";
 
 type ReturnData<T = any> = {
   success: boolean;
@@ -389,13 +389,24 @@ export class Credit {
       }
 
       // Plafond fini -> comparer au nombre de contrats non archivés.
+      // Les contrats achetés à l'unité (Pack Contrat payé) ne comptent pas dans
+      // le plafond : `paidCount` permet au front d'afficher « limite + x achetés ».
       if (contrathequeLimit?.unlimited === false && typeof contrathequeLimit.value === "number") {
+        const paidPurchases = await prisma.billingOneShot.findMany({
+          where: { userId, status: BillingOneShotStatus.PAID },
+          select: { contractRef: true },
+        });
+        const paidContractRefs = [...new Set(paidPurchases.map((purchase) => purchase.contractRef))];
+
         const count = await prisma.contract.count({
-          where: { userId, isArchived: false },
+          where: { userId, isArchived: false, externalId: { notIn: paidContractRefs } },
+        });
+        const paidCount = await prisma.contract.count({
+          where: { userId, isArchived: false, externalId: { in: paidContractRefs } },
         });
         return {
           success: true,
-          data: { allowed: count < contrathequeLimit.value, count, limit: contrathequeLimit.value },
+          data: { allowed: count < contrathequeLimit.value, count, limit: contrathequeLimit.value, paidCount },
         };
       }
 

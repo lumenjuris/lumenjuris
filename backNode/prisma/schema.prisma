@@ -516,6 +516,15 @@ model BillingOneShot {
   stripeCheckoutSessionId String  @unique
   stripePaymentIntentId   String?
 
+  // Contenu de l'éditeur (JSON TipTap) envoyé au checkout : source des livrables.
+  // Chiffré (voir encryptedFields.ts). Absent pour les achats antérieurs : on
+  // reconstruit alors les documents depuis le texte du contrat en contrathèque.
+  documentContent Json?
+
+  // Livraison des documents après paiement
+  deliveryStatus DeliveryStatus @default(PENDING)
+  emailSentAt    DateTime?
+
   createdAt DateTime  @default(now())
   paidAt    DateTime?
 
@@ -523,9 +532,41 @@ model BillingOneShot {
   userId Int
   user   User @relation(fields: [userId], references: [idUser], onDelete: Restrict)
 
-  facture Facture?
+  facture   Facture?
+  livrables LivrableAchat[]
 
   @@index([userId, contractRef])
+}
+
+/// État de génération des livrables d'un achat unitaire :
+/// PENDING tant que rien n'est généré, READY quand les fichiers sont sur le serveur,
+/// FAILED si la génération a échoué (relancée à la demande au téléchargement).
+enum DeliveryStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+/// Types de documents livrés avec un achat unitaire.
+enum LivrableKind {
+  PDF
+  DOCX
+  FICHE
+}
+
+/// Fichier livré avec un achat unitaire, stocké chiffré sur le serveur (./livrables).
+model LivrableAchat {
+  idLivrable Int          @id @default(autoincrement())
+  kind       LivrableKind
+  filePath   String       @db.Text
+  createdAt  DateTime     @default(now())
+
+  //relation
+  billingOneShotId Int
+  billingOneShot   BillingOneShot @relation(fields: [billingOneShotId], references: [idBilling], onDelete: Cascade)
+
+  // Un seul fichier par type et par achat (une régénération remplace le précédent)
+  @@unique([billingOneShotId, kind])
 }
 
 /// Définition d'un plan tarifaire : nom, prix, intervalle de facturation et crédits inclus.

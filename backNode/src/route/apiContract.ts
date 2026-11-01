@@ -167,7 +167,7 @@ router.post("/", authMiddleware, requireEditor, async (req: Request, res: Respon
                 success: false,
                 code: "CONTRATHEQUE_LIMIT_REACHED",
                 message: cap.data.limit != null
-                    ? `Votre plan est limité à ${cap.data.limit} contrats suivis. Passez à un plan supérieur pour en ajouter davantage.`
+                    ? `Votre plan est limité à ${cap.data.limit} contrats suivis${cap.data.paidCount ? ` (+ ${cap.data.paidCount} contrat${cap.data.paidCount > 1 ? "s" : ""} acheté${cap.data.paidCount > 1 ? "s" : ""}, non décompté${cap.data.paidCount > 1 ? "s" : ""})` : ""}. Passez à un plan supérieur pour en ajouter davantage.`
                     : "Votre plan ne permet pas d'ajouter davantage de contrats.",
             })
         }
