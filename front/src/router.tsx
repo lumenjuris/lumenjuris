@@ -72,6 +72,8 @@ const Monitoring = lazyPage(() => import("./page/Monitoring").then((m) => ({ def
 const Subscription = lazyPage(() => import("./page/Subscription").then((m) => ({ default: m.Subscription })));
 const SubscriptionSuccess = lazyPage(() => import("./components/SubscriptionComponents/SubscriptionSuccess").then((m) => ({ default: m.SubscriptionSuccess })));
 const SubscriptionFailed = lazyPage(() => import("./components/SubscriptionComponents/SubscriptionFailed").then((m) => ({ default: m.SubscriptionFailed })));
+const ContractPackSuccess = lazyPage(() => import("./components/ContractPackComponents/ContractPackSuccess").then((m) => ({ default: m.ContractPackSuccess })));
+const ContractPackCancelled = lazyPage(() => import("./components/ContractPackComponents/ContractPackCancelled").then((m) => ({ default: m.ContractPackCancelled })));
 const ConfirmDeleteAccountPage = lazyPage(() => import("./page/DeleteAccount").then((m) => ({ default: m.ConfirmDeleteAccountPage })));
 const SignerPage = lazyPage(() => import("./page/SignerPage").then((m) => ({ default: m.SignerPage })));
 
@@ -178,6 +180,10 @@ export function App() {
         {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
         <Route path="/subscription/success" element={<SubscriptionSuccess />} />
         <Route path="/subscription/failed" element={<SubscriptionFailed />} />
+        {/* Retours Stripe de l'achat ponctuel d'un contrat (Pack Contrat) : la
+            vérification du paiement exige d'être connecté (sinon reconnexion puis retour ici) */}
+        <Route path="/achat/success" element={<RequireAuth><ContractPackSuccess /></RequireAuth>} />
+        <Route path="/achat/failed" element={<RequireAuth><ContractPackCancelled /></RequireAuth>} />
 
 
         {/* Page de gestion d'un cluster pour les multi user

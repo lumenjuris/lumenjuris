@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { jsPDF } from "jspdf";
 import {
   Download, FileText, FileSignature, Bold, Italic, List, Quote,
   Sparkles, X, Loader2, ShieldCheck, ShieldAlert, MessagesSquare, Check, Share2,
@@ -34,6 +33,10 @@ import { ShareContractPanel, guessSide, SIDE_CYCLE, type ShareMode } from "../..
 import type { FieldSide } from "../../negotiation/types";
 import { fetchProxy } from "../../../../utils/fetchProxy";
 import { CONTRACT_DOCUMENT_CLASS, CONTRACT_DOCUMENT_PADDING_CLASS, CONTRACT_TOOLBAR_CLASS } from "./documentTypography";
+import { type JNode, inlineText, buildContractPdf, contractPdfBase64, buildContractDocx, downloadBlob } from "./contractExport";
+import { ContractPackOffer } from "../../../ContractPackComponents/ContractPackOffer";
+import { startContractPackCheckout } from "../../../ContractPackComponents/contractPackApi";
+import { savePendingPurchase } from "../../../ContractPackComponents/pendingPurchase";
 
 const isEmptyClause = (c: string) => c.trim() === "Sans objet.";
 
@@ -126,20 +129,6 @@ function buildFieldGroups(model: ContractModel): FieldGroup[] {
     else groups.push({ id: block.id, label, varIds: fresh });
   }
   return groups;
-}
-
-// — Sérialisation pour l'export PDF —
-type JNode = { type: string; attrs?: Record<string, unknown>; text?: string; content?: JNode[] };
-function inlineText(nodes?: JNode[]): string {
-  if (!nodes) return "";
-  return nodes
-    .map((n) =>
-      n.type === "text" ? n.text ?? ""
-      : n.type === "hardBreak" ? "\n"
-      : n.type === "variable" ? (String(n.attrs?.value || "") || "…")
-      : inlineText(n.content),
-    )
-    .join("");
 }
 
 /** Sérialisation pour l'IA : les variables restent des marqueurs {{nom}}. */
@@ -549,6 +538,9 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   /** Construit le PDF du contrat (réutilisé pour l'export et la signature). */
     const [hasFiligrane, setHasFiligrane] = useState<boolean | null>(null);
+    // Offre d'achat ponctuel : seulement si le backend confirme que le plan impose
+    // le filigrane (jamais sur une simple erreur réseau, ni pour un abonné).
+    const [packOfferVisible, setPackOfferVisible] = useState(false);
     useEffect(() => {
       let isCurrent = true;
 
@@ -560,6 +552,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
         const filigrane = data?.data?.quotas?.generationContractWithFiligrane;
         // Sans information fiable, on garde le filigrane par prudence.
         setHasFiligrane(filigrane ? filigrane.enabled === true : true);
+        setPackOfferVisible(filigrane?.enabled === true);
       }).catch(() => {
         if (isCurrent) setHasFiligrane(true);
       });
@@ -568,72 +561,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       };
     }, []);
 
-  const buildPdfDoc = () => {
-    const json = editor!.getJSON() as JNode;
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 56, maxW = pdf.internal.pageSize.getWidth() - margin * 2, pageH = pdf.internal.pageSize.getHeight();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    let y = margin;
-    const block = (txt: string, bold: boolean, size: number, gap = 8) => {
-      pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
-      for (const line of pdf.splitTextToSize(txt || " ", maxW) as string[]) {
-        if (y + size + 2 > pageH - margin) { pdf.addPage(); y = margin; }
-        pdf.text(line, margin, y); y += size + 2;
-      }
-      y += gap;
-    };
-    for (const n of json.content ?? []) {
-      const txt = inlineText(n.content);
-      if (n.type === "heading") {
-        // Espace avant le titre (sauf en haut de page) pour le détacher du paragraphe précédent.
-        if (y > margin) y += 8;
-        block(txt, true, n.attrs?.level === 2 ? 15 : 11.5, 4);
-      }
-      else if (txt.trim()) block(txt, false, 10.5, 8);
-    }
-    if (hasFiligrane) {
-      addFiligraneToPdf(pdf, pageWidth, margin, pageH);
-    }
-    return pdf;
-  };
-
-  const addFiligraneToPdf = (pdf: jsPDF, pageWidth: number, margin: number, pageH: number) => {
-    const totalPages = pdf.getNumberOfPages();
-    const rightX = pageWidth - margin;
-    const center = pageWidth / 2;
-    const paddingX = 8;
-    const paddingY = 4;
-    const fontSize = 10;
-    const borderRadius = 4;
-    const text = "Généré par Lumen Juris";
-
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.setTextColor("#213957");
-      pdf.setDrawColor("#213957");
-      pdf.setLineWidth(1);
-
-      const textWidth = pdf.getTextWidth(text);
-      const boxW = textWidth + paddingX * 2;
-      const boxH = fontSize + 2 * paddingY;
-      
-      if (i === 1) {
-        const centerY = 32;
-        const boxX = rightX - boxW;
-        const boxY = centerY - fontSize;
-        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S")
-        pdf.text(text, rightX - paddingX, centerY, {align: "right", baseline: "middle"});
-      } else {
-        const centerY = pageH - 32;
-        const boxX = center - boxW / 2;
-        const boxY = centerY - fontSize;
-        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S");
-        pdf.text(text, center, centerY, {align: "center", baseline:"middle"});
-      }
-    }
-  }
+  const buildPdfDoc = () => buildContractPdf(editor!.getJSON() as JNode, !!hasFiligrane);
 
   const exportPdf = () => {
     if (!editor) return;
@@ -677,8 +605,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   /** Enregistre le contrat en contrathèque (PDF + texte) et renvoie son identifiant. */
   const saveToContratheque = async (): Promise<{ id: string }> => {
-    const dataUri = buildPdfDoc().output("datauristring");
-    const fileBase64 = dataUri.split(",")[1] ?? "";
+    const fileBase64 = contractPdfBase64(editor!.getJSON() as JNode, !!hasFiligrane);
     const created = await contractApi.create({
       title: fileBase,
       ocrText: getContractText(),
@@ -691,6 +618,51 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       status: "ACTIVE",
     });
     return { id: created.id };
+  };
+
+  // ── Achat ponctuel du contrat (Pack Contrat) ─────────────────────────────
+  const [packLoading, setPackLoading] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
+  // Contrat déjà enregistré pour l'achat : un nouvel essai (paiement échoué,
+  // erreur réseau) réutilise la même fiche au lieu d'en créer une seconde.
+  const packContractRef = useRef<string | null>(null);
+
+  /**
+   * Enregistre le contrat en contrathèque (identifiant de l'achat), mémorise son
+   * contenu pour reconstruire les documents au retour, puis redirige vers Stripe.
+   */
+  const buyContractPack = async () => {
+    if (!editor || packLoading) return;
+    setPackLoading(true);
+    setPackError(null);
+    try {
+      if (!packContractRef.current) {
+        packContractRef.current = (await saveToContratheque()).id;
+      }
+      const contractRef = packContractRef.current;
+
+      savePendingPurchase({
+        contractRef,
+        fileBase,
+        document: editor.getJSON() as JNode,
+      });
+
+      const checkout = await startContractPackCheckout(contractRef);
+      if (checkout.success) {
+        window.location.href = checkout.url; // redirection vers Stripe Checkout
+        return; // le bouton reste en chargement jusqu'au départ de la page
+      }
+      setPackError(checkout.message);
+    } catch (e) {
+      // Échec de l'enregistrement en contrathèque : message du backend (ex : limite
+      // du plan atteinte) ou coupure réseau (fetch lève une TypeError).
+      setPackError(
+        e instanceof Error && !(e instanceof TypeError)
+          ? e.message
+          : "Connexion au serveur impossible. Vérifiez votre connexion puis réessayez.",
+      );
+    }
+    setPackLoading(false);
   };
 
   /** Négocier : enregistre le contrat en contrathèque puis ouvre l'espace de négociation. */
@@ -720,42 +692,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   const exportDocx = async () => {
     if (!editor) return;
-    const json = editor.getJSON() as JNode;
-    const docx = await import("docx");
-    const { saveAs } = await import("file-saver");
-    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer } = docx;
-    // Word ignore les "\n" dans un TextRun : chaque ligne devient un run avec un retour à la ligne avant.
-    const textRunsWithLineBreaks = (txt: string, bold = false) =>
-      txt.split("\n").map((line, index) => new TextRun({ text: line, bold, break: index > 0 ? 1 : undefined }));
-    const children = (json.content ?? []).map((n) => {
-      const txt = inlineText(n.content);
-      if (n.type === "heading") {
-        const isTitle = n.attrs?.level === 2;
-        return new Paragraph({
-          heading: isTitle ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
-          alignment: isTitle ? AlignmentType.CENTER : undefined,
-          spacing: { before: 240, after: 120 },
-          children: textRunsWithLineBreaks(txt, true),
-        });
-      }
-      return new Paragraph({ spacing: { after: 120 }, children: textRunsWithLineBreaks(txt) });
-    });
-    
-    const waterMark = new TextRun({
-      text: "Généré par Lumen Juris", bold: true, size: 18, color: "213957"
-    })
-    const firstPageHeader = new Header({
-      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
-    })
-    const footer = new Footer({
-      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
-    })
-    const wordDoc = new Document({
-      styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
-      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: !!hasFiligrane, },headers: hasFiligrane ? {first: firstPageHeader} : undefined, footers: hasFiligrane ? {default: footer} : undefined, children }],
-    });
-    const blob = await docx.Packer.toBlob(wordDoc);
-    saveAs(blob, `${fileBase}.docx`);
+    const blob = await buildContractDocx(editor.getJSON() as JNode, !!hasFiligrane);
+    await downloadBlob(blob, `${fileBase}.docx`);
   };
 
   // ── Enregistrer ce contrat comme modèle ──────────────────────────────────
@@ -983,7 +921,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 <ToolbarAction
                   icon={FileText}
                   short="Word"
-                  label={hasFiligrane ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
+                  label={hasFiligrane ? "Télécharger en Word — inclus dans le Pack Contrat ou un abonnement" : "Télécharger en Word"}
                   onClick={() => void exportDocx()}
                   disabled={!!hasFiligrane}
                 />
@@ -1009,6 +947,17 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 [&_input[data-share-side=COUNTERPARTY]]:!bg-emerald-100 [&_input[data-share-side=COUNTERPARTY]]:!text-emerald-800 [&_input[data-share-side=COUNTERPARTY]]:!ring-emerald-300
                 [&_input[data-share-side=THIRD_PARTY]]:!bg-violet-100 [&_input[data-share-side=THIRD_PARTY]]:!text-violet-800 [&_input[data-share-side=THIRD_PARTY]]:!ring-violet-300`}
             >
+            {/* Rendu fidèle à l'export : le filigrane imposé par le plan est visible ici aussi */}
+            {hasFiligrane && (
+              <div className="mb-3 flex justify-end">
+                <span
+                  aria-label="Mention ajoutée aux exports de votre plan"
+                  className="pointer-events-none select-none rounded border border-blue-primary px-2 py-0.5 text-[11px] font-bold text-blue-primary"
+                >
+                  Généré par Lumen Juris
+                </span>
+              </div>
+            )}
             <EditorContent editor={editor} className={CONTRACT_DOCUMENT_CLASS} />
 
             {/* Bouton IA au survol d'une clause */}
@@ -1070,6 +1019,14 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
             )}
             </div>
           </div>
+
+          {packOfferVisible && (
+            <ContractPackOffer
+              onPurchase={() => void buyContractPack()}
+              loading={packLoading}
+              error={packError}
+            />
+          )}
 
           {/* Barre sticky « Modifier avec l'IA » — liseré de marque pour être
               repérée dès l'arrivée sur la page. */}

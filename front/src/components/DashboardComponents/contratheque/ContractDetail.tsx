@@ -13,6 +13,8 @@ import type { AmendmentDTO, ContractDetail as Detail, ContractStatus } from "./t
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { BANNER_ACTION_CLASS, PageBanner } from "../../common/PageBanner";
 import { Amendments } from "./Amendments";
+import { isContractPackPaid } from "../../ContractPackComponents/contractPackApi";
+import { ContractPackDownloads } from "../../ContractPackComponents/ContractPackDownloads";
 
 interface Props {
   contractId: string;
@@ -33,6 +35,17 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
   // Le bouton « Analyser » du bandeau déclenche l'analyse du panneau des informations.
   const fieldsPanelRef = useRef<ContractFieldsPanelHandle>(null);
   const [analysing, setAnalysing] = useState(false);
+  // Achat ponctuel (Pack Contrat) : confirmé par le backend uniquement
+  const [packPaid, setPackPaid] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+    isContractPackPaid(contractId)
+      .then((paid) => { if (isCurrent) setPackPaid(paid); })
+      // Sans réponse du backend, on n'affiche simplement pas les livrables
+      .catch((err) => console.error("Statut d'achat indisponible :", err));
+    return () => { isCurrent = false; };
+  }, [contractId]);
 
   // Point d'entrée du tunnel : ouvre (ou rejoint) la négociation isolée de ce contrat.
   async function handleNegotiate() {
@@ -111,6 +124,11 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
         badges={
           <>
             <StatusBadge status={data.status} />
+            {packPaid && (
+              <span className="text-[10px] font-bold text-emerald-200 bg-emerald-500/20 border border-emerald-300/30 px-2 py-0.5 rounded-md">
+                Pack Contrat acheté
+              </span>
+            )}
             {urgent && (
               <span className="text-[10px] font-bold text-amber-200 bg-amber-500/20 border border-amber-300/30 px-2 py-0.5 rounded-md">
                 Échéance dans {remainingDays} j
@@ -193,6 +211,15 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
 
         {/* Colonne droite : ce qu'il reste à traiter d'abord, le reste ensuite */}
         <div className="space-y-4">
+          {packPaid && (
+            <div className="bg-white rounded-card border border-line shadow-card p-4 space-y-3">
+              <div>
+                <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">Pack Contrat</p>
+                <p className="mt-1 text-xs text-ink-muted">Documents sans filigrane, inclus dans votre achat.</p>
+              </div>
+              <ContractPackDownloads contractRef={contractId} title={data.title} plainText={data.ocrText ?? null} />
+            </div>
+          )}
           <ContractFieldsPanel ref={fieldsPanelRef} key={data.id} contract={data} onSaved={refreshInBackground} onAnalysingChange={setAnalysing} />
           <TrackingCard contract={data} onUpdated={refreshInBackground} />
           <Amendments
