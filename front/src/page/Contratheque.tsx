@@ -13,6 +13,16 @@ import { useUserStore } from "../store/userStore";
 import { PageBanner } from "../components/common/PageBanner";
 
 /**
+ * Mention des contrats achetés à l'unité, qui ne comptent pas dans le plafond.
+ * Ex : « (+ 2 contrats achetés, non décomptés) » ; vide s'il n'y en a pas.
+ */
+function paidContractsNote(paidCount?: number): string {
+  if (!paidCount) return "";
+  const plural = paidCount > 1 ? "s" : "";
+  return ` (+ ${paidCount} contrat${plural} acheté${plural}, non décompté${plural})`;
+}
+
+/**
  * Contrathèque — point d'entrée (routes /contratheque et /contratheque/:externalId).
  *
  * Trois vues, inline dans la page (pas de popup) :
@@ -33,7 +43,7 @@ export function Contratheque() {
   const [filesToImport, setFilesToImport] = useState<File[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   // Vérification du plafond lancée dès le clic, relue au moment de la sélection.
-  const capacityCheck = useRef<Promise<{ allowed: boolean; limit?: number } | null> | null>(null);
+  const capacityCheck = useRef<Promise<{ allowed: boolean; limit?: number; paidCount?: number } | null> | null>(null);
   const [tab, setTab] = useState<ContrathequeTab>(
     searchParams.get("vue") === "echeances" ? "echeances" : "contrats",
   );
@@ -79,7 +89,7 @@ export function Contratheque() {
     if (cap && cap.allowed === false) {
       setLimitMessage(
         cap.limit != null
-          ? `Votre formule est limitée à ${cap.limit} contrats suivis. Passez à une formule supérieure pour en suivre davantage.`
+          ? `Votre formule est limitée à ${cap.limit} contrats suivis${paidContractsNote(cap.paidCount)}. Passez à une formule supérieure pour en suivre davantage.`
           : "Votre formule ne permet pas de suivre davantage de contrats.",
       );
       return;

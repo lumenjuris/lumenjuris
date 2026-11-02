@@ -60,7 +60,7 @@ export const ENCRYPTED_FIELDS: Record<string, string[]> = {
     GenerationLog: ["output"],
 
     // ─── Achat unitaire ───
-    BillingOneShot: ["documentContent"],
+    BillingOneShot: ["documentContent", "aiSummary"],
     SignatureEnvelope: [
         "envelopeFields",
         // Données personnelles des signataires

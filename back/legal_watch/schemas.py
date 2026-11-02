@@ -54,7 +54,9 @@ class EnrichItemInput(BaseModel):
 class EnrichRequest(BaseModel):
     items: List[EnrichItemInput] = Field(min_length=1, max_length=50)
     concepts: List[ConceptDef] = Field(min_length=1)
-    model: Optional[str] = None  # défaut : LEGAL_WATCH_ENRICH_MODEL ou gpt-4o-mini
+    # Défaut : LEGAL_WATCH_ENRICH_MODEL ou gpt-4o-mini. Liste fermée pour
+    # qu'un appelant ne puisse pas choisir un modèle coûteux.
+    model: Optional[Literal["gpt-4o-mini", "gpt-4o", "gpt-5.4-nano", "gpt-5.2"]] = None
 
 
 class EnrichmentResult(BaseModel):

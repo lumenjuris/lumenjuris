@@ -1,7 +1,6 @@
 // Construction des fichiers d'un contrat (PDF / Word) à partir du contenu de l'éditeur.
-// Sorti de SmartCddEditor pour être réutilisé hors de l'éditeur : la page de retour
-// d'un achat (Pack Contrat) reconstruit les documents sans filigrane à partir du
-// contenu mémorisé avant la redirection vers Stripe.
+// Sorti de SmartCddEditor pour alléger l'éditeur. Les documents sans filigrane d'un
+// achat (Pack Contrat) sont, eux, générés par le backend (voir ContractPackComponents).
 import { jsPDF } from "jspdf";
 
 /** Nœud du document TipTap (sortie de `editor.getJSON()`). */
@@ -15,27 +14,11 @@ export function inlineText(nodes?: JNode[]): string {
   return nodes
     .map((n) =>
       n.type === "text" ? n.text ?? ""
-      : n.type === "hardBreak" ? "\n"
-      : n.type === "variable" ? (String(n.attrs?.value || "") || "…")
-      : inlineText(n.content),
+        : n.type === "hardBreak" ? "\n"
+          : n.type === "variable" ? (String(n.attrs?.value || "") || "…")
+            : inlineText(n.content),
     )
     .join("");
-}
-
-/**
- * Document minimal à partir du texte brut d'un contrat (paragraphes séparés par
- * une ligne vide), tel qu'enregistré en contrathèque. Sert quand le contenu de
- * l'éditeur n'est plus disponible : le texte est complet mais les titres ne sont
- * plus distingués des paragraphes.
- */
-export function documentFromPlainText(text: string): JNode {
-  return {
-    type: "doc",
-    content: text
-      .split(/\n\s*\n/)
-      .filter((paragraph) => paragraph.trim())
-      .map((paragraph) => ({ type: "paragraph", content: [{ type: "text", text: paragraph }] })),
-  };
 }
 
 /** Encadré « Généré par Lumen Juris » : en haut à droite de la 1re page, en bas des suivantes. */
@@ -65,13 +48,13 @@ function addFiligraneToPdf(pdf: jsPDF, pageWidth: number, margin: number, pageH:
       const boxX = rightX - boxW;
       const boxY = centerY - fontSize;
       pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S")
-      pdf.text(FILIGRANE_TEXT, rightX - paddingX, centerY, {align: "right", baseline: "middle"});
+      pdf.text(FILIGRANE_TEXT, rightX - paddingX, centerY, { align: "right", baseline: "middle" });
     } else {
       const centerY = pageH - 32;
       const boxX = center - boxW / 2;
       const boxY = centerY - fontSize;
       pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S");
-      pdf.text(FILIGRANE_TEXT, center, centerY, {align: "center", baseline:"middle"});
+      pdf.text(FILIGRANE_TEXT, center, centerY, { align: "center", baseline: "middle" });
     }
   }
 }
@@ -116,6 +99,7 @@ export async function buildContractDocx(json: JNode, withFiligrane: boolean): Pr
   const docx = await import("docx");
   const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer } = docx;
   // Word ignore les "\n" dans un TextRun : chaque ligne devient un run avec un retour à la ligne avant.
+
   const textRunsWithLineBreaks = (txt: string, bold = false) =>
     txt.split("\n").map((line, index) => new TextRun({ text: line, bold, break: index > 0 ? 1 : undefined }));
   const children = (json.content ?? []).map((n) => {
@@ -136,14 +120,28 @@ export async function buildContractDocx(json: JNode, withFiligrane: boolean): Pr
     text: FILIGRANE_TEXT, bold: true, size: 18, color: "213957"
   })
   const firstPageHeader = new Header({
-    children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
+    children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [waterMark] })],
   })
   const footer = new Footer({
-    children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
+    children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [waterMark] })],
   })
   const wordDoc = new Document({
     styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
-    sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: withFiligrane, },headers: withFiligrane ? {first: firstPageHeader} : undefined, footers: withFiligrane ? {default: footer} : undefined, children }],
+    sections: [
+      {
+        properties: {
+          page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } },
+          titlePage: withFiligrane,
+        },
+        headers:
+          withFiligrane
+            ? { first: firstPageHeader }
+            : undefined,
+        footers: withFiligrane
+          ? { default: footer }
+          : undefined,
+        children
+      }],
   });
   return docx.Packer.toBlob(wordDoc);
 }

@@ -1,3 +1,4 @@
+import { pythonHeaders } from "../config.js";
 /* eslint-disable no-console */
 const IS_PROD = process.env.NODE_ENV === "production";
 const BACKEND_URL = IS_PROD ? process.env.BACKEND_URL : "http://127.0.0.1:5678";
@@ -52,7 +53,7 @@ export async function callOpenAI(
 ): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify({ messages, ...options }),
   });
   if (!r.ok) throw new Error(`openai-chat error ${r.status}`);
@@ -74,7 +75,7 @@ export async function callOpenAi52(
 ): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat-5`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify({ prompt, reasoning, verbosity, model }),
   });
   if (!r.ok) throw new Error(`openai-chat-5 error ${r.status}`);

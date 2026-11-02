@@ -20,7 +20,7 @@ const MAX_POLL_ATTEMPTS = 15;
  */
 type PaymentStatus = "checking" | "paid" | "pending" | "unavailable";
 
-type ContractInfo = { title: string | null; plainText: string | null };
+type ContractInfo = { title: string | null };
 
 /**
  * Page de retour Stripe après un achat ponctuel (`/achat/success?contractRef=…`).
@@ -32,7 +32,7 @@ export function ContractPackSuccess() {
   const contractRef = searchParams.get("contractRef");
 
   const [status, setStatus] = useState<PaymentStatus>("checking");
-  const [contract, setContract] = useState<ContractInfo>({ title: null, plainText: null });
+  const [contract, setContract] = useState<ContractInfo>({ title: null });
   // Incrémenté par « Vérifier à nouveau » pour relancer une série de vérifications
   const [checkRound, setCheckRound] = useState(0);
 
@@ -76,11 +76,11 @@ export function ContractPackSuccess() {
     };
   }, [contractRef, checkRound]);
 
-  // Une fois payé : titre et texte du contrat, pour les documents de secours
+  // Une fois payé : titre du contrat, pour nommer les fichiers téléchargés
   useEffect(() => {
     if (status !== "paid" || !contractRef) return;
     contractApi.get(contractRef)
-      .then((detail) => setContract({ title: detail.title, plainText: detail.ocrText ?? null }))
+      .then((detail) => setContract({ title: detail.title }))
       .catch((error) => console.error("Contrat introuvable en contrathèque :", error));
   }, [status, contractRef]);
 
@@ -114,15 +114,11 @@ export function ContractPackSuccess() {
               icon={<CheckCircle2 className="h-6 w-6 text-green-600" />}
               iconBg="bg-green-100"
               title="Paiement confirmé"
-              text="Merci pour votre confiance. Vos documents sont prêts et votre facture vous est envoyée par e-mail."
+              text="Merci pour votre confiance. Vos documents vous sont envoyés par e-mail, avec votre facture dans un message séparé."
             />
             <div className="mx-auto mt-6 max-w-xl rounded-panel bg-white p-5 text-left">
               <p className="mb-3 text-sm font-semibold text-ink">Vos documents</p>
-              <ContractPackDownloads
-                contractRef={contractRef}
-                title={contract.title}
-                plainText={contract.plainText}
-              />
+              <ContractPackDownloads contractRef={contractRef} title={contract.title} />
               <p className="mt-4 text-xs text-ink-muted">
                 Ce contrat reste disponible dans votre contrathèque : vous pourrez retélécharger ces documents à tout moment.
               </p>

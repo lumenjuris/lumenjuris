@@ -166,7 +166,7 @@ routerBilling.post("/create-one-shot-checkout", authMiddleware, async (req: Requ
       })
     }
 
-    const { item, contractRef, documentContent } = req.body;
+    const { item, contractRef, documentContent, refundGenerationCredit } = req.body;
 
     if (!isItemVente(item)) {
       return res.status(400).json({
@@ -195,12 +195,12 @@ routerBilling.post("/create-one-shot-checkout", authMiddleware, async (req: Requ
     }
 
     const userId = Number(req.idUser);
-    const checkout = await stripeService.createOneShotCheckout(
-      userId,
-      item,
-      contractRef,
-      documentContent ?? null,
-    );
+    const checkout = await stripeService.createOneShotCheckout(userId, item, contractRef, {
+      documentContent: documentContent ?? null,
+      // Contrat issu de « Créer de zéro » : crédit de génération rendu après paiement
+      // (borné côté Credit.refundQuota, impossible d'en gagner plus que consommé)
+      refundGenerationCredit: refundGenerationCredit === true,
+    });
 
     // Statut HTTP relayé depuis le service : 409 si déjà payé,
     // 404 si utilisateur, contrat ou article introuvable.
@@ -306,10 +306,14 @@ routerBilling.post("/one-shot/:idBilling/resend-email", authMiddleware, async (r
       return res.status(400).json({ success: false, message: "Identifiant d'achat invalide." })
     }
 
-    const sent = await new ContractPack().resendEmail(Number(req.idUser), idBilling);
-    return res.status(sent ? 200 : 500).json({
-      success: sent,
-      message: sent
+    const result = await new ContractPack().resendEmail(Number(req.idUser), idBilling);
+
+    if (result === "not_found") {
+      return res.status(404).json({ success: false, message: "Achat introuvable." })
+    }
+    return res.status(result === "sent" ? 200 : 500).json({
+      success: result === "sent",
+      message: result === "sent"
         ? "Les documents vous ont été renvoyés par e-mail."
         : "L'envoi a échoué. Réessayez dans quelques instants.",
     })

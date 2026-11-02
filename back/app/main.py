@@ -1,10 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any, Set, Tuple
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Set, Tuple, Literal
 import os
 import io
+import hmac
 import base64
 import binascii
 import requests
@@ -52,18 +52,76 @@ setup_logging("INFO")
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# ─────────────────────────────────────────────────────────────────────────────
+# SÉCURITÉ — ce serveur n'est appelé QUE par nos serveurs (proxy et backNode).
+#
+# Chaque requête doit porter le header `x-internal-api-key` égal à la variable
+# INTERNAL_API_KEY (même valeur que dans proxy/.env et backNode/.env).
+# Sans cette garde, n'importe qui sur Internet pouvait appeler les routes IA
+# et consommer nos crédits OpenAI.
+#
+# - En production, si INTERNAL_API_KEY n'est pas configurée, TOUT est refusé
+#   (on préfère un service en panne à un service ouvert).
+# - En dev, si la clé n'est pas configurée, on laisse passer pour ne pas
+#   bloquer le poste local.
+# ─────────────────────────────────────────────────────────────────────────────
+
+INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "")
+
+# Routes accessibles sans clé (aucun appel IA derrière).
+ROUTES_PUBLIQUES = {"/health"}
+
+
+async def verifier_cle_interne(request: Request) -> None:
+    if request.url.path in ROUTES_PUBLIQUES:
+        return
+
+    if not INTERNAL_API_KEY:
+        if IS_PROD:
+            raise HTTPException(status_code=503, detail="Service non configuré.")
+        return
+
+    cle_recue = request.headers.get("x-internal-api-key", "")
+    # compare_digest : comparaison en temps constant (évite de deviner la clé
+    # caractère par caractère en mesurant le temps de réponse).
+    if not hmac.compare_digest(cle_recue, INTERNAL_API_KEY):
+        raise HTTPException(status_code=401, detail="Accès refusé.")
+
+
+# En production, on ne publie pas la documentation automatique (/docs, /redoc,
+# /openapi.json) : elle donnait la liste complète des routes à un attaquant.
+app = FastAPI(
+    dependencies=[Depends(verifier_cle_interne)],
+    docs_url=None if IS_PROD else "/docs",
+    redoc_url=None if IS_PROD else "/redoc",
+    openapi_url=None if IS_PROD else "/openapi.json",
+)
+
+if not INTERNAL_API_KEY:
+    if IS_PROD:
+        logger.error("INTERNAL_API_KEY absente : toutes les routes (sauf /health) répondront 503.")
+    else:
+        logger.warning("INTERNAL_API_KEY absente : routes ouvertes (mode dev uniquement).")
 
 # Veille juridique (ingestion Judilibre + enrichissement LLM — stateless)
 app.include_router(legal_watch_router)
 
-proxyUrl = ["http://localhost:3020", "https://proxy.lumenjuris.com"]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[proxyUrl],
-    allow_methods=["*"],
-    allow_headers=["*"],
-) 
+# Pas de CORS : aucun navigateur n'appelle ce serveur directement, seuls le
+# proxy et backNode le font (appels serveur à serveur, non concernés par CORS).
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LIMITES des appels IA — bornent le coût maximal d'une requête.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Modèles que l'application utilise réellement. Tout autre modèle est refusé.
+ModeleChat = Literal["gpt-4o", "gpt-4o-mini", "gpt-5.2", "gpt-5.4-nano"]
+ModeleGpt5 = Literal["gpt-5.2", "gpt-5.4-nano"]
+
+MAX_CARACTERES_CONTRAT = 300_000   # ~75k tokens : un contrat de plus de 100 pages
+MAX_CARACTERES_PROMPT = 400_000    # prompt complet (contrat + consignes)
+MAX_CARACTERES_MESSAGE = 10_000    # une question de chat
+MAX_TOKENS_REPONSE = 4_000         # le plus gros appelant demande 3 500
 
 
 
@@ -71,53 +129,61 @@ HF_TOKEN = os.environ.get("HF_TOKEN") #Hugging Face
 
 
 class SearchRequest(BaseModel):
-    query: str
+    query: str = Field(max_length=1_000)
     limit: int = 3
 
 
 class JurisprudenceRequest(BaseModel):
-    queries: List[str]
+    queries: List[str] = Field(max_length=10)
     # Description de la clause et du problème juridique identifié : active le
     # re-classement sémantique des décisions (recherche hybride).
-    context: Optional[str] = None
+    context: Optional[str] = Field(default=None, max_length=MAX_CARACTERES_MESSAGE)
 
 
 class ClassifyVeilleRequest(BaseModel):
-    articles: List[Dict[str, str]]  # [{title, description}, ...]
+    articles: List[Dict[str, str]] = Field(max_length=100)  # [{title, description}, ...]
 
 
 class AnalyzeClauseRequest(BaseModel):
-    clauseText: str
-    question: str
-    clauseType: Optional[str] = None
+    clauseText: str = Field(max_length=MAX_CARACTERES_CONTRAT)
+    question: str = Field(max_length=MAX_CARACTERES_MESSAGE)
+    clauseType: Optional[str] = Field(default=None, max_length=200)
 
 
 
 class OpenAIRequestGpt5(BaseModel):
-    prompt: str
-    reasoning : str
-    verbosity : str
-    model: str = "gpt-5.2"
+    prompt: str = Field(max_length=MAX_CARACTERES_PROMPT)
+    reasoning: Literal["none", "low", "medium", "high"]
+    verbosity: Literal["low", "medium", "high"]
+    model: ModeleGpt5 = "gpt-5.2"
 
 
 
 class ChatMessage(BaseModel):
-    role: str
+    # Pas de rôle "system" dans l'historique : le cadre du modèle est fixé ici.
+    role: Literal["user", "assistant"]
     content: str
 
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(max_length=MAX_CARACTERES_MESSAGE)
     context: Optional[str] = ""
-    history: List[ChatMessage] = []
-    model: str = "gpt-4o"
+    # Le front envoie toute la conversation ; seuls les 10 derniers messages,
+    # tronqués, sont transmis à OpenAI (voir la route /chat).
+    history: List[ChatMessage] = Field(default=[], max_length=500)
+    model: ModeleChat = "gpt-4o"
+
+
+class OpenAIChatMessage(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(max_length=MAX_CARACTERES_PROMPT)
 
 
 class OpenAIChatRequest(BaseModel):
-    messages: List[Dict[str, str]]
-    model: str = "gpt-4o"
-    temperature: float = 0.3
-    max_tokens: int = 800
+    messages: List[OpenAIChatMessage] = Field(min_length=1, max_length=20)
+    model: ModeleChat = "gpt-4o"
+    temperature: float = Field(default=0.3, ge=0, le=2)
+    max_tokens: int = Field(default=800, ge=1, le=MAX_TOKENS_REPONSE)
     response_format: Optional[Dict[str, Any]] = None
 
 
@@ -245,19 +311,8 @@ CONTRACT_METADATA_KEYS = [
 
 
 
-@app.get("/health")
-def healtMonitor():
-    try:
-        return {
-            "status" : "OK"
-        }
-    except:
-        return {
-            "status" : "echec"
-        }
-
 class ContractMetadataFromTextRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=MAX_CARACTERES_CONTRAT)
 
 
 async def _lire_texte_contrat(filename: str, content: bytes, scan: bool) -> Tuple[str, str]:
@@ -328,6 +383,8 @@ async def _analyser_metadonnees_ia(texte: str) -> Tuple[List[Dict[str, Any]], An
     """
     if not _openai_client:
         raise HTTPException(status_code=503, detail="Service d'extraction IA non disponible")
+    if len(texte) > MAX_CARACTERES_CONTRAT:
+        raise HTTPException(status_code=413, detail="Contrat trop long pour l'analyse IA.")
 
     prompt = _construire_prompt_metadonnees(texte)
 
@@ -437,7 +494,7 @@ async def classify_veille(req: ClassifyVeilleRequest):
 
     tag_list = ", ".join(_VEILLE_TAGS)
     lines = "\n".join(
-        f"{i+1}. \"{a.get('title','')}\" — {a.get('description','')[:150]}"
+        f"{i+1}. \"{a.get('title','')[:300]}\" — {a.get('description','')[:150]}"
         for i, a in enumerate(req.articles)
     )
     prompt = (
@@ -602,7 +659,7 @@ async def jurisprudence(req: JurisprudenceRequest):
     # ── Recherche hybride ──────────────────────────────────────────────────
     # 1) Rappel lexical élargi : jusqu'à 3 requêtes complémentaires en parallèle
     #    (Judilibre), pool de candidats plus large que le besoin final.
-    queries = [q for q in (req.queries or []) if isinstance(q, str) and q.strip()][:3]
+    queries = [q[:500] for q in (req.queries or []) if isinstance(q, str) and q.strip()][:3]
     pool_size = 6 if req.context else 3
     # fetch_text=False : pool léger (métadonnées seulement) — le texte complet
     # n'est téléchargé que pour les 3 décisions retenues (hydratation ci-dessous).
@@ -810,7 +867,7 @@ Lorsque cela est pertinent, précise qu'un professionnel du droit peut être né
         if h.role and h.content:
             messages.append({
                 "role": h.role,
-                "content": h.content,
+                "content": h.content[:MAX_CARACTERES_MESSAGE],
             })
 
     messages.append({
@@ -868,7 +925,7 @@ async def openai_chat(req: OpenAIChatRequest):
         raise HTTPException(status_code=503, detail="Service OpenAI non configuré")
     params = {
         "model": req.model,
-        "messages": req.messages,
+        "messages": [message.model_dump() for message in req.messages],
         "temperature": req.temperature,
         "max_tokens": req.max_tokens,
     }
@@ -882,7 +939,9 @@ async def openai_chat(req: OpenAIChatRequest):
             "openai_tokens": extract_token_usage(response, req.model),
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Le détail reste dans les logs : on ne renvoie pas l'erreur brute d'OpenAI.
+        logger.error(f"[openai-chat] Erreur OpenAI : {e}")
+        raise HTTPException(status_code=500, detail="Erreur du service IA.")
 
 
 
@@ -894,10 +953,8 @@ async def openai_chat52(req:OpenAIRequestGpt5):
     if not _openai_client:
         raise HTTPException(status_code=503, detail="Service OpenAI non configuré")
 
-    allowed_models = {"gpt-5.2", "gpt-5.4-nano"}
-    if req.model not in allowed_models:
-        raise HTTPException(status_code=400, detail=f"Modèle OpenAI non autorisé: {req.model}")
-    
+    # Le modèle, le niveau de réflexion et la verbosité sont déjà contrôlés
+    # par OpenAIRequestGpt5 (valeurs autorisées uniquement).
     try:
         #construction des parametres
         params = {
@@ -925,10 +982,8 @@ async def openai_chat52(req:OpenAIRequestGpt5):
             "openai_tokens": extract_token_usage(response, req.model),
         }
     except Exception as e:
-        import traceback
-        print("❌ Erreur OpenAI:", type(e), e)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"[openai-chat-5] Erreur OpenAI : {e}")
+        raise HTTPException(status_code=500, detail="Erreur du service IA.")
 
 
 
@@ -956,7 +1011,8 @@ async def huggingface_generate(req: HFRequest):
             text = data.get("generated_text", "")
         return {"generated_text": text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"[huggingface-generate] Erreur : {e}")
+        raise HTTPException(status_code=500, detail="Erreur du service IA.")
 
 
 @app.post("/summarize-case")

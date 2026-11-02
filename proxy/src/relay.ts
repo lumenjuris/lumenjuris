@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import http from "http";
-import { BACKEND_URL, BACKNODE_URL } from "./config.js";
+import { BACKEND_URL, BACKNODE_URL, pythonHeaders } from "./config.js";
 
 // Réponse JSON du backend Python, avec la conso de tokens éventuelle.
 export type OpenAiUsagePayload = {
@@ -27,7 +27,13 @@ export function relayStreamToPython(
     port: Number(backendUrl.port) || 80,
     path: backendUrl.pathname,
     method: req.method,
-    headers: { ...req.headers, host: backendUrl.host },
+    // On garde les en-têtes du multipart (Content-Type avec boundary, taille),
+    // mais on écrase la clé interne : celle envoyée par le client ne compte pas.
+    headers: {
+      ...req.headers,
+      host: backendUrl.host,
+      "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+    },
   };
   const proxyReq = http.request(options, (proxyRes) => {
     res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers as any);
@@ -49,7 +55,7 @@ export function relayJsonToPython(
 ): void {
   fetch(`${BACKEND_URL}${targetPath}`, {
     method: req.method,
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify(req.body),
   })
     .then(async (r) => {

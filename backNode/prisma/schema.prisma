@@ -218,7 +218,7 @@ model User {
   userUpload         UserUpload?
   contractTemplates  ContractTemplate[]
   signatureEnvelopes SignatureEnvelope[]
-  achatUnique       BillingOneShot[]
+  achatUnique        BillingOneShot[]
 
   // Contrathèque
   contracts        Contract[]
@@ -520,6 +520,16 @@ model BillingOneShot {
   // Chiffré (voir encryptedFields.ts). Absent pour les achats antérieurs : on
   // reconstruit alors les documents depuis le texte du contrat en contrathèque.
   documentContent Json?
+
+  // Synthèse IA de la fiche récapitulative (gpt-5.2, prompt de « Comprendre contrat »).
+  // Gardée ici, chiffrée, pour qu'une régénération ne rappelle pas l'IA. Volontairement
+  // PAS enregistrée dans ContractSummary : elle fait partie de l'achat.
+  aiSummary Json?
+
+  // Contrat issu de « Créer de zéro » : le crédit generatorFromScratch consommé à la
+  // rédaction est rendu au paiement (une seule fois, date du remboursement ci-dessous).
+  refundGenerationCredit     Boolean   @default(false)
+  generationCreditRefundedAt DateTime?
 
   // Livraison des documents après paiement
   deliveryStatus DeliveryStatus @default(PENDING)

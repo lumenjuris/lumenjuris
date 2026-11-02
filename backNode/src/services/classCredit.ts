@@ -234,6 +234,92 @@ export class Credit {
   }
 
   /**
+   * Rend 1 unité de quota déjà consommée (ex : crédit de génération d'un contrat
+   * finalement acheté à l'unité). Garde-fous :
+   *  - un seul remboursement par `sourceId` (rejeu sans effet) ;
+   *  - jamais plus de remboursements que de consommations depuis le début de la
+   *    période en cours (dernière attribution SUBSCRIPTION) : impossible de
+   *    « gagner » des crédits.
+   */
+  async refundQuota(userId: number, feature: string, sourceId: string, description: string): Promise<ReturnData> {
+    try {
+      if (!isConsumable(feature)) {
+        return { success: false, message: `Feature "${feature}" non consommable.` };
+      }
+      if (await isAdmin(userId)) {
+        return { success: true, message: "Quota illimité, rien à rendre.", data: { refunded: false } };
+      }
+
+      const alreadyRefunded = await prisma.creditTransaction.findFirst({
+        where: { userId, feature, type: CreditTransactionType.REFUND, sourceId },
+        select: { id: true },
+      });
+      if (alreadyRefunded) {
+        return { success: true, message: "Crédit déjà rendu.", data: { refunded: false } };
+      }
+
+      const result = await getActiveQuotas(userId);
+      if ("reason" in result) return { success: false, message: REASON_MESSAGES[result.reason] };
+
+      const state = readRemaining(result.quotas, feature);
+      if (state.kind === "unlimited") {
+        return { success: true, message: "Quota illimité, rien à rendre.", data: { refunded: false } };
+      }
+      if (state.kind === "disabled") {
+        return { success: false, message: `Feature "${feature}" non incluse dans le plan.` };
+      }
+
+      // Début de la période en cours : dernière attribution de quotas
+      const lastAttribution = await prisma.creditTransaction.findFirst({
+        where: { userId, type: CreditTransactionType.SUBSCRIPTION },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      });
+      const periodStart = lastAttribution?.createdAt ?? new Date(0);
+
+      const [consumed, refunded] = await Promise.all([
+        prisma.creditTransaction.aggregate({
+          _sum: { amount: true },
+          where: { userId, feature, type: CreditTransactionType.CONSUMPTION, createdAt: { gte: periodStart } },
+        }),
+        prisma.creditTransaction.aggregate({
+          _sum: { amount: true },
+          where: { userId, feature, type: CreditTransactionType.REFUND, createdAt: { gte: periodStart } },
+        }),
+      ]);
+      // Les consommations sont stockées en négatif, les remboursements en positif
+      const consumedThisPeriod = -(consumed._sum.amount ?? 0);
+      const refundedThisPeriod = refunded._sum.amount ?? 0;
+      if (consumedThisPeriod - refundedThisPeriod < 1) {
+        return { success: true, message: "Aucune consommation à rendre sur la période.", data: { refunded: false } };
+      }
+
+      const newRemaining = state.remaining + 1;
+      const newQuotas = writeRemaining(result.quotas, feature, newRemaining);
+
+      await prisma.$transaction([
+        prisma.userCredit.update({ where: { userId }, data: { quotas: newQuotas } }),
+        prisma.creditTransaction.create({
+          data: {
+            userId,
+            feature,
+            amount: 1, // + crédit rendu
+            balanceAfter: newRemaining,
+            type: CreditTransactionType.REFUND,
+            description,
+            sourceId,
+          },
+        }),
+      ]);
+
+      return { success: true, message: "Crédit rendu.", data: { refunded: true, feature, remaining: newRemaining } };
+    } catch (error) {
+      console.error("REFUND QUOTA ERROR:", error);
+      return { success: false, message: "Erreur lors du remboursement du quota." };
+    }
+  }
+
+  /**
    * Consomme `amount` unités d'un quota (ex: 1 analyse). Respecte l'illimité
    * (aucun décompte) et refuse si la feature est absente ou le quota épuisé.
    */

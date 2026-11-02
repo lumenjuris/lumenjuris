@@ -215,9 +215,9 @@ export function ContractDetail({ contractId, canDelete, onBack, onDeleted }: Pro
             <div className="bg-white rounded-card border border-line shadow-card p-4 space-y-3">
               <div>
                 <p className="text-[10px] font-bold text-ink-subtle uppercase tracking-widest">Pack Contrat</p>
-                <p className="mt-1 text-xs text-ink-muted">Documents sans filigrane, inclus dans votre achat.</p>
+                <p className="mt-1 text-xs text-ink-muted">Contrat sans filigrane, version Word et fiche de synthèse, inclus dans votre achat.</p>
               </div>
-              <ContractPackDownloads contractRef={contractId} title={data.title} plainText={data.ocrText ?? null} />
+              <ContractPackDownloads contractRef={contractId} title={data.title} />
             </div>
           )}
           <ContractFieldsPanel ref={fieldsPanelRef} key={data.id} contract={data} onSaved={refreshInBackground} onAnalysingChange={setAnalysing} />

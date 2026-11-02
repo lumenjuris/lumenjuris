@@ -420,11 +420,13 @@ export class StripeLumenJuris {
     // le webhook (onOneShotCompleted) qui valide l'achat.
     // `documentContent` : contenu de l'éditeur (JSON TipTap), source des livrables
     // générés après paiement (voir ContractPack).
+    // `refundGenerationCredit` : contrat issu de « Créer de zéro », dont le crédit de
+    // génération sera rendu une fois le paiement confirmé.
     async createOneShotCheckout(
         userId: number,
         item: ItemVente,
         contractRef: string,
-        documentContent: Prisma.InputJsonValue | null,
+        options: { documentContent: Prisma.InputJsonValue | null; refundGenerationCredit: boolean },
     ) {
         const successUrl = `${process.env.HOST_FRONT}/achat/success?contractRef=${encodeURIComponent(contractRef)}`
         const cancelUrl = `${process.env.HOST_FRONT}/achat/failed?contractRef=${encodeURIComponent(contractRef)}`
@@ -507,6 +509,18 @@ export class StripeLumenJuris {
             },
         })
 
+        // Nouvel essai sans le contenu de l'éditeur (ex : « Reprendre l'achat » après
+        // une annulation) : on reprend celui de la tentative précédente du même contrat.
+        const previousAttempt = options.documentContent
+            ? null
+            : await prisma.billingOneShot.findFirst({
+                where: { userId, item, contractRef },
+                orderBy: { createdAt: "desc" },
+                select: { documentContent: true, refundGenerationCredit: true },
+            })
+        const documentContent = options.documentContent ?? previousAttempt?.documentContent ?? null
+        const refundGenerationCredit = options.refundGenerationCredit || previousAttempt?.refundGenerationCredit === true
+
         // Achat en attente : il passera en PAID à la réception du webhook.
         await prisma.billingOneShot.create({
             data: {
@@ -515,7 +529,8 @@ export class StripeLumenJuris {
                 contractRef,
                 status: BillingOneShotStatus.PENDING,
                 stripeCheckoutSessionId: checkout.id,
-                ...(documentContent ? { documentContent } : {}),
+                ...(documentContent ? { documentContent: documentContent as Prisma.InputJsonValue } : {}),
+                refundGenerationCredit,
             }
         })
 

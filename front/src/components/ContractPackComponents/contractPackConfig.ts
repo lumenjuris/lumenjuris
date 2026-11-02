@@ -21,9 +21,9 @@ export const CONTRACT_PACK_DELIVERABLES: ContractPackDeliverable[] = [
   { label: "Contrat PDF sans filigrane", available: true },
   { label: "Contrat Word (.docx) modifiable", available: true },
   // À activer quand le backend générera la fiche de synthèse
-  { label: "Fiche récapitulative PDF", available: false },
+  { label: "Fiche récapitulative PDF", available: true },
   // À activer quand le backend enverra les livrables en pièces jointes
-  { label: "Envoi des documents par e-mail", available: false },
+  { label: "Envoi des documents par e-mail", available: true },
   { label: "Conservation dans votre contrathèque", available: true },
 ];
 
