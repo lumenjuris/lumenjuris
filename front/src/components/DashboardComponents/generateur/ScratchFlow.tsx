@@ -351,6 +351,9 @@ export function ScratchWizard({ title, initialBrief, onReady, onBack }: {
   );
 }
 
+
+
+
 function FreeAnswer({ onSubmit }: { onSubmit: (v: string) => void }) {
   const [v, setV] = useState("");
   return (

@@ -16,6 +16,29 @@ billingRouter.post("/create-checkout", auth, (req,res)=>{
 })
 
 
+// Achat unitaire d'un article pour un contrat précis
+billingRouter.post("/create-one-shot-checkout", auth, (req, res) =>
+  relayToNode(req, res, "/billing/create-one-shot-checkout"),
+);
+
+billingRouter.get("/one-shot/:item/:contractRef", auth, (req, res) =>
+  relayToNode(req, res, `/billing/one-shot/${encodeURIComponent(req.params.item as string)}/${encodeURIComponent(req.params.contractRef as string)}`),
+);
+
+// Livrables des achats unitaires (PDF, Word, fiche de synthèse)
+billingRouter.get("/one-shot/purchases", auth, (req, res) =>
+  relayToNode(req, res, "/billing/one-shot/purchases"),
+);
+
+billingRouter.get("/one-shot/:idBilling/files/:kind", auth, (req, res) =>
+  relayToNodeRaw(req, res, `/billing/one-shot/${encodeURIComponent(req.params.idBilling as string)}/files/${encodeURIComponent(req.params.kind as string)}`),
+);
+
+billingRouter.post("/one-shot/:idBilling/resend-email", auth, (req, res) =>
+  relayToNode(req, res, `/billing/one-shot/${encodeURIComponent(req.params.idBilling as string)}/resend-email`),
+);
+
+
 billingRouter.post("/payment-intent", auth, (req, res) =>
   relayToNode(req, res, "/billing/payment-intent"),
 );

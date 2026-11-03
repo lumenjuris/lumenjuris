@@ -56,6 +56,9 @@ word-addin/dist
 # Contrats chiffrés uploadés (données runtime, ne pas versionner)
 backNode/contracts/
 
+# Livrables chiffrés des achats unitaires (Pack Contrat)
+backNode/livrables/
+
 # Environnement Python (genere localement)
 back/venv/
 

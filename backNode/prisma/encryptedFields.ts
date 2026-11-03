@@ -58,6 +58,9 @@ export const ENCRYPTED_FIELDS: Record<string, string[]> = {
     NegotiationPlaybookAnalysis: ["fileName", "snapshot"],
     ContractTemplate: ["structure"],
     GenerationLog: ["output"],
+
+    // ─── Achat unitaire ───
+    BillingOneShot: ["documentContent", "aiSummary"],
     SignatureEnvelope: [
         "envelopeFields",
         // Données personnelles des signataires

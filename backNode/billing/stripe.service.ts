@@ -1,8 +1,11 @@
 import Stripe from 'stripe';
 import { prisma, type TransactionClient } from "./../prisma/singletonPrisma.js"
-import { Prisma, PlanName, PlanInterval, SubscriptionStatus, CreditTransactionType } from "@prisma/client"
+import { Prisma, PlanName, PlanInterval, SubscriptionStatus, CreditTransactionType, ItemVente, BillingOneShotStatus } from "@prisma/client"
 import { Mailer } from "../src/infrastructure/mailer/classMailer.js"
 import type { InvoiceData } from "../src/infrastructure/pdf/invoicePDF.js"
+import { isItemVente } from "../src/utils/typeGuard.js"
+import { ITEM_VENTE_LABELS } from "../src/utils/itemVente.js"
+import { ContractPack } from "../src/services/classContractPack.js"
 import {
     buildInvoiceNumber,
     buildCustomerInvoiceInfo,
@@ -84,9 +87,21 @@ export class StripeLumenJuris {
 
             switch (event.type) {
                 case "checkout.session.completed":
+                    // Achat unitaire (mode payment) : rien à voir avec un abonnement
+                    if ((event.data.object as Stripe.Checkout.Session).mode === "payment") {
+                        return this.onOneShotCompleted(event)
+                    }
                     //Création de la nouvelle subscription succès, première activation
                     //Commencer a mettre les credits
                     return this.onCheckoutCompleted(event)
+
+                case "checkout.session.async_payment_succeeded":
+                    // Achat unitaire payé par un moyen différé (ex : prélèvement SEPA)
+                    return this.onOneShotCompleted(event)
+
+                case "checkout.session.expired":
+                    // Checkout abandonné : l'achat unitaire en attente est clos
+                    return this.onOneShotExpired(event)
 
                 case "invoice.payment_succeeded":
                     //Chaque mois quand un paiment a lieux pour une subscription 
@@ -332,19 +347,7 @@ export class StripeLumenJuris {
             }
         }
 
-        // Réutilise le customer existant, sinon en crée un ET le persiste tout de
-        // suite : sans ça, chaque checkout abandonné recréerait un customer Stripe
-        // (le webhook ne l'enregistre qu'en cas de paiement abouti).
-        let customerId = user?.stripeCustomerId ?? undefined;
-        if (!customerId) {
-            customerId = (await this.createCustomer(user.email, user.nom ? user.nom : user.prenom ?? "Non défini")).customerId;
-            if (customerId) {
-                await prisma.user.update({
-                    where: { idUser: userId },
-                    data: { stripeCustomerId: customerId },
-                });
-            }
-        }
+        const customerId = await this.getOrCreateCustomerId(userId, user);
 
 
         const checkout = await this.stripeClient.checkout.sessions.create({
@@ -388,6 +391,175 @@ export class StripeLumenJuris {
             data: dataCheckout,
             url: dataCheckout.url
         }
+    }
+
+
+    // Réutilise le customer existant, sinon en crée un ET le persiste tout de
+    // suite : sans ça, chaque checkout abandonné recréerait un customer Stripe
+    // (le webhook ne l'enregistre qu'en cas de paiement abouti).
+    private async getOrCreateCustomerId(
+        userId: number,
+        user: { email: string; nom: string | null; prenom: string | null; stripeCustomerId: string | null },
+    ) {
+        let customerId = user.stripeCustomerId ?? undefined;
+        if (!customerId) {
+            customerId = (await this.createCustomer(user.email, user.nom ? user.nom : user.prenom ?? "Non défini")).customerId;
+            if (customerId) {
+                await prisma.user.update({
+                    where: { idUser: userId },
+                    data: { stripeCustomerId: customerId },
+                });
+            }
+        }
+        return customerId;
+    }
+
+
+    // Achat unitaire (paiement one shot) d'un article pour un contrat précis.
+    // Même principe que createCheckout : le front redirige vers Stripe, et c'est
+    // le webhook (onOneShotCompleted) qui valide l'achat.
+    // `documentContent` : contenu de l'éditeur (JSON TipTap), source des livrables
+    // générés après paiement (voir ContractPack).
+    // `refundGenerationCredit` : contrat issu de « Créer de zéro », dont le crédit de
+    // génération sera rendu une fois le paiement confirmé.
+    async createOneShotCheckout(
+        userId: number,
+        item: ItemVente,
+        contractRef: string,
+        options: { documentContent: Prisma.InputJsonValue | null; refundGenerationCredit: boolean },
+    ) {
+        const successUrl = `${process.env.HOST_FRONT}/achat/success?contractRef=${encodeURIComponent(contractRef)}`
+        const cancelUrl = `${process.env.HOST_FRONT}/achat/failed?contractRef=${encodeURIComponent(contractRef)}`
+
+        const user = await prisma.user.findUnique({
+            where: { idUser: userId },
+            select: {
+                email: true,
+                nom: true,
+                prenom: true,
+                stripeCustomerId: true
+            }
+        })
+
+        if (!user) {
+            return {
+                success: false,
+                status: 404,
+                message: "Utilisateur introuvable."
+            }
+        }
+
+        // Le contrat acheté doit appartenir à l'utilisateur (sinon on paierait
+        // pour la référence de quelqu'un d'autre, ou pour une référence inventée).
+        const contract = await prisma.contract.findFirst({
+            where: { externalId: contractRef, userId },
+            select: { idContract: true }
+        })
+        if (!contract) {
+            return {
+                success: false,
+                status: 404,
+                message: "Contrat introuvable dans votre contrathèque."
+            }
+        }
+
+        // Garde anti-doublon : ce contrat a déjà été payé pour cet article.
+        const alreadyPaid = await this.hasPaidOneShot(userId, item, contractRef)
+        if (alreadyPaid) {
+            return {
+                success: false,
+                status: 409,
+                message: "Cet achat a déjà été réglé pour ce contrat."
+            }
+        }
+
+        //recherche du prix de l'article dans la bdd
+        const itemBilling = await prisma.itemBilling.findUnique({
+            where: { item },
+            select: { stripePriceId: true }
+        })
+
+        if (!itemBilling) {
+            return {
+                success: false,
+                status: 404,
+                message: "L'article n'a pas pu être retrouvé."
+            }
+        }
+
+        const customerId = await this.getOrCreateCustomerId(userId, user);
+
+        const checkout = await this.stripeClient.checkout.sessions.create({
+            mode: "payment",
+            customer: customerId,
+            line_items: [
+                {
+                    price: itemBilling.stripePriceId,
+                    quantity: 1
+                }
+            ],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            // `type` permet au webhook de distinguer un achat unitaire d'un abonnement
+            metadata: {
+                type: "one_shot",
+                userId: userId.toString(),
+                item,
+                contractRef,
+            },
+        })
+
+        // Nouvel essai sans le contenu de l'éditeur (ex : « Reprendre l'achat » après
+        // une annulation) : on reprend celui de la tentative précédente du même contrat.
+        const previousAttempt = options.documentContent
+            ? null
+            : await prisma.billingOneShot.findFirst({
+                where: { userId, item, contractRef },
+                orderBy: { createdAt: "desc" },
+                select: { documentContent: true, refundGenerationCredit: true },
+            })
+        const documentContent = options.documentContent ?? previousAttempt?.documentContent ?? null
+        const refundGenerationCredit = options.refundGenerationCredit || previousAttempt?.refundGenerationCredit === true
+
+        // Achat en attente : il passera en PAID à la réception du webhook.
+        await prisma.billingOneShot.create({
+            data: {
+                userId,
+                item,
+                contractRef,
+                status: BillingOneShotStatus.PENDING,
+                stripeCheckoutSessionId: checkout.id,
+                ...(documentContent ? { documentContent: documentContent as Prisma.InputJsonValue } : {}),
+                refundGenerationCredit,
+            }
+        })
+
+        return {
+            success: true,
+            data: {
+                id: checkout.id,
+                url: checkout.url,
+                mode: checkout.mode,
+                status: checkout.status,
+                paymentStatus: checkout.payment_status
+            },
+            url: checkout.url
+        }
+    }
+
+
+    // Indique si l'utilisateur a déjà payé cet article pour ce contrat.
+    async hasPaidOneShot(userId: number, item: ItemVente, contractRef: string) {
+        const paidPurchase = await prisma.billingOneShot.findFirst({
+            where: {
+                userId,
+                item,
+                contractRef,
+                status: BillingOneShotStatus.PAID
+            },
+            select: { idBilling: true }
+        })
+        return !!paidPurchase
     }
 
 
@@ -517,6 +689,143 @@ export class StripeLumenJuris {
             });
 
             console.log(`Checkout complété : abonnement activé pour userId=${userId}, idPlan=${idPlan}`)
+        });
+    }
+
+
+    // Validation d'un achat unitaire (checkout en mode payment)
+    private async onOneShotCompleted(event: Stripe.Event) {
+        // Achat payé dont il faut générer et envoyer les livrables après le commit
+        let paidPurchaseId: number | undefined;
+        // Rempli DANS la transaction, envoyé APRÈS le commit (même principe que onPaymentSucceeded).
+        let invoiceEmail:
+            | {
+                email: string;
+                prenom: string | null;
+                data: InvoiceData;
+            }
+            | undefined;
+
+        const result = await this.processOnce(event, async (tx) => {
+            const session = event.data.object as Stripe.Checkout.Session;
+
+            // Paiement différé pas encore encaissé : l'achat reste PENDING,
+            // checkout.session.async_payment_succeeded arrivera plus tard.
+            if (session.payment_status !== "paid") {
+                console.log("Achat unitaire en attente d'encaissement :", session.id);
+                return;
+            }
+
+            if (!session.metadata) throw new Error("Metadata Stripe checkout.session absente (achat unitaire).");
+
+            const userId = Number(session.metadata.userId);
+            const item = session.metadata.item;
+            const contractRef = session.metadata.contractRef;
+            if (!Number.isInteger(userId) || !isItemVente(item) || !contractRef) {
+                throw new Error(
+                    `Metadata achat unitaire invalides : userId=${session.metadata.userId}, item=${item}, contractRef=${contractRef}`,
+                );
+            }
+
+            const stripePaymentIntentId =
+                typeof session.payment_intent === "string"
+                    ? session.payment_intent
+                    : session.payment_intent?.id ?? null;
+
+            const paidData = {
+                status: BillingOneShotStatus.PAID,
+                amount: session.amount_total ?? 0,
+                stripePaymentIntentId,
+                paidAt: new Date(),
+            };
+
+            // La ligne PENDING est normalement créée par createOneShotCheckout.
+            // Si elle manque (échec d'écriture après la création de la session),
+            // on la recrée depuis les metadata pour ne pas perdre un paiement.
+            const purchase = await tx.billingOneShot.upsert({
+                where: { stripeCheckoutSessionId: session.id },
+                create: {
+                    userId,
+                    item,
+                    contractRef,
+                    stripeCheckoutSessionId: session.id,
+                    ...paidData,
+                },
+                update: paidData,
+            });
+
+            paidPurchaseId = purchase.idBilling;
+
+            // Créer la Facture de l'achat (une seule par achat : billingOneShotId est @unique)
+            const facture = await tx.facture.create({
+                data: {
+                    billingOneShotId: purchase.idBilling,
+                    price: paidData.amount,
+                    stripeInvoiceId: stripePaymentIntentId ?? session.id,
+                    status: "PAID",
+                },
+            });
+
+            // Préparer les données de l'email de facture (envoyé après le commit)
+            const user = await tx.user.findUnique({
+                where: { idUser: userId },
+                select: USER_INVOICE_SELECT,
+            });
+            if (user) {
+                invoiceEmail = {
+                    email: user.email,
+                    prenom: user.prenom,
+                    data: {
+                        invoiceNumber: buildInvoiceNumber(facture.idFacture, facture.createdAt),
+                        date: facture.createdAt,
+                        ...buildCustomerInvoiceInfo(user),
+                        itemLabel: ITEM_VENTE_LABELS[item],
+                        amountTTCCents: facture.price,
+                        stripePaymentIntentId: facture.stripeInvoiceId,
+                    },
+                };
+            }
+
+            console.log(`Achat unitaire payé : userId=${userId}, item=${item}, contractRef=${contractRef}`)
+        });
+
+        // Effet externe non annulable : hors transaction, uniquement si le travail a réellement tourné
+        if (result.success && invoiceEmail) {
+            new Mailer(invoiceEmail.email)
+                .sendInvoice(invoiceEmail.data, invoiceEmail.prenom ?? undefined)
+                .catch((error) =>
+                    console.error(
+                        "Erreur lors de l'envoi de la facture d'achat unitaire par email (webhook):",
+                        error,
+                    ),
+                );
+        }
+
+        // Livrables (PDF, Word, fiche) : générés et envoyés hors transaction, sans faire
+        // attendre Stripe. En cas d'échec, le téléchargement relance la génération.
+        if (result.success && paidPurchaseId) {
+            new ContractPack()
+                .deliver(paidPurchaseId)
+                .catch((error) => console.error("Erreur lors de la livraison des documents (webhook):", error));
+        }
+
+        return result;
+    }
+
+
+    // Session de checkout expirée sans paiement : l'achat en attente est clos.
+    private async onOneShotExpired(event: Stripe.Event) {
+        return this.processOnce(event, async (tx) => {
+            const session = event.data.object as Stripe.Checkout.Session;
+
+            // Les checkouts d'abonnement abandonnés n'ont pas de ligne à clore
+            await tx.billingOneShot.updateMany({
+                where: {
+                    stripeCheckoutSessionId: session.id,
+                    status: BillingOneShotStatus.PENDING,
+                },
+                data: { status: BillingOneShotStatus.EXPIRED },
+            });
         });
     }
 

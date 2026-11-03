@@ -12,6 +12,7 @@ import { templateSignatureOtp } from "./template/signatureOtp.js";
 import { templateExportData } from "./template/userData.js";
 import { templateDeleteAccount } from "./template/deleteAccount.js";
 import { templatePaymentFailed } from "./template/paymentFailed.js";
+import { templateContractPackDelivery } from "./template/contractPackDelivery.js";
 
 import { generateInvoicePDF, type InvoiceData } from "../pdf/invoicePDF.js";
 import { logger } from "../../logger/logger.js";
@@ -423,6 +424,39 @@ export class Mailer {
    * automatiquement : l'email invite à vérifier le moyen de paiement pour éviter
    * une rétrogradation. `manageBillingUrl` pointe vers l'espace de gestion.
    */
+  /**
+   * Livre les documents d'un achat unitaire (Pack Contrat) en pièces jointes.
+   * Les fichiers sont déjà générés et déchiffrés par l'appelant (ContractPack).
+   */
+  async sendContractPack(opts: {
+    username?: string;
+    contractTitle: string;
+    contractUrl: string;
+    attachments: { label: string; filename: string; content: Buffer; contentType: string }[];
+  }): Promise<MailResult> {
+    try {
+      const html = this.createHtmlFullContent(
+        templateContractPackDelivery({
+          username: opts.username,
+          contractTitle: opts.contractTitle,
+          contractUrl: opts.contractUrl,
+          attachmentLabels: opts.attachments.map((attachment) => attachment.label),
+        }),
+      );
+
+      const mailOptions = this.createOption(html, `Vos documents Lumen Juris — ${opts.contractTitle}`, {
+        attachments: opts.attachments.map(({ filename, content, contentType }) => ({ filename, content, contentType })),
+      });
+
+      return this.send(
+        mailOptions,
+        `Les documents du contrat ont été envoyés à ${this.email}.`,
+      );
+    } catch (err) {
+      return this.errorCatching(err);
+    }
+  }
+
   async sendPaymentFailed(opts: {
     username?: string;
     planName: string;

@@ -10,6 +10,7 @@ import type { ContractStats, ContractListItem, ListFilters, ContractStatus, Fold
 import { ConfirmationModal } from "../../ui/ConfirmationModal";
 import { Sidebar } from "./Sidebar";
 import { BannerAction, PageBanner } from "../../common/PageBanner";
+import { listContractPackPurchases } from "../../ContractPackComponents/contractPackApi";
 
 interface Props {
   onOpen: (id: string) => void;
@@ -42,6 +43,8 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
 
   const [filters, setFilters] = useState<ListFilters>({ sortBy: "endDate", sortDir: "asc", page: 1, pageSize: PAGE_SIZE });
   const [search, setSearch] = useState("");
+  // Contrats achetés à l'unité (Pack Contrat) : badge « Acheté » dans le tableau
+  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true); setError("");
@@ -65,6 +68,15 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
   }, [filters, activeFolder, activeTags]);
 
   useEffect(() => { void loadData(); }, [loadData, refreshKey]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    listContractPackPurchases()
+      .then((purchases) => { if (isCurrent) setPurchasedIds(purchases.map((purchase) => purchase.contractRef)); })
+      // Sans réponse, on n'affiche simplement pas le badge
+      .catch((err) => console.error("Achats indisponibles :", err));
+    return () => { isCurrent = false; };
+  }, [refreshKey]);
 
   const handleFolderSelect = (id: string | null) => {
     setActiveFolder(id);
@@ -211,6 +223,7 @@ export function ContrathequeList({ onOpen, onImport, tab, onTab, canDelete, refr
             canDelete={canDelete}
             onDelete={handleDelete}
             highlightedIds={highlightedIds}
+            purchasedIds={purchasedIds}
           />
 
           {/* Pagination */}

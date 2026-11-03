@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import { encryptBuffer } from "../../services/encryption.js";
+import { PlanInterval } from "@prisma/client";
 
 // Ligne de facturation additionnelle (ex: options prises avec l'abonnement).
 // Le prix est TTC, exprimé en centimes, comme `amountTTCCents`.
@@ -18,9 +19,11 @@ export type InvoiceData = {
   customerEmail: string;
   customerAddress?: string; // ex: "12 rue des Lilas\n75011 Paris"
   customerVatNumber?: string; // optionnel, B2B intracommunautaire
-  planName: string;
-  interval: string;
-  amountTTCCents: number; // montant TTC de l'abonnement (hors items ci-dessous)
+  // Abonnement : planName + interval. Achat unitaire : itemLabel seul.
+  planName?: string;
+  interval?: string;
+  itemLabel?: string; // ex: "Contrat sans filigrane"
+  amountTTCCents: number; // montant TTC de l'abonnement ou de l'achat (hors items ci-dessous)
   items?: InvoiceItem[]; // options/suppléments facturés en plus de l'abonnement
   stripePaymentIntentId?: string;
   paymentMethodLabel?: string; // défaut: "Carte bancaire"
@@ -45,13 +48,13 @@ function getVendor() {
   };
 }
 
-// ── Palette ─────────────────────────────────────────────────────────────────
-const BLUE = "#5B9DF5"; // bleu de marque (identique au mailer)
-const BLUE_SOFT = "#9CB8E8"; // bleu secondaire ("Juris")
-const INK = "#1f2937"; // texte principal
-const MUTED = "#6b7280"; // texte secondaire
-const LINE = "#e5e7eb"; // filets / bordures
-const BG_SOFT = "#f9fafb"; // fonds de blocs
+// ── Palette (réutilisée par les livrables d'achat, contractPackPDF.ts) ─────────────────────────────────────────────────────────────────
+export const BLUE = "#5B9DF5"; // bleu de marque (identique au mailer)
+export const BLUE_SOFT = "#9CB8E8"; // bleu secondaire ("Juris")
+export const INK = "#1f2937"; // texte principal
+export const MUTED = "#6b7280"; // texte secondaire
+export const LINE = "#e5e7eb"; // filets / bordures
+export const BG_SOFT = "#f9fafb"; // fonds de blocs
 
 // Taux de TVA appliqué à toutes les factures (exporté : source unique de vérité,
 // réutilisé par le calcul fiscal du monitoring).
@@ -85,8 +88,14 @@ function formatDate(date: Date): string {
   });
 }
 
-function intervalLabel(interval: string): string {
-  return interval === "year" ? "Annuel" : "Mensuel";
+function intervalLabel(interval?: string): string {
+  return interval === PlanInterval.yearly ? "Annuel" : "Mensuel";
+}
+
+// Libellé de la ligne principale : achat unitaire ou abonnement.
+function mainLineLabel(data: InvoiceData): string {
+  if (data.itemLabel) return data.itemLabel;
+  return `Abonnement ${data.planName} — ${intervalLabel(data.interval)}`;
 }
 
 // Dossier de rangement mensuel : ./facture/mai_2026, ./facture/juin_2026, ...
@@ -129,7 +138,7 @@ function saveEncryptedCopy(data: InvoiceData, pdf: Buffer) {
 
 // ── Logo Lumen Juris (repris du mailer) ─────────────────────────────────────
 // Deux cercles concentriques bleus + le wordmark "Lumen Juris".
-function drawLogo(doc: PdfDoc, x: number, y: number) {
+export function drawLogo(doc: PdfDoc, x: number, y: number) {
   const size = 12;
   const cx = x + size / 2;
   const cy = y + size / 2;
@@ -223,10 +232,10 @@ function createParties(doc: PdfDoc, data: InvoiceData) {
 // Tableau des prestations + totaux
 function createItemsAndTotals(doc: PdfDoc, data: InvoiceData, startY: number) {
   // Chaque ligne : libellé, quantité et prix unitaire TTC (en euros).
-  // L'abonnement est toujours la 1re ligne ; les items éventuels s'ajoutent.
+  // L'abonnement (ou l'achat unitaire) est toujours la 1re ligne ; les items éventuels s'ajoutent.
   const rows = [
     {
-      label: `Abonnement ${data.planName} — ${intervalLabel(data.interval)}`,
+      label: mainLineLabel(data),
       qty: 1,
       unitTTC: centToEuro(data.amountTTCCents),
     },

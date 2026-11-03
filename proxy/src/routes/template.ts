@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js";
-import { BACKEND_URL, BACKNODE_URL } from "../config.js";
+import { BACKEND_URL, BACKNODE_URL, pythonHeaders } from "../config.js";
 import { relayToNode } from "../relay.js";
 import { logOpenAiTokens, trackFeature, withTracking } from "../tracking.js";
 import { callGpt5, type Gpt5Response } from "../utils/openaiResponses.js";
@@ -206,7 +206,7 @@ async function handleTemplateGenerate(
     // 5. Appel gpt-5.2
     const aiRes = await fetch(`${BACKEND_URL}/openai-chat-5`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonHeaders(),
       body: JSON.stringify({
         prompt,
         reasoning: "medium",
@@ -984,7 +984,7 @@ async function extractDocumentText(fileBase64: string, filename: string): Promis
   // multipart contenant un fichier est détourné avant d'atteindre le moteur Python (404).
   const extractRes = await fetch(`${BACKEND_URL}/extract-document-text-json`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify({ filename, fileBase64 }),
   });
   if (extractRes.status === 422) {

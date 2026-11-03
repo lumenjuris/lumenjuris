@@ -49,8 +49,12 @@ type RevenueKpis = {
   activeCount: number;
 };
 
+// Facture d'un achat unitaire (hors abonnement), ex : contrat sans filigrane
+type OneShotFacture = Facture & { itemLabel: string; user: RevenueUser };
+
 type RevenueData = {
   subscriptions: Subscription[];
+  oneShotFactures?: OneShotFacture[];
   totalRevenue: number;
   activeCount: number;
   revenueByPlan: Record<string, { count: number; revenue: number }>;
@@ -87,6 +91,10 @@ const PERIOD_PRESETS: { id: PeriodPreset; label: string }[] = [
 
 // Ordre fixe : la couleur suit le plan (ordre alphabétique), jamais son rang.
 const PLAN_COLORS = ["#6366f1", "#14b8a6", "#f59e0b", "#ec4899", "#8b5cf6", "#3b82f6"];
+
+// Série du graphique regroupant tous les achats unitaires, toujours empilée en dernier
+const ARTICLES_SERIES = "Ventes articles";
+const ARTICLES_COLOR = "#10b981";
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -152,7 +160,7 @@ function KpiTile({ icon: Icon, label, value, sub, color, hint }: {
 
 /** Badge Mensuel / Annuel affiché à côté du nom du plan. */
 function IntervalBadge({ interval }: { interval: string }) {
-  const isYear = interval === "year";
+  const isYear = interval === "yearly";
   return (
     <span
       className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full border whitespace-nowrap ${
@@ -231,19 +239,28 @@ export function RevenueSection() {
     return "month";
   }, [range]);
 
-  // Toutes les factures aplaties (avec plan + client), triées récentes d'abord
+  // Toutes les factures aplaties (avec plan + client), triées récentes d'abord.
+  // Les achats unitaires sont rangés dans la série « Ventes articles ».
   const allFactures = useMemo(() => {
     if (!data) return [];
-    return data.subscriptions
-      .flatMap((s) =>
-        s.facture.map((f) => ({
-          ...f,
-          plan: s.plan.name,
-          planInterval: s.plan.interval,
-          user: s.user,
-          date: new Date(f.createdAt),
-        })),
-      )
+    const subscriptionFactures = data.subscriptions.flatMap((s) =>
+      s.facture.map((f) => ({
+        ...f,
+        plan: s.plan.name,
+        planInterval: s.plan.interval as string | null,
+        series: s.plan.name,
+        user: s.user,
+        date: new Date(f.createdAt),
+      })),
+    );
+    const articleFactures = (data.oneShotFactures ?? []).map((f) => ({
+      ...f,
+      plan: f.itemLabel,
+      planInterval: null, // un achat unitaire n'a pas d'intervalle
+      series: ARTICLES_SERIES,
+      date: new Date(f.createdAt),
+    }));
+    return [...subscriptionFactures, ...articleFactures]
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [data]);
 
@@ -278,6 +295,7 @@ export function RevenueSection() {
     const paid = periodFactures.filter((f) => f.status !== "FAILED");
     // Ordre alphabétique fixe : la couleur d'un plan ne change pas selon la période.
     const plans = [...new Set(data.subscriptions.map((s) => s.plan.name))].sort((a, b) => a.localeCompare(b));
+    if ((data.oneShotFactures ?? []).length > 0) plans.push(ARTICLES_SERIES);
 
     const keyOf = (d: Date) =>
       granularity === "month" ? monthKey(d) : granularity === "week" ? weekKey(d) : dayKey(d);
@@ -287,7 +305,7 @@ export function RevenueSection() {
       const k = keyOf(f.date);
       if (!buckets.has(k)) buckets.set(k, {});
       const b = buckets.get(k)!;
-      b[f.plan] = (b[f.plan] ?? 0) + f.price;
+      b[f.series] = (b[f.series] ?? 0) + f.price;
     }
 
     // Slots continus sur toute la période (les creux restent visibles à zéro)
@@ -521,7 +539,7 @@ export function RevenueSection() {
                     key={plan}
                     dataKey={plan}
                     stackId="revenue"
-                    fill={PLAN_COLORS[i % PLAN_COLORS.length]}
+                    fill={plan === ARTICLES_SERIES ? ARTICLES_COLOR : PLAN_COLORS[i % PLAN_COLORS.length]}
                     stroke="#ffffff"
                     strokeWidth={1}
                     radius={i === planNames.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
@@ -569,7 +587,13 @@ export function RevenueSection() {
                     <div className="col-span-2 flex items-center gap-1.5 min-w-0">
                       <CreditCard className="w-3.5 h-3.5 text-gray-300 shrink-0" />
                       <span className="text-gray-700 truncate">{f.plan}</span>
-                      <IntervalBadge interval={f.planInterval} />
+                      {f.planInterval ? (
+                        <IntervalBadge interval={f.planInterval} />
+                      ) : (
+                        <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full border whitespace-nowrap bg-emerald-50 text-emerald-700 border-emerald-100">
+                          Article
+                        </span>
+                      )}
                     </div>
                     <span className={`col-span-2 text-right font-semibold tabular-nums ${failed ? "text-gray-400 line-through" : "text-emerald-700"}`}>
                       {fmt.eur(f.price)}

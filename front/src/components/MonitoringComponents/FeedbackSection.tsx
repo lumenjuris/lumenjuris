@@ -53,6 +53,8 @@ type UserDetails = {
     totalPaid: number;
     invoiceCount: number;
   } | null;
+  // Achats unitaires (hors abonnement), ex : contrat sans filigrane
+  oneShotPaid?: { totalPaid: number; invoiceCount: number };
   enterprise: {
     name: string | null;
     siren: string | null;
@@ -638,7 +640,20 @@ function UserDetailsPanel({ data }: { data: UserDetails }) {
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 dark:text-gray-500 italic">Aucun abonnement actif</p>
+          <div className="space-y-2 text-sm">
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic">Aucun abonnement actif</p>
+            {data.oneShotPaid && data.oneShotPaid.invoiceCount > 0 && (
+              <Row
+                label="Achats unitaires"
+                value={
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {(data.oneShotPaid.totalPaid / 100).toFixed(2)} €{" "}
+                    <span className="font-normal text-gray-500">({data.oneShotPaid.invoiceCount} facture{data.oneShotPaid.invoiceCount > 1 ? "s" : ""})</span>
+                  </span>
+                }
+              />
+            )}
+          </div>
         )}
       </PanelSection>
 

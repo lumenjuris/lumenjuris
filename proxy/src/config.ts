@@ -21,3 +21,14 @@ export const BACKEND_URL = IS_PROD
 export const BACKNODE_URL = IS_PROD
   ? process.env.BACKNODE_URL
   : "http://localhost:3020";
+
+/**
+ * En-têtes à joindre à CHAQUE appel vers le serveur Python : il refuse (401)
+ * toute requête sans la clé interne partagée (voir back/app/main.py).
+ */
+export function pythonHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+  };
+}

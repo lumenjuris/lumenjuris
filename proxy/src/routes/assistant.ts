@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js";
-import { BACKEND_URL } from "../config.js";
+import { BACKEND_URL, pythonHeaders } from "../config.js";
 import { logOpenAiTokens, withTracking } from "../tracking.js";
 import type { PythonJsonResponse } from "../relay.js";
 import { callGpt5, type Gpt5Request } from "../utils/openaiResponses.js";
@@ -166,7 +166,7 @@ assistantRouter.post("/clause-analysis", auth, async (req: Request, res: Respons
   try {
     const pythonRes = await fetch(`${BACKEND_URL}/openai-chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: pythonHeaders(),
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
         model,

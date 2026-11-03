@@ -1489,6 +1489,8 @@ export function Generateur() {
           model={blankEditor.model}
           fileBase={blankEditor.fileBase}
           onBack={goLibrary}
+          // Contrat rédigé par « Créer de zéro » : crédit rendu s'il est acheté
+          createdFromScratch
         />
       )}
       {section === "useCustom" && useTemplateId && (

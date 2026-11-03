@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "../config.js";
+import { BACKEND_URL, pythonHeaders } from "../config.js";
 
 /**
  * Appel d'un modèle GPT-5 (API « Responses » d'OpenAI), avec le même message
@@ -85,7 +85,7 @@ async function callOpenAiDirectly(req: Gpt5Request, apiKey: string): Promise<Gpt
 async function callThroughPython(req: Gpt5Request): Promise<Gpt5Response> {
   const res = await fetch(`${BACKEND_URL}/openai-chat-5`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify(req),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });

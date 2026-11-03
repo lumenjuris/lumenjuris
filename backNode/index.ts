@@ -38,6 +38,7 @@ import { addErrorFeedbackLogger } from "./src/middleware/loggerFeedback.js";
 import { globalErrorHandler } from "./src/middleware/globalErrorHandle.js";
 
 import { seedPlans } from "./prisma/seedPlans.js";
+import { seedItemBilling } from "./prisma/seedItemBilling.js";
 import { StripeLumenJuris } from "./billing/stripe.service.js";
 
 import { logger } from "./src/logger/logger.js";
@@ -181,6 +182,7 @@ app.listen(port, async () => {
 
     
     void await seedPlans()
+    void await seedItemBilling()
     //Initialisation des utilisateurs de developpement
     void await seedBootstrapUsers();
 

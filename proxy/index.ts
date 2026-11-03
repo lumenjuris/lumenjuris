@@ -29,6 +29,7 @@ import { assistantRouter } from "./src/routes/assistant.js";
 import { legalTextRouter } from "./src/routes/legalText.js";
 import { adminRouter } from "./src/routes/admin.js";
 import { summarizeContractRouter } from "./src/routes/summarizeContract.js";
+import { contractPackRouter } from "./src/routes/contractPack.js";
 import { globalErrorHandler } from "./src/middleware/globalErrorHandler.js";
 import { addErrorFeedbackLogger } from "./src/middleware/loggerFeedback.js";
 
@@ -87,6 +88,8 @@ app.use("/api/legal-text", legalTextRouter);
 app.use("/api/admin", adminRouter)
 app.use("/api/summarize-contract", summarizeContractRouter)
 app.use("/api/delete-summarize-contract", summarizeContractRouter);
+// Routes internes du Pack Contrat (appelées par le backNode, clé interne)
+app.use("/api/internal/contract-pack", contractPackRouter);
 
 
 

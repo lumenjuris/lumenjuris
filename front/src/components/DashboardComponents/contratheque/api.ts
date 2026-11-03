@@ -46,7 +46,8 @@ export const contractApi = {
   /** Vérifie (sans créer) si l'utilisateur peut encore ajouter un contrat. */
   capacity: () =>
     fetchProxy(`${BASE}/capacity`, { credentials: "include" }).then(
-      json<{ allowed: boolean; count?: number; limit?: number; reason?: string }>,
+      // paidCount : contrats achetés à l'unité, non décomptés du plafond
+      json<{ allowed: boolean; count?: number; limit?: number; paidCount?: number; reason?: string }>,
     ),
 
   list: (f: ListFilters) =>

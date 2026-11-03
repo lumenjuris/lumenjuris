@@ -1,3 +1,4 @@
+import { pythonHeaders } from "../../config.js";
 import type { ClauseRisk, AnalysisContext } from "./types.js";
 import { buildClauseExtractionPromptForAI } from "./buildingPrompt.js";
 import { parseAIResponse } from "./parsingData.js";
@@ -65,7 +66,7 @@ export async function callPythonOpenAi(
 ): Promise<string> {
   const r = await fetch(`${BACKEND_URL}/openai-chat-5`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: pythonHeaders(),
     body: JSON.stringify({
       prompt,
       reasoning: "none",

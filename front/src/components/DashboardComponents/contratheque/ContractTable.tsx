@@ -19,6 +19,8 @@ interface Props {
   onDelete?: (id: string, title: string) => void;
   /** Lignes à surligner (ex. contrats tout juste importés). */
   highlightedIds?: string[];
+  /** Contrats achetés à l'unité (Pack Contrat), signalés par un badge. */
+  purchasedIds?: string[];
 }
 
 const STORAGE_KEY = "contract_table_visible_columns";
@@ -29,7 +31,7 @@ const URGENT_WITHIN_DAYS = 90;
 
 /** Tableau principal de la liste des contrats. */
 export function ContractTable({
-  items, loading, sortBy, sortDir, onSort, onOpen, canDelete, onDelete, highlightedIds = [],
+  items, loading, sortBy, sortDir, onSort, onOpen, canDelete, onDelete, highlightedIds = [], purchasedIds = [],
 }: Props) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -59,6 +61,14 @@ export function ContractTable({
                 title="Contrat avec un consommateur (loi Châtel)"
               >
                 B2C
+              </span>
+            )}
+            {purchasedIds.includes(contract.id) && (
+              <span
+                className="shrink-0 rounded-md border border-emerald-200/60 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700"
+                title="Pack Contrat acheté : PDF sans filigrane, Word et fiche de synthèse disponibles"
+              >
+                Acheté
               </span>
             )}
           </div>

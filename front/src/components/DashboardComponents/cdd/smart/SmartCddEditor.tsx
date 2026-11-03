@@ -4,12 +4,11 @@
 // un bandeau (barre d'outils + icônes des fonctionnalités) surplombe la zone de contenu,
 // puis les deux blocs (« Champs à compléter » + document éditable) côte à côte.
 // Utilisé pour tous les types de contrat (CDD, CDI, avenant, disciplinaire, rupture).
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { jsPDF } from "jspdf";
 import {
   Download, FileText, FileSignature, Bold, Italic, List, Quote,
   Sparkles, X, Loader2, ShieldCheck, ShieldAlert, MessagesSquare, Check, Share2,
@@ -34,7 +33,9 @@ import { ShareContractPanel, guessSide, SIDE_CYCLE, type ShareMode } from "../..
 import type { FieldSide } from "../../negotiation/types";
 import { fetchProxy } from "../../../../utils/fetchProxy";
 import { CONTRACT_DOCUMENT_CLASS, CONTRACT_DOCUMENT_PADDING_CLASS, CONTRACT_TOOLBAR_CLASS } from "./documentTypography";
-
+import { type JNode, inlineText, buildContractPdf, contractPdfBase64, buildContractDocx, downloadBlob } from "./contractExport";
+import { ContractPackOffer, type ContractPackOfferReason } from "../../../ContractPackComponents/ContractPackOffer";
+import { startContractPackCheckout } from "../../../ContractPackComponents/contractPackApi";
 const isEmptyClause = (c: string) => c.trim() === "Sans objet.";
 
 function escapeHtml(s: string): string {
@@ -128,29 +129,15 @@ function buildFieldGroups(model: ContractModel): FieldGroup[] {
   return groups;
 }
 
-// — Sérialisation pour l'export PDF —
-type JNode = { type: string; attrs?: Record<string, unknown>; text?: string; content?: JNode[] };
-function inlineText(nodes?: JNode[]): string {
-  if (!nodes) return "";
-  return nodes
-    .map((n) =>
-      n.type === "text" ? n.text ?? ""
-      : n.type === "hardBreak" ? "\n"
-      : n.type === "variable" ? (String(n.attrs?.value || "") || "…")
-      : inlineText(n.content),
-    )
-    .join("");
-}
-
 /** Sérialisation pour l'IA : les variables restent des marqueurs {{nom}}. */
 function markerText(nodes?: JNode[]): string {
   if (!nodes) return "";
   return nodes
     .map((n) =>
       n.type === "text" ? n.text ?? ""
-      : n.type === "hardBreak" ? "\n"
-      : n.type === "variable" ? `{{${String(n.attrs?.name ?? "")}}}`
-      : markerText(n.content),
+        : n.type === "hardBreak" ? "\n"
+          : n.type === "variable" ? `{{${String(n.attrs?.name ?? "")}}}`
+            : markerText(n.content),
     )
     .join("");
 }
@@ -180,9 +167,14 @@ interface Props {
   model?: ContractModel;
   /** Base du nom de fichier exporté (sans extension). */
   fileBase?: string;
+  /**
+   * Contrat rédigé via « Créer de zéro » (un crédit de génération a été consommé) :
+   * s'il est acheté à l'unité, ce crédit est rendu.
+   */
+  createdFromScratch?: boolean;
 }
 
-export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase = "CDD-accroissement" }: Props) {
+export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase = "CDD-accroissement", createdFromScratch = false }: Props) {
   const navigate = useNavigate();
 
   // Emplacement réservé dans le header de l'app (MainLayout) pour y déposer le fil d'ariane.
@@ -548,96 +540,52 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
   };
 
   /** Construit le PDF du contrat (réutilisé pour l'export et la signature). */
-    const [hasFiligrane, setHasFiligrane] = useState<boolean | null>(null);
-    useEffect(() => {
-      let isCurrent = true;
+  const [hasFiligrane, setHasFiligrane] = useState<boolean | null>(null);
+  // Achat ponctuel (Pack Contrat) possible : seulement si le backend confirme que le
+  // plan impose le filigrane (jamais sur une simple erreur réseau, ni pour un abonné).
+  const [packAvailable, setPackAvailable] = useState(false);
+  // Modale d'achat ouverte, et ce qui l'a ouverte (null = fermée)
+  const [packOfferReason, setPackOfferReason] = useState<ContractPackOfferReason | null>(null);
 
-      // Le filigrane suit le droit generationContractWithFiligrane du plan
-      // (un administrateur n'en a jamais : /billing/credits le renvoie désactivé).
-      fetchProxy("/api/billing/credits", {credentials : "include"}).then((res) => res.ok ? res.json() : null).then((data) => {
-        if (!isCurrent) return;
+  useEffect(() => {
+    let isCurrent = true;
 
-        const filigrane = data?.data?.quotas?.generationContractWithFiligrane;
-        // Sans information fiable, on garde le filigrane par prudence.
-        setHasFiligrane(filigrane ? filigrane.enabled === true : true);
-      }).catch(() => {
-        if (isCurrent) setHasFiligrane(true);
-      });
-      return () => {
-        isCurrent = false;
-      };
-    }, []);
+    // Le filigrane suit le droit generationContractWithFiligrane du plan
+    // (un administrateur n'en a jamais : /billing/credits le renvoie désactivé).
+    fetchProxy("/api/billing/credits", { credentials: "include" }).then((res) => res.ok ? res.json() : null).then((data) => {
+      if (!isCurrent) return;
 
-  const buildPdfDoc = () => {
-    const json = editor!.getJSON() as JNode;
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 56, maxW = pdf.internal.pageSize.getWidth() - margin * 2, pageH = pdf.internal.pageSize.getHeight();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    let y = margin;
-    const block = (txt: string, bold: boolean, size: number, gap = 8) => {
-      pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
-      for (const line of pdf.splitTextToSize(txt || " ", maxW) as string[]) {
-        if (y + size + 2 > pageH - margin) { pdf.addPage(); y = margin; }
-        pdf.text(line, margin, y); y += size + 2;
-      }
-      y += gap;
+      const filigrane = data?.data?.quotas?.generationContractWithFiligrane;
+      // Sans information fiable, on garde le filigrane par prudence.
+      setHasFiligrane(filigrane ? filigrane.enabled === true : true);
+      // L'offre n'est plus affichée en permanence : elle s'ouvre en modale au moment
+      // d'exporter (PDF, Word) ou depuis « Retirer la mention » dans le document.
+      setPackAvailable(filigrane?.enabled === true);
+    }).catch(() => {
+      if (isCurrent) setHasFiligrane(true);
+    });
+    return () => {
+      isCurrent = false;
     };
-    for (const n of json.content ?? []) {
-      const txt = inlineText(n.content);
-      if (n.type === "heading") {
-        // Espace avant le titre (sauf en haut de page) pour le détacher du paragraphe précédent.
-        if (y > margin) y += 8;
-        block(txt, true, n.attrs?.level === 2 ? 15 : 11.5, 4);
-      }
-      else if (txt.trim()) block(txt, false, 10.5, 8);
-    }
-    if (hasFiligrane) {
-      addFiligraneToPdf(pdf, pageWidth, margin, pageH);
-    }
-    return pdf;
-  };
+  }, []);
 
-  const addFiligraneToPdf = (pdf: jsPDF, pageWidth: number, margin: number, pageH: number) => {
-    const totalPages = pdf.getNumberOfPages();
-    const rightX = pageWidth - margin;
-    const center = pageWidth / 2;
-    const paddingX = 8;
-    const paddingY = 4;
-    const fontSize = 10;
-    const borderRadius = 4;
-    const text = "Généré par Lumen Juris";
+  const buildPdfDoc = () => buildContractPdf(editor!.getJSON() as JNode, !!hasFiligrane);
 
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.setTextColor("#213957");
-      pdf.setDrawColor("#213957");
-      pdf.setLineWidth(1);
-
-      const textWidth = pdf.getTextWidth(text);
-      const boxW = textWidth + paddingX * 2;
-      const boxH = fontSize + 2 * paddingY;
-      
-      if (i === 1) {
-        const centerY = 32;
-        const boxX = rightX - boxW;
-        const boxY = centerY - fontSize;
-        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S")
-        pdf.text(text, rightX - paddingX, centerY, {align: "right", baseline: "middle"});
-      } else {
-        const centerY = pageH - 32;
-        const boxX = center - boxW / 2;
-        const boxY = centerY - fontSize;
-        pdf.roundedRect(boxX, boxY, boxW, boxH, borderRadius, borderRadius, "S");
-        pdf.text(text, center, centerY, {align: "center", baseline:"middle"});
-      }
-    }
-  }
-
-  const exportPdf = () => {
+  /** Télécharge le PDF tel qu'affiché (avec la mention si le plan l'impose). */
+  const downloadPdf = () => {
     if (!editor) return;
     buildPdfDoc().save(`${fileBase}.pdf`);
+  };
+
+  // Plan avec filigrane : on présente d'abord le Pack Contrat, la version gratuite
+  // restant téléchargeable en un clic depuis la modale.
+  const exportPdf = () => {
+    if (!editor) return;
+    if (packAvailable) {
+      setPackOfferReason("pdf");
+      return;
+    }
+    downloadPdf();
   };
 
   /** Génère le PDF et l'envoie directement dans le module Signature. */
@@ -677,8 +625,7 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   /** Enregistre le contrat en contrathèque (PDF + texte) et renvoie son identifiant. */
   const saveToContratheque = async (): Promise<{ id: string }> => {
-    const dataUri = buildPdfDoc().output("datauristring");
-    const fileBase64 = dataUri.split(",")[1] ?? "";
+    const fileBase64 = contractPdfBase64(editor!.getJSON() as JNode, !!hasFiligrane);
     const created = await contractApi.create({
       title: fileBase,
       ocrText: getContractText(),
@@ -691,6 +638,54 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
       status: "ACTIVE",
     });
     return { id: created.id };
+  };
+
+  // ── Achat ponctuel du contrat (Pack Contrat) ─────────────────────────────
+  const [packLoading, setPackLoading] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
+
+  // Fermeture de la modale : l'erreur d'un essai précédent ne doit pas réapparaître
+  const closePackOffer = useCallback(() => {
+    setPackOfferReason(null);
+    setPackError(null);
+  }, []);
+  // Contrat déjà enregistré pour l'achat : un nouvel essai (paiement échoué,
+  // erreur réseau) réutilise la même fiche au lieu d'en créer une seconde.
+  const packContractRef = useRef<string | null>(null);
+
+  /**
+   * Enregistre le contrat en contrathèque (identifiant de l'achat), puis crée la
+   * session de paiement avec le contenu du contrat et redirige vers Stripe.
+   */
+  const buyContractPack = async () => {
+    if (!editor || packLoading) return;
+    setPackLoading(true);
+    setPackError(null);
+    try {
+      if (!packContractRef.current) {
+        packContractRef.current = (await saveToContratheque()).id;
+      }
+      // Le contenu de l'éditeur part avec le checkout : le backend en tirera les
+      // livrables (PDF, Word, fiche de synthèse) une fois le paiement confirmé.
+      const checkout = await startContractPackCheckout(packContractRef.current, {
+        document: editor.getJSON() as JNode,
+        createdFromScratch,
+      });
+      if (checkout.success) {
+        window.location.href = checkout.url; // redirection vers Stripe Checkout
+        return; // le bouton reste en chargement jusqu'au départ de la page
+      }
+      setPackError(checkout.message);
+    } catch (e) {
+      // Échec de l'enregistrement en contrathèque : message du backend (ex : limite
+      // du plan atteinte) ou coupure réseau (fetch lève une TypeError).
+      setPackError(
+        e instanceof Error && !(e instanceof TypeError)
+          ? e.message
+          : "Connexion au serveur impossible. Vérifiez votre connexion puis réessayez.",
+      );
+    }
+    setPackLoading(false);
   };
 
   /** Négocier : enregistre le contrat en contrathèque puis ouvre l'espace de négociation. */
@@ -720,42 +715,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
 
   const exportDocx = async () => {
     if (!editor) return;
-    const json = editor.getJSON() as JNode;
-    const docx = await import("docx");
-    const { saveAs } = await import("file-saver");
-    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Header, Footer } = docx;
-    // Word ignore les "\n" dans un TextRun : chaque ligne devient un run avec un retour à la ligne avant.
-    const textRunsWithLineBreaks = (txt: string, bold = false) =>
-      txt.split("\n").map((line, index) => new TextRun({ text: line, bold, break: index > 0 ? 1 : undefined }));
-    const children = (json.content ?? []).map((n) => {
-      const txt = inlineText(n.content);
-      if (n.type === "heading") {
-        const isTitle = n.attrs?.level === 2;
-        return new Paragraph({
-          heading: isTitle ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
-          alignment: isTitle ? AlignmentType.CENTER : undefined,
-          spacing: { before: 240, after: 120 },
-          children: textRunsWithLineBreaks(txt, true),
-        });
-      }
-      return new Paragraph({ spacing: { after: 120 }, children: textRunsWithLineBreaks(txt) });
-    });
-    
-    const waterMark = new TextRun({
-      text: "Généré par Lumen Juris", bold: true, size: 18, color: "213957"
-    })
-    const firstPageHeader = new Header({
-      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
-    })
-    const footer = new Footer({
-      children: [new Paragraph({alignment: AlignmentType.RIGHT, children: [waterMark]})],
-    })
-    const wordDoc = new Document({
-      styles: { default: { document: { run: { font: "Calibri", size: 22 }, paragraph: { spacing: { line: 276 } } } } },
-      sections: [{ properties: { page: { margin: { top: 1440, bottom: 1440, left: 1800, right: 1800 } }, titlePage: !!hasFiligrane, },headers: hasFiligrane ? {first: firstPageHeader} : undefined, footers: hasFiligrane ? {default: footer} : undefined, children }],
-    });
-    const blob = await docx.Packer.toBlob(wordDoc);
-    saveAs(blob, `${fileBase}.docx`);
+    const blob = await buildContractDocx(editor.getJSON() as JNode, !!hasFiligrane);
+    await downloadBlob(blob, `${fileBase}.docx`);
   };
 
   // ── Enregistrer ce contrat comme modèle ──────────────────────────────────
@@ -909,9 +870,8 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                     <li key={g.id}>
                       <button
                         onClick={() => scrollToGroup(g)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                          complete ? "bg-brand-light" : "hover:bg-surface-subtle"
-                        }`}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${complete ? "bg-brand-light" : "hover:bg-surface-subtle"
+                          }`}
                       >
                         <span className={`min-w-0 flex-1 text-sm leading-snug lg:truncate ${complete ? "font-medium text-ink" : "text-ink-secondary"}`}>
                           {g.label}
@@ -979,13 +939,21 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                   <ToolbarAction icon={ShieldCheck} short="Convention" label="Vérifier la convention collective" onClick={() => setCcPanel(true)} />
                 )}
                 <span aria-hidden className="mx-1.5 h-5 w-px bg-line" />
+                {/* Download en pdf*/}
                 <ToolbarAction icon={Download} short="PDF" label="Télécharger en PDF" onClick={exportPdf} />
+
+                {/* Download en word docs*/}
                 <ToolbarAction
                   icon={FileText}
                   short="Word"
-                  label={hasFiligrane ? "Télécharger en Word — nécessite un plan supérieur" : "Télécharger en Word"}
-                  onClick={() => void exportDocx()}
-                  disabled={!!hasFiligrane}
+                  label={
+                    !hasFiligrane ? "Télécharger en Word"
+                      : packAvailable ? "Télécharger en Word — inclus dans le Pack Contrat"
+                        : "Télécharger en Word — nécessite un abonnement"
+                  }
+                  // Word sans filigrane : réservé aux abonnés, ou proposé via le Pack Contrat
+                  onClick={() => (hasFiligrane ? setPackOfferReason("docx") : void exportDocx())}
+                  disabled={!!hasFiligrane && !packAvailable}
                 />
                 <ToolbarAction
                   icon={BookmarkPlus}
@@ -1009,67 +977,100 @@ export function SmartCddEditor({ onBack, model = cddAccroissementModel, fileBase
                 [&_input[data-share-side=COUNTERPARTY]]:!bg-emerald-100 [&_input[data-share-side=COUNTERPARTY]]:!text-emerald-800 [&_input[data-share-side=COUNTERPARTY]]:!ring-emerald-300
                 [&_input[data-share-side=THIRD_PARTY]]:!bg-violet-100 [&_input[data-share-side=THIRD_PARTY]]:!text-violet-800 [&_input[data-share-side=THIRD_PARTY]]:!ring-violet-300`}
             >
-            <EditorContent editor={editor} className={CONTRACT_DOCUMENT_CLASS} />
-
-            {/* Bouton IA au survol d'une clause */}
-            {hover && !ai && (
-              <button
-                type="button"
-                onClick={openAi}
-                style={{ top: hover.top }}
-                aria-label="Préciser cette clause avec l'IA"
-                className="group absolute right-3 z-10 inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-white px-2 py-1 text-[11px] font-medium text-brand shadow-sm transition hover:bg-brand-light"
-              >
-                <Sparkles className="h-3.5 w-3.5" /> IA
-                <InfoBulle texte="Préciser cette clause avec l'IA" align="right" />
-              </button>
-            )}
-
-            {/* Panneau IA de la clause */}
-            {ai && (
-              <div
-                style={{ top: Math.max(0, ai.top) }}
-                className="absolute right-3 z-20 w-80 rounded-card border border-line bg-white p-3 shadow-card-md"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink">
-                    <Sparkles className="h-3.5 w-3.5 text-brand" /> Préciser la clause
+              {/* Rendu fidèle à l'export : le filigrane imposé par le plan est visible ici aussi */}
+              {hasFiligrane && (
+                <div className="mb-3 flex items-center justify-end gap-3">
+                  {packAvailable && (
+                    <button
+                      type="button"
+                      onClick={() => setPackOfferReason("watermark")}
+                      className="text-[11px] font-medium text-ink-muted underline-offset-2 transition-colors hover:text-brand hover:underline"
+                    >
+                      Retirer la mention
+                    </button>
+                  )}
+                  <span
+                    aria-label="Mention ajoutée aux exports de votre plan"
+                    className="pointer-events-none select-none rounded border border-blue-primary px-2 py-0.5 text-[11px] font-bold text-blue-primary"
+                  >
+                    Généré par Lumen Juris
                   </span>
-                  <button onClick={() => setAi(null)} className="rounded p-0.5 text-ink-subtle hover:bg-surface-muted"><X className="h-3.5 w-3.5" /></button>
                 </div>
+              )}
+              <EditorContent editor={editor} className={CONTRACT_DOCUMENT_CLASS} />
 
-                <textarea
-                  value={ai.instruction}
-                  onChange={(e) => setAi((a) => (a ? { ...a, instruction: e.target.value } : a))}
-                  rows={2}
-                  placeholder="Que souhaitez-vous préciser ? (ex. « ajoute un préavis de 8 jours »)"
-                  className="mt-2 w-full resize-none rounded-lg border border-line px-2 py-1.5 text-[12px] outline-none focus:border-brand/40 focus:shadow-ring-brand"
-                />
+              {/* Bouton IA au survol d'une clause */}
+              {hover && !ai && (
                 <button
-                  disabled={ai.loading || !ai.instruction.trim()}
-                  onClick={runInstruction}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-medium text-white hover:bg-brand-hover disabled:opacity-50"
+                  type="button"
+                  onClick={openAi}
+                  style={{ top: hover.top }}
+                  aria-label="Préciser cette clause avec l'IA"
+                  className="group absolute right-3 z-10 inline-flex items-center gap-1 rounded-lg border border-brand/30 bg-white px-2 py-1 text-[11px] font-medium text-brand shadow-sm transition hover:bg-brand-light"
                 >
-                  <Sparkles className="h-3.5 w-3.5" /> Valider
+                  <Sparkles className="h-3.5 w-3.5" /> IA
+                  <InfoBulle texte="Préciser cette clause avec l'IA" align="right" />
                 </button>
+              )}
 
-                {ai.loading && (
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-ink-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Génération…</p>
-                )}
-                {ai.error && <p className="mt-2 text-[11px] text-danger">{ai.error}</p>}
-                {ai.result && (
-                  <div className="mt-2">
-                    <p className="max-h-40 overflow-auto whitespace-pre-line rounded-lg bg-surface-subtle p-2 text-[12px] leading-snug text-ink-secondary">{ai.result}</p>
-                    <div className="mt-2 flex gap-1.5">
-                      <button onClick={acceptAi} className="rounded-lg bg-brand px-2.5 py-1 text-[11px] font-medium text-white hover:bg-brand-hover">Remplacer la clause</button>
-                      <button onClick={() => setAi((a) => (a ? { ...a, result: null } : a))} className="rounded-lg px-2.5 py-1 text-[11px] text-ink-muted hover:bg-surface-muted">Réessayer</button>
-                    </div>
+              {/* Panneau IA de la clause */}
+              {ai && (
+                <div
+                  style={{ top: Math.max(0, ai.top) }}
+                  className="absolute right-3 z-20 w-80 rounded-card border border-line bg-white p-3 shadow-card-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink">
+                      <Sparkles className="h-3.5 w-3.5 text-brand" /> Préciser la clause
+                    </span>
+                    <button onClick={() => setAi(null)} className="rounded p-0.5 text-ink-subtle hover:bg-surface-muted"><X className="h-3.5 w-3.5" /></button>
                   </div>
-                )}
-              </div>
-            )}
+
+                  <textarea
+                    value={ai.instruction}
+                    onChange={(e) => setAi((a) => (a ? { ...a, instruction: e.target.value } : a))}
+                    rows={2}
+                    placeholder="Que souhaitez-vous préciser ? (ex. « ajoute un préavis de 8 jours »)"
+                    className="mt-2 w-full resize-none rounded-lg border border-line px-2 py-1.5 text-[12px] outline-none focus:border-brand/40 focus:shadow-ring-brand"
+                  />
+                  <button
+                    disabled={ai.loading || !ai.instruction.trim()}
+                    onClick={runInstruction}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-medium text-white hover:bg-brand-hover disabled:opacity-50"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Valider
+                  </button>
+
+                  {ai.loading && (
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-ink-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Génération…</p>
+                  )}
+                  {ai.error && <p className="mt-2 text-[11px] text-danger">{ai.error}</p>}
+                  {ai.result && (
+                    <div className="mt-2">
+                      <p className="max-h-40 overflow-auto whitespace-pre-line rounded-lg bg-surface-subtle p-2 text-[12px] leading-snug text-ink-secondary">{ai.result}</p>
+                      <div className="mt-2 flex gap-1.5">
+                        <button onClick={acceptAi} className="rounded-lg bg-brand px-2.5 py-1 text-[11px] font-medium text-white hover:bg-brand-hover">Remplacer la clause</button>
+                        <button onClick={() => setAi((a) => (a ? { ...a, result: null } : a))} className="rounded-lg px-2.5 py-1 text-[11px] text-ink-muted hover:bg-surface-muted">Réessayer</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Modale d'achat ponctuel (rendue dans un portail, au-dessus de la page) */}
+          <ContractPackOffer
+            reason={packOfferReason}
+            onClose={closePackOffer}
+            onPurchase={() => void buyContractPack()}
+            onDownloadFree={() => {
+              downloadPdf();
+              closePackOffer();
+            }}
+            loading={packLoading}
+            error={packError}
+          />
 
           {/* Barre sticky « Modifier avec l'IA » — liseré de marque pour être
               repérée dès l'arrivée sur la page. */}
@@ -1271,11 +1272,10 @@ export function ToolbarAction({ icon: Icon, label, short, onClick, disabled = fa
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`group relative inline-flex items-center gap-1 rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 xl:px-2 ${
-        highlight
+      className={`group relative inline-flex items-center gap-1 rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40 xl:px-2 ${highlight
           ? "text-brand hover:bg-brand-light"
           : "text-ink-muted hover:bg-surface-muted hover:text-ink-secondary"
-      }`}
+        }`}
     >
       <Icon className="h-4 w-4 shrink-0" />
       {short && <span className="hidden text-[12px] font-medium xl:inline">{short}</span>}
