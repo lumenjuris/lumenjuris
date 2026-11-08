@@ -51,7 +51,8 @@ app.use(
       /^https:\/\/.*\.odns\.fr$/,
       "http://localhost:5173",
       "https://beta.lumenjuris.com",
-      "https://app.lumenjuris.com"
+      "https://app.lumenjuris.com",
+      "https://staging.lumenjuris.com",
     ],
     credentials: true,
   }),
@@ -94,8 +95,8 @@ app.use("/api/internal/contract-pack", contractPackRouter);
 
 
 
-app.get("/api/google", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/google`)});
-app.get("/api/microsoft", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/microsoft`)});
+app.get("/api/google", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/google`) });
+app.get("/api/microsoft", (req, res) => { res.redirect(`${BACKNODE_URL}/auth/microsoft`) });
 
 
 // Health pour tester le serveur

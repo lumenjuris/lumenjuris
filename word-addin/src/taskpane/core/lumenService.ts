@@ -45,6 +45,8 @@ export class AuthError extends Error {}
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
 export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY);
 
+
+
 async function post<T>(endpoint: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   // Toutes les routes métier exigent l'authentification en production :
@@ -84,6 +86,8 @@ async function post<T>(endpoint: string, body: unknown): Promise<T> {
   }
   return (await response.json()) as T;
 }
+
+
 
 /** Connexion avec les identifiants de la plateforme LumenJuris. */
 export async function login(email: string, password: string): Promise<void> {
