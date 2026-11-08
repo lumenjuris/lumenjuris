@@ -7,7 +7,7 @@ const webpack = require("webpack");
 
 // Port 3001 : le port 3000 est occupé par le proxy LumenJuris (lumenjuris/proxy).
 const urlDev = "https://localhost:3001/";
-const urlProd = "https://beta.lumenjuris.com/word-addin/"; // Emplacement public du complément (hébergé sur beta.lumenjuris.com)
+const urlProd = "https://app.lumenjuris.com/word-addin/"; // Emplacement public du complément (hébergé sur app.lumenjuris.com)
 
 async function getHttpsOptions() {
   const httpsOptions = await devCerts.getHttpsServerOptions();

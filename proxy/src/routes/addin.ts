@@ -10,7 +10,7 @@ export const addinRouter: Router = Router()
  * JWT est renvoyé dans le corps (l'iframe Word ne peut pas recevoir le cookie
  * httpOnly cross-site). Le token est ensuite passé en Authorization: Bearer.
  */
-addinRouter.post("/login", async (req, res) => {
+addinRouter.post(["/login", "/session"], async (req, res) => {
     try {
 
         const BACKNODE_URL = process.env.BACKNODE_URL
