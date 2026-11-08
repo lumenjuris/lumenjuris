@@ -91,7 +91,7 @@ async function post<T>(endpoint: string, body: unknown): Promise<T> {
 
 /** Connexion avec les identifiants de la plateforme LumenJuris. */
 export async function login(email: string, password: string): Promise<void> {
-  const data = await post<{ success: boolean; token?: string; message?: string }>("/api/addin/login", {
+  const data = await post<{ success: boolean; token?: string; message?: string }>("/api/addin/session", {
     email,
     password,
   });
