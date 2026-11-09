@@ -5,16 +5,19 @@ from typing import List, Optional, Dict, Any, Set, Tuple, Literal
 import os
 import io
 import hmac
+import hashlib
+import threading
+import time
+import json
 import base64
 import binascii
 import requests
 import asyncio
 from starlette.concurrency import run_in_threadpool
-from datetime import datetime
+from datetime import datetime, timezone
 
 #Max de requette en simultané
 semaphore = asyncio.Semaphore(5)
-
 
 IS_PROD = os.environ.get("IS_PROD", "false").lower() == "true"
 
@@ -53,6 +56,41 @@ setup_logging("INFO")
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# JOURNAL DE SÉCURITÉ — un objet JSON par ligne (format JSON Lines), dans un
+# fichier à part. Chemin modifiable via LOG_SECURITE_PATH. Rotation à 5 Mo,
+# 5 fichiers conservés. Contient des IP : ne pas versionner, ne pas exposer.
+# ─────────────────────────────────────────────────────────────────────────────
+from logging.handlers import RotatingFileHandler
+
+# `or` : une variable présente mais vide (copie de .env.example) retombe sur le défaut.
+LOG_SECURITE_PATH = os.environ.get("LOG_SECURITE_PATH") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "securite.jsonl"
+)
+
+# Aperçu du corps de la requête refusée : nombre max de caractères journalisés
+# (0 = ne pas journaliser d'aperçu). Le corps peut contenir des contrats
+# confidentiels : on garde court, et l'empreinte SHA-256 suffit à comparer.
+try:
+    LOG_SECURITE_CORPS_MAX = max(0, int(os.environ.get("LOG_SECURITE_CORPS_MAX", "1000")))
+except ValueError:
+    LOG_SECURITE_CORPS_MAX = 1000
+
+journal_securite = logging.getLogger("lumenjuris.securite")
+journal_securite.setLevel(logging.INFO)
+journal_securite.propagate = False  # n'écrit que dans son fichier
+
+try:
+    os.makedirs(os.path.dirname(LOG_SECURITE_PATH), exist_ok=True)
+    _handler_securite = RotatingFileHandler(
+        LOG_SECURITE_PATH, maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
+    _handler_securite.setFormatter(logging.Formatter("%(message)s"))
+    journal_securite.addHandler(_handler_securite)
+except OSError as e:
+    # Un dossier non inscriptible ne doit jamais empêcher le serveur de démarrer.
+    logger.error(f"Journal de sécurité indisponible ({LOG_SECURITE_PATH}) : {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SÉCURITÉ — ce serveur n'est appelé QUE par nos serveurs (proxy et backNode).
 #
 # Chaque requête doit porter le header `x-internal-api-key` égal à la variable
@@ -72,6 +110,84 @@ INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "")
 ROUTES_PUBLIQUES = {"/health"}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BLOCAGE TEMPORAIRE par IP après trop de clés refusées (anti force brute).
+#
+# - On compte sur l'IP de la connexion (request.client.host), JAMAIS sur
+#   x-forwarded-for : ce header est modifiable par l'attaquant, qui pourrait
+#   sinon contourner le blocage ou faire bloquer l'IP de notre propre proxy.
+# - Compteurs en mémoire, PAR PROCESSUS : si Passenger lance plusieurs
+#   processus, chacun compte séparément (la limite réelle est donc un
+#   multiple de AUTH_MAX_ECHECS). Ils sont remis à zéro au redémarrage.
+# - AUTH_IPS_EXEMPTEES : IP jamais bloquées (proxy, backNode), séparées par
+#   des virgules. À renseigner si ces serveurs passent par une IP fixe.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _entier_env(nom: str, defaut: int) -> int:
+    try:
+        return max(1, int(os.environ.get(nom, defaut)))
+    except ValueError:
+        return defaut
+
+
+AUTH_MAX_ECHECS = _entier_env("AUTH_MAX_ECHECS", 5)        # échecs tolérés...
+AUTH_FENETRE_SECONDES = _entier_env("AUTH_FENETRE_SECONDES", 300)   # ...sur 5 min
+AUTH_BLOCAGE_SECONDES = _entier_env("AUTH_BLOCAGE_SECONDES", 900)   # blocage 15 min
+AUTH_IPS_EXEMPTEES = {
+    ip.strip() for ip in os.environ.get("AUTH_IPS_EXEMPTEES", "").split(",") if ip.strip()
+}
+_AUTH_MAX_IPS_SUIVIES = 10_000  # borne mémoire face à une attaque depuis de nombreuses IP
+
+_auth_verrou = threading.Lock()
+_auth_echecs: Dict[str, List[float]] = {}     # ip -> horodatages des échecs récents
+_auth_bloquees: Dict[str, List[float]] = {}   # ip -> [fin_du_blocage, requetes_refusees]
+
+
+def _secondes_de_blocage_restantes(ip: str) -> Tuple[int, int]:
+    """(secondes restantes, nombre de requêtes refusées pendant le blocage) ; (0, 0) si libre."""
+    if ip in AUTH_IPS_EXEMPTEES:
+        return 0, 0
+    with _auth_verrou:
+        etat = _auth_bloquees.get(ip)
+        if not etat:
+            return 0, 0
+        reste = etat[0] - time.time()
+        if reste <= 0:
+            del _auth_bloquees[ip]
+            return 0, 0
+        etat[1] += 1
+        return int(reste) + 1, etat[1]
+
+
+def _enregistrer_echec(ip: str) -> bool:
+    """Note un échec. Retourne True si cette IP vient d'être bloquée."""
+    if ip in AUTH_IPS_EXEMPTEES:
+        return False
+    maintenant = time.time()
+    with _auth_verrou:
+        if len(_auth_echecs) >= _AUTH_MAX_IPS_SUIVIES:
+            # Purge des IP sans échec récent ; si tout est récent, on repart de zéro.
+            limite = maintenant - AUTH_FENETRE_SECONDES
+            for cle in [c for c, h in _auth_echecs.items() if not h or h[-1] < limite]:
+                del _auth_echecs[cle]
+            if len(_auth_echecs) >= _AUTH_MAX_IPS_SUIVIES:
+                _auth_echecs.clear()
+        historique = [t for t in _auth_echecs.get(ip, []) if t > maintenant - AUTH_FENETRE_SECONDES]
+        historique.append(maintenant)
+        _auth_echecs[ip] = historique
+        if len(historique) >= AUTH_MAX_ECHECS:
+            _auth_bloquees[ip] = [maintenant + AUTH_BLOCAGE_SECONDES, 0]
+            del _auth_echecs[ip]
+            return True
+    return False
+
+
+def _journaliser_securite(entree: Dict[str, Any]) -> None:
+    ligne = json.dumps(entree, ensure_ascii=False)
+    journal_securite.warning(ligne)   # fichier JSON Lines
+    logger.warning(ligne)             # console / logs habituels
+
+
 async def verifier_cle_interne(request: Request) -> None:
     if request.url.path in ROUTES_PUBLIQUES:
         return
@@ -81,11 +197,83 @@ async def verifier_cle_interne(request: Request) -> None:
             raise HTTPException(status_code=503, detail="Service non configuré.")
         return
 
+
+    ip_directe = request.client.host if request.client else "inconnue"
+
+    # IP déjà bloquée : refus immédiat, même avec la bonne clé.
+    reste, nb_refus = _secondes_de_blocage_restantes(ip_directe)
+    if reste:
+        # On n'écrit qu'une ligne sur 50 pour ne pas saturer le journal sous attaque.
+        if nb_refus == 1 or nb_refus % 50 == 0:
+            _journaliser_securite({
+                "evenement": "requete_refusee_ip_bloquee",
+                "horodatage": datetime.now(timezone.utc).isoformat(),
+                "ip_directe": ip_directe,
+                "chemin": request.url.path,
+                "secondes_restantes": reste,
+                "requetes_refusees_depuis_blocage": nb_refus,
+            })
+        raise HTTPException(
+            status_code=429,
+            detail="Trop de tentatives. Réessayez plus tard.",
+            headers={"Retry-After": str(reste)},
+        )
+
     cle_recue = request.headers.get("x-internal-api-key", "")
     # compare_digest : comparaison en temps constant (évite de deviner la clé
-    # caractère par caractère en mesurant le temps de réponse).
-    if not hmac.compare_digest(cle_recue, INTERNAL_API_KEY):
+    # caractère par caractère en mesurant le temps de réponse). Comparée en
+    # octets : un caractère non ASCII dans le header ne provoque plus d'erreur 500.
+    if not hmac.compare_digest(cle_recue.encode("utf-8"), INTERNAL_API_KEY.encode("utf-8")):
+        # Journal JSON d'un refus. On ne logue JAMAIS la clé reçue (ni un extrait) :
+        # seulement sa présence et sa longueur, pour repérer un essai de force brute.
+        transfert = request.headers.get("x-forwarded-for", "")
+        ip_client = (
+            transfert.split(",")[0].strip()
+            or (request.client.host if request.client else "inconnue")
+        )
+        corps_octets = corps_sha256 = corps_apercu = None
+        try:
+            corps = await request.body()
+            corps_octets = len(corps)
+            corps_sha256 = hashlib.sha256(corps).hexdigest()
+            if LOG_SECURITE_CORPS_MAX and corps:
+                corps_apercu = corps[:LOG_SECURITE_CORPS_MAX].decode("utf-8", errors="replace")
+        except Exception:
+            pass  # corps déjà consommé (multipart) ou illisible : on journalise sans
+
+        entree = {
+            "evenement": "cle_interne_refusee",
+            "horodatage": datetime.now(timezone.utc).isoformat(),
+            "ip_client": ip_client,
+            "x_forwarded_for": transfert or None,
+            "ip_directe": request.client.host if request.client else None,
+            "methode": request.method,
+            "chemin": request.url.path,
+            "cle_presente": bool(cle_recue),
+            "longueur_cle_recue": len(cle_recue),
+            "user_agent": request.headers.get("user-agent"),
+            "origine": request.headers.get("origin"),
+            "referer": request.headers.get("referer"),
+            "taille_corps": request.headers.get("content-length"),
+            "corps_octets": corps_octets,
+            "corps_sha256": corps_sha256,
+            "corps_apercu": corps_apercu,
+            "corps_tronque": bool(corps_apercu is not None and corps_octets and corps_octets > LOG_SECURITE_CORPS_MAX),
+        }
+        _journaliser_securite(entree)
+        if _enregistrer_echec(ip_directe):
+            _journaliser_securite({
+                "evenement": "ip_bloquee",
+                "horodatage": datetime.now(timezone.utc).isoformat(),
+                "ip_directe": ip_directe,
+                "ip_client": ip_client,
+                "echecs_declencheurs": AUTH_MAX_ECHECS,
+                "fenetre_secondes": AUTH_FENETRE_SECONDES,
+                "duree_blocage_secondes": AUTH_BLOCAGE_SECONDES,
+            })
         raise HTTPException(status_code=401, detail="Accès refusé.")
+
+
 
 
 # En production, on ne publie pas la documentation automatique (/docs, /redoc,

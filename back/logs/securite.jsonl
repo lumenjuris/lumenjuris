@@ -1,0 +1,14 @@
+{"evenement": "cle_interne_refusee", 
+"horodatage": "2026-11-09T17:40:12.588472+00:00"
+, "ip_client": "127.0.0.1",
+ "x_forwarded_for": null,
+ "ip_directe": "127.0.0.1",
+  "methode": "POST",
+   "chemin": "/chat",
+    "cle_presente": true,
+     "longueur_cle_recue": 4,
+      "user_agent": "curl/8.13.0",
+       "origine": null,
+        "referer": null,
+         "taille_corps": "2"
+        }
