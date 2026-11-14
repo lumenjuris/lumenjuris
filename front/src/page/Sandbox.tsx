@@ -25,7 +25,7 @@ export const Sandbox = () => {
   const arrayPageForm = [PageFormProfil, PageFormOrganisation, PageFormActivity, PageFormBesoin]
   const CurrentPage = arrayPageForm[pageFormReview]
 
-  const btnCss = "border-1-black gap-2 bg-white p-2 mr-2 mt-2 rounded"
+  const btnCss = "border-1-black gap-2 bg-white p-2 mr-2 mt-2 rounded hover:bg-white/15"
 
   const RemoveStorageNewUser = (): void => { localStorage.removeItem("isNewUser"); setDisplayForm(false) }
   const SetStorageTrue = (): void => { localStorage.setItem("isNewUser", "true"); setDisplayForm(true) }

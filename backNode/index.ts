@@ -23,8 +23,10 @@ import routerAdmin from "./src/route/apiAdmin.js";
 import routerNegotiation from "./src/route/apiNegotiation.js";
 import routerLegalWatch from "./src/route/apiLegalWatch.js";
 import routerLogger from "./src/route/apiLogger.js";
-
+import { routerUserMetaData } from "./src/route/apiUserMetaData.js";
 import routerFeatureEvent from "./src/route/apiFeatureEvent.js";
+
+
 import cors from "cors";
 import { seedBootstrapUsers } from "./src/services/bootstrapUsers.js";
 import { Mailer } from "./src/infrastructure/mailer/classMailer.js";
@@ -129,6 +131,7 @@ app.use("/playbook", routerPlaybook);
 app.use("/admin", routerAdmin);
 app.use("/feature-event", routerFeatureEvent);
 app.use("/negotiation", routerNegotiation);
+app.use("/user-metadata", routerUserMetaData);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({
