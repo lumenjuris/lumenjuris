@@ -10,3 +10,4 @@ python-multipart
 python-docx
 mammoth
 awsgi
+a2wsgi

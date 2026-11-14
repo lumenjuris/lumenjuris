@@ -16,6 +16,8 @@ import asyncio
 from starlette.concurrency import run_in_threadpool
 from datetime import datetime, timezone
 
+
+
 #Max de requette en simultané
 semaphore = asyncio.Semaphore(5)
 
@@ -1134,7 +1136,6 @@ async def openai_chat(req: OpenAIChatRequest):
 
 
 
-
 @app.post("/openai-chat-5")
 async def openai_chat52(req:OpenAIRequestGpt5):
 
@@ -1225,6 +1226,8 @@ class NegotiationDiffRequest(BaseModel):
     rightText: str
 
 
+
+
 def _segment_clauses(text: str) -> List[Dict[str, str]]:
     """Découpe un contrat en clauses par en-têtes 'Article N' (fallback : paragraphes)."""
     import re
@@ -1268,6 +1271,9 @@ def _line_diff(a: str, b: str) -> List[Dict[str, Any]]:
             for line in bl[j1:j2]:
                 out.append({"type": "added", "text": line})
     return out
+
+
+
 
 
 @app.post("/negotiation-diff")
