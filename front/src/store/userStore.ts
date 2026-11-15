@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { UserData } from "../types/userData";
+import type { OnboardingData } from "../types/onboarding";
 import { fetchProxy } from "../utils/fetchProxy";
 import { oublierDestination } from "../utils/destinationApresConnexion";
 
@@ -22,7 +23,14 @@ interface UserState {
   authStatus: AuthStatus;
   userAvatarUrl: string | null;
   userInfoError: string | null;
+  /** Onboarding : état du parcours + réponses. `null` tant qu'il n'est pas chargé. */
+  onboarding: OnboardingData | null;
+  /** Vrai quand l'utilisateur a fermé le formulaire (« plus tard ») : on ne le rouvre pas avant la prochaine session. */
+  onboardingDismissed: boolean;
   fetchUser: () => Promise<void>;
+  fetchOnboarding: () => Promise<void>;
+  setOnboarding: (onboarding: OnboardingData) => void;
+  dismissOnboarding: () => void;
   logoutUser: () => Promise<boolean>;
   reset: () => void;
 }
@@ -40,6 +48,12 @@ interface UserState {
  * - Succès mais non vérifié → `authStatus: "unauthenticated"` (le compte existe
  *   mais l'email n'a pas été confirmé — traité comme non connecté).
  * - Erreur réseau / serveur → `authStatus: "unauthenticated"`, `userInfoError` renseigné.
+ *
+ * **`fetchOnboarding`** — appelle `GET /api/user-metadata` et range le résultat dans
+ * `onboarding`. Lancé automatiquement par `fetchUser` dès que la session est
+ * confirmée, donc à chaque connexion (formulaire, Google, Microsoft, retour sur
+ * l'application). Un échec est silencieux : l'onboarding ne doit jamais bloquer
+ * l'application.
  *
  * **`logoutUser`** — appelle `POST /api/user/auth/logout` pour invalider le cookie
  * JWT côté serveur, puis remet le store à zéro. Retourne `true` si la déconnexion
@@ -60,12 +74,14 @@ interface UserState {
  * if (success) navigate("/");
  * ```
  */
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   userData: null,
   isConnected: false,
   authStatus: "idle",
   userAvatarUrl: null,
   userInfoError: null,
+  onboarding: null,
+  onboardingDismissed: false,
 
   fetchUser: async () => {
     set({ authStatus: "loading" });
@@ -86,12 +102,16 @@ export const useUserStore = create<UserState>((set) => ({
           userAvatarUrl: provider?.avatarUrl ?? null,
           userInfoError: null,
         });
+        // Session confirmée : on charge l'état de l'onboarding sans attendre,
+        // pour ne pas retarder l'affichage de l'application.
+        void get().fetchOnboarding();
       } else {
         set({
           isConnected: false,
           authStatus: "unauthenticated",
           userData: null,
           userAvatarUrl: null,
+          onboarding: null,
           userInfoError: dataResponse.success ? null : dataResponse.message,
         });
       }
@@ -104,6 +124,26 @@ export const useUserStore = create<UserState>((set) => ({
       });
     }
   },
+
+  fetchOnboarding: async () => {
+    try {
+      const response = await fetchProxy("/api/user-metadata", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const dataResponse = await response.json().catch(() => null);
+      if (response.ok && dataResponse?.success && dataResponse.data) {
+        set({ onboarding: dataResponse.data as OnboardingData });
+      }
+    } catch (error) {
+      console.error("Onboarding : chargement impossible", error);
+    }
+  },
+
+  setOnboarding: (onboarding) => set({ onboarding }),
+
+  dismissOnboarding: () => set({ onboardingDismissed: true }),
 
   logoutUser: async () => {
     try {
@@ -120,6 +160,8 @@ export const useUserStore = create<UserState>((set) => ({
           userData: null,
           userAvatarUrl: null,
           userInfoError: null,
+          onboarding: null,
+          onboardingDismissed: false,
         });
         return true;
       }
@@ -143,5 +185,18 @@ export const useUserStore = create<UserState>((set) => ({
       authStatus: "unauthenticated",
       userAvatarUrl: null,
       userInfoError: null,
+      onboarding: null,
+      onboardingDismissed: false,
     }),
 }));
+
+/**
+ * Faut-il proposer le formulaire d'onboarding ? Oui tant que le parcours n'est
+ * ni terminé ni refusé, et que l'utilisateur ne l'a pas fermé pendant cette
+ * session.
+ */
+export const selectShouldShowOnboarding = (state: UserState): boolean =>
+  state.authStatus === "authenticated" &&
+  !state.onboardingDismissed &&
+  (state.onboarding?.onboardingStatus === "NOT_STARTED" ||
+    state.onboarding?.onboardingStatus === "IN_PROGRESS");

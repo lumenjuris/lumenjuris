@@ -200,6 +200,7 @@ model User {
   lastConnected    DateTime @default(now())
 
   //relation 
+  userMetadata      UserMetadata?
   tokens            Token[]
   events            Event[]
   authProviders     AuthProviderAccount[]
@@ -231,6 +232,43 @@ model User {
   // Playbook (règles de négociation)
   negotiationPlaybooks        NegotiationPlaybook[]
   negotiationPlaybookAnalyses NegotiationPlaybookAnalysis[]
+}
+
+/// État du parcours d'accueil (onboarding) d'un utilisateur.
+enum OnboardingStatus {
+  NOT_STARTED // compte créé, formulaire jamais ouvert
+  IN_PROGRESS // au moins une étape enregistrée
+  COMPLETED // formulaire terminé
+  SKIPPED // l'utilisateur a refusé, ou compte antérieur à l'onboarding
+}
+
+/// Réponses du formulaire d'accueil + état du parcours. Une ligne par utilisateur.
+/// Les réponses sont des CODES issus de listes fermées (voir classUserMetadata.ts) :
+/// stockés en clair car non identifiants, et filtrables pour les statistiques.
+/// Seul `professionOther` est un texte libre (60 caractères max).
+model UserMetadata {
+  idUserMetadata Int @id @default(autoincrement())
+
+  // --- État du parcours ---
+  onboardingStatus  OnboardingStatus @default(NOT_STARTED)
+  onboardingVersion Int              @default(1) // version du questionnaire : permet d'ajouter une question plus tard
+  currentStep       Int              @default(0) // dernière étape atteinte (reprise + mesure des abandons)
+  completedAt       DateTime?
+
+  // --- Réponses ---
+  profession      String? @db.VarChar(40) // code de la liste, "autre" si saisie libre
+  professionOther String? @db.VarChar(60) // renseigné uniquement quand profession = "autre"
+  primaryIntents  Json? // codes d'outils, 3 max, dans l'ordre de sélection (le 1er = intention principale)
+  contractVolume  String? @db.VarChar(20) // volume mensuel de contrats
+  teamSize        String? @db.VarChar(20) // taille de l'équipe qui traite les contrats
+  hasNoEnterprise Boolean @default(false) // a répondu « pas d'entreprise » : on ne repropose plus l'étape
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //relation user 1:1
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [idUser], onDelete: Cascade)
 }
 
 // --- AUTH VIA PROVIDER ---

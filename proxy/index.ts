@@ -32,7 +32,7 @@ import { summarizeContractRouter } from "./src/routes/summarizeContract.js";
 import { contractPackRouter } from "./src/routes/contractPack.js";
 import { globalErrorHandler } from "./src/middleware/globalErrorHandler.js";
 import { addErrorFeedbackLogger } from "./src/middleware/loggerFeedback.js";
-
+import { routerUserMetadata } from "./src/routes/userMetadata.js";
 
 
 const app = express();
@@ -91,7 +91,7 @@ app.use("/api/summarize-contract", summarizeContractRouter)
 app.use("/api/delete-summarize-contract", summarizeContractRouter);
 // Routes internes du Pack Contrat (appelées par le backNode, clé interne)
 app.use("/api/internal/contract-pack", contractPackRouter);
-
+app.use("/api/user-metadata", routerUserMetadata)
 
 
 
