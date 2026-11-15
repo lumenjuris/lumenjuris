@@ -1,3 +1,15 @@
+/**
+ * ⚠ VERSION OBSOLÈTE — archivée le 15/11/2026, plus utilisée par l'application.
+ *
+ * Ancien bloc « Premiers pas » du tableau de bord : trois étapes fixes,
+ * identiques pour tous (premier contrat, première négociation, première
+ * signature), cochées automatiquement. Remplacé par les cartes d'outils
+ * adaptées aux choix de l'onboarding (`home/console/ToolCards.tsx`).
+ *
+ * Ce fichier regroupe le composant (`OnboardingSteps.tsx`) et, en bas, le type
+ * et la fonction qui l'alimentaient (retirés de `types.ts` et de
+ * `useDashboardData.ts`). Il n'est pas compilé : les imports ne sont plus valides.
+ */
 import { Link } from "react-router-dom";
 import { ArrowRight, Check } from "lucide-react";
 
@@ -89,4 +101,54 @@ export function OnboardingSteps({ steps, loading }: Props) {
       </div>
     </SectionCard>
   );
+}
+/* ─── Retiré de `home/types.ts` ─── */
+
+/** Une étape du bloc « Premiers pas », cochée automatiquement. */
+export interface OnboardingStep {
+  key: string;
+  title: string;
+  description: string;
+  /** Vrai dès que les données montrent que l'étape a été franchie. */
+  done: boolean;
+  /** Libellé du bouton affiché sur la prochaine étape à faire. */
+  actionLabel: string;
+  to: string;
+}
+
+/* ─── Retiré de `home/useDashboardData.ts` ─── */
+
+/**
+ * Construit les trois étapes de prise en main.
+ *
+ * Elles suivent le parcours naturel de l'outil (rédiger → négocier → signer) et
+ * se cochent à partir des données déjà chargées : aucun état n'est stocké.
+ */
+function buildOnboarding(raw: RawData): OnboardingStep[] {
+  return [
+    {
+      key: "premier-contrat",
+      title: "Ajoutez un premier contrat",
+      description: "Générez-en un depuis un brief, ou importez un document existant.",
+      done: (raw.contractStats?.total ?? 0) > 0,
+      actionLabel: "Commencer",
+      to: "/contrat-generation?section=scratch",
+    },
+    {
+      key: "premiere-negociation",
+      title: "Ouvrez une négociation",
+      description: "Partagez le document, recevez les propositions et tranchez.",
+      done: raw.negotiations.length > 0,
+      actionLabel: "Ouvrir",
+      to: "/negociations",
+    },
+    {
+      key: "premiere-signature",
+      title: "Envoyez en signature",
+      description: "Faites signer en ligne, avec valeur probante.",
+      done: raw.envelopes.length > 0,
+      actionLabel: "Envoyer",
+      to: "/signature",
+    },
+  ];
 }

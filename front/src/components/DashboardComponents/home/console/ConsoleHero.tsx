@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Upload } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Upload } from "lucide-react";
 
 import { Seal } from "./Seal";
 /* import { ThemeToggle } from "./ThemeToggle";
@@ -10,6 +10,8 @@ interface Props {
   isEmpty: boolean;
   /** Nombre d'éléments en attente, repris dans l'accroche. */
   pendingActions: number;
+  /** Vrai quand l'utilisateur a choisi ses outils à l'onboarding : l'accroche d'accueil y renvoie. */
+  isPersonalized: boolean;
 }
 
 /** Date du jour formatée « Mardi 26 septembre », première lettre en capitale. */
@@ -24,15 +26,19 @@ function todayLabel(): string {
 
 /**
  * En-tête de la console connectée : salutation éditoriale, accroche du jour et
- * les deux points d'entrée principaux (générer / importer). L'interrupteur de
- * thème est posé en haut à droite.
+ * les deux points d'entrée principaux (générer / importer). Pour un compte
+ * encore vide, ces deux actions laissent la place aux cartes d'outils affichées
+ * juste en dessous (voir `ToolCards`). L'interrupteur de thème est posé en haut
+ * à droite.
  */
-export function ConsoleHero({ firstName, isEmpty, pendingActions }: Props) {
+export function ConsoleHero({ firstName, isEmpty, pendingActions, isPersonalized }: Props) {
   const greeting = isEmpty
     ? `Bienvenue${firstName ? `, ${firstName}` : ""}.`
     : `Bonjour${firstName ? ` ${firstName}` : ""}.`;
 
-  let subline = "Commencez par un contrat : le suivi des échéances, des signatures et des risques se met en place ensuite.";
+  let subline = isPersonalized
+    ? "Votre espace est prêt : les outils que vous avez choisis vous attendent juste en dessous."
+    : "Commencez par un contrat : le suivi des échéances, des signatures et des risques se met en place ensuite.";
   if (!isEmpty) {
     subline = pendingActions > 0
       ? `<b>${pendingActions} action${pendingActions > 1 ? "s" : ""}</b> vous attend${pendingActions > 1 ? "ent" : ""}. Reprenez où vous vous êtes arrêté.`
@@ -53,6 +59,12 @@ export function ConsoleHero({ firstName, isEmpty, pendingActions }: Props) {
           <p className="sub" dangerouslySetInnerHTML={{ __html: subline }} />
         </div>
 
+        {isEmpty ? (
+          <div className="hero-visual" aria-hidden="true">
+            <Seal size={150} className="bigseal" />
+            <div className="fcard"><span className="fi"><Check className="ic" style={{ width: 17, height: 17 }} /></span><span><b>Lumen Juris</b><span>Mettez en lumière le juridique</span></span></div>
+          </div>
+        ) : (
         <div className="actions">
           <Link to="/contrat-generation?section=scratch" className="pa primary">
             <span className="paic"><Sparkles className="ic" /></span>
@@ -69,6 +81,7 @@ export function ConsoleHero({ firstName, isEmpty, pendingActions }: Props) {
             </span>
           </Link>
         </div>
+        )}
       </div>
     </div>
   );

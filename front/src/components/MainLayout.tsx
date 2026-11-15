@@ -26,6 +26,7 @@ import { isFeatureEnabled } from "../config/features";
 
 import { MainHeader } from "./MainHeader/MainHeader";
 import { FeedbackWidget } from "./common/FeedbackWidget";
+import { OnboardingGate } from "./onboarding/OnboardingGate";
 import { useTemplateNotificationStore } from "../store/templateNotificationStore";
 import { useLegalWatchStore } from "../store/legalWatchStore";
 import { LumenJurisLogo } from "./common/LumenJurisLogo";
@@ -409,6 +410,9 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
       </div>
 
       <FeedbackWidget />
+
+      {/* Formulaire d'accueil : ne s'affiche qu'aux comptes connectés qui ne l'ont ni terminé ni refusé. */}
+      <OnboardingGate />
 
       <style>{`
         @keyframes templateAddedPulse {

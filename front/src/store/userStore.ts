@@ -26,6 +26,8 @@ interface UserState {
   /** Onboarding : état du parcours + réponses. `null` tant qu'il n'est pas chargé. */
   onboarding: OnboardingData | null;
   /** Vrai quand l'utilisateur a fermé le formulaire (« plus tard ») : on ne le rouvre pas avant la prochaine session. */
+  /** Vrai dès que le chargement de l'onboarding est terminé, réussi ou non. */
+  onboardingLoaded: boolean;
   onboardingDismissed: boolean;
   fetchUser: () => Promise<void>;
   fetchOnboarding: () => Promise<void>;
@@ -81,6 +83,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   userAvatarUrl: null,
   userInfoError: null,
   onboarding: null,
+  onboardingLoaded: false,
   onboardingDismissed: false,
 
   fetchUser: async () => {
@@ -112,6 +115,7 @@ export const useUserStore = create<UserState>((set, get) => ({
           userData: null,
           userAvatarUrl: null,
           onboarding: null,
+          onboardingLoaded: false,
           userInfoError: dataResponse.success ? null : dataResponse.message,
         });
       }
@@ -138,6 +142,8 @@ export const useUserStore = create<UserState>((set, get) => ({
       }
     } catch (error) {
       console.error("Onboarding : chargement impossible", error);
+    } finally {
+      set({ onboardingLoaded: true });
     }
   },
 
@@ -161,6 +167,7 @@ export const useUserStore = create<UserState>((set, get) => ({
           userAvatarUrl: null,
           userInfoError: null,
           onboarding: null,
+          onboardingLoaded: false,
           onboardingDismissed: false,
         });
         return true;
@@ -186,6 +193,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       userAvatarUrl: null,
       userInfoError: null,
       onboarding: null,
+      onboardingLoaded: false,
       onboardingDismissed: false,
     }),
 }));

@@ -20,7 +20,7 @@ import type { CreditsData } from "../../../types/creditsData";
 import { readQuotaValue } from "../../../types/quotas";
 import type { SubscriptionData } from "../../../types/subscriptionData";
 import type {
-  DeadlineCard, KpiCard, OnboardingStep, QueueItem, QuotaBar, QuotaState, RiskAlert,
+  DeadlineCard, KpiCard, QueueItem, QuotaBar, QuotaState, RiskAlert,
   SignatureEnvelope,
 } from "./types";
 
@@ -250,41 +250,6 @@ function buildKpis(raw: RawData, queue: QueueItem[]): KpiCard[] {
   ];
 }
 
-/**
- * Construit les trois étapes de prise en main.
- *
- * Elles suivent le parcours naturel de l'outil (rédiger → négocier → signer) et
- * se cochent à partir des données déjà chargées : aucun état n'est stocké.
- */
-function buildOnboarding(raw: RawData): OnboardingStep[] {
-  return [
-    {
-      key: "premier-contrat",
-      title: "Ajoutez un premier contrat",
-      description: "Générez-en un depuis un brief, ou importez un document existant.",
-      done: (raw.contractStats?.total ?? 0) > 0,
-      actionLabel: "Commencer",
-      to: "/contrat-generation?section=scratch",
-    },
-    {
-      key: "premiere-negociation",
-      title: "Ouvrez une négociation",
-      description: "Partagez le document, recevez les propositions et tranchez.",
-      done: raw.negotiations.length > 0,
-      actionLabel: "Ouvrir",
-      to: "/negociations",
-    },
-    {
-      key: "premiere-signature",
-      title: "Envoyez en signature",
-      description: "Faites signer en ligne, avec valeur probante.",
-      done: raw.envelopes.length > 0,
-      actionLabel: "Envoyer",
-      to: "/signature",
-    },
-  ];
-}
-
 /** Construit les prochaines échéances (les plus proches d'abord). */
 function buildDeadlines(raw: RawData): DeadlineCard[] {
   return [...raw.deadlines]
@@ -454,13 +419,12 @@ export interface DashboardData {
   queue: QueueItem[];
   deadlines: DeadlineCard[];
   alerts: RiskAlert[];
-  onboarding: OnboardingStep[];
-  /** Vrai quand les trois étapes de prise en main sont franchies. */
-  onboardingCompleted: boolean;
   quotas: QuotaBar[];
   planName: string;
   /** Compteurs affichés en indice sur les cartes de modules. */
   moduleCounts: { contracts: number; negotiations: number; signatures: number; alerts: number };
+  /** Volumes par outil, affichés sur les cartes d'outils une fois l'outil utilisé. */
+  toolCounts: { contracts: number; negotiations: number; envelopes: number };
 }
 
 export function useDashboardData(): DashboardData {
@@ -523,7 +487,6 @@ export function useDashboardData(): DashboardData {
     const queue = buildQueue(raw);
     const alerts = buildAlerts(raw);
     const contracts = raw.contractStats?.total ?? 0;
-    const onboarding = buildOnboarding(raw);
 
     return {
       loading,
@@ -538,8 +501,6 @@ export function useDashboardData(): DashboardData {
       queue,
       deadlines: buildDeadlines(raw),
       alerts,
-      onboarding,
-      onboardingCompleted: !loading && onboarding.every((step) => step.done),
       quotas: buildQuotas(raw),
       planName: raw.planName ?? "Découverte",
       moduleCounts: {
@@ -547,6 +508,11 @@ export function useDashboardData(): DashboardData {
         negotiations: queue.filter((item) => item.group === "Négociation").length,
         signatures: queue.filter((item) => item.group === "Signature").length,
         alerts: alerts.length,
+      },
+      toolCounts: {
+        contracts,
+        negotiations: raw.negotiations.length,
+        envelopes: raw.envelopes.length,
       },
     };
   }, [raw, loading, isGuest]);

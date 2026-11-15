@@ -265,6 +265,21 @@ html[data-theme="dark"] .ljc .demo.sign path{stroke:var(--gold-bright)}
 .ljc .reassure .r{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 14px}
 .ljc .reassure .r .ic{width:14px;height:14px;color:var(--green)}
 
+/* ══════════ Cartes d'outils (colonne principale) ══════════ */
+.ljc .maincol{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ljc .tools-h{padding:2px 2px 11px}
+.ljc .tools-h h3{font-family:"Newsreader",Georgia,serif;font-weight:400;font-size:19px;line-height:1.1;margin-top:4px;color:var(--ink)}
+.ljc .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:13px}
+.ljc .tool{display:flex;flex-direction:column;gap:7px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s,border-color .18s}
+.ljc .tool:hover{transform:translateY(-2px);box-shadow:var(--lift);border-color:var(--gold)}
+.ljc .tool .tic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--blue-soft);color:var(--info);margin-bottom:4px}
+.ljc .tool .tt{font-weight:600;font-size:14.5px;color:var(--ink)}
+.ljc .tool .td{font-size:12.5px;line-height:1.45;color:var(--ink-muted);flex:1}
+.ljc .tool .ts{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--green)}
+.ljc .tool .ts::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+.ljc .tool .tgo{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:12.5px;font-weight:600;color:var(--info)}
+.ljc .tool .arrow{transition:transform .18s}.ljc .tool:hover .arrow{transform:translateX(3px)}
+
 /* ══════════ Responsive ══════════ */
 @media(max-width:1080px){
   .ljc .kpis{grid-template-columns:repeat(2,1fr)}
