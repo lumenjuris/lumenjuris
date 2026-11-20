@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 
+import { useOnboardingTourStore } from "../../store/onboardingTourStore";
 import { selectShouldShowOnboarding, useUserStore } from "../../store/userStore";
 
 // Chargé à la demande : seuls les comptes qui n'ont pas terminé leur parcours
@@ -19,6 +20,7 @@ const OnboardingForm = lazy(() =>
 export function OnboardingGate() {
   const shouldShow = useUserStore(selectShouldShowOnboarding);
   const dismissOnboarding = useUserStore((state) => state.dismissOnboarding);
+  const startTour = useOnboardingTourStore((state) => state.startTour);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -30,6 +32,8 @@ export function OnboardingGate() {
   const close = () => {
     setOpen(false);
     dismissOnboarding();
+    // Formulaire terminé (pas seulement fermé ou refusé) : la visite guidée du menu prend le relais.
+    if (useUserStore.getState().onboarding?.onboardingStatus === "COMPLETED") startTour();
   };
 
   return (

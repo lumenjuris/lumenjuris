@@ -8,7 +8,8 @@ import { deleteOnboardingAnswers } from "../components/onboarding/api";
 import { OnboardingForm } from "../components/onboarding/OnboardingForm";
 import { selectShouldShowOnboarding, useUserStore } from "../store/userStore";
 import type { OnboardingData } from "../types/onboarding";
-import { OnboardingTooltip } from "../components/DashboardComponents/home/console/OnboardingToolTips";
+import { useNavigate } from "react-router-dom";
+import { useOnboardingTourStore } from "../store/onboardingTourStore";
 
 const STATUS_LABELS: Record<OnboardingData["onboardingStatus"], string> = {
   NOT_STARTED: "Non commencé",
@@ -29,6 +30,15 @@ export const Sandbox = () => {
   useEffect(() => {
     if (shouldShow) setForceOpen(true);
   }, [shouldShow]);
+
+  const startTour = useOnboardingTourStore((state) => state.startTour);
+  const navigate = useNavigate();
+
+  // La visite se déroule sur le menu latéral, absent de cette page : on part sur l'accueil.
+  const launchTour = () => {
+    startTour();
+    navigate("/dashboard");
+  };
 
   const closeForm = () => {
     setForceOpen(false);
@@ -58,10 +68,11 @@ export const Sandbox = () => {
           <button type="button" onClick={() => void deleteOnboardingAnswers()} className={buttonClassName}>
             Effacer mes réponses
           </button>
+          <button type="button" onClick={launchTour} className={buttonClassName}>
+            Lancer la visite du menu
+          </button>
         </div>
       </div>
-
-      {/* <OnboardingTooltip /> */}
 
       {forceOpen && <OnboardingForm onClose={closeForm} />}
     </div>
