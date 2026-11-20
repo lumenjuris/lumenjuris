@@ -493,7 +493,8 @@ model FeatureUsage {
   @@index([createdAt])
 }
 
-/// Abonnement d'un utilisateur à un plan tarifaire : statut, dates de début/expiration, référence Stripe.
+/// Abonnement d'un utilisateur à un plan tarifaire : statut, dates de début/expiration, référence Stripe 
+// (prend en compte la version freemium initialisé à la création d'un utilisateur ).
 model Subscription {
   idSubscription       Int                @id @default(autoincrement())
   status               SubscriptionStatus
@@ -516,7 +517,7 @@ model Subscription {
 
 /// Articles vendus à l'unité (hors abonnement).
 enum ItemVente {
-  CONTRACT_SANS_FILIGRANE
+  CONTRACT_SANS_FILIGRANE //Vente d'un contrat généré avec pack (pdf,word, document récapitulatif)
 }
 
 /// Cycle de vie d'un achat unitaire :
@@ -586,9 +587,9 @@ model BillingOneShot {
   @@index([userId, contractRef])
 }
 
-/// État de génération des livrables d'un achat unitaire :
-/// PENDING tant que rien n'est généré, READY quand les fichiers sont sur le serveur,
-/// FAILED si la génération a échoué (relancée à la demande au téléchargement).
+// État de génération des livrables d'un achat unitaire :
+// PENDING tant que rien n'est généré, READY quand les fichiers sont sur le serveur,
+// FAILED si la génération a échoué (relancée à la demande au téléchargement).
 enum DeliveryStatus {
   PENDING
   READY

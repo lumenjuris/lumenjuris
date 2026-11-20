@@ -83,7 +83,7 @@ export function Dashboard() {
                     (voir `showQueue`, `showAgenda`, `showRisks`). Les cartes
                     d'outils et les crédits sont toujours présents. */}
                 <div className="cols">
-                  <div className="maincol">
+                  <div className="maincol bg-white p-4 rounded-xl">
                     {showQueue && <WorkQueue items={data.queue} />}
                     <ToolCards cards={toolCards} isPersonalized={isPersonalized} />
                   </div>

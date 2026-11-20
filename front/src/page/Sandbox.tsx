@@ -8,6 +8,7 @@ import { deleteOnboardingAnswers } from "../components/onboarding/api";
 import { OnboardingForm } from "../components/onboarding/OnboardingForm";
 import { selectShouldShowOnboarding, useUserStore } from "../store/userStore";
 import type { OnboardingData } from "../types/onboarding";
+import { OnboardingTooltip } from "../components/DashboardComponents/home/console/OnboardingToolTips";
 
 const STATUS_LABELS: Record<OnboardingData["onboardingStatus"], string> = {
   NOT_STARTED: "Non commencé",
@@ -59,6 +60,8 @@ export const Sandbox = () => {
           </button>
         </div>
       </div>
+
+      {/* <OnboardingTooltip /> */}
 
       {forceOpen && <OnboardingForm onClose={closeForm} />}
     </div>

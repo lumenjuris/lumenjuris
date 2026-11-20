@@ -35,6 +35,8 @@ import { useDemandeConnexion } from "./auth/useDemandeConnexion";
 import { useLayoutStore } from "../store/layoutStore";
 
 import { ErrorBoundary } from "./ContractAnalysis/ErrorBoundary";
+import { OnboardingTooltip } from "./DashboardComponents/home/console/OnboardingToolTips";
+
 
 interface NavSubItem {
   icon: React.ElementType;
@@ -94,23 +96,23 @@ const navSections: NavSection[] = [
       { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
       ...(isFeatureEnabled("ENABLE_PLAYBOOK")
         ? [
-            { icon: ListChecks, label: "Playbook", path: "/playbook" },
-            {
-              icon: ScanSearch,
-              label: "Analyse",
-              path: "/conformite",
-              matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
-              children: [
-                { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
-                { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook" },
-                { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
-              ],
-            },
-          ]
+          { icon: ListChecks, label: "Playbook", path: "/playbook" },
+          {
+            icon: ScanSearch,
+            label: "Analyse",
+            path: "/conformite",
+            matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
+            children: [
+              { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
+              { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook" },
+              { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+            ],
+          },
+        ]
         : [
-            { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
-            { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
-          ]),
+          { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
+          { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+        ]),
       { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
@@ -360,14 +362,19 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
             {navSections.map((section, sectionIdx) => (
               <div key={sectionIdx} className="flex flex-col gap-0.5">
                 {section.category && (
-                  <h3 className="px-3 text-[10px] font-semibold tracking-wider text-sky-300 uppercase mb-0.5">
-                    {section.category}
-                  </h3>
+                  <>
+                    <h3 className="px-3 text-[10px] font-semibold tracking-wider text-sky-300 uppercase mb-0.5">
+                      {section.category}
+                    </h3>
+                  </>
                 )}
 
                 <ul className="flex flex-col gap-0.5">
                   {section.items.map((item) => (
-                    <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
+                    <>
+                      <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
+                      <OnboardingTooltip activeDescription="accueil" />
+                    </>
                   ))}
 
                   {section.category === "PILOTAGE" && isAdmin && (
@@ -411,7 +418,8 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
       <FeedbackWidget />
 
-      {/* Formulaire d'accueil : ne s'affiche qu'aux comptes connectés qui ne l'ont ni terminé ni refusé. */}
+      {/* Carte principale d'onboarding dés la création d'un nouveau compte envoie une série de questions pour configurer 
+      un front adapté à l'user */}
       <OnboardingGate />
 
       <style>{`

@@ -42,7 +42,7 @@ function lazyPage(load: () => Promise<{ default: ComponentType<any> }>) {
         } catch { /* stockage indisponible : pas de rechargement automatique */ }
         if (dejaRecharge) throw error;
         window.location.reload();
-        return new Promise<never>(() => {});
+        return new Promise<never>(() => { });
       },
     ),
   );
@@ -120,7 +120,7 @@ export function App() {
   if (showLoaderPage) return <Loader />
 
 
-  
+
 
   // L'accueil n'est plus une redirection selon l'authentification : `/` rend
   // directement le tableau de bord, qui s'adapte lui-même au visiteur.
@@ -129,88 +129,91 @@ export function App() {
       <ScrollToTop />
 
       <Suspense fallback={<Loader />}>
-      <Routes>
-        {/* ------------------------------------------------------------------
+        <Routes>
+          {/* ------------------------------------------------------------------
             Pages ouvertes à tous, avec le menu latéral et l'en-tête.
             L'accueil est visible sans compte : c'est la vitrine de l'outil,
             la connexion est demandée au moment d'utiliser une fonctionnalité.
            ------------------------------------------------------------------ */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-        </Route>
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* ------------------------------------------------------------------
+            
+            <Route path="/sandbox" element={<RequireAuth>{" "}<Sandbox />{" "}</RequireAuth>} />
+
+          </Route>
+
+          {/* ------------------------------------------------------------------
             Pages qui n'ont aucun sens sans compte : elles n'affichent que des
             données personnelles. Elles gardent le menu latéral et l'en-tête.
            ------------------------------------------------------------------ */}
-        <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
-          <Route path="/generateur" element={<Generateur />} />
+          <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
+            <Route path="/generateur" element={<Generateur />} />
 
-          {/* En attente d'implémentation, décommenter le lien dans MainLayout pour réimplémenter */}
-          {/* <Route path="/generateur/filigranes" element={<MesFiligranes />} /> */}
-          <Route path="/contrat-generation" element={<Generateur />} />
+            {/* En attente d'implémentation, décommenter le lien dans MainLayout pour réimplémenter */}
+            {/* <Route path="/generateur/filigranes" element={<MesFiligranes />} /> */}
+            <Route path="/contrat-generation" element={<Generateur />} />
 
-          <Route path="/contrat-statique" element={<Generateur />} />
+            <Route path="/contrat-statique" element={<Generateur />} />
 
-          <Route path="/contrat-from-model" element={<Generateur />} />
-          <Route path="/contrat-enhanced" element={<Generateur />} />
-          <Route path="/signature" element={<Signature />} />
-          <Route path="/contratheque" element={<Contratheque />} />
-          <Route path="/contratheque/:externalId" element={<Contratheque />} />
-          <Route path="/clauses" element={<ClausesLibrary />} />
-          {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/playbook" element={<PlaybookRules />} />}
-          {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/analyse-playbook" element={<PlaybookAnalysis />} />}
-          <Route path="/utilisateurs" element={<UserManagement />} />
-          <Route path="/negociations" element={<NegotiationsList />} />
-          <Route path="/negociation/:negotiationId" element={<NegotiationWorkspace />} />
-          <Route path="/chatjuridique" element={<ChatJuridique />} />
-          <Route path="/calculateur" element={<Calculateur />} />
-          {/* désactiver en attente d'amélioration de cet outil
+            <Route path="/contrat-from-model" element={<Generateur />} />
+            <Route path="/contrat-enhanced" element={<Generateur />} />
+            <Route path="/signature" element={<Signature />} />
+            <Route path="/contratheque" element={<Contratheque />} />
+            <Route path="/contratheque/:externalId" element={<Contratheque />} />
+            <Route path="/clauses" element={<ClausesLibrary />} />
+            {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/playbook" element={<PlaybookRules />} />}
+            {isFeatureEnabled("ENABLE_PLAYBOOK") && <Route path="/analyse-playbook" element={<PlaybookAnalysis />} />}
+            <Route path="/utilisateurs" element={<UserManagement />} />
+            <Route path="/negociations" element={<NegotiationsList />} />
+            <Route path="/negociation/:negotiationId" element={<NegotiationWorkspace />} />
+            <Route path="/chatjuridique" element={<ChatJuridique />} />
+            <Route path="/calculateur" element={<Calculateur />} />
+            {/* désactiver en attente d'amélioration de cet outil
             <Route path="/veille" element={<Veille />} />
              */}
-          <Route path="/conformite" element={<Conformite />} />
-          <Route path="/comprendre-contrat" element={<ComprendreContrat />} />
-          <Route path="/mon-compte" element={<ParamCompte />} />
-          <Route path="/analyzer" element={<ContractAnalysis />} />
-          <Route path="/monitoring" element={<Monitoring />} />
-        </Route>
+            <Route path="/conformite" element={<Conformite />} />
+            <Route path="/comprendre-contrat" element={<ComprendreContrat />} />
+            <Route path="/mon-compte" element={<ParamCompte />} />
+            <Route path="/analyzer" element={<ContractAnalysis />} />
+            <Route path="/monitoring" element={<Monitoring />} />
+          </Route>
 
 
-        {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
-        <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-        <Route path="/subscription/failed" element={<SubscriptionFailed />} />
-        {/* Retours Stripe de l'achat ponctuel d'un contrat (Pack Contrat) : la
+          {/* Pages de retour Stripe Checkout (URLs configurées côté backend) */}
+          <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+          <Route path="/subscription/failed" element={<SubscriptionFailed />} />
+          {/* Retours Stripe de l'achat ponctuel d'un contrat (Pack Contrat) : la
             vérification du paiement exige d'être connecté (sinon reconnexion puis retour ici) */}
-        <Route path="/achat/success" element={<RequireAuth><ContractPackSuccess /></RequireAuth>} />
-        <Route path="/achat/failed" element={<RequireAuth><ContractPackCancelled /></RequireAuth>} />
+          <Route path="/achat/success" element={<RequireAuth><ContractPackSuccess /></RequireAuth>} />
+          <Route path="/achat/failed" element={<RequireAuth><ContractPackCancelled /></RequireAuth>} />
 
 
-        {/* Page de gestion d'un cluster pour les multi user
+          {/* Page de gestion d'un cluster pour les multi user
           <Route path="/cluster" element={<ClusterUserPage />} /> EN COURS DE DEV
           */}
 
 
 
-        <Route path="/sandbox" element={<RequireAuth>{" "}<Sandbox />{" "}</RequireAuth>} />
 
 
-        <Route path="/verify-account" element={<VerifyAccount />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-account" element={<VerifyAccount />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route element={<PublicLayout />}>
-          <Route path="/user/deleteaccount/:token" element={<ConfirmDeleteAccountPage />} />
-        </Route>
+          <Route element={<PublicLayout />}>
+            <Route path="/user/deleteaccount/:token" element={<ConfirmDeleteAccountPage />} />
+          </Route>
 
-        {/* Page publique de signature pour le cocontractant — sans auth */}
-        <Route path="/signer/:token" element={<SignerPage />} />
+          {/* Page publique de signature pour le cocontractant — sans auth */}
+          <Route path="/signer/:token" element={<SignerPage />} />
 
-        {/* Route pour les formulaire et l'achat d'un plan */}
-        <Route path="/souscription" element={<Subscription />} />
+          {/* Route pour les formulaire et l'achat d'un plan */}
+          <Route path="/souscription" element={<Subscription />} />
 
-        {/* Page publique de négociation pour un invité externe — sans auth */}
-        <Route path="/negociation-invite/:token" element={<NegotiationGuest />} />
-      </Routes>
+          {/* Page publique de négociation pour un invité externe — sans auth */}
+          <Route path="/negociation-invite/:token" element={<NegotiationGuest />} />
+        </Routes>
       </Suspense>
 
 
