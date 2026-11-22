@@ -1,5 +1,7 @@
 import "../components/DashboardComponents/home/console.css";
 
+import { useMemo } from "react";
+
 import { useUserStore } from "../store/userStore";
 import { useDashboardData } from "../components/DashboardComponents/home/useDashboardData";
 import { usePageThemeScope } from "../hooks/usePageThemeScope";
@@ -12,6 +14,8 @@ import { AgendaCard } from "../components/DashboardComponents/home/console/Agend
 import { CreditsCard } from "../components/DashboardComponents/home/console/CreditsCard";
 import { RisksCard } from "../components/DashboardComponents/home/console/RisksCard";
 import { VisitorLauncher } from "../components/DashboardComponents/home/console/VisitorLauncher";
+import { ToolCards } from "../components/DashboardComponents/home/console/ToolCards";
+import { buildToolCards } from "../components/DashboardComponents/home/console/toolCatalog";
 
 /**
  * Page d'accueil (`/dashboard`) — « la console ».
@@ -32,6 +36,22 @@ export function Dashboard() {
 
   const data = useDashboardData();
 
+  // Cartes d'outils : celles choisies à l'onboarding, sinon trois cartes par défaut.
+  const primaryIntents = useUserStore((s) => s.onboarding?.primaryIntents);
+  const onboardingLoaded = useUserStore((s) => s.onboardingLoaded);
+  const toolCards = useMemo(
+    () => buildToolCards(primaryIntents ?? [], data.toolCounts),
+    [primaryIntents, data.toolCounts],
+  );
+  const isPersonalized = (primaryIntents?.length ?? 0) > 0;
+
+  // Un bloc sans donnée est masqué, chacun indépendamment des autres.
+  const showQueue = data.queue.length > 0;
+  const showAgenda = data.deadlines.length > 0;
+  // Les points de vigilance restent visibles dès qu'un contrat est suivi, même
+  // sans alerte : « vos contrats sont à jour » est alors une information utile.
+  const showRisks = data.alerts.length > 0 || data.toolCounts.contracts > 0;
+
   return (
     <div className="ljc">
       <div className="wrap">
@@ -49,19 +69,29 @@ export function Dashboard() {
               firstName={firstName}
               isEmpty={data.isEmpty}
               pendingActions={data.pendingActions}
+              isPersonalized={isPersonalized}
             />
 
-            {data.loading ? (
+            {/* On attend aussi l'onboarding : sans cela, les cartes par défaut
+                s'afficheraient un instant avant celles de l'utilisateur. */}
+            {data.loading || !onboardingLoaded ? (
               <ConsoleSkeleton />
             ) : (
               <>
                 {/* <ConsoleKpis kpis={data.kpis} /> */}
+                {/* Chaque bloc ne s'affiche que s'il a quelque chose à montrer
+                    (voir `showQueue`, `showAgenda`, `showRisks`). Les cartes
+                    d'outils et les crédits sont toujours présents. */}
                 <div className="cols">
-                  <WorkQueue items={data.queue} />
+                  <div className="maincol bg-white p-4 rounded-xl">
+                    {showQueue && <WorkQueue items={data.queue} />}
+                    <ToolCards cards={toolCards} isPersonalized={isPersonalized} />
+                  </div>
                   <div className="rail">
-                    <AgendaCard items={data.deadlines} />
+                    {/* Les points de vigilance passent en tête du rail : rassurer est la première promesse. */}
+                    {showRisks && <RisksCard alerts={data.alerts} />}
+                    {showAgenda && <AgendaCard items={data.deadlines} />}
                     <CreditsCard quotas={data.quotas} planName={data.planName} />
-                    <RisksCard alerts={data.alerts} />
                   </div>
                 </div>
               </>

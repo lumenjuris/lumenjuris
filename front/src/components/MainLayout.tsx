@@ -26,6 +26,7 @@ import { isFeatureEnabled } from "../config/features";
 
 import { MainHeader } from "./MainHeader/MainHeader";
 import { FeedbackWidget } from "./common/FeedbackWidget";
+import { OnboardingGate } from "./onboarding/OnboardingGate";
 import { useTemplateNotificationStore } from "../store/templateNotificationStore";
 import { useLegalWatchStore } from "../store/legalWatchStore";
 import { LumenJurisLogo } from "./common/LumenJurisLogo";
@@ -34,12 +35,17 @@ import { useDemandeConnexion } from "./auth/useDemandeConnexion";
 import { useLayoutStore } from "../store/layoutStore";
 
 import { ErrorBoundary } from "./ContractAnalysis/ErrorBoundary";
+import { OnboardingTour } from "./onboarding/OnboardingTour";
+import type { OnboardingTooltipKey } from "./onboarding/OnboardingTooltip";
+import { useOnboardingTourStore } from "../store/onboardingTourStore";
 
 interface NavSubItem {
   icon: React.ElementType;
   label: string;
   path: string;
   notificationKey?: "templateAdded";
+  /** Bulle de la visite guidée posée sur cette entrée. */
+  onboardingKey?: OnboardingTooltipKey;
 }
 
 interface NavItem {
@@ -47,6 +53,8 @@ interface NavItem {
   label: string;
   path: string;
   notificationKey?: string;
+  /** Bulle de la visite guidée posée sur cette entrée. */
+  onboardingKey?: OnboardingTooltipKey;
   children?: NavSubItem[];
   /** Page consultable sans compte : le clic n'ouvre pas le panneau de connexion. */
   estPublic?: boolean;
@@ -63,54 +71,54 @@ const navSections: NavSection[] = [
   {
     // Pas de catégorie pour l'accueil
     items: [
-      { icon: LayoutDashboard, label: "Accueil", path: "/dashboard", estPublic: true }
+      { icon: LayoutDashboard, label: "Accueil", path: "/dashboard", estPublic: true, onboardingKey: "accueil" }
     ],
   },
   {
     category: "CONTRATS",
     items: [
-      { icon: Library, label: "Contrathèque", path: "/contratheque" },
+      { icon: Library, label: "Contrathèque", path: "/contratheque", onboardingKey: "contratheque" },
       {
         icon: FileText,
         label: "Générateur de contrat",
         path: "/generateur",
         children: [
-          { icon: Sparkles, label: "Créer de zéro", path: "/contrat-generation?section=scratch" },
-          { icon: Upload, label: "Importer un modèle", path: "/contrat-generation?section=import" },
+          { icon: Sparkles, label: "Créer de zéro", path: "/contrat-generation?section=scratch", onboardingKey: "generateurContractScratch" },
+          { icon: Upload, label: "Importer un modèle", path: "/contrat-generation?section=import", onboardingKey: "generateurContractModel" },
           { icon: BookOpen, label: "Bibliothèque de modèles", path: "/contrat-generation?section=library", notificationKey: "templateAdded" },
 
           // A réactiver avec la route "/generateur/filigranes"
           // { icon: Droplets, label: "Mes images", path: "/generateur/filigranes" },
         ],
       },
-      { icon: MessagesSquare, label: "Négociation", path: "/negociations" },
-      { icon: PenTool, label: "Signature", path: "/signature" },
+      { icon: MessagesSquare, label: "Négociation", path: "/negociations", onboardingKey: "negociation" },
+      { icon: PenTool, label: "Signature", path: "/signature", onboardingKey: "signature" },
     ],
   },
   {
     category: "PILOTAGE",
     items: [
-      { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses" },
+      { icon: ScrollText, label: "Bibliothèque de clauses", path: "/clauses", onboardingKey: "bibliothequeClause" },
       ...(isFeatureEnabled("ENABLE_PLAYBOOK")
-        ? [
-            { icon: ListChecks, label: "Playbook", path: "/playbook" },
-            {
-              icon: ScanSearch,
-              label: "Analyse",
-              path: "/conformite",
-              matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
-              children: [
-                { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
-                { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook" },
-                { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
-              ],
-            },
-          ]
-        : [
-            { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite" },
-            { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
-          ]),
-      { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique" },
+        ? ([
+          { icon: ListChecks, label: "Playbook", path: "/playbook", onboardingKey: "playbook" },
+          {
+            icon: ScanSearch,
+            label: "Analyse",
+            path: "/conformite",
+            matchPaths: ["/conformite", "/comprendre-contrat", "/analyse-playbook"],
+            children: [
+              { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite", onboardingKey: "analyseClassique" },
+              { icon: ClipboardCheck, label: "Analyse playbook", path: "/analyse-playbook", onboardingKey: "analysePlaybook" },
+              { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+            ],
+          },
+        ] satisfies NavItem[])
+        : ([
+          { icon: ShieldCheck, label: "Analyse et revue", path: "/conformite", onboardingKey: "analyseClassique" },
+          { icon: Eye, label: "Comprendre ses contrats", path: "/comprendre-contrat" },
+        ] satisfies NavItem[])),
+      { icon: MessageSquare, label: "Chat juridique", path: "/chatjuridique", onboardingKey: "chat" },
       /*  { icon: Newspaper, label: "Actualité juridique", path: "/veille", notificationKey: "legalWatchUnread" }, */
     ],
   },
@@ -124,6 +132,16 @@ const navSections: NavSection[] = [
     ],
   },
 ];
+
+/**
+ * Étapes de la visite guidée : les entrées du menu qui portent une bulle, dans
+ * l'ordre d'affichage. Une entrée retirée du menu (fonctionnalité désactivée)
+ * disparaît donc aussi de la visite.
+ */
+const TOUR_STEPS: OnboardingTooltipKey[] = navSections
+  .flatMap((section) => section.items)
+  .flatMap((item) => [item.onboardingKey, ...(item.children ?? []).map((child) => child.onboardingKey)])
+  .filter((key): key is OnboardingTooltipKey => key !== undefined);
 
 // Breakpoint Tailwind `md` = 768px. On garde la même valeur en JS pour rester cohérent.
 const MOBILE_BREAKPOINT = 768;
@@ -142,6 +160,7 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
     <li>
       <NavLink
         to={child.path}
+        data-onboarding-anchor={child.onboardingKey}
         onClick={(event) => {
           demanderConnexion(event, child.path);
           onNavigate();
@@ -166,7 +185,16 @@ function NavChildLink({ child, onNavigate }: { child: NavSubItem; onNavigate: ()
   );
 }
 
-function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
+function NavItemRow({
+  item,
+  onNavigate,
+  tourKey,
+}: {
+  item: NavItem;
+  onNavigate: () => void;
+  /** Entrée présentée par la visite guidée en ce moment. */
+  tourKey?: OnboardingTooltipKey;
+}) {
   const location = useLocation();
   const demanderConnexion = useDemandeConnexion();
 
@@ -181,7 +209,9 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
   const hasChildren = !!item.children?.length;
   const isParentActive = (item.matchPaths ?? [item.path]).some((p) => location.pathname.startsWith(p));
   const [hovered, setHovered] = useState(false);
-  const open = hovered || isParentActive;
+  // Pendant la visite, le groupe reste ouvert quand la bulle présente un de ses sous-éléments.
+  const showsTourStep = tourKey !== undefined && (item.children ?? []).some((child) => child.onboardingKey === tourKey);
+  const open = hovered || isParentActive || showsTourStep;
 
   return (
     <li
@@ -192,6 +222,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
         <>
           <NavLink
             to={item.path}
+            data-onboarding-anchor={item.onboardingKey}
             onClick={handleNavClick}
             className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isParentActive
               ? "bg-white/15 text-white font-medium"
@@ -216,6 +247,7 @@ function NavItemRow({ item, onNavigate }: { item: NavItem; onNavigate: () => voi
         <NavLink
           to={item.path}
           end={item.path === "/dashboard"}
+          data-onboarding-anchor={item.onboardingKey}
           onClick={handleNavClick}
           className={({ isActive }) =>
             `group flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2.5 text-sm transition-all ${isActive
@@ -268,7 +300,17 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
   // - le collapse desktop (sidebar rétractable)
   const [sidebarOpen, setSidebarOpen] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= MOBILE_BREAKPOINT
-  );
+  );
+
+  // Visite guidée : entrée présentée en ce moment. Sur grand écran, le menu
+  // est rouvert s'il avait été replié, sinon la bulle n'aurait rien à désigner.
+  const tourStepIndex = useOnboardingTourStore((s) => s.stepIndex);
+  const tourKey = tourStepIndex !== null ? TOUR_STEPS[tourStepIndex] : undefined;
+  const tourActive = tourStepIndex !== null;
+  useEffect(() => {
+    if (tourActive && window.innerWidth >= MOBILE_BREAKPOINT) setSidebarOpen(true);
+  }, [tourActive]);
+
 
   // Ajuste automatiquement l'état lors d'un resize (ex: rotation tablette, redimensionnement fenêtre)
   useEffect(() => {
@@ -366,7 +408,7 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
 
                 <ul className="flex flex-col gap-0.5">
                   {section.items.map((item) => (
-                    <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} />
+                    <NavItemRow key={item.path} item={item} onNavigate={handleNavigate} tourKey={tourKey} />
                   ))}
 
                   {section.category === "PILOTAGE" && isAdmin && (
@@ -409,6 +451,13 @@ export function MainLayout({ children }: { children?: React.ReactNode }) {
       </div>
 
       <FeedbackWidget />
+
+      {/* Carte principale d'onboarding dés la création d'un nouveau compte envoie une série de questions pour configurer 
+      un front adapté à l'user */}
+      <OnboardingGate />
+
+      {/* Visite guidée du menu, lancée à la fin du formulaire d'accueil. */}
+      <OnboardingTour steps={TOUR_STEPS} />
 
       <style>{`
         @keyframes templateAddedPulse {

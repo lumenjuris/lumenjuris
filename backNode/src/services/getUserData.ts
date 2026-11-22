@@ -27,6 +27,7 @@ import {
   NegotiationSessionService,
 } from "./negotiation/classNegotiation.js";
 import { DoctrinalNoteService } from "./classDoctrinalNote.js";
+import { UserMetadataService, UserMetadataDTO } from "./classUserMetadata.js";
 
 // TYPE GLOBAL D'EXPORTATION
 export type UserFullExport = {
@@ -34,6 +35,7 @@ export type UserFullExport = {
   profile: any;
   enterprise: CompanyProfileDTO | null;
   preferences: UserPreferenceDTO | null;
+  onboarding: UserMetadataDTO | null; // réponses du formulaire d'accueil
   contracts: ContractListItemDTO[];
   doctrinalNotes: any[];
   folders: FolderDTO[]; // NOUVEAU
@@ -66,6 +68,7 @@ export async function getUserFullExport(
       chatHistoryResult,
       contractHistory,
       negotiationSession,
+      onboarding,
     ] = await Promise.all([
       new User().get(userId),
       CompanyProfileService.get(userId),
@@ -81,6 +84,7 @@ export async function getUserFullExport(
       new ChatHistory().get(userId),
       new ContractHistory().list(userId),
       new NegotiationSessionService().listForExport(userId),
+      new UserMetadataService().get(userId),
     ]);
 
     if (!profileResult || !profileResult.data) {
@@ -141,6 +145,7 @@ export async function getUserFullExport(
       profile: cleanProfile,
       enterprise,
       preferences,
+      onboarding: onboarding.data ?? null,
       contracts: contracts?.items || [],
       doctrinalNotes: doctrinalNotes || [],
       folders: folders || [],

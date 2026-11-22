@@ -57,18 +57,6 @@ export interface KpiCard {
   to: string;
 }
 
-/** Une étape du bloc « Premiers pas », cochée automatiquement. */
-export interface OnboardingStep {
-  key: string;
-  title: string;
-  description: string;
-  /** Vrai dès que les données montrent que l'étape a été franchie. */
-  done: boolean;
-  /** Libellé du bouton affiché sur la prochaine étape à faire. */
-  actionLabel: string;
-  to: string;
-}
-
 /** Une échéance du bloc « Échéances à venir ». */
 export interface DeadlineCard {
   key: string;
