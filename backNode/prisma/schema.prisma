@@ -1595,27 +1595,25 @@ model NegotiationPlaybookAnalysis {
   @@index([userId])
 }
 
-
-
 //Log de toutes les questions généré pour la generation d'un contrat, quand on atteins un certain cap on pioche dans la bdd
 // plutot qu'envoyer une req llm
 
-enum StatusQuestion{
+enum StatusQuestion {
   COLLECTING //En cours de collect de données
-  REVIEW  //Seuil atteint attente de validation
+  REVIEW //Seuil atteint attente de validation
   READY //Prêt à être utilisé
   DISABLED //Désactivé
 }
-model contractGeneratorQuestion {
-  id           Int    @id @default(autoincrement())
-  contractType String @unique
-  questions     Json
-  status  StatusQuestion @default(COLLECTING)
-  generationCount Int @default(1)
 
+model contractGeneratorQuestion {
+  id              Int            @id @default(autoincrement())
+  contractType    String         @unique
+  questions       Json
+  status          StatusQuestion @default(COLLECTING)
+  generationCount Int            @default(1)
 
   lastGeneratedAt DateTime?
-  validatedAt DateTime? 
+  validatedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

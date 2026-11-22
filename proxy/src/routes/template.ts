@@ -1077,6 +1077,9 @@ function readAttachments(raw: unknown): BriefAttachment[] {
   );
 }
 
+
+
+
 /**
  * Étape 1 : questions de cadrage du contrat. Gratuit (pas de quota) : seule la
  * rédaction du contrat consomme un crédit.
@@ -1089,6 +1092,21 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
   }
 
   try {
+
+    //Regarder si les questions sont disponible dans notre bdd
+    const searchPrivatelib = await 
+    //Si elles sont disponible return direct
+
+    //Si elles ne sont pas disponible handdle ia
+
+    //Enregistrer dans notre bdd la générations des questions
+
+    //Retour à l'utilisateur
+
+
+
+
+
     // gpt-5.2 sans réflexion préalable : questions mieux ciblées que gpt-5.4-nano en « high »
     // (essais du 1er oct. 2026 : motif, échéance, essai pour un CDD ; type de bail, révision,
     // travaux pour un bail commercial) en 5 à 7 s au lieu de 26 s. « low » variait de 6 à 26 s.
@@ -1105,6 +1123,16 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
     res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Étape 2 : rédaction du contrat. 1 rédaction = 1 crédit "generatorFromScratch".
