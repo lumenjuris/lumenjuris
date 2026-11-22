@@ -133,7 +133,7 @@ app.use("/admin", routerAdmin);
 app.use("/feature-event", routerFeatureEvent);
 app.use("/negotiation", routerNegotiation);
 app.use("/user-metadata", routerUserMetaData);
-app.use("/question", routerQuestionGeneratorContract);
+app.use("/generate-question", routerQuestionGeneratorContract);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

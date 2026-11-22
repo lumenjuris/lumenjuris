@@ -1609,6 +1609,7 @@ model contractGeneratorQuestion {
   id              Int            @id @default(autoincrement())
   contractType    String         @unique
   questions       Json
+  questionsFinal  Json?
   status          StatusQuestion @default(COLLECTING)
   generationCount Int            @default(1)
 
