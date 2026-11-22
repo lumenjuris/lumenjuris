@@ -40,9 +40,12 @@ export const Sandbox = () => {
     navigate("/dashboard");
   };
 
+  // Même enchaînement que `OnboardingGate` : un formulaire terminé lance la visite
+  // du menu. Elle s'affiche dès qu'une page avec le menu latéral est ouverte.
   const closeForm = () => {
     setForceOpen(false);
     dismissOnboarding();
+    if (useUserStore.getState().onboarding?.onboardingStatus === "COMPLETED") startTour();
   };
 
   const buttonClassName =

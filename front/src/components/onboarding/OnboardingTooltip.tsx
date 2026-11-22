@@ -47,7 +47,7 @@ const TOOLTIP_CONTENT: Record<OnboardingTooltipKey, { title: string; text: strin
   },
   signature: {
     title: "Signature électronique",
-    text: "Envoyez vos contrats en signature et suivez leur avancement. Chaque étape est horodatée et consignée dans un journal de preuve.",
+    text: "Envoyez vos contrats en signature et suivez leur avancement. Lors de la validation des deux parties, chacun recevra un dossier de preuve de cette signature.",
   },
   bibliothequeClause: {
     title: "Bibliothèque de clauses",
@@ -59,7 +59,7 @@ const TOOLTIP_CONTENT: Record<OnboardingTooltipKey, { title: string; text: strin
   },
   analyseClassique: {
     title: "Analyse et revue",
-    text: "Importez un contrat reçu : les clauses à risque et les points d'attention sont identifiés et expliqués, clause par clause.",
+    text: "Analysez votre contrat, les clauses à risque et les points d'attention sont identifiés et expliqués, clause par clause.",
   },
   analysePlaybook: {
     title: "Analyse playbook",
@@ -67,7 +67,7 @@ const TOOLTIP_CONTENT: Record<OnboardingTooltipKey, { title: string; text: strin
   },
   chat: {
     title: "Chat juridique",
-    text: "Interrogez l'assistant sur un point de droit ou une clause et obtenez une première réponse argumentée, à vérifier avant usage.",
+    text: "Interrogez l'assistant sur un point de droit ou une clause et obtenez une première réponse argumentée.",
   },
 };
 

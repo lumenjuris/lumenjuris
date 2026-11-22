@@ -44,8 +44,8 @@ export function StepDone({
       </h2>
       <p className="mt-2 max-w-[380px] text-[13.5px] leading-relaxed text-ink-muted">
         {first
-          ? "Merci. Vous pouvez commencer tout de suite par l'outil que vous avez placé en premier."
-          : "Merci. Vous pouvez dès maintenant découvrir vos outils depuis le tableau de bord."}
+          ? "Merci. Commencez par l'outil que vous avez placé en premier : une courte visite du menu vous présentera ensuite chaque fonctionnalité."
+          : "Merci. Une courte visite du menu va maintenant vous présenter chaque fonctionnalité."}
       </p>
 
       <div className="mt-6 flex w-full max-w-[340px] flex-col gap-2">
