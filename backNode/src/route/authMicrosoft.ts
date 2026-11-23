@@ -10,6 +10,7 @@ import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
 import { logger } from "../logger/logger.js";
+import { redirectAddin, signAddinToken } from "../securite/addinAuth.js";
 
 /** Le paramètre `state` OAuth n'est valable que quelques minutes. */
 const DUREE_STATE_OAUTH = "5m";
@@ -46,7 +47,7 @@ microsoftRouter.get("/auth/microsoft", async (req: Request, res: Response) => {
     // quelle instance. Le nonce aléatoire rend chaque état unique.
     // (Même mécanisme que la route Google, le projet n'a pas de express-session.)
     const state = jwt.sign(
-      { nonce: crypto.randomUUID(), purpose: "microsoft-oauth" },
+      { nonce: crypto.randomUUID(), purpose: "microsoft-oauth", addin: req.query.addin === "1" },
       process.env.JWT_SECRET!,
       { expiresIn: DUREE_STATE_OAUTH },
     );
@@ -75,6 +76,14 @@ microsoftRouter.get(
   "/auth/microsoft/callback",
   async (req: Request, res: Response) => {
     const FRONT = process.env.HOST_FRONT;
+    // Complément Word : pas de cookie, le JWT repart vers la fenêtre de dialogue.
+    let addin = false;
+    const erreur = (url: string, code: string) =>
+      addin ? redirectAddin(res, { error: code }) : res.redirect(url);
+    const connecter = (idUser: number, role: string) =>
+      addin
+        ? redirectAddin(res, { token: signAddinToken(idUser, role) })
+        : (createCookieAuth(idUser, role, res), res.redirect(`${FRONT}/dashboard`));
     try {
       const { code, state, error, error_description } = req.query;
 
@@ -97,7 +106,8 @@ microsoftRouter.get(
         const payload = jwt.verify(
           typeof state === "string" ? state : "",
           process.env.JWT_SECRET!,
-        ) as { purpose?: string };
+        ) as { purpose?: string; addin?: boolean };
+        addin = payload.addin === true;
         if (payload.purpose !== "microsoft-oauth") {
           return res.redirect(`${FRONT}?error=microsoft_invalid_state`);
         }
@@ -131,7 +141,7 @@ microsoftRouter.get(
 
       if (!microsoftId || !email) {
         console.error("Claims Microsoft incomplets (oid ou email manquant)");
-        return res.redirect(`${FRONT}?error=microsoft_error`);
+        return erreur(`${FRONT}?error=microsoft_error`, "microsoft_error");
       }
 
       // Recherche dans la BDD d'un utilisateur inscrit avec cet e-mail.
@@ -143,12 +153,9 @@ microsoftRouter.get(
         if (findUser.isBanned) {
           // /inscription n'existe plus : la connexion se fait depuis l'accueil,
           // qui lit ce paramètre et affiche le message de blocage.
-          return res.redirect(`${FRONT}/dashboard?error=banned`);
+          return erreur(`${FRONT}/dashboard?error=banned`, "banned");
         }
-        return (
-          createCookieAuth(findUser.idUser, findUser.role, res),
-          res.redirect(`${FRONT}/dashboard`)
-        );
+        return connecter(findUser.idUser, findUser.role);
       }
 
       // Enregistrer un nouvel utilisateur dans la BDD.
@@ -160,7 +167,7 @@ microsoftRouter.get(
       });
 
       if (!("data" in newUser)) {
-        return res.redirect(`${FRONT}/verify-account?reason=userNotCreated`);
+        return erreur(`${FRONT}/verify-account?reason=userNotCreated`, "userNotCreated");
       }
 
       // Nouveau AuthProviderAccount Microsoft.
@@ -177,15 +184,14 @@ microsoftRouter.get(
 
 
       // Créer session JWT cookie http only.
-      createCookieAuth(newUser.data?.idUser!, "USER", res);
-      return res.redirect(`${FRONT}/dashboard`);
+      return connecter(newUser.data?.idUser!, "USER");
     } catch (err) {
       console.error(
         "Erreur lors du callback de microsoft auth, error : \n",
         err
       );
       logger.error("Erreur lors de l'enregistrement du compte microsft", err)
-      return res.redirect(`${FRONT}/dashboard?error=microsoft_error`);
+      return erreur(`${FRONT}/dashboard?error=microsoft_error`, "microsoft_error");
     }
   },
 );

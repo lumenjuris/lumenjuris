@@ -1,6 +1,8 @@
 import * as React from "react";
-import { login } from "../core/lumenService";
+import { login, loginWithProvider } from "../core/lumenService";
 import StatusMessage, { Status } from "./StatusMessage";
+import { FcGoogle } from "react-icons/fc"
+
 
 /* global window */
 
@@ -13,6 +15,17 @@ interface Props {
 const SIGNUP_URL = "https://app.lumenjuris.com/";
 const CONTACT_URL = "https://www.lumenjuris.com/contactez-nous/";
 
+
+const MicrosoftLogo = () => (
+  <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
+    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+  </svg>
+)
+
+
 /**
  * Écran de première exécution : présente la proposition de valeur du
  * complément (exigence Microsoft 1100.1.5) puis demande la connexion au
@@ -23,6 +36,23 @@ const LoginScreen: React.FC<Props> = ({ notice, onSignedIn }) => {
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [status, setStatus] = React.useState<Status | null>(notice ?? null);
+
+  const handleProvider = async (provider: "google" | "microsoft") => {
+    setSubmitting(true);
+    setStatus(null);
+    try {
+      await loginWithProvider(provider);
+      onSignedIn();
+    } catch (error) {
+      setStatus({ kind: "err", text: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleLogGoogle = () => handleProvider("google");
+
+  const handleLogMicrosoft = () => handleProvider("microsoft");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +108,18 @@ const LoginScreen: React.FC<Props> = ({ notice, onSignedIn }) => {
           Utilisez vos identifiants Lumen Juris. Pas encore de compte ? L'offre Free permet de
           démarrer gratuitement, sans engagement.
         </p>
+
+        <div className="flex flex-col gap-2">
+          <button type="button" disabled={submitting} onClick={handleLogGoogle}>
+            <FcGoogle />
+            Se connecter avec Google
+          </button>
+          <button type="button" disabled={submitting} onClick={handleLogMicrosoft}>
+            <MicrosoftLogo />
+            Se connecter avec Microsoft
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <label className="lj-label" htmlFor="lj-login-email">E-mail</label>
           <input

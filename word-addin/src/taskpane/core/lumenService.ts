@@ -1,6 +1,6 @@
 import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "./types";
 
-/* global localStorage, fetch, window, Response, setTimeout */
+/* global localStorage, fetch, window, Response, setTimeout, Office */
 
 /**
  * Client des endpoints LumenJuris — les MÊMES routes que la page « Analyse
@@ -98,6 +98,62 @@ export async function login(email: string, password: string): Promise<void> {
   if (!data.success || !data.token) throw new Error(data.message || "Connexion refusée");
   localStorage.setItem(TOKEN_KEY, data.token);
 }
+
+/**
+ * Connexion via Google ou Microsoft. Les pages de connexion de ces fournisseurs
+ * refusent l'iframe du volet : on les ouvre dans une fenêtre de dialogue Office
+ * (auth-dialog.html), qui renvoie le JWT par messageParent une fois connecté.
+ */
+export function loginWithProvider(provider: "google" | "microsoft"): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Hors de Word (taskpane.html ouvert directement dans un navigateur),
+    // Office.context.ui n'existe pas : la fenêtre de dialogue est impossible.
+    if (typeof Office === "undefined" || !Office.context || !Office.context.ui) {
+      reject(new Error("La connexion Google / Microsoft ne fonctionne que dans Word (pas dans un navigateur seul)."));
+      return;
+    }
+    // Relatif à taskpane.html : fonctionne en local (racine) et en prod (/word-addin/).
+    const url = new URL(`auth-dialog.html?provider=${provider}`, window.location.href).toString();
+    Office.context.ui.displayDialogAsync(url, { height: 70, width: 40, promptBeforeOpen: false }, (result) => {
+      if (result.status === Office.AsyncResultStatus.Failed) {
+        reject(new Error(`Impossible d'ouvrir la fenêtre de connexion (${result.error.message}).`));
+        return;
+      }
+      const dialog = result.value;
+      dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+        dialog.close();
+        let data: { token?: string | null; error?: string | null } = {};
+        try {
+          data = JSON.parse((arg as { message: string }).message);
+        } catch {
+          /* message illisible */
+        }
+        if (data.token) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          resolve();
+        } else if (data.error === "banned") {
+          reject(new Error("Ce compte est suspendu. Contactez le support Lumen Juris."));
+        } else {
+          reject(new Error("La connexion a échoué. Réessayez ou utilisez votre e-mail et mot de passe."));
+        }
+      });
+      dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
+        // 12006 = fenêtre fermée par l'utilisateur ; 12002 = page introuvable ;
+        // 12003 = redirection vers une page HTTP (HTTPS obligatoire).
+        const code = (arg as { error?: number }).error;
+        reject(
+          new Error(
+            code === 12006
+              ? "Connexion annulée."
+              : `La fenêtre de connexion a rencontré une erreur (code ${code}).`
+          )
+        );
+      });
+    });
+  });
+}
+
+
 
 /** Contexte par défaut (mêmes valeurs que le formulaire plateforme). */
 export const DEFAULT_CONTEXT: AnalysisContext = {

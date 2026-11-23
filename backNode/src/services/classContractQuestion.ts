@@ -1,4 +1,4 @@
-import { prisma } from "../singletonPrisma.js"
+import { prisma } from "../../prisma/singletonPrisma.js";
 import { StatusQuestion } from "@prisma/client"
 
 

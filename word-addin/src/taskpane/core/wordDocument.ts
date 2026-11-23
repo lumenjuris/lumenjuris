@@ -1,5 +1,4 @@
 import { ClauseRisk } from "./types";
-
 /* global Word, Office, OfficeExtension */
 
 /**

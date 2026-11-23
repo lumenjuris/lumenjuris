@@ -1093,18 +1093,15 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
 
 
   try {
-    type Method = "GET" | "POST" | "DELEAT" | "PUT" | "PATCH"
-    const fetchOption = (method:Method) => {
-      method.toUpperCase()
-      return {
-        method: "method",
-        headers: {
-          "Content-Type": "Application/json",
-          "x-internal-api-key": process.env.INTERNAL_API_KEY!
-        }
-      }
-    }
-    const nodeUrl = process.env.BACKNODE_URL
+    type Method = "GET" | "POST" | "DELETE" | "PUT" | "PATCH"
+    const fetchOption = (method: Method) => ({
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-api-key": process.env.INTERNAL_API_KEY ?? "",
+      },
+    })
+    const nodeUrl = BACKNODE_URL
     if (!nodeUrl) throw new Error("BACKNODE_URL, variable introuvable dans le proxy template")
 
 
@@ -1118,8 +1115,9 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
     if (isReady.isReady) {
       const r = await fetch(`${nodeUrl}/generate-question/question?contractType=${encodeURIComponent(title)}`, fetchOption("GET"))
       const data = await r.json()
+      // Même format que la réponse IA : `content` est une chaîne JSON
       return res.status(200).json({
-        content : data.data
+        content: JSON.stringify(data.data ?? [])
       })
     }
 
@@ -1136,10 +1134,18 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
 
 
     //Enregistrer dans notre bdd la générations des questions
-    void await fetch(`${nodeUrl}/generate-question?contractType=${encodeURIComponent(title)}`,{
-      ... fetchOption("POST"),
-      body: JSON.stringify(data.content)
-    })
+    // Fire-and-forget : l'enregistrement ne doit ni ralentir ni faire échouer la réponse
+    try {
+      const questions = JSON.parse(data.content)
+      if (Array.isArray(questions)) {
+        fetch(`${nodeUrl}/generate-question?contractType=${encodeURIComponent(title)}`, {
+          ...fetchOption("POST"),
+          body: JSON.stringify(questions),
+        }).catch((err) => console.error("[template/generate-questions] enregistrement bdd :", err?.message))
+      }
+    } catch {
+      console.warn("[template/generate-questions] réponse IA non JSON, questions non enregistrées")
+    }
 
 
   //Retour à l'utilisateur
