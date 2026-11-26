@@ -72,6 +72,11 @@ module.exports = async (env, options) => {
       new CopyWebpackPlugin({
         patterns: [
           {
+            // Fenêtre de dialogue de connexion Google / Microsoft (page statique).
+            from: "src/auth/auth-dialog.html",
+            to: "auth-dialog.html",
+          },
+          {
             from: "assets/*",
             to: "assets/[name][ext][query]",
           },
@@ -107,6 +112,16 @@ module.exports = async (env, options) => {
         options: env.WEBPACK_BUILD || options.https !== undefined ? options.https : await getHttpsOptions(),
       },
       port: process.env.npm_package_config_dev_server_port || 3001,
+      // Connexion Google / Microsoft en local : la fenêtre de dialogue Office
+      // refuse toute page HTTP (erreur 12003). On fait donc passer les routes
+      // OAuth du backNode (http://127.0.0.1:3020) par ce serveur HTTPS.
+      proxy: [
+        {
+          context: ["/auth"],
+          target: "http://127.0.0.1:3020",
+          changeOrigin: false,
+        },
+      ],
     },
   };
 

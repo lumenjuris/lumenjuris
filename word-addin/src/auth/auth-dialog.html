@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Connexion Lumen Juris</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #333; }
+  </style>
+</head>
+<body>
+  <p id="msg">Redirection vers la connexion…</p>
+  <script>
+    /*
+     * Fenêtre de dialogue Office pour la connexion Google / Microsoft.
+     * 1er passage  : ?provider=google|microsoft → redirection vers le proxy (?addin=1).
+     * Retour OAuth : #token=… ou #error=… (posé par le backNode) → remis au volet
+     *                via Office.context.ui.messageParent.
+     */
+    (function () {
+      var local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      var PROXY_BASE = local ? "http://localhost:3000" : "https://app.proxy.lumenjuris.com";
+      var hash = new URLSearchParams(location.hash.slice(1));
+
+      if (hash.has("token") || hash.has("error")) {
+        document.getElementById("msg").textContent = "Connexion terminée, vous pouvez revenir dans Word…";
+        Office.onReady(function () {
+          Office.context.ui.messageParent(
+            JSON.stringify({ token: hash.get("token"), error: hash.get("error") })
+          );
+        });
+        return;
+      }
+
+      var provider = new URLSearchParams(location.search).get("provider");
+      if (provider !== "google" && provider !== "microsoft") {
+        document.getElementById("msg").textContent = "Fournisseur de connexion inconnu.";
+        return;
+      }
+      // En local, on reste en HTTPS (le dev-server relaie /auth vers le backNode) ;
+      // en prod, le proxy est déjà en HTTPS.
+      location.replace(
+        local
+          ? "/auth/" + provider + "?addin=1"
+          : PROXY_BASE + "/api/user/auth/" + provider + "?addin=1"
+      );
+    })();
+  </script>
+</body>
+</html>

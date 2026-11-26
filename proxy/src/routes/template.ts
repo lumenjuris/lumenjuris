@@ -1046,7 +1046,7 @@ function sendImportError(res: Response, step: string, error: unknown): void {
  * jusqu'à 15 s à redémarrer ; ce temps s'écoule pendant que l'internaute choisit son fichier.
  */
 function handleImportWarmup(_req: Request, res: Response): void {
-  fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => {});
+  fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => { });
   res.status(204).end();
 }
 
@@ -1077,21 +1077,51 @@ function readAttachments(raw: unknown): BriefAttachment[] {
   );
 }
 
+
+
+
 /**
  * Étape 1 : questions de cadrage du contrat. Gratuit (pas de quota) : seule la
  * rédaction du contrat consomme un crédit.
  */
-async function handleGenerateQuestions(req: Request, res: Response): Promise<void> {
+async function handleGenerateQuestions(req: Request, res: Response): Promise<void | object> {
   const { title } = req.body as { title?: string };
   if (!title || typeof title !== "string" || !title.trim()) {
     res.status(400).json({ success: false, message: "Le champ 'title' est requis." });
     return;
   }
 
+
   try {
-    // gpt-5.2 sans réflexion préalable : questions mieux ciblées que gpt-5.4-nano en « high »
-    // (essais du 1er oct. 2026 : motif, échéance, essai pour un CDD ; type de bail, révision,
-    // travaux pour un bail commercial) en 5 à 7 s au lieu de 26 s. « low » variait de 6 à 26 s.
+    type Method = "GET" | "POST" | "DELETE" | "PUT" | "PATCH"
+    const fetchOption = (method: Method) => ({
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-api-key": process.env.INTERNAL_API_KEY ?? "",
+      },
+    })
+    const nodeUrl = BACKNODE_URL
+    if (!nodeUrl) throw new Error("BACKNODE_URL, variable introuvable dans le proxy template")
+
+
+    //Regarder si les questions sont disponible dans notre bdd
+    const searchStatus = await fetch(`${nodeUrl}/generate-question/status/is-ready?contractType=${encodeURIComponent(title)}`, 
+      fetchOption("GET")
+    )
+    const isReady = await searchStatus.json()
+
+    //Si elles sont disponible return direct
+    if (isReady.isReady) {
+      const r = await fetch(`${nodeUrl}/generate-question/question?contractType=${encodeURIComponent(title)}`, fetchOption("GET"))
+      const data = await r.json()
+      // Même format que la réponse IA : `content` est une chaîne JSON
+      return res.status(200).json({
+        content: JSON.stringify(data.data ?? [])
+      })
+    }
+
+    //Si elles ne sont pas disponible handdle ia
     const data = await callGpt5({
       prompt: buildQuestionsPrompt(title),
       model: "gpt-5.2",
@@ -1099,12 +1129,45 @@ async function handleGenerateQuestions(req: Request, res: Response): Promise<voi
       verbosity: "low",
     });
     await withTracking("generate_contract_questions", logOpenAiTokens)(data, res.locals.userId as number | undefined);
-    res.json(data);
-  } catch (e) {
-    console.error("[template/generate-questions]", (e as Error)?.message);
-    res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
-  }
+
+
+
+
+    //Enregistrer dans notre bdd la générations des questions
+    // Fire-and-forget : l'enregistrement ne doit ni ralentir ni faire échouer la réponse
+    try {
+      const questions = JSON.parse(data.content)
+      if (Array.isArray(questions)) {
+        fetch(`${nodeUrl}/generate-question?contractType=${encodeURIComponent(title)}`, {
+          ...fetchOption("POST"),
+          body: JSON.stringify(questions),
+        }).catch((err) => console.error("[template/generate-questions] enregistrement bdd :", err?.message))
+      }
+    } catch {
+      console.warn("[template/generate-questions] réponse IA non JSON, questions non enregistrées")
+    }
+
+
+  //Retour à l'utilisateur
+  res.json(data);
+
+
+
+} catch (e) {
+  console.error("[template/generate-questions]", (e as Error)?.message);
+  res.status(502).json({ success: false, message: "Service IA momentanément indisponible" });
 }
+}
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Étape 2 : rédaction du contrat. 1 rédaction = 1 crédit "generatorFromScratch".
@@ -1145,12 +1208,12 @@ async function handleGenerateDraft(req: Request, res: Response): Promise<void> {
     mode === "questions"
       ? buildDraftPrompt(title, readAnswers(req.body?.answers), parties, withRgpd)
       : buildBriefPrompt(
-          title,
-          typeof brief === "string" && brief.trim() ? brief : title,
-          readAttachments(req.body?.attachments),
-          parties,
-          withRgpd,
-        );
+        title,
+        typeof brief === "string" && brief.trim() ? brief : title,
+        readAttachments(req.body?.attachments),
+        parties,
+        withRgpd,
+      );
 
   try {
     // Profondeur "medium" et non "high" : la rédaction depuis une consigne libre

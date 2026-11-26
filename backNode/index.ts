@@ -44,6 +44,7 @@ import { seedItemBilling } from "./prisma/seedItemBilling.js";
 import { StripeLumenJuris } from "./billing/stripe.service.js";
 
 import { logger } from "./src/logger/logger.js";
+import { routerQuestionGeneratorContract } from "./src/route/apiQuestionGeneratorContract.js";
 /**
  * Préparation du serveur nodejs/express pour ce backend
  * Ici sera traité toute les opérations avec la base de données
@@ -132,6 +133,7 @@ app.use("/admin", routerAdmin);
 app.use("/feature-event", routerFeatureEvent);
 app.use("/negotiation", routerNegotiation);
 app.use("/user-metadata", routerUserMetaData);
+app.use("/generate-question", routerQuestionGeneratorContract);
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({

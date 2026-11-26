@@ -1,5 +1,4 @@
 import { ClauseRisk } from "./types";
-
 /* global Word, Office, OfficeExtension */
 
 /**
@@ -446,4 +445,92 @@ export async function applyRecommendationTracked(clauseId: string, newText: stri
   });
 
   return { applied, tracked };
+}
+
+/* ================================================================
+ * Génération de contrat : insertion du contrat rédigé dans Word.
+ * ================================================================ */
+
+const VARIABLE_RE = /\{\{([a-zA-Z0-9_]+)\}\}/g;
+/** Tag du content control qui enveloppe un contrat inséré. */
+export const CONTRACT_TAG = "lumen-contract";
+
+/** Couleur de surlignage des champs restant à compléter (palette compatible desktop). */
+const PLACEHOLDER_HIGHLIGHT = "yellow";
+
+interface Segment {
+  text: string;
+  /** Champ non rempli : affiché « [Libellé] » et surligné. */
+  placeholder?: boolean;
+}
+
+/** Découpe un texte en segments, en remplaçant {{id}} par la valeur saisie ou « [Libellé] ». */
+function toSegments(content: string, values: Record<string, string>, labels: Record<string, string>): Segment[] {
+  const out: Segment[] = [];
+  let last = 0;
+  content.replace(VARIABLE_RE, (match, id: string, offset: number) => {
+    if (offset > last) out.push({ text: content.slice(last, offset) });
+    const value = (values[id] ?? "").trim();
+    out.push(value ? { text: value } : { text: `[${labels[id] ?? id}]`, placeholder: true });
+    last = offset + match.length;
+    return match;
+  });
+  if (last < content.length) out.push({ text: content.slice(last) });
+  return out;
+}
+
+/**
+ * Insère le contrat à la position du curseur : titre, articles (Titre 2) et
+ * paragraphes. Les champs remplis sont substitués ; les champs vides restent
+ * sous la forme « [Libellé] », surlignés en jaune pour être complétés dans Word.
+ * Le tout est enveloppé dans un content control `lumen-contract`.
+ */
+export async function insertContract(
+  draft: { title: string; variables: { id: string; label: string }[]; sections: { heading?: string; content: string }[] },
+  values: Record<string, string>
+): Promise<{ remaining: number }> {
+  const labels: Record<string, string> = {};
+  draft.variables.forEach((v) => (labels[v.id] = v.label));
+  let remaining = 0;
+
+  await Word.run(async (context) => {
+    const selection = context.document.getSelection();
+    // Point d'ancrage : un paragraphe vide inséré au curseur, que l'on remplit ensuite.
+    let cursor = selection.insertParagraph("", Word.InsertLocation.after);
+
+    const addParagraph = (segments: Segment[], style?: Word.BuiltInStyleName) => {
+      const p = cursor.insertParagraph("", Word.InsertLocation.after);
+      if (style) p.styleBuiltIn = style;
+      segments.forEach((seg) => {
+        if (!seg.text) return;
+        const range = p.insertText(seg.text, Word.InsertLocation.end);
+        range.font.highlightColor = seg.placeholder ? PLACEHOLDER_HIGHLIGHT : null;
+        if (seg.placeholder) remaining += 1;
+      });
+      cursor = p;
+      return p;
+    };
+
+    const first = addParagraph([{ text: draft.title }], Word.BuiltInStyleName.title);
+    draft.sections.forEach((section) => {
+      if (section.heading) addParagraph(toSegments(section.heading, values, labels), Word.BuiltInStyleName.heading2);
+      section.content
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => addParagraph(toSegments(line, values, labels), Word.BuiltInStyleName.normal));
+    });
+
+    // Enveloppe le contrat complet pour pouvoir le retrouver plus tard.
+    const whole = first.getRange(Word.RangeLocation.whole).expandTo(cursor.getRange(Word.RangeLocation.whole));
+    const control = whole.insertContentControl();
+    control.tag = CONTRACT_TAG;
+    control.title = "Contrat Lumen Juris";
+    control.appearance = Word.ContentControlAppearance.hidden;
+
+    first.select(Word.SelectionMode.start);
+    await context.sync();
+  });
+
+  return { remaining };
 }

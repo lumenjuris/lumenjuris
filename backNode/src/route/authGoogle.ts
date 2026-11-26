@@ -9,6 +9,7 @@ import { Google } from "../services/classGoogle.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { logger } from "../logger/logger.js";
+import { redirectAddin, signAddinToken, trackAddinLogin } from "../securite/addinAuth.js";
 
 
 
@@ -24,13 +25,13 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
   // instance (la Map précédente cassait dès qu'il y avait plusieurs process).
   // Le nonce aléatoire rend chaque état unique.
   const state = jwt.sign(
-    { nonce: crypto.randomUUID(), purpose: "google-oauth" },
+    { nonce: crypto.randomUUID(), purpose: "google-oauth", addin: req.query.addin === "1" },
     process.env.JWT_SECRET!,
     { expiresIn: DUREE_STATE_OAUTH },
   );
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = `${process.env.HOST}/auth/google/callback`;
+  const redirectUri = (process.env.GOOGLE_REDIRECT_URI || `${process.env.HOST}/auth/google/callback`);
   const scope = "openid email profile";
 
   const url =
@@ -52,6 +53,7 @@ routerAuthGoogle.get("/auth/google", (req: Request, res: Response) => {
 routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response) => {
 
   const { code, state } = req.query;
+  let addin = false;
 
   // L'état doit être un jeton que NOUS avons signé et qui n'a pas expiré.
   // La signature suffit à écarter un state forgé ; l'expiration borne sa
@@ -61,7 +63,8 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
     const payload = jwt.verify(
       typeof state === "string" ? state : "",
       process.env.JWT_SECRET!,
-    ) as { purpose?: string };
+    ) as { purpose?: string; addin?: boolean };
+    addin = payload.addin === true;
     if (payload.purpose !== "google-oauth") {
       return res.status(400).send("Invalid State");
     }
@@ -77,7 +80,7 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
         code: code as string,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `${process.env.HOST}/auth/google/callback`,
+        redirect_uri: (process.env.GOOGLE_REDIRECT_URI || `${process.env.HOST}/auth/google/callback`),
         grant_type: "authorization_code",
       }),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
@@ -96,10 +99,18 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
     const FRONT = process.env.HOST_FRONT;
 
+    // Complément Word : pas de cookie, le JWT repart vers la fenêtre de dialogue.
+    const erreur = (url: string, code: string) =>
+      addin ? redirectAddin(res, { error: code }) : res.redirect(url);
+    const connecter = (idUser: number, role: string) =>
+      addin
+        ? (void trackAddinLogin(idUser, "google"), redirectAddin(res, { token: signAddinToken(idUser, role) }))
+        : (createCookieAuth(idUser, role, res), res.redirect(`${FRONT}/dashboard`));
+
 
     const emailVerifie = email_verified === true || email_verified === "true";
     if (!email || !emailVerifie) {
-      return res.redirect(`${FRONT}/dashboard?error=google-email-non-verifie`);
+      return erreur(`${FRONT}/dashboard?error=google-email-non-verifie`, "google-email-non-verifie");
     }
 
     // Recherche dans la BDD d'un utilisateur inscrit avec un compte Google
@@ -109,12 +120,9 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
     if (findUser) {
       if (findUser.isBanned) {
-        return res.redirect(`${FRONT}/dashboard?error=banned`);
+        return erreur(`${FRONT}/dashboard?error=banned`, "banned");
       }
-      return (
-        createCookieAuth(findUser.idUser, findUser.role, res),
-        res.redirect(`${process.env.HOST_FRONT}/dashboard`)
-      );
+      return connecter(findUser.idUser, findUser.role);
     }
 
 
@@ -128,9 +136,7 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
     });
 
     if (!("data" in newUser)) {
-      return res.redirect(
-        `${process.env.HOST_FRONT}/verify-account?reason=userNotCreated`,
-      );
+      return erreur(`${FRONT}/verify-account?reason=userNotCreated`, "userNotCreated");
     }
 
 
@@ -149,15 +155,14 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
 
 
     //Créer session JWT cookie http only
-    createCookieAuth(newUser.data?.idUser!, "USER", res);
-
-    res.redirect(`${process.env.HOST_FRONT}/dashboard`);
+    connecter(newUser.data?.idUser!, "USER");
   } catch (err) {
     console.log(err);
     logger.error("Erreur lors de l'enregistrement d'un nouvel user via google", err)
     // Sans réponse, le navigateur resterait suspendu sur le callback.
     if (!res.headersSent) {
-      res.redirect(`${process.env.HOST_FRONT}/dashboard?error=google-erreur`);
+      if (addin) redirectAddin(res, { error: "google-erreur" });
+      else res.redirect(`${process.env.HOST_FRONT}/dashboard?error=google-erreur`);
     }
   }
 },

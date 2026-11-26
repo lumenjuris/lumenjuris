@@ -77,3 +77,37 @@ export interface AnalysisContext {
   legalRegime?: string;
   contractObjective?: string;
 }
+
+/* ---------------- Génération de contrat « de zéro » (= front/generateur/contractAi.ts) ---------------- */
+
+/** Question de cadrage posée avant la rédaction. */
+export interface WizardQuestion {
+  id: string;
+  question: string;
+  type: "choice" | "text";
+  options?: string[];
+  /** Exemple de réponse (question "text") ou explication courte (question "choice"). */
+  hint?: string;
+}
+
+/** Importance d'un champ à remplir : pilote l'affichage (optionnels repliés). */
+export type ImportanceChamp = "obligatoire" | "recommande" | "optionnel";
+
+/** Donnée factuelle à compléter, présente dans le texte sous la forme {{id}}. */
+export interface DraftVariable {
+  id: string;
+  label: string;
+  importance?: ImportanceChamp;
+}
+
+export interface DraftSection {
+  heading?: string;
+  content: string;
+}
+
+/** Contrat rédigé par l'IA, structuré en articles. */
+export interface ContractDraft {
+  title: string;
+  variables: DraftVariable[];
+  sections: DraftSection[];
+}

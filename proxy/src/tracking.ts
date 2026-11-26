@@ -1,5 +1,6 @@
 import { BACKNODE_URL } from "./config.js";
 import type { PythonJsonResponse } from "./relay.js";
+import { currentClientSource } from "./middleware/clientSource.js";
 
 /**
  * Loggue la consommation de tokens OpenAI renvoyée par le backend Python
@@ -28,6 +29,7 @@ export async function logOpenAiTokens(
         method: "PUT",
         headers: {
           "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+          "x-client-source": currentClientSource(),
           ...(userId ? { "x-user-id": String(userId) } : {}),
         },
       },
@@ -55,7 +57,8 @@ export async function trackFeature(
         "Content-Type": "application/json",
         "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
       },
-      body: JSON.stringify({ feature, userId }),
+      // `source` : "web" ou "word-addin" (middleware clientSource).
+      body: JSON.stringify({ feature, userId, source: currentClientSource() }),
     });
   } catch (e: any) {
     console.error("[feature-track] error:", e.message);
