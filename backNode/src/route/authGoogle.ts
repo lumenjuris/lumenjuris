@@ -9,7 +9,7 @@ import { Google } from "../services/classGoogle.js";
 import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { logger } from "../logger/logger.js";
-import { redirectAddin, signAddinToken } from "../securite/addinAuth.js";
+import { redirectAddin, signAddinToken, trackAddinLogin } from "../securite/addinAuth.js";
 
 
 
@@ -104,7 +104,7 @@ routerAuthGoogle.get("/auth/google/callback", async (req: Request, res: Response
       addin ? redirectAddin(res, { error: code }) : res.redirect(url);
     const connecter = (idUser: number, role: string) =>
       addin
-        ? redirectAddin(res, { token: signAddinToken(idUser, role) })
+        ? (void trackAddinLogin(idUser, "google"), redirectAddin(res, { token: signAddinToken(idUser, role) }))
         : (createCookieAuth(idUser, role, res), res.redirect(`${FRONT}/dashboard`));
 
 

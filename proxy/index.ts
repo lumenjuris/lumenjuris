@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import express, { Request, Response } from "express";
 import cors from "cors";
+import { clientSourceMiddleware } from "./src/middleware/clientSource.js";
 import cookieParser from "cookie-parser"
 import { PORT, BACKEND_URL, BACKNODE_URL } from "./src/config.js";
 
@@ -59,6 +60,8 @@ app.use(
 );
 
 app.use(cookieParser());
+// Origine des appels (web / complément Word) pour le suivi d'usage.
+app.use(clientSourceMiddleware);
 app.use(express.json({ limit: "80mb" }));
 
 app.use(addErrorFeedbackLogger);

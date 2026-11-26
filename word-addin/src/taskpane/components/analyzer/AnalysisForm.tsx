@@ -1,7 +1,7 @@
 import * as React from "react";
-import { AnalysisContext } from "../core/types";
-import { DEFAULT_CONTEXT, detectContract } from "../core/lumenService";
-import StatusMessage, { Status } from "./StatusMessage";
+import { AnalysisContext } from "../../core/types";
+import { DEFAULT_CONTEXT, detectContract } from "../../core/lumenService";
+import StatusMessage, { Status } from "../common/StatusMessage";
 
 interface Props {
   documentText: string;

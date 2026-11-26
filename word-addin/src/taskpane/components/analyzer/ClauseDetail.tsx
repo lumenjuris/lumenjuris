@@ -1,9 +1,9 @@
 import * as React from "react";
-import { ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "../core/types";
-import { fetchClauseDetail, fetchJurisprudence, fetchRecommendations, askQuestion } from "../core/lumenService";
-import RichText from "./RichText";
-import { applyRecommendationTracked } from "../core/wordDocument";
-import StatusMessage, { Status, TRACKED_OK, TRACKED_UNSUPPORTED } from "./StatusMessage";
+import { ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "../../core/types";
+import { fetchClauseDetail, fetchJurisprudence, fetchRecommendations, askQuestion } from "../../core/lumenService";
+import RichText from "../common/RichText";
+import { applyRecommendationTracked } from "../../core/wordDocument";
+import StatusMessage, { Status, TRACKED_OK, TRACKED_UNSUPPORTED } from "../common/StatusMessage";
 
 type Tab = "overview" | "cases" | "question";
 

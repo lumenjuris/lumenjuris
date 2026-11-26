@@ -1,6 +1,6 @@
 import * as React from "react";
-import { login, loginWithProvider } from "../core/lumenService";
-import StatusMessage, { Status } from "./StatusMessage";
+import { login, loginWithProvider } from "../../core/lumenService";
+import StatusMessage, { Status } from "../common/StatusMessage";
 import { FcGoogle } from "react-icons/fc"
 
 
@@ -79,46 +79,34 @@ const LoginScreen: React.FC<Props> = ({ notice, onSignedIn }) => {
   };
 
   return (
-    <main className="lj-content">
-      {/* ---- Proposition de valeur (première exécution) ---- */}
-      <div className="lj-card" style={{ marginTop: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="assets/icon-64.png" alt="" width={36} height={36} style={{ borderRadius: 8 }} />
-          <div>
-            <h3 style={{ margin: 0 }}>Lumen Juris — Analyse de contrats</h3>
-            <p className="lj-muted" style={{ margin: "2px 0 0" }}>L'assistant juridique IA dans Word</p>
-          </div>
-        </div>
-        <p style={{ margin: "10px 0 4px", lineHeight: 1.5 }}>
-          Analysez le contrat ouvert dans Word en quelques secondes : les clauses à risque sont
-          détectées, surlignées dans le document et expliquées, avec des reformulations prêtes à
-          insérer en suivi des modifications.
-        </p>
-        <ul className="lj-list lj-muted" style={{ marginTop: 6 }}>
-          <li>Détection des clauses sensibles (responsabilité, résiliation, pénalités, RGPD…)</li>
-          <li>Recommandations sourcées, adossées à Légifrance et à la jurisprudence française</li>
-          <li>Questions libres à l'IA sur chaque clause, sans quitter Word</li>
-        </ul>
+    <main className="lj-content lj-auth">
+      {/* ---- En-tête de marque ---- */}
+      <div className="lj-auth-hero">
+        <img src="assets/icon-64.png" alt="" />
+        <h2>Lumen Juris</h2>
+        <p>L'assistant juridique IA dans Word</p>
       </div>
 
       {/* ---- Connexion ---- */}
-      <div className="lj-card">
+      <div className="lj-auth-card">
         <h3>Connectez-vous pour commencer</h3>
-        <p className="lj-muted" style={{ margin: "0 0 8px" }}>
-          Utilisez vos identifiants Lumen Juris. Pas encore de compte ? L'offre Free permet de
-          démarrer gratuitement, sans engagement.
+        <p className="lj-muted" style={{ margin: 0 }}>
+          Utilisez votre compte Lumen Juris. Pas encore de compte ? L'offre Free permet de démarrer
+          gratuitement, sans engagement.
         </p>
 
-        <div className="flex flex-col gap-2">
-          <button type="button" disabled={submitting} onClick={handleLogGoogle}>
+        <div className="lj-sso">
+          <button type="button" className="lj-sso-btn" disabled={submitting} onClick={handleLogGoogle}>
             <FcGoogle />
-            Se connecter avec Google
+            Continuer avec Google
           </button>
-          <button type="button" disabled={submitting} onClick={handleLogMicrosoft}>
+          <button type="button" className="lj-sso-btn" disabled={submitting} onClick={handleLogMicrosoft}>
             <MicrosoftLogo />
-            Se connecter avec Microsoft
+            Continuer avec Microsoft
           </button>
         </div>
+
+        <div className="lj-divider">ou</div>
 
         <form onSubmit={handleSubmit}>
           <label className="lj-label" htmlFor="lj-login-email">E-mail</label>
@@ -127,6 +115,7 @@ const LoginScreen: React.FC<Props> = ({ notice, onSignedIn }) => {
             className="lj-input"
             type="email"
             autoComplete="username"
+            placeholder="vous@cabinet.fr"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={submitting}
@@ -141,17 +130,32 @@ const LoginScreen: React.FC<Props> = ({ notice, onSignedIn }) => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={submitting}
           />
-          <button className="lj-btn" type="submit" disabled={submitting} style={{ width: "100%", marginTop: 4 }}>
+          <button className="lj-btn-brand" type="submit" disabled={submitting}>
             {submitting ? "Connexion…" : "Se connecter"}
           </button>
         </form>
         <StatusMessage status={status} />
-        <p className="lj-muted" style={{ margin: "10px 0 0" }}>
+
+        <p className="lj-auth-links">
           <a href={SIGNUP_URL} target="_blank" rel="noreferrer">Créer un compte gratuit</a>
           {" · "}
           <a href={CONTACT_URL} target="_blank" rel="noreferrer">Nous contacter</a>
         </p>
-        <p className="lj-muted" style={{ margin: "6px 0 0", fontSize: 11.5 }}>
+      </div>
+
+      {/* ---- Proposition de valeur (exigence Microsoft 1100.1.5) ---- */}
+      <div className="lj-auth-card">
+        <h3>Analysez vos contrats sans quitter Word</h3>
+        <p className="lj-muted" style={{ margin: "0 0 10px" }}>
+          Les clauses à risque sont détectées, surlignées dans le document et expliquées, avec des
+          reformulations prêtes à insérer en suivi des modifications.
+        </p>
+        <ul className="lj-auth-features">
+          <li>Détection des clauses sensibles (responsabilité, résiliation, pénalités, RGPD…)</li>
+          <li>Recommandations sourcées, adossées à Légifrance et à la jurisprudence française</li>
+          <li>Questions libres à l'IA sur chaque clause</li>
+        </ul>
+        <p className="lj-muted" style={{ margin: "10px 0 0", fontSize: 11.5 }}>
           Entreprises : offres Starter, Pro et Enterprise (RBAC, SSO, intégrations) sur{" "}
           <a
             href="https://www.lumenjuris.com"

@@ -1,4 +1,14 @@
-import { AnalysisContext, ClauseAI, ClauseRisk, JurisprudenceCase, Recommendation } from "./types";
+import {
+  AnalysisContext,
+  ClauseAI,
+  ClauseRisk,
+  ContractDraft,
+  DraftVariable,
+  ImportanceChamp,
+  JurisprudenceCase,
+  Recommendation,
+  WizardQuestion,
+} from "./types";
 
 /* global localStorage, fetch, window, Response, setTimeout, Office */
 
@@ -42,13 +52,22 @@ const TOKEN_KEY = "lumen-addin-token";
 
 export class AuthError extends Error {}
 
+/** Quota de l'offre épuisé (HTTP 402) — ex. contrats générés. */
+export class QuotaExceededError extends Error {}
+
+/**
+ * Origine des appels : lue par le proxy (middleware clientSource) pour
+ * distinguer dans le suivi d'usage ce qui vient du complément Word.
+ */
+const CLIENT_SOURCE_HEADER = { "x-lumen-client": "word-addin" };
+
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
 export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY);
 
 
 
 async function post<T>(endpoint: string, body: unknown): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...CLIENT_SOURCE_HEADER };
   // Toutes les routes métier exigent l'authentification en production :
   // le Bearer est envoyé dès qu'une session existe (login obligatoire côté UI).
   const token = getToken();
@@ -73,6 +92,12 @@ async function post<T>(endpoint: string, body: unknown): Promise<T> {
     clearToken();
     const data = (await response.json().catch(() => ({}))) as { message?: string };
     throw new AuthError(data.message || "Session expirée — reconnectez-vous.");
+  }
+  if (response.status === 402) {
+    const data = (await response.json().catch(() => ({}))) as { message?: string };
+    throw new QuotaExceededError(
+      data.message || "Quota de votre offre épuisé. Passez à un plan supérieur sur app.lumenjuris.com."
+    );
   }
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -304,4 +329,132 @@ export async function askQuestion(clause: ClauseRisk, question: string): Promise
     justification: clause.justification,
     question,
   });
+}
+
+
+/* ================================================================
+ * Génération de contrat « de zéro » — mêmes routes et même lecture
+ * des réponses que la plateforme (front/generateur/contractAi.ts).
+ * Les prompts sont construits par le proxy, jamais ici.
+ * ================================================================ */
+
+async function callGenerator(route: "generate-questions" | "generate-draft", body: object): Promise<string> {
+  const data = await post<{ content?: string }>(`/api/template/${route}`, body);
+  return data.content ?? "";
+}
+
+/** Isole le premier bloc JSON ([...] ou {...}) d'une réponse potentiellement bavarde. */
+function extractJson(s: string): string {
+  const openArr = s.indexOf("[");
+  const closeArr = s.lastIndexOf("]");
+  const openObj = s.indexOf("{");
+  const closeObj = s.lastIndexOf("}");
+  if (openArr !== -1 && (openObj === -1 || openArr < openObj) && closeArr > openArr) {
+    return s.slice(openArr, closeArr + 1);
+  }
+  if (openObj !== -1 && closeObj > openObj) return s.slice(openObj, closeObj + 1);
+  return s;
+}
+
+function lireImportance(v: unknown): ImportanceChamp | undefined {
+  const s =
+    typeof v === "string"
+      ? v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      : "";
+  return s === "obligatoire" || s === "recommande" || s === "optionnel" ? s : undefined;
+}
+
+let qCounter = 0;
+
+/** Étape 1 : questions de cadrage (gratuit, sans quota). */
+export async function generateContractQuestions(title: string): Promise<WizardQuestion[]> {
+  const out = await callGenerator("generate-questions", { title });
+  let arr: unknown;
+  try {
+    arr = JSON.parse(extractJson(out));
+  } catch {
+    arr = null;
+  }
+  if (!Array.isArray(arr)) throw new Error("Questions illisibles");
+  const questions = (arr as unknown[])
+    .map((raw): WizardQuestion | null => {
+      const o = raw as { question?: unknown; type?: unknown; options?: unknown; hint?: unknown };
+      const question = typeof o.question === "string" ? o.question.trim() : "";
+      if (!question) return null;
+      const options = Array.isArray(o.options) ? o.options.map((x) => String(x).trim()).filter(Boolean) : [];
+      const type: "choice" | "text" = o.type === "text" || options.length === 0 ? "text" : "choice";
+      const hint = typeof o.hint === "string" && o.hint.trim() ? o.hint.trim() : undefined;
+      qCounter += 1;
+      return { id: `q${qCounter}`, question, type, hint, options: type === "choice" ? options.slice(0, 4) : undefined };
+    })
+    .filter((q): q is WizardQuestion => q !== null)
+    .slice(0, 8);
+  if (questions.length === 0) throw new Error("Aucune question générée");
+  return questions;
+}
+
+function parseDraft(out: string, title: string): ContractDraft {
+  try {
+    const j = JSON.parse(extractJson(out)) as { title?: unknown; variables?: unknown; sections?: unknown };
+    if (j && Array.isArray(j.sections)) {
+      const variables = Array.isArray(j.variables)
+        ? (j.variables as unknown[])
+            .map((v): DraftVariable | null => {
+              const o = v as { id?: unknown; label?: unknown; importance?: unknown };
+              const id = typeof o.id === "string" ? o.id.trim() : "";
+              if (!id) return null;
+              const label = typeof o.label === "string" && o.label.trim() ? o.label.trim() : id;
+              const importance = lireImportance(o.importance);
+              return importance ? { id, label, importance } : { id, label };
+            })
+            .filter((v): v is DraftVariable => v !== null)
+        : [];
+      const sections = (j.sections as unknown[])
+        .map((sec) => {
+          const o = sec as { heading?: unknown; content?: unknown };
+          return {
+            heading: typeof o.heading === "string" && o.heading.trim() ? o.heading.trim() : undefined,
+            content: String(o.content ?? "").trim(),
+          };
+        })
+        .filter((sec) => sec.content);
+      if (sections.length > 0) {
+        return {
+          title: typeof j.title === "string" && j.title.trim() ? j.title.trim() : title.toUpperCase(),
+          variables,
+          sections,
+        };
+      }
+    }
+  } catch {
+    /* repli ci-dessous */
+  }
+  return { title: title.toUpperCase(), variables: [], sections: [{ content: out.trim() }] };
+}
+
+/** Étape 2 (parcours guidé) : rédaction depuis les réponses. 1 rédaction = 1 crédit. */
+export async function generateContractDraft(
+  title: string,
+  answers: { question: string; answer: string }[],
+  includeRgpd = true
+): Promise<ContractDraft> {
+  const out = await callGenerator("generate-draft", { mode: "questions", title, answers, parties: [], includeRgpd });
+  return parseDraft(out, title);
+}
+
+/** Étape 2 (« Générer maintenant ») : rédaction directe depuis l'intitulé. 1 rédaction = 1 crédit. */
+export async function generateContractDraftFromBrief(
+  title: string,
+  brief: string,
+  includeRgpd = true
+): Promise<ContractDraft> {
+  const out = await callGenerator("generate-draft", {
+    mode: "brief",
+    title,
+    brief: brief.trim() || title,
+    attachments: [],
+    parties: [],
+    includeRgpd,
+  });
+  return parseDraft(out, title);
 }

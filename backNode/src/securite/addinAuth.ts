@@ -22,3 +22,18 @@ export function redirectAddin(res: Response, result: { token?: string; error?: s
   const params = new URLSearchParams(result as Record<string, string>);
   return res.redirect(`${ADDIN_URL}/auth-dialog.html#${params.toString()}`);
 }
+
+/**
+ * Trace une connexion Google / Microsoft depuis le complément Word dans le
+ * suivi d'usage (FeatureUsage, source "word-addin"). Best-effort.
+ */
+export async function trackAddinLogin(idUser: number, provider: "google" | "microsoft"): Promise<void> {
+  try {
+    const { prisma } = await import("../../prisma/singletonPrisma.js");
+    await prisma.featureUsage.create({
+      data: { feature: `addin_login_${provider}`, userId: idUser, source: "word-addin" },
+    });
+  } catch (e) {
+    console.error("[addin] tracking connexion :", (e as Error)?.message);
+  }
+}

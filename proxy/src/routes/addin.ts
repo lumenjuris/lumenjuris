@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { relayToNode } from "../relay.js"
 import { proxyAuthMiddleware as auth } from "../middleware/authMiddleware.js"
+import { trackFeature } from "../tracking.js"
 
 
 export const addinRouter: Router = Router()
@@ -62,6 +63,7 @@ addinRouter.post(["/login", "/session"], async (req, res) => {
                 expiresIn: "7d",
             },
         );
+        void trackFeature("addin_login", data.data.idUser);
         res.json({
             success: true,
             token,

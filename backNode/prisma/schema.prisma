@@ -484,6 +484,8 @@ model FeatureUsage {
   id        Int      @id @default(autoincrement())
   feature   String
   userId    Int?
+  /// Origine de l'appel : "web" (plateforme) ou "word-addin" (complément Word).
+  source    String   @default("web")
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [idUser], onDelete: SetNull)
@@ -491,6 +493,7 @@ model FeatureUsage {
   @@index([userId])
   @@index([feature])
   @@index([createdAt])
+  @@index([source])
 }
 
 /// Abonnement d'un utilisateur à un plan tarifaire : statut, dates de début/expiration, référence Stripe 

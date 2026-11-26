@@ -8,7 +8,9 @@ const router: Router = express.Router();
 // POST /feature-event — enregistrement interne d'un usage (appelé par le proxy, non exposé au front).
 router.post("/", internalApiKeyMiddleware, async (req: Request, res: Response) => {
   try {
-    const { feature, userId } = req.body as { feature?: unknown; userId?: unknown };
+    const { feature, userId, source } = req.body as { feature?: unknown; userId?: unknown; source?: unknown };
+    // Origine de l'appel, fixée par le proxy (liste blanche) : "web" par défaut.
+    const origine = source === "word-addin" ? "word-addin" : "web";
     if (typeof feature !== "string" || !feature.trim()) {
       return res.status(400).json({ success: false, message: "feature requis." });
     }
@@ -16,6 +18,7 @@ router.post("/", internalApiKeyMiddleware, async (req: Request, res: Response) =
       data: {
         feature: feature.trim().slice(0, 64),
         userId: typeof userId === "number" && Number.isFinite(userId) ? userId : null,
+        source: origine,
       },
     });
     return res.status(201).json({ success: true });

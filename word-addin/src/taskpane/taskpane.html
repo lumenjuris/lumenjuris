@@ -222,6 +222,154 @@
             line-height: 1.4;
         }
         .lj-radio input { margin-top: 2px; }
+
+        /* ================================================================
+           Charte Lumen Juris (alignée sur front/tailwind.config.js) :
+           bleu marine #2C3A5E, fond #f4f6fa, rayons 12/16 px, Inter.
+           Utilisée par l'écran de connexion et le menu.
+           ================================================================ */
+        :root {
+            --lj-brand: #2C3A5E;
+            --lj-brand-dark: #1a2238;
+            --lj-brand-bg: #f4f6fa;
+            --lj-brand-ring: 0 0 0 3px rgba(53, 79, 153, 0.15);
+            --lj-shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+            --lj-font: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        /* ---- Écran de connexion ---- */
+        .lj-auth { font-family: var(--lj-font); padding-top: 12px; }
+        .lj-auth-hero { text-align: center; margin: 4px 0 14px; }
+        .lj-auth-hero img { width: 44px; height: 44px; border-radius: 12px; box-shadow: var(--lj-shadow-card); }
+        .lj-auth-hero h2 { margin: 10px 0 2px; font-size: 16px; font-weight: 700; color: var(--lj-brand); letter-spacing: -0.01em; }
+        .lj-auth-hero p { margin: 0; font-size: 12px; color: #64748b; }
+
+        .lj-auth-card {
+            background: #ffffff;
+            border: 1px solid var(--lj-line);
+            border-radius: 16px;
+            box-shadow: var(--lj-shadow-card);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .lj-auth-card h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--lj-brand); }
+        .lj-auth-card .lj-input { border-radius: 8px; padding: 8px 10px; }
+        .lj-auth-card .lj-input:focus { outline: none; border-color: var(--lj-brand); box-shadow: var(--lj-brand-ring); }
+
+        .lj-sso { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .lj-sso-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; height: 38px;
+            border: 1px solid var(--lj-brand);
+            border-radius: 8px;
+            background: #ffffff;
+            color: var(--lj-brand);
+            font: 500 12.5px var(--lj-font);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .lj-sso-btn:hover:not(:disabled) { background: var(--lj-brand-bg); }
+        .lj-sso-btn:disabled { opacity: 0.6; cursor: default; }
+        .lj-sso-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        .lj-divider {
+            display: flex; align-items: center; gap: 10px;
+            margin: 14px 0 6px;
+            color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .lj-divider::before, .lj-divider::after { content: ""; flex: 1; height: 1px; background: var(--lj-line); }
+
+        .lj-btn-brand {
+            width: 100%; height: 38px; margin-top: 6px;
+            border: none; border-radius: 8px;
+            background: var(--lj-brand); color: #ffffff;
+            font: 600 12.5px var(--lj-font);
+            cursor: pointer;
+            transition: box-shadow 0.15s ease, background 0.15s ease;
+        }
+        .lj-btn-brand:hover:not(:disabled) { box-shadow: inset 0 -3px 0 0 rgba(0, 0, 0, 0.15); }
+        .lj-btn-brand:disabled { background: #8a94ab; cursor: default; }
+
+        .lj-auth-links { text-align: center; margin: 12px 0 0; font-size: 12px; color: #64748b; }
+        .lj-auth-links a { color: var(--lj-brand); font-weight: 600; text-decoration: none; }
+        .lj-auth-links a:hover { text-decoration: underline; }
+        .lj-auth-features { list-style: none; margin: 0; padding: 0; }
+        .lj-auth-features li { position: relative; padding-left: 18px; margin-bottom: 6px; font-size: 12px; line-height: 1.45; color: #475569; }
+        .lj-auth-features li::before { content: "✓"; position: absolute; left: 0; color: var(--lj-brand); font-weight: 700; }
+
+        /* ---- Menu ---- */
+        .lj-topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 10px; font-family: var(--lj-font); }
+        .lj-topbar-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; color: var(--lj-brand); }
+        .lj-topbar-brand img { width: 22px; height: 22px; border-radius: 6px; }
+        .lj-logout {
+            border: none; background: none; padding: 4px 6px; border-radius: 6px;
+            color: #64748b; font: 500 11.5px var(--lj-font); cursor: pointer;
+        }
+        .lj-logout:hover { background: #eef1f6; color: var(--lj-brand); }
+
+        /* Onglets (une vue est ouverte) */
+        .lj-menu-tabs {
+            display: flex; gap: 4px; padding: 4px; margin-bottom: 12px;
+            background: #e9edf4; border-radius: 12px; font-family: var(--lj-font);
+        }
+        .lj-menu-tab {
+            flex: 1; border: none; background: none; padding: 7px 6px; border-radius: 9px;
+            color: #64748b; font: 600 12px var(--lj-font); cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .lj-menu-tab:hover { color: var(--lj-brand); }
+        .lj-menu-tab.active { background: #ffffff; color: var(--lj-brand); box-shadow: var(--lj-shadow-card); }
+
+        /* Tuiles (accueil, aucune vue ouverte) */
+        .lj-menu-tiles { display: flex; flex-direction: column; gap: 10px; font-family: var(--lj-font); }
+        .lj-menu-tile {
+            display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+            background: #ffffff; border: 1px solid var(--lj-line); border-radius: 16px;
+            box-shadow: var(--lj-shadow-card); padding: 14px; cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            font-family: var(--lj-font);
+        }
+        .lj-menu-tile:hover { border-color: var(--lj-brand); box-shadow: var(--lj-brand-ring); }
+        .lj-menu-tile-icon {
+            flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--lj-brand-bg); color: var(--lj-brand); font-size: 16px;
+        }
+        .lj-menu-tile strong { display: block; font-size: 13px; color: var(--lj-brand); margin-bottom: 2px; }
+        .lj-menu-tile span { font-size: 12px; color: #64748b; line-height: 1.4; }
+        .lj-logout.lj-topbar-brand { color: var(--lj-brand); font-weight: 700; font-size: 13px; padding: 4px; }
+
+        /* ---- Génération de contrat ---- */
+        .lj-gen-kicker { margin: 0 0 6px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        .lj-progress { height: 4px; background: #e9edf4; border-radius: 999px; overflow: hidden; }
+        .lj-progress > div { height: 100%; background: var(--lj-brand); border-radius: 999px; transition: width 0.2s ease; }
+        .lj-choice {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            width: 100%; margin-bottom: 8px; padding: 10px 12px; text-align: left;
+            background: #ffffff; border: 1px solid var(--lj-line); border-radius: 12px;
+            color: var(--lj-brand); font: 500 12.5px var(--lj-font); cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .lj-choice:hover:not(:disabled), .lj-choice.selected { border-color: var(--lj-brand); background: var(--lj-brand-bg); }
+        .lj-choice:disabled { opacity: 0.5; cursor: default; }
+        .lj-choice strong { display: block; font-size: 12.5px; }
+        .lj-choice small { display: block; margin-top: 2px; font-size: 11px; color: #64748b; font-weight: 400; }
+        .lj-gen-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 10px; }
+        .lj-gen-examples button {
+            border: 1px solid var(--lj-line); background: var(--lj-brand-bg); color: #475569;
+            border-radius: 999px; padding: 3px 9px; font: 500 11px var(--lj-font); cursor: pointer;
+        }
+        .lj-gen-examples button:hover { border-color: var(--lj-brand); color: var(--lj-brand); }
+        .lj-gen-check { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 12px; color: #475569; cursor: pointer; }
+        .lj-gen-nav { display: flex; justify-content: space-between; margin-top: 12px; }
+        .lj-gen-group { border: none; padding: 0; margin: 10px 0 0; }
+        .lj-gen-group legend { padding: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+        .lj-spinner {
+            width: 26px; height: 26px; margin: 8px auto 0; border-radius: 50%;
+            border: 3px solid #e9edf4; border-top-color: var(--lj-brand);
+            animation: lj-spin 0.8s linear infinite;
+        }
+        @keyframes lj-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 

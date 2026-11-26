@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ClauseRisk } from "../core/types";
+import { ClauseRisk } from "../../core/types";
 
 const riskBadge = (score: number): { label: string; css: string } =>
   score >= 4

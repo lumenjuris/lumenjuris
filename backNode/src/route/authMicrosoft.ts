@@ -10,7 +10,7 @@ import { prisma } from "../../prisma/singletonPrisma.js";
 import { Subscription } from "../services/classSubscription.js";
 import { Mailer } from "../infrastructure/mailer/classMailer.js";
 import { logger } from "../logger/logger.js";
-import { redirectAddin, signAddinToken } from "../securite/addinAuth.js";
+import { redirectAddin, signAddinToken, trackAddinLogin } from "../securite/addinAuth.js";
 
 /** Le paramètre `state` OAuth n'est valable que quelques minutes. */
 const DUREE_STATE_OAUTH = "5m";
@@ -82,7 +82,7 @@ microsoftRouter.get(
       addin ? redirectAddin(res, { error: code }) : res.redirect(url);
     const connecter = (idUser: number, role: string) =>
       addin
-        ? redirectAddin(res, { token: signAddinToken(idUser, role) })
+        ? (void trackAddinLogin(idUser, "microsoft"), redirectAddin(res, { token: signAddinToken(idUser, role) }))
         : (createCookieAuth(idUser, role, res), res.redirect(`${FRONT}/dashboard`));
     try {
       const { code, state, error, error_description } = req.query;
